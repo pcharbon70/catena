@@ -1,0 +1,32 @@
+# Compiled files
+ebin/
+*.beam
+*.app
+
+# Generated files
+src/compiler/lexer/catena_lexer_gen.erl
+src/catena_parser.erl
+
+# Dependency lock files
+rebar.lock
+
+# Erlang
+.erl_crash.dump
+.erlang.cookie
+erl_crash.dump
+
+# Rebar3
+.rebar3/
+_build/
+_checkouts/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
