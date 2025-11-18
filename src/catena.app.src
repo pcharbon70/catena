@@ -1,0 +1,13 @@
+{application, catena,
+ [{description, "Catena: A category theory-inspired functional programming language for BEAM"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, []},
+  {licenses, ["MIT"]},
+  {links, []}
+ ]}.
