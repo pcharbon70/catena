@@ -286,7 +286,7 @@ instantiate({mono, Type, Constraints}, State) ->
     {Type, Constraints, State};
 instantiate({poly, QuantVars, Type}, State0) ->
     % Polymorphic without constraints (backward compatible)
-    {InstType, StateFinal} = instantiate_poly(QuantVars, Type, [], State0),
+    {InstType, _InstConstraints, StateFinal} = instantiate_poly(QuantVars, Type, [], State0),
     {InstType, [], StateFinal};
 instantiate({poly, QuantVars, Constraints, Type}, State0) ->
     % Qualified polymorphic - instantiate both type and constraints
