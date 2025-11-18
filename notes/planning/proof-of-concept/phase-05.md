@@ -55,6 +55,18 @@ Message handlers have signature: `handle : Message -> State -> (State, Maybe Rep
 - [ ] 5.1.4.3 Implement `call` (?) as Process effect operation for synchronous request-reply with timeout handling
 - [ ] 5.1.4.4 Implement `link` and `monitor` as Process effect operations for failure detection and supervision
 
+### 5.1.5 Actor-Workflow Integration
+- [ ] **Task 5.1.5 Complete**
+
+Demonstrate that actors form a Workflow (Monad) for concurrent computation, proving that Catena's category theory foundation elegantly captures actor-based concurrency. The Process monad enables monadic composition of concurrent operations, making distributed programming compositional and type-safe.
+
+- [ ] 5.1.5.1 Define Process Workflow instance showing processes form a monad: `instance Workflow Process where pure : a -> Process a; bind : Process a -> (a -> Process b) -> Process b`
+- [ ] 5.1.5.2 Implement `pure` for Process spawning trivial actor that immediately returns value (wrapping pure computation in process)
+- [ ] 5.1.5.3 Implement `bind` for Process enabling sequential actor communication where second actor depends on first's result
+- [ ] 5.1.5.4 Show actor message handlers are EffectfulFlows (Kleisli arrows) in Process category: `handle : Message -> State -> (State, Reply) / {Process}`
+- [ ] 5.1.5.5 Enable do-notation for actor choreography allowing sequential process composition: `do { x <- spawn Worker1; y <- x ? Process; spawn (Worker2 y) }`
+- [ ] 5.1.5.6 Verify Process monad laws (left/right identity, associativity) hold for actor composition via property testing
+
 ### Unit Tests - Section 5.1
 - [ ] **Unit Tests 5.1 Complete**
 - [ ] Test actor state type checking enforcing immutability and serializability
@@ -62,6 +74,9 @@ Message handlers have signature: `handle : Message -> State -> (State, Maybe Rep
 - [ ] Test handler function type-and-effect checking including Process effect tracking
 - [ ] Test process primitives (spawn, send, call) as Process effect operations with effect tracking
 - [ ] Test actor-effect unification demonstrating actors as Process effect handlers
+- [ ] Test Process Workflow instance with monad laws verification
+- [ ] Test do-notation for actor composition producing correct concurrent behavior
+- [ ] Test actor handlers as EffectfulFlows composing via Kleisli composition
 
 ---
 

@@ -155,15 +155,39 @@ Beyond core operations, the prelude includes convenient helpers that simplify co
 - [ ] 2.2.7.3 Implement `reverse : List a -> List a` reversing list order
 - [ ] 2.2.7.4 Implement `take : Natural -> List a -> List a` taking first n elements
 
-### 2.2.8 Builtin Effect Definitions
+### 2.2.8 Category Theory Prelude Module
 - [ ] **Task 2.2.8 Complete**
+
+Provide complete category theory foundation in standard library, making all pragmatic category theory traits available by default. This module implements the core abstractions from Phase 1 Section 1.7 and makes them universally accessible through the prelude, proving that Catena's categorical foundation integrates seamlessly with practical programming.
+
+- [ ] 2.2.8.1 Create `Category.Comparable` module exporting Comparable trait and `===`, `!==` operators with instances for all primitive types
+- [ ] 2.2.8.2 Create `Category.Combiner` and `Category.Accumulator` modules with `<>` operator and instances for Text, List, Natural
+- [ ] 2.2.8.3 Create `Category.Mapper` module exporting Mapper trait with `<$>` operator and instances for List, Maybe, Result
+- [ ] 2.2.8.4 Create `Category.Workflow` module exporting Chainable, StructuredMapper, and Workflow traits with `>>=`, `>>`, `>=>` operators
+- [ ] 2.2.8.5 Create `Category.Core` umbrella module re-exporting all category theory traits for convenient single import
+- [ ] 2.2.8.6 Implement REPL command `:instances Trait` to list all available instances of a trait for inspection
+
+### 2.2.9 do-Notation Implementation
+- [ ] **Task 2.2.9 Complete**
+
+Prove monadic computation is ergonomic with do-notation sugar. This syntactic sugar makes Workflow (Monad) usage readable and intuitive, essential for making effectful and monadic code practical. The implementation demonstrates that Catena's category theory foundation supports real-world programming patterns.
+
+- [ ] 2.2.9.1 Verify do-notation parser support from Phase 1.7.7 is integrated and producing DoExpr AST nodes
+- [ ] 2.2.9.2 Implement do-notation desugaring in compiler: `x <- ma; rest` becomes `bind ma (\x -> rest)`
+- [ ] 2.2.9.3 Support let bindings within do blocks: `let x = expr` remains pure within monadic context
+- [ ] 2.2.9.4 Integrate do-notation with type inference ensuring Workflow constraint is generated for do blocks
+- [ ] 2.2.9.5 Test do-notation with Maybe, List, and Result workflows verifying correct desugaring and execution
+- [ ] 2.2.9.6 Support do-notation in REPL allowing interactive monadic programming with immediate feedback
+
+### 2.2.10 Builtin Effect Definitions
+- [ ] **Task 2.2.10 Complete**
 
 The prelude defines standard effects that programs use for I/O and process interaction. **IO effect** provides file operations (read, write) and console output (print, println). **Process effect** enables process spawning and message passing for actor-style concurrency. These effects are implemented using the process-based runtime from Phase 1, with handlers that invoke actual BEAM operations. The prelude makes these effects universally available.
 
-- [ ] 2.2.8.1 Define IO effect with operations `readFile : String -> String`, `writeFile : String -> String -> Unit`, `print : String -> Unit`, and `println : String -> Unit`
-- [ ] 2.2.8.2 Define Process effect with operations `spawn : Flow -> ProcessId`, `send : ProcessId -> Message -> Unit`, and `receive : Message` for actor-style concurrency
-- [ ] 2.2.8.3 Implement builtin IO effect handler using Erlang file module and io module for actual file and console operations
-- [ ] 2.2.8.4 Implement builtin Process effect handler using Erlang spawn, send (!) and receive for actual process operations
+- [ ] 2.2.10.1 Define IO effect with operations `readFile : String -> String`, `writeFile : String -> String -> Unit`, `print : String -> Unit`, and `println : String -> Unit`
+- [ ] 2.2.10.2 Define Process effect with operations `spawn : Flow -> ProcessId`, `send : ProcessId -> Message -> Unit`, and `receive : Message` for actor-style concurrency
+- [ ] 2.2.10.3 Implement builtin IO effect handler using Erlang file module and io module for actual file and console operations
+- [ ] 2.2.10.4 Implement builtin Process effect handler using Erlang spawn, send (!) and receive for actual process operations
 
 ### Unit Tests - Section 2.2
 - [ ] **Unit Tests 2.2 Complete**

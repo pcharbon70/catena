@@ -109,12 +109,28 @@ Circular module dependencies cause compilation problems—if A imports B and B i
 - [ ] 4.2.4.3 Implement cycle error reporting showing complete import chain forming cycle
 - [ ] 4.2.4.4 Implement topological sorting determining valid compilation order for acyclic graphs
 
+### 4.2.5 Cross-Module Trait Resolution
+- [ ] **Task 4.2.5 Complete**
+
+Ensure coherence of trait instances across modules, preventing orphan instances and duplicate instances. This is critical for Catena's category theory foundation—we must guarantee that there is exactly one instance of each trait for each type, ensuring predictable behavior when using categorical abstractions across module boundaries.
+
+- [ ] 4.2.5.1 Implement orphan instance checking: instances must be defined in same module as either the trait or the type (no orphan instances)
+- [ ] 4.2.5.2 Implement global instance registry tracking all trait instances across modules for coherence checking
+- [ ] 4.2.5.3 Implement duplicate instance detection preventing multiple instances of same trait for same type across entire program
+- [ ] 4.2.5.4 Implement instance visibility rules: instances automatically exported when trait or type is exported (no explicit instance exports)
+- [ ] 4.2.5.5 Implement newtype support allowing separate instances via wrapper types when needed (e.g., Product Natural for multiplication monoid)
+- [ ] 4.2.5.6 Implement coherence error messages clearly explaining orphan instances and duplicate instances with module locations
+
 ### Unit Tests - Section 4.2
 - [ ] **Unit Tests 4.2 Complete**
 - [ ] Test qualified imports resolving module-prefixed names correctly
 - [ ] Test selective imports bringing specific names into scope unqualified
 - [ ] Test name resolution handling shadowing and scope correctly
 - [ ] Test circular dependency detection catching direct and indirect cycles
+- [ ] Test orphan instance prevention catching instances not in trait or type module
+- [ ] Test duplicate instance detection across multiple modules
+- [ ] Test instance visibility with automatic export when trait/type exported
+- [ ] Test newtype instances allowing separate trait implementations
 
 ---
 
