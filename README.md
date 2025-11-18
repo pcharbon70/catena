@@ -2,6 +2,12 @@
 
 > A category theory-inspired functional programming language for the BEAM VM
 
+## Etymology
+
+**Catena** (Latin): literally "chain" or "series of connected links."
+
+Figuratively, a catena represents an unbroken sequence of related elements, each linked to form a coherent whole. In logic and mathematics, it describes a chain of reasoning where each step follows necessarily from the last. This reflects the language's emphasis on composition—where functions, types, and effects are chained together through category-theoretic principles to build reliable, fault-tolerant systems.
+
 ## Overview
 
 Catena is a research project exploring the design of a programming language that unifies category theory's mathematical rigor with the BEAM VM's legendary fault tolerance and concurrency capabilities. The language aims to make abstract mathematical concepts practical and accessible while leveraging the proven strengths of Erlang's runtime.
