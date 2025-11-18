@@ -235,9 +235,9 @@ test_typical_type_checking_scenario() ->
     ?assertEqual(IdScheme, IdSchemeFound),
 
     % Instantiate id multiple times (should get fresh vars each time)
-    State0 = catena_type_state:new(),
-    {IdInst1, State1} = catena_type_scheme:instantiate(IdSchemeFound, State0),
-    {IdInst2, _State2} = catena_type_scheme:instantiate(IdSchemeFound, State1),
+    State0 = catena_infer_state:new(),
+    {IdInst1, _Constraints1, State1} = catena_type_scheme:instantiate(IdSchemeFound, State0),
+    {IdInst2, _Constraints2, _State2} = catena_type_scheme:instantiate(IdSchemeFound, State1),
 
     ?assertMatch({tfun, {tvar, _}, {tvar, _}, _}, IdInst1),
     ?assertMatch({tfun, {tvar, _}, {tvar, _}, _}, IdInst2),

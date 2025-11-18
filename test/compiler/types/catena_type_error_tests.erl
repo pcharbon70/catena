@@ -1305,7 +1305,7 @@ test_instantiate_empty_quantifiers() ->
     Scheme = catena_type_scheme:poly([], Type),
 
     % Instantiate should return original type
-    {Result, _NewState} = catena_type_scheme:instantiate(Scheme, State),
+    {Result, _Constraints, _NewState} = catena_type_scheme:instantiate(Scheme, State),
     ?assertEqual(Type, Result).
 
 test_nested_quantification() ->

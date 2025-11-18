@@ -63,8 +63,8 @@ test_identity_function() ->
 
     % Look up and instantiate
     {ok, SchemeFound} = catena_type_env:lookup(Env, id),
-    {Inst1, State2} = catena_type_scheme:instantiate(SchemeFound, State1),
-    {Inst2, _State3} = catena_type_scheme:instantiate(SchemeFound, State2),
+    {Inst1, _Constraints1, State2} = catena_type_scheme:instantiate(SchemeFound, State1),
+    {Inst2, _Constraints2, _State3} = catena_type_scheme:instantiate(SchemeFound, State2),
 
     % Both instantiations should be function types
     ?assertMatch({tfun, _, _, _}, Inst1),
@@ -80,7 +80,7 @@ test_identity_function() ->
 
     % Pretty-print the scheme
     PP = catena_type_pp:pp_scheme(IdScheme),
-    ?assertEqual("∀α1. α1 -> α1", PP).
+    ?assertEqual("∀a1. a1 -> a1", PP).
 
 test_const_function() ->
     % Simulate: let const = λx. λy. x
@@ -110,11 +110,11 @@ test_const_function() ->
 
     % Pretty-print
     PP = catena_type_pp:pp_scheme(ConstScheme),
-    ?assertEqual("∀α1 α2. α1 -> α2 -> α1", PP),
+    ?assertEqual("∀a1 a2. a1 -> a2 -> a1", PP),
 
     % Instantiate and verify fresh variables
     StateInst = catena_infer_state:new(),
-    {Inst, _StateInst1} = catena_type_scheme:instantiate(ConstScheme, StateInst),
+    {Inst, _Constraints, _StateInst1} = catena_type_scheme:instantiate(ConstScheme, StateInst),
     ?assertMatch({tfun, {tvar, _}, {tfun, {tvar, _}, {tvar, _}, _}, _}, Inst).
 
 test_compose_function() ->
@@ -168,7 +168,7 @@ test_compose_function() ->
 
     % Pretty-print
     PP = catena_type_pp:pp_scheme(ComposeScheme),
-    Expected = "∀α1 α2 α3. (α2 -> α3) -> (α1 -> α2) -> α1 -> α3",
+    Expected = "∀a1 a2 a3. (a2 -> a3) -> (a1 -> a2) -> a1 -> a3",
     ?assertEqual(Expected, PP).
 
 test_map_function() ->
@@ -216,7 +216,7 @@ test_map_function() ->
 
     % Pretty-print
     PP = catena_type_pp:pp_scheme(MapScheme),
-    Expected = "∀α1 α2. (α1 -> α2) -> List<α1> -> List<α2>",
+    Expected = "∀a1 a2. (a1 -> a2) -> List<a1> -> List<a2>",
     ?assertEqual(Expected, PP).
 
 %%====================================================================
@@ -260,7 +260,7 @@ test_substitution_before_generalization() ->
     ?assertMatch({poly, [_], _}, Scheme),
 
     PP = catena_type_pp:pp_scheme(Scheme),
-    ?assertEqual("∀α2. integer -> α2", PP).
+    ?assertEqual("∀a2. integer -> a2", PP).
 
 test_environment_with_substitution() ->
     % Build environment with multiple bindings, apply substitution
@@ -314,7 +314,7 @@ test_record_with_polymorphism() ->
     Scheme = catena_type_scheme:generalize(RecordType, EnvFreeVars),
 
     PP = catena_type_pp:pp_scheme(Scheme),
-    ?assertEqual("∀α1. {x: α1, y: α1}", PP).
+    ?assertEqual("∀a1. {x: a1, y: a1}", PP).
 
 test_effectful_map() ->
     % ∀α β. (α -> β / {io}) -> List<α> -> List<β> / {io}
@@ -356,7 +356,7 @@ test_effectful_map() ->
     Scheme = catena_type_scheme:generalize(MapType, EnvFreeVars),
 
     PP = catena_type_pp:pp_scheme(Scheme),
-    Expected = "∀α1 α2. (α1 -> α2 / {io}) -> List<α1> -> List<α2> / {io}",
+    Expected = "∀a1 a2. (a1 -> a2 / {io}) -> List<a1> -> List<a2> / {io}",
     ?assertEqual(Expected, PP).
 
 test_nested_type_application() ->
@@ -445,9 +445,9 @@ test_multiple_let_bindings() ->
     {ok, AppFound} = catena_type_env:lookup(Env, app),
 
     StateInst0 = catena_infer_state:new(),
-    {IdInst, StateInst1} = catena_type_scheme:instantiate(IdFound, StateInst0),
-    {ConstInst, StateInst2} = catena_type_scheme:instantiate(ConstFound, StateInst1),
-    {AppInst, _StateInst3} = catena_type_scheme:instantiate(AppFound, StateInst2),
+    {IdInst, _Constraints1, StateInst1} = catena_type_scheme:instantiate(IdFound, StateInst0),
+    {ConstInst, _Constraints2, StateInst2} = catena_type_scheme:instantiate(ConstFound, StateInst1),
+    {AppInst, _Constraints3, _StateInst3} = catena_type_scheme:instantiate(AppFound, StateInst2),
 
     % All should be function types
     ?assertMatch({tfun, _, _, _}, IdInst),
@@ -463,6 +463,6 @@ test_multiple_let_bindings() ->
     ConstPP = catena_type_pp:pp_scheme(ConstScheme),
     AppPP = catena_type_pp:pp_scheme(AppScheme),
 
-    ?assertEqual("∀α1. α1 -> α1", IdPP),
-    ?assertEqual("∀α2 α3. α2 -> α3 -> α2", ConstPP),
+    ?assertEqual("∀a1. a1 -> a1", IdPP),
+    ?assertEqual("∀a2 a3. a2 -> a3 -> a2", ConstPP),
     ?assertEqual("∀α4 α5. (α4 -> α5) -> α4 -> α5", AppPP).

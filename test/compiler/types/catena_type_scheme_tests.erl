@@ -119,15 +119,17 @@ instantiation_test_() ->
 
 test_instantiate_mono() ->
     % Monomorphic schemes instantiate to themselves
-    State = catena_type_state:new(),
+    State = catena_infer_state:new(),
     Type = catena_types:tcon(integer),
     Scheme = catena_type_scheme:mono(Type),
 
-    {Instantiated, _NewState} = catena_type_scheme:instantiate(Scheme, State),
-    ?assertEqual(Type, Instantiated).
+    {Instantiated, Constraints, _NewState} = catena_type_scheme:instantiate(Scheme, State),
+    ?assertEqual(Type, Instantiated),
+    % Monomorphic types have no constraints
+    ?assertEqual([], Constraints).
 
 test_instantiate_poly() ->
-    State = catena_type_state:new(),
+    State = catena_infer_state:new(),
 
     % ∀α. α -> α (using ID 100 to distinguish from fresh vars)
     VarAlpha = catena_types:tvar(100),
@@ -135,7 +137,7 @@ test_instantiate_poly() ->
     Scheme = catena_type_scheme:poly([100], FunType),
 
     % Instantiate should create fresh variables
-    {Instantiated, _NewState} = catena_type_scheme:instantiate(Scheme, State),
+    {Instantiated, Constraints, _NewState} = catena_type_scheme:instantiate(Scheme, State),
 
     % Should be a function type with same structure
     ?assertMatch({tfun, _, _, _}, Instantiated),
@@ -148,10 +150,13 @@ test_instantiate_poly() ->
     % From and To should be the same variable (both were α)
     {tvar, FromId} = From,
     {tvar, ToId} = To,
-    ?assertEqual(FromId, ToId).
+    ?assertEqual(FromId, ToId),
+
+    % Polymorphic types without explicit constraints return empty list
+    ?assertEqual([], Constraints).
 
 test_instantiate_creates_fresh() ->
-    State0 = catena_type_state:new(),
+    State0 = catena_infer_state:new(),
 
     % ∀α β. (α -> β) (using IDs 100, 200)
     Type = catena_types:tfun(
@@ -162,8 +167,8 @@ test_instantiate_creates_fresh() ->
     Scheme = catena_type_scheme:poly([100, 200], Type),
 
     % Two instantiations should create different fresh variables
-    {Inst1, State1} = catena_type_scheme:instantiate(Scheme, State0),
-    {Inst2, _State2} = catena_type_scheme:instantiate(Scheme, State1),
+    {Inst1, _Constraints1, State1} = catena_type_scheme:instantiate(Scheme, State0),
+    {Inst2, _Constraints2, _State2} = catena_type_scheme:instantiate(Scheme, State1),
 
     ?assertMatch({tfun, {tvar, _}, {tvar, _}, _}, Inst1),
     ?assertMatch({tfun, {tvar, _}, {tvar, _}, _}, Inst2),
@@ -240,7 +245,7 @@ integration_test_() ->
     ].
 
 test_generalize_then_instantiate() ->
-    State0 = catena_type_state:new(),
+    State0 = catena_infer_state:new(),
 
     % Use fresh_var to create variables (this advances the counter)
     {{tvar, Var1}, State1} = catena_types:fresh_var(State0),
@@ -261,7 +266,7 @@ test_generalize_then_instantiate() ->
     ?assertMatch({poly, _, _}, Scheme),
 
     % Instantiate should create fresh variables
-    {Inst, _State3} = catena_type_scheme:instantiate(Scheme, State2),
+    {Inst, _Constraints, _State3} = catena_type_scheme:instantiate(Scheme, State2),
 
     % Should have structure with fresh vars
     ?assertMatch({tfun, {tvar, _}, {tvar, _}, _}, Inst),
