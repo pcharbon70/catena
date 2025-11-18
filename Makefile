@@ -26,11 +26,13 @@ compile:
 		src/compiler/types/catena_type_error.erl \
 		src/compiler/types/catena_ast.erl \
 		src/compiler/types/catena_config.erl \
+		src/compiler/types/catena_type_config.erl \
 		src/compiler/types/catena_constraint.erl \
 		src/compiler/types/catena_instance.erl \
 		src/compiler/types/catena_coherence.erl \
 		src/compiler/types/catena_handler_verify.erl \
 		src/compiler/types/catena_infer_state.erl \
+		src/compiler/types/catena_infer_utils.erl \
 		src/compiler/types/catena_infer_unify.erl \
 		src/compiler/types/catena_infer_pattern.erl \
 		src/compiler/types/catena_infer_expr.erl \
