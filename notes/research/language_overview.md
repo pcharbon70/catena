@@ -1,71 +1,96 @@
 # Catena Language Guide
 
+## Language Keywords
+
+| Keyword | Purpose | Example |
+|---------|---------|---------|
+| **type** | Define data types | `type User = {name: Text, age: Natural}` |
+| **transform** | Define pure functions | `transform greet : User -> Text` |
+| **system** | Define modules/categories | `system Collections = {...}` |
+| **trait** | Define type classes | `trait Mapper f where ...` |
+| **instance** | Implement traits | `instance Mapper List where ...` |
+| **extends** | Trait inheritance | `trait Pipeline m extends Applicator m` |
+| **effect** | Define algebraic effects | `effect FileIO = {...}` |
+| **perform** | Use effects | `perform FileIO.read(path)` |
+| **handle...with** | Handle effects | `handle expr with FileIO.read(p) -> ...` |
+| **actor** | Define actors | `actor Counter = {...}` |
+| **process** | Actor message handlers | `process handle : Message -> State -> ...` |
+| **adapter** | Natural transformations | `adapter listToMaybe : List ~> Maybe` |
+| **laws** | Define trait laws | `laws Pipeline m where ...` |
+| **test** | Define tests | `test "example" = ...` |
+| **property** | Property-based tests | `property "commutative" = ...` |
+| **doc** | Documentation | `doc "Description of function"` |
+| **match** | Pattern matching | `match x | Some v -> v | None -> 0` |
+| **do** | Monadic notation | `do { x <- action; return x }` |
+| **operator** | Define operators | `operator (===) = equals` |
+
 ## Introduction
 
 Catena is a new functional programming language for the BEAM virtual machine that fundamentally grounds itself in category theory principles. Unlike traditional functional languages that add categorical concepts as libraries, Catena makes category theory the foundation from which all language features emerge naturally. This creates a unique synthesis where mathematical rigor meets practical distributed systems programming.
 
-To make category theory accessible, Catena uses **pragmatic terminology** alongside traditional mathematical names. Where mathematicians say "morphism", we say **Flow**. Where they say "object", we say **Shape**. This developer-friendly naming makes the powerful abstractions of category theory intuitive for everyday programming.
+To make category theory accessible, Catena uses **pragmatic terminology** alongside traditional mathematical names. Where mathematicians say "morphism", we say **Transform**. Where they say "object", we say **Type**. This developer-friendly naming makes the powerful abstractions of category theory intuitive for everyday programming.
 
-**Note**: This guide focuses on core language features. For information about standard library abstractions (Mapper/Functor, Workflow/Monad, operators, etc.), see the [Standard Library Guide](../guides/standard-library-overview.md).
+**Note**: This guide focuses on core language features. For information about standard library abstractions (Mapper/Functor, Pipeline/Monad, operators, etc.), see the [Standard Library Guide](../guides/standard-library-overview.md).
 
 ## Core Philosophy
 
-In Catena, **everything is a FlowSpace (category)**. Programs are compositions of Flows (morphisms), data flows through immutable transformations of Shapes (objects), and side effects are handled through algebraic effect handlers. The language treats the BEAM's actor model as a natural categorical structure, making distributed programming both type-safe and mathematically sound.
+In Catena, **everything is a System (category)**. Programs are compositions of Transforms (morphisms), data is represented through immutable Types (objects), and side effects are handled through algebraic effect handlers. The language treats the BEAM's actor model as a natural categorical structure, making distributed programming both type-safe and mathematically sound.
 
-## Fundamental Concepts and Keywords
+## Fundamental Concepts
 
-### 1. Shapes (Objects in Category Theory)
+### 1. Types (Objects in Category Theory)
 
-**Shapes** define data types as objects in a FlowSpace. They are immutable by construction and support algebraic data types. In category theory, these are called *Objects* - the fundamental entities that Flows transform between.
+**Types** define data structures as objects in a System. They are immutable by construction and support algebraic data types. In category theory, these are called *Objects* - the fundamental entities that Transforms operate between.
 
 ```catena
 -- Product types (records)
-shape User = {
+type User = {
   name: Text,
   age: Natural,
   email: Email
 } deriving [Eq, Show, Doc]
 
 -- Sum types (variants) - Choice (Coproduct) in CT
-shape Result a b = Ok a | Error b
+type Result a b = Ok a | Error b
 
 -- Recursive types
-shape List a = Nil | Cons a (List a)
+type List a = Nil | Cons a (List a)
+
+-- Type aliases
+type CustomerId = Natural
+type Money = Decimal
 ```
 
-### 2. Flows (Morphisms in Category Theory)
+### 2. Transforms (Morphisms in Category Theory)
 
-**Flows** are pure functions that represent morphisms between Shapes. They compose naturally and preserve categorical properties. In category theory, *Morphisms* are the arrows that connect objects.
-
-> **Note**: Updated to include type class constraints using `=>` syntax for trait-bounded polymorphism.
+**Transforms** are pure functions that represent morphisms between Types. They compose naturally and preserve categorical properties. In category theory, *Morphisms* are the arrows that connect objects.
 
 ```catena
--- Basic flow definition
-flow greet : User -> Text
-flow greet user = Text.concat "Hello, " user.name
+-- Basic transform definition
+transform greet : User -> Text
+transform greet user = Text.concat "Hello, " user.name
 
 -- Composition using pipe operator
-flow processUser : User -> Result User ValidationError
-flow processUser =
+transform processUser : User -> Result User ValidationError
+transform processUser =
   validate |> normalize |> store
 
 -- Type class constraints with Mapper (Functor)
-flow double : List Natural -> List Natural
-flow double xs = List.map (* 2) xs
+transform double : List Natural -> List Natural
+transform double xs = List.map (* 2) xs
 
--- Polymorphic functions with constraints
-flow total : Accumulator a => List a -> a
-flow total xs = List.fold (<>) empty xs
+-- Polymorphic transforms with constraints
+transform total : Accumulator a => List a -> a
+transform total xs = List.fold combine empty xs
 ```
 
 ### 3. Trait System (Type Classes)
 
-> **Note**: Traits define type classes with laws that implementations must satisfy. This is the foundation for all category theory abstractions in Catena, from Comparable (Setoid) to Workflow (Monad).
+Traits define type classes with laws that implementations must satisfy. This is the foundation for all category theory abstractions in Catena.
 
 ```catena
 -- Define a Comparable trait (Setoid in category theory)
 trait Comparable a where
-  -- Type class methods
   equals : a -> a -> Bool
 
   -- Default implementations
@@ -76,22 +101,19 @@ trait Comparable a where
 operator (===) = equals
 operator (!==) = not_equals
 
--- Trait hierarchies with extends
+-- Trait hierarchies
 trait Orderable a extends Comparable a where
   compare : a -> a -> Ordering
 
-  -- Derived operations
   less_than : a -> a -> Bool
   less_than x y = compare x y == LT
 
 -- Mapper trait (Functor in category theory)
--- A Mapper lifts Flows to operate inside contexts
 trait Mapper (f : Type -> Type) where
   map : (a -> b) -> f a -> f b
 
--- StructuredMapper trait (Applicative Functor in category theory)
--- Mapper with pure and apply operations
-trait StructuredMapper (f : Type -> Type) extends Mapper f where
+-- Applicator trait (Applicative Functor in category theory)
+trait Applicator (f : Type -> Type) extends Mapper f where
   pure : a -> f a
   apply : f (a -> b) -> f a -> f b
 
@@ -99,11 +121,14 @@ trait StructuredMapper (f : Type -> Type) extends Mapper f where
 trait Chainable (m : Type -> Type) extends Mapper m where
   chain : (a -> m b) -> m a -> m b
 
--- Workflow trait (Monad in category theory)
--- A Workflow supports chaining of effectful Flows
-trait Workflow (m : Type -> Type) extends StructuredMapper m, Chainable m where
-  -- Both pure and chain are inherited
-  -- This trait asserts the combined laws
+-- Pipeline trait (Monad in category theory)
+trait Pipeline (m : Type -> Type) extends Applicator m, Chainable m where
+  -- Combines pure and chain from parent traits
+
+-- Extractor trait (Comonad in category theory)
+trait Extractor (w : Type -> Type) extends Mapper w where
+  extract : w a -> a
+  extend : (w a -> b) -> w a -> w b
 
 -- Trait laws (verified by property testing)
 laws Mapper f where
@@ -116,23 +141,12 @@ laws Mapper f where
       map (h . g) x === (map h . map g) x
 ```
 
-#### Core Language Operators
-
-The language includes minimal built-in operators based on pragmatic traits:
-
-| Trait | Description | Keyword | Operator |
-|-------|-------------|---------|----------|
-| Comparable (Setoid) | Type-level equality | `equals` | `===` |
-| Comparable (Setoid) | Type-level inequality | `not_equals` | `!==` |
-
-**Note**: Comparison operators (`<`, `>`, `<=`, `>=`) are built into the language for convenience. Other trait-based operators (Mapper `<$>`, Workflow `>>=`, Combiner `<>`, etc.) are defined in the [Standard Library](../guides/standard-library-overview.md).
-
 ### 4. Instances (Trait Implementations)
 
 Instances provide concrete implementations of traits for specific types.
 
 ```catena
--- Simple instance for Comparable
+-- Simple instance
 instance Comparable Natural where
   equals = (==)
 
@@ -146,21 +160,13 @@ instance Comparable a => Comparable (List a) where
 instance Mapper List where
   map = List.map
 
--- Instance for StructuredMapper
-instance StructuredMapper List where
+-- Instance for Applicator
+instance Applicator List where
   pure x = [x]
   apply fs xs = List.flat_map (\f -> map f xs) fs
 
--- Instance for Chainable
-instance Chainable List where
-  chain f = List.flat_map f
-
--- Instance for Workflow (combines StructuredMapper and Chainable)
-instance Workflow List where
-  -- pure and chain are inherited from StructuredMapper and Chainable
-
--- Instance for Workflow Maybe
-instance Workflow Maybe where
+-- Instance for Pipeline (Monad)
+instance Pipeline Maybe where
   pure = Some
   apply = match
     | None, _ -> None
@@ -169,62 +175,45 @@ instance Workflow Maybe where
   chain f = match
     | None -> None
     | Some x -> f x
+
+-- Instance for Extractor (Comonad)
+instance Extractor NonEmptyList where
+  extract (NEL x _) = x
+  extend f w@(NEL x xs) = NEL (f w) (extend_list f xs x [])
 ```
 
-### 5. Operators
+### 5. Systems (Categories/Modules)
 
-Catena includes minimal built-in operators for type-level equality based on Comparable (Setoid):
-
-```catena
--- Type-level equality (built into language)
-operator (===) = equals      -- Comparable equality
-operator (!==) = not_equals  -- Comparable inequality
-```
-
-Comparison operators (`<`, `>`, `<=`, `>=`) are also built into the language for convenience.
-
-**Note**: Other operators (Mapper `<$>`, Workflow `>>=`, Combiner `<>`, composition operators, etc.) are defined in the [Standard Library](../guides/standard-library-overview.md) as library functions, not built into the language grammar.
-
-### 6. FlowSpaces and Modules (Categories)
-
-Modules organize code into FlowSpaces with explicit structure. A **FlowSpace** is what category theory calls a *Category* - a collection of Shapes and Flows with composition and identity.
-
-> **Note**: Updated to use pragmatic terminology while maintaining categorical structure.
+Systems organize code into categorical structures with explicit imports and exports.
 
 ```catena
--- Module defining a FlowSpace with Shapes and Flows
-flowspace Collections = {
-  -- Shapes (Objects in the category)
-  export shape List a
-  export shape Set a
+-- System definition
+system Collections = {
+  -- Export types (Objects)
+  export type List a
+  export type Set a
+  export type Map k v
 
-  -- Flows (Morphisms between objects)
-  export flow map : (a -> b) -> List a -> List b
-  export flow filter : (a -> Bool) -> List a -> List a
-  export flow fold : (a -> b -> b) -> b -> List a -> b
+  -- Export transforms (Morphisms)
+  export transform map : (a -> b) -> List a -> List b
+  export transform filter : (a -> Bool) -> List a -> List a
+  export transform fold : (a -> b -> b) -> b -> List a -> b
+
+  -- Internal helpers (not exported)
+  transform partition_helper : (a -> Bool) -> List a -> (List a, List a)
+  transform partition_helper pred xs = ...
 }
 
--- Module for trait definitions
-module Data.Ordering where
-  export trait Orderable a where
-    compare : a -> a -> Ordering
+-- Import from systems
+import Collections (List, map, filter)
 
-  export shape Ordering = LT | EQ | GT
-
--- Module for instances
-module Data.Natural.Instances where
-  import Data.Ordering (Orderable, Ordering)
-
-  instance Orderable Natural where
-    compare x y =
-      if x < y then LT
-      else if x > y then GT
-      else EQ
+-- Qualified imports
+import qualified Data.Natural as Nat
 ```
 
-### 7. Effects and Handlers
+### 6. Effects and Handlers
 
-Side effects are managed through algebraic effect handlers, making them explicit in types. Effects are essentially **EffectfulFlows** (Kleisli arrows in category theory).
+Side effects are managed through algebraic effect handlers, making them explicit in types. Effects are essentially **EffectfulTransforms** (Kleisli arrows in category theory).
 
 ```catena
 -- Define an effect
@@ -233,9 +222,9 @@ effect FileIO = {
   write : Path -> String -> Unit
 }
 
--- Use effects with perform keyword (creating an EffectfulFlow)
-flow loadConfig : Path -> Config / {FileIO}
-flow loadConfig path = do
+-- Use effects with perform keyword
+transform loadConfig : Path -> Config / {FileIO}
+transform loadConfig path = do
   content <- perform FileIO.read(path)
   return parseConfig(content)
 
@@ -245,39 +234,77 @@ handle loadConfig("app.toml") with
   FileIO.write(p, c) -> writeToDisk(p, c)
 end
 
--- Workflow-based effects
-trait WorkflowIO (m : Type -> Type) extends Workflow m where
+-- Pipeline-based effects
+trait PipelineIO (m : Type -> Type) extends Pipeline m where
   liftIO : IO a -> m a
 ```
 
-### 8. Actors and Processes
+### 7. Actors and Processes
 
-BEAM processes are first-class with categorical structure. Actors form their own FlowSpace where message passing represents Flows.
+BEAM processes are first-class with categorical structure. Actors form their own System where message passing represents Transforms.
 
 ```catena
 actor Counter = {
-  shape State = { count: Natural }
-  shape Message = Increment | Decrement | Get
+  type State = { count: Natural }
+  type Message = Increment | Decrement | Get
 
-  flow init : Unit -> State
-  flow init () = { count: 0 }
+  transform init : Unit -> State
+  transform init () = { count: 0 }
 
-  flow handle : Message -> State -> (State, Maybe Reply)
-  flow handle msg state = match msg
+  -- Use 'process' keyword for message handlers
+  process handle : Message -> State -> (State, Maybe Reply)
+  process handle msg state = match msg
     | Increment -> ({ count: state.count + 1 }, None)
     | Decrement -> ({ count: state.count - 1 }, None)
     | Get -> (state, Some state.count)
   end
 }
+
+-- Supervisor definition
+supervisor CounterSupervisor = {
+  strategy: one_for_one,
+  intensity: 10,
+  period: 60,
+
+  children: [
+    {
+      id: counter,
+      start: Counter.start_link,
+      restart: permanent,
+      shutdown: 5000
+    }
+  ]
+}
+```
+
+### 8. Adapters (Natural Transformations)
+
+Adapters provide structure-preserving conversions between type constructors, representing natural transformations in category theory.
+
+```catena
+-- Adapter definition
+adapter listToMaybe : List ~> Maybe where
+  adapt [] = None
+  adapt (x::_) = Some x
+
+-- Using adapters
+transform firstElement : List a -> Maybe a
+transform firstElement xs = adapt listToMaybe xs
+
+-- Adapter laws
+laws adapter listToMaybe where
+  property "naturality" =
+    forall f : (a -> b), xs : List a ->
+      map f (adapt xs) === adapt (map f xs)
 ```
 
 ### 9. Pattern Matching
 
-Advanced pattern matching with categorical foundations. Patterns are essentially **Context Shifts** (natural transformations) between different representations of data.
+Advanced pattern matching with categorical foundations.
 
 ```catena
-flow process : Message -> Response
-flow process = match
+transform process : Message -> Response
+transform process = match
   -- View patterns
   | parse_json -> Ok(data) -> handle_data(data)
 
@@ -295,9 +322,7 @@ end
 
 ### 10. Documentation as First-Class
 
-Documentation is mandatory and introspectable. Docs describe the behavior of Shapes, Flows, and trait instances.
-
-> **Note**: Extended to include documentation of trait laws.
+Documentation is mandatory and introspectable.
 
 ```catena
 doc "Calculates the distance between two points"
@@ -309,8 +334,8 @@ doc returns "Euclidean distance as Float"
 doc examples """
   distance({x: 0, y: 0}, {x: 3, y: 4}) == 5.0
 """
-flow distance : Point -> Point -> Float
-flow distance p1 p2 =
+transform distance : Point -> Point -> Float
+transform distance p1 p2 =
   sqrt((p2.x - p1.x)^2 + (p2.y - p1.y)^2)
 
 -- Documentation for trait instances
@@ -326,7 +351,7 @@ instance Comparable a => Comparable (List a) where
 
 ### 11. Testing as Language Primitive
 
-> **Note**: Tests verify that implementations satisfy categorical laws. Property testing ensures our Mappers are true Functors, our Workflows are lawful Monads, etc.
+Tests verify that implementations satisfy categorical laws.
 
 ```catena
 -- Unit tests
@@ -344,8 +369,8 @@ property "distance is symmetric" =
 test "List satisfies Mapper laws" =
   verify laws Mapper for List
 
-test "Maybe is a valid Workflow" =
-  verify laws Workflow for Maybe
+test "Maybe is a valid Pipeline" =
+  verify laws Pipeline for Maybe
 
 test "Natural forms an Accumulator" =
   verify laws Accumulator for Natural
@@ -360,11 +385,11 @@ suite "Collection Operations" where
     forall xs : List a ->
       List.reverse (List.reverse xs) === xs
 
--- Benchmarks for performance testing
+-- Benchmarks
 benchmark "fold performance" = {
   baseline: {
-    "left fold": measure -> List.fold_left (<>) empty largeList,
-    "right fold": measure -> List.fold_right (<>) empty largeList
+    "left fold": measure -> List.fold_left combine empty largeList,
+    "right fold": measure -> List.fold_right combine empty largeList
   },
 
   requirements: {
@@ -376,14 +401,12 @@ benchmark "fold performance" = {
 
 ### 12. Type System Features
 
-Advanced types with categorical grounding. The type system supports all the universal constructions of category theory.
-
-> **Note**: Extended with higher-kinded types for Mappers (Functors) and Workflows (Monads).
+Advanced types with categorical grounding.
 
 ```catena
 -- Row polymorphism
-flow getX : {x: Float | ρ} -> Float
-flow getX record = record.x
+transform getX : {x: Float | ρ} -> Float
+transform getX record = record.x
 
 -- Type families
 type family Append xs ys where
@@ -391,61 +414,50 @@ type family Append xs ys where
   Append (x:xs) ys = x : Append xs ys
 
 -- Existential types
-shape AbstractSet a = exists r. {
+type AbstractSet a = exists r. {
   rep: r,
   empty: r,
   insert: a -> r -> r,
   member: a -> r -> Bool
 }
 
--- ShapeMapper (Endofunctor) - maps within same FlowSpace
-trait ShapeMapper (f : Type -> Type) where
-  map : (a -> b) -> f a -> f b
-
--- DualMapper (Bifunctor) - maps two Shapes simultaneously
+-- Higher-kinded types
 trait DualMapper (p : Type -> Type -> Type) where
   bimap : (a -> c) -> (b -> d) -> p a b -> p c d
 
 -- Multiple constraints using pragmatic names
-flow traverse : (Traversable t, StructuredMapper f) =>
+transform traverse : (Traversable t, Applicator f) =>
   (a -> f b) -> t a -> f (t b)
 
 -- Bundle (Product) and Choice (Coproduct) types
-shape Bundle a b = Bundle a b  -- Product in CT
-shape Choice a b = Left a | Right b  -- Coproduct in CT
-
--- ContextReader (Comonad) - extract from context
-trait ContextReader (w : Type -> Type) extends ShapeMapper w where
-  extract : w a -> a
-  extend : (w a -> b) -> w a -> w b
+type Bundle a b = Bundle a b  -- Product in CT
+type Choice a b = Left a | Right b  -- Coproduct in CT
 ```
 
 ### 13. Immutability and Updates
 
-All data is immutable with structured update syntax. Updates create new Shapes rather than modifying existing ones.
+All data is immutable with structured update syntax.
 
 ```catena
 -- Update with 'with' keyword
-flow birthday : User -> User
-flow birthday user =
+transform birthday : User -> User
+transform birthday user =
   user with { age = user.age + 1 }
 
--- Optics for nested updates (lenses are Context Shifts)
-flow updateCity : Text -> Person -> Person
-flow updateCity newCity =
+-- Optics for nested updates (lenses)
+transform updateCity : Text -> Person -> Person
+transform updateCity newCity =
   Person.address.city.set newCity
 ```
 
 ## Complete Syntax Examples
 
-**Note**: Examples focus on core language features using pragmatic terminology. For standard library patterns (Mapper/Functor, Workflow/Monad usage), see the [Standard Library Guide](../guides/standard-library-overview.md).
-
 ### Session Types for Protocol Safety
 
-Session types define communication protocols as FlowSpaces where each state is a Shape and transitions are Flows.
+Session types define communication protocols as Systems where each state is a Type and transitions are Transforms.
 
 ```catena
--- Define a session protocol (a FlowSpace of communication states)
+-- Define a session protocol
 session TwoPhaseCommit =
   !prepare -> ?vote ->
   choice {
@@ -453,9 +465,9 @@ session TwoPhaseCommit =
     abort -> !rollback -> end
   }
 
--- Implement session (Flows between protocol states)
-flow coordinator : Session[TwoPhaseCommit] -> Result
-flow coordinator session = do
+-- Implement session
+transform coordinator : Session[TwoPhaseCommit] -> Result
+transform coordinator session = do
   send session Prepare
   vote <- receive session
   match vote
@@ -472,17 +484,17 @@ flow coordinator session = do
 
 ### DSL Creation
 
-DSLs are embedded FlowSpaces with their own Shapes, Flows, and laws.
+DSLs are embedded Systems with their own categorical structure.
 
 ```catena
--- Define a DSL (embedded FlowSpace)
-dsl MatrixDSL : FlowSpace where
-  -- Grammar for Shapes
+-- Define a DSL
+dsl MatrixDSL : System where
+  -- Grammar for Types
   grammar Matrix where
     syntax "[[ _ ]]" : Matrix where
       [[ a, b; c, d ]] = Matrix 2 2 [[a,b], [c,d]]
 
-  -- Operations (Flows in the DSL)
+  -- Operations (Transforms in the DSL)
   operator (×) = matrix_multiply
   operator (ᵀ) = transpose [postfix]
 
@@ -496,13 +508,13 @@ dsl MatrixDSL : FlowSpace where
 ```mermaid
 graph TB
     subgraph "Category Theory Foundation"
-        CT[FlowSpace Type System]
-        CT --> Shapes[Shapes (Objects)]
-        CT --> Flows[Flows (Morphisms)]
+        CT[System Type System]
+        CT --> Types[Types (Objects)]
+        CT --> Transforms[Transforms (Morphisms)]
         CT --> Traits[Traits/Type Classes]
         CT --> Mappers[Mappers (Functors)]
-        CT --> ContextShifts[Context Shifts (Natural Transformations)]
-        CT --> Workflows[Workflows (Monads)]
+        CT --> Adapters[Adapters (Natural Transformations)]
+        CT --> Pipelines[Pipelines (Monads)]
     end
 
     subgraph "BEAM Runtime"
@@ -528,7 +540,7 @@ graph TB
         EFF[Algebraic Effects]
         EFF --> Handlers[Effect Handlers]
         EFF --> Pure[Pure Core]
-        EFF --> EffFlows[EffectfulFlows (Kleisli)]
+        EFF --> EffTransforms[EffectfulTransforms (Kleisli)]
         EFF --> IO[I/O Effects]
         EFF --> Conc[Concurrency Effects]
     end
@@ -541,693 +553,96 @@ graph TB
         TEST --> Bench[Benchmarks]
     end
 
-    Shapes --> Processes
-    Flows --> Messages
+    Types --> Processes
+    Transforms --> Messages
     Mappers --> Supervision
-    ContextShifts --> HotReload
+    Adapters --> HotReload
     Traits --> CT
-    Workflows --> EFF
+    Pipelines --> EFF
 
     TS --> CT
     EFF --> VM
     TEST --> Traits
 ```
 
-## Complete Case Study: Online Store
-
-Let's build a modular online store system demonstrating all of Catena's features with pragmatic terminology.
-
-### Module 1: Core Domain Models (Shapes)
-
-```catena
-module Store.Domain where
-
--- Core Shapes (Objects in our domain FlowSpace)
-doc "Represents a product in the catalog"
-shape Product = {
-  id: ProductId,
-  name: Text,
-  price: Money,
-  stock: Natural
-} deriving [Comparable, Show, Doc]
-
-doc "Customer information"
-shape Customer = {
-  id: CustomerId,
-  name: Text,
-  email: Email,
-  address: Address
-}
-
-doc "Shopping cart with items (Bundle type)"
-shape Cart = {
-  customer: CustomerId,
-  items: List CartItem,
-  created: Timestamp
-}
-
-shape CartItem = {
-  product: ProductId,
-  quantity: Natural
-}
-
-shape Order = {
-  id: OrderId,
-  customer: Customer,
-  items: List OrderItem,
-  total: Money,
-  status: OrderStatus
-}
-
--- Choice (Coproduct) representing order states
-shape OrderStatus =
-  | Pending
-  | Confirmed
-  | Shipped TrackingNumber
-  | Delivered
-  | Cancelled Reason
-
--- Type families for calculations
-type family TotalPrice items where
-  TotalPrice [] = Money 0
-  TotalPrice (item:rest) =
-    item.price * item.quantity + TotalPrice rest
-```
-
-### Module 2: Effects Definition (EffectfulFlows)
-
-```catena
-module Store.Effects where
-
--- Database effect (EffectfulFlows for data operations)
-effect Database = {
-  query : Query a -> List a,
-  insert : a -> Unit,
-  update : Id -> a -> Unit,
-  delete : Id -> Unit
-}
-
--- Payment processing effect
-effect Payment = {
-  charge : Card -> Money -> PaymentResult,
-  refund : TransactionId -> Money -> RefundResult
-}
-
--- Email notification effect
-effect Email = {
-  send : Address -> Template -> Unit
-}
-
--- Inventory management effect
-effect Inventory = {
-  check : ProductId -> Natural,
-  reserve : ProductId -> Natural -> Bool,
-  release : ProductId -> Natural -> Unit
-}
-```
-
-### Module 3: Business Logic (Pure Flows)
-
-```catena
-module Store.Logic where
-import Store.Domain
-import Store.Effects
-
--- Pure validation Flows (morphisms between Shapes)
-doc "Validates a cart has items and all are in stock"
-flow validateCart : Cart -> Result Cart ValidationError
-flow validateCart cart = do
-  ensure (not List.empty cart.items)
-    "Cart cannot be empty"
-
-  ensure (all validQuantity cart.items)
-    "Invalid item quantities"
-
-  Ok cart
-where
-  validQuantity item = item.quantity > 0
-
--- Price calculation with row polymorphism
-flow calculateTotal : {items: List OrderItem | ρ} -> Money
-flow calculateTotal order =
-  List.foldl (\acc item ->
-    acc + (item.price * item.quantity)
-  ) (Money 0) order.items
-
--- Order state machine (Flows between OrderStatus Shapes)
-flow processOrderStatus : OrderStatus -> OrderEvent -> OrderStatus
-flow processOrderStatus = match
-  | Pending, Confirm -> Confirmed
-  | Confirmed, Ship(tracking) -> Shipped(tracking)
-  | Shipped(_), Deliver -> Delivered
-  | status, Cancel(reason) when cancelable(status) ->
-    Cancelled(reason)
-  | status, _ -> status  -- Invalid transitions ignored
-end
-where
-  cancelable = match
-    | Pending | Confirmed -> true
-    | _ -> false
-  end
-```
-
-### Module 4: Service Layer with Effects (EffectfulFlows/Workflows)
-
-```catena
-module Store.Service where
-import Store.Domain
-import Store.Logic
-import Store.Effects
-
--- Checkout service using multiple EffectfulFlows
--- This is a Workflow (Monad) combining multiple effects
-flow checkout : Cart -> Result Order CheckoutError
-  / {Database, Payment, Email, Inventory}
-flow checkout cart = do
-  -- Validate cart
-  validCart <- validateCart cart |> liftResult
-
-  -- Check inventory (EffectfulFlow)
-  available <- all checkStock validCart.items
-  ensure available StockUnavailable
-
-  -- Reserve items
-  reserved <- all reserveItem validCart.items
-  ensure reserved ReservationFailed
-
-  -- Create order
-  let order = createOrder validCart
-  perform Database.insert(order)
-
-  -- Process payment (another EffectfulFlow)
-  payment <- perform Payment.charge(
-    validCart.customer.card,
-    order.total
-  )
-
-  match payment
-    | Success(txn) -> do
-      let confirmed = order with {
-        status = Confirmed,
-        transaction = txn
-      }
-      perform Database.update(order.id, confirmed)
-      perform Email.send(
-        order.customer.email,
-        OrderConfirmation(confirmed)
-      )
-      Ok confirmed
-
-    | Failure(reason) -> do
-      -- Release reserved inventory
-      each (releaseItem) validCart.items
-      perform Database.update(order.id,
-        order with { status = Cancelled(reason) })
-      Error PaymentFailed(reason)
-  end
-where
-  checkStock item =
-    perform Inventory.check(item.product) >= item.quantity
-
-  reserveItem item =
-    perform Inventory.reserve(item.product, item.quantity)
-
-  releaseItem item =
-    perform Inventory.release(item.product, item.quantity)
-```
-
-### Module 5: Actor-Based Order Processing
-
-Actors form their own FlowSpace where messages are Flows between actor states.
-
-```catena
-module Store.OrderProcessor where
-import Store.Domain
-import Store.Service
-
--- Order processing actor (a FlowSpace of states and message Flows)
-actor OrderProcessor = {
-  shape State = {
-    orders: Map OrderId Order,
-    metrics: ProcessingMetrics
-  }
-
-  shape Message =
-    | ProcessOrder Cart
-    | UpdateStatus OrderId OrderStatus
-    | GetOrder OrderId
-    | GetMetrics
-
-  flow init : Unit -> State
-  flow init () = {
-    orders: Map.empty,
-    metrics: defaultMetrics
-  }
-
-  -- Handler is a Flow from (Message, State) to (State, Reply)
-  flow handle : Message -> State -> (State, Maybe Reply)
-    / {Database, Payment, Email, Inventory}
-  flow handle msg state = match msg
-    | ProcessOrder cart -> do
-      result <- checkout cart
-      match result
-        | Ok order ->
-          let newState = state with {
-            orders = Map.insert order.id order state.orders,
-            metrics = updateMetrics Success state.metrics
-          }
-          (newState, Some order.id)
-
-        | Error e ->
-          let newState = state with {
-            metrics = updateMetrics (Failure e) state.metrics
-          }
-          (newState, Some (Error e))
-      end
-
-    | UpdateStatus id status ->
-      let updated = Map.update id
-        (\order -> order with { status = status })
-        state.orders
-      (state with { orders = updated }, None)
-
-    | GetOrder id ->
-      (state, Map.lookup id state.orders)
-
-    | GetMetrics ->
-      (state, Some state.metrics)
-  end
-}
-
--- Supervisor for order processing (manages actor FlowSpace)
-supervisor OrderSupervisor = {
-  strategy: one_for_one,
-  intensity: 10,
-  period: 60,
-
-  children: [
-    {
-      id: order_processor,
-      start: OrderProcessor.start_link,
-      restart: permanent,
-      shutdown: 5000
-    }
-  ]
-}
-```
-
-### Module 6: Web API with Session Types
-
-Session types define communication protocols as FlowSpaces.
-
-```catena
-module Store.API where
-import Store.Service
-
--- Define API session protocol (a FlowSpace of communication states)
-session CustomerSession =
-  ?Login Credentials ->
-  choice {
-    success -> !Token -> ShoppingSession,
-    failure -> !Error -> end
-  }
-
-session ShoppingSession =
-  rec X. choice {
-    browse -> !Products -> X,
-    addToCart -> ?ProductId -> !Result -> X,
-    viewCart -> !Cart -> X,
-    checkout -> ?PaymentInfo -> CheckoutSession,
-    logout -> end
-  }
-
-session CheckoutSession =
-  !OrderSummary ->
-  ?Confirmation ->
-  choice {
-    confirm -> !Order -> end,
-    cancel -> ShoppingSession
-  }
-
--- Implement the API handler (Flows through session states)
-flow handleCustomer : Session[CustomerSession] -> Unit
-  / {Database, Http}
-flow handleCustomer session = do
-  credentials <- receive session
-  user <- perform Database.query(
-    UserByCredentials(credentials)
-  )
-
-  match user
-    | Some u -> do
-      select session success
-      token <- generateToken u
-      send session token
-      handleShopping session u
-
-    | None -> do
-      select session failure
-      send session InvalidCredentials
-  end
-
-flow handleShopping : Session[ShoppingSession] -> User -> Unit
-  / {Database, Http}
-flow handleShopping session user = do
-  choice <- receive session
-  match choice
-    | browse -> do
-      products <- perform Database.query(AllProducts)
-      send session products
-      handleShopping session user
-
-    | addToCart -> do
-      productId <- receive session
-      result <- addToUserCart user productId
-      send session result
-      handleShopping session user
-
-    | viewCart -> do
-      cart <- perform Database.query(CartByUser user.id)
-      send session cart
-      handleShopping session user
-
-    | checkout -> do
-      payment <- receive session
-      handleCheckout session user payment
-
-    | logout -> ()
-  end
-```
-
-### Module 7: Testing
-
-Testing verifies that our implementations satisfy categorical laws.
-
-```catena
-module Store.Test where
-import Store.Service
-import Store.Domain
-
--- Property-based testing for business logic
-property "cart total is sum of items" =
-  forall items : List CartItem ->
-    calculateTotal {items: items} ===
-    List.sum (List.map itemTotal items)
-  where
-    itemTotal item = item.price * item.quantity
-
--- Verify our types form proper algebraic structures
-test "Money is a valid Accumulator (Monoid)" =
-  verify laws Accumulator for Money
-
-test "Order forms a Comparable (Setoid)" =
-  verify laws Comparable for Order
-
--- Test EffectfulFlows with mock handlers
-test "checkout reserves inventory" = do
-  let cart = {
-    customer: testCustomer,
-    items: [{product: pid1, quantity: 2}]
-  }
-
-  let inventoryOps = ref []
-
-  -- Run with mock handlers (interpreting EffectfulFlows)
-  result <- handle checkout(cart) with
-    Database.insert(_) -> ()
-    Database.update(_, _) -> ()
-
-    Payment.charge(_, amount) ->
-      assert amount === Money 200
-      Success(txn123)
-
-    Email.send(_, _) -> ()
-
-    Inventory.check(pid) ->
-      assert pid === pid1
-      return 10  -- Plenty in stock
-
-    Inventory.reserve(pid, qty) ->
-      inventoryOps := (pid, qty) :: !inventoryOps
-      return true
-  end
-
-  -- Verify inventory was reserved
-  assert !inventoryOps === [(pid1, 2)]
-  assert result matches Ok(_)
-end
-
--- Actor testing (testing message Flows)
-test actor "order processor handles concurrent orders" = do
-  let processor = spawn_test OrderProcessor.init()
-
-  -- Send multiple orders concurrently
-  parallel [
-    processor ! ProcessOrder(cart1),
-    processor ! ProcessOrder(cart2),
-    processor ! ProcessOrder(cart3)
-  ]
-
-  wait_idle processor
-
-  -- Verify all processed
-  metrics <- processor ?? GetMetrics
-  assert metrics.total === 3
-end
-
--- Test suite organization
-suite "Order Validation Tests" where
-  test "empty cart is rejected" =
-    assert validateCart emptyCart === Error "Cart cannot be empty"
-
-  test "zero quantity is rejected" =
-    let cart = {items: [{product: p1, quantity: 0}]}
-    assert validateCart cart === Error "Invalid item quantities"
-
-  property "valid carts pass validation" =
-    forall cart : Cart where all (\i -> i.quantity > 0) cart.items ->
-      validateCart cart matches Ok(_)
-
--- Benchmark testing for Flows
-benchmark "checkout performance" = {
-  baseline: {
-    "simple checkout":
-      measure -> checkout(simpleCart),
-    "complex checkout":
-      measure -> checkout(complexCart)
-  },
-
-  requirements: {
-    "checkout under 100ms": time < 100.ms,
-    "memory usage": heap_growth < 1.mb
-  }
-}
-```
-
-### Module 8: DSL for Business Rules
-
-DSLs are embedded FlowSpaces with their own categorical structure.
-
-```catena
-module Store.Rules where
-
--- Define a DSL for business rules (embedded FlowSpace)
-dsl BusinessRules where
-  -- Rule definition syntax (Shapes in the DSL)
-  rule FreeShipping =
-    when order.total > Money 100
-    then order with { shipping = Free }
-
-  rule BulkDiscount =
-    when any item -> item.quantity >= 10
-    then apply discount 0.10 to item
-
-  rule LoyaltyPoints =
-    when customer.tier == Gold
-    then award points (order.total * 0.02)
-
-  -- Rule composition (Flow composition in the DSL)
-  ruleset StandardRules =
-    FreeShipping >> BulkDiscount >> LoyaltyPoints
-
-  -- Interpreter for rules (maps DSL Flows to implementation)
-  interpreter RuleEngine : BusinessRules -> Order -> Order where
-    apply rule order = match rule
-      | when condition then action ->
-        if evaluate condition order
-        then execute action order
-        else order
-    end
-```
-
-### Module 9: Main Application
-
-The main application composes all FlowSpaces and handles effects.
-
-```catena
-module Store.Main where
-import Store.{OrderProcessor, API, Service}
-
--- Main application with effect handling
-flow main : Unit -> Unit / {}
-flow main () = do
-  -- All EffectfulFlows must be handled
-  handle runApplication() with
-    -- Production handlers (interpreting EffectfulFlows)
-    Database.query(q) -> PostgreSQL.execute(q)
-    Database.insert(x) -> PostgreSQL.insert(x)
-    Database.update(id, x) -> PostgreSQL.update(id, x)
-    Database.delete(id) -> PostgreSQL.delete(id)
-
-    Payment.charge(card, amount) ->
-      StripeAPI.charge(card, amount)
-    Payment.refund(txn, amount) ->
-      StripeAPI.refund(txn, amount)
-
-    Email.send(addr, template) ->
-      SendGrid.send(addr, render(template))
-
-    Inventory.check(pid) ->
-      InventoryDB.getStock(pid)
-    Inventory.reserve(pid, qty) ->
-      InventoryDB.reserve(pid, qty)
-    Inventory.release(pid, qty) ->
-      InventoryDB.release(pid, qty)
-  end
-
-flow runApplication : Unit -> Unit
-  / {Database, Payment, Email, Inventory}
-flow runApplication () = do
-  -- Start supervision tree (manages actor FlowSpaces)
-  supervisor OrderSupervisor.start()
-
-  -- Start web server
-  HttpServer.start(port: 8080) { request ->
-    match request.path
-      | "/api/session" ->
-        spawn handleCustomer(establishSession())
-      | "/health" ->
-        HttpResponse.ok("healthy")
-      | _ ->
-        HttpResponse.notFound()
-    end
-  }
-
-  -- Keep running
-  Process.sleep(:infinity)
-end
-```
-
 ## Key Language Features Summary
 
-> **Note**: Updated to use pragmatic terminology throughout while maintaining categorical foundations.
-
 ### Category Theory Integration (Pragmatic Names)
-- **Shapes and Flows**: Types and functions as Objects and Morphisms
-- **FlowSpaces**: Categories organizing code structure
+- **Types and Transforms**: Data structures and functions as Objects and Morphisms
+- **Systems**: Categories organizing code structure
 - **Traits and Instances**: Type classes with lawful abstractions
 - **Mappers (Functors)**: Structure-preserving transformations
-- **Workflows (Monads)**: Composable effectful computations
-- **Context Shifts (Natural Transformations)**: Structure-preserving conversions
+- **Pipelines (Monads)**: Composable effectful computations
+- **Adapters (Natural Transformations)**: Structure-preserving conversions
+- **Extractors (Comonads)**: Dual of Pipelines, extract from context
 - **Bundles and Choices**: Products and Coproducts
 - **Accumulators (Monoids)**: Types with identity and combination
-- **Standard Library Abstractions**: See [Standard Library Guide](../guides/standard-library-overview.md) for complete list
 
 ### Type System
 - **Trait System**: General abstraction mechanism with `trait`, `instance`, `extends`
-- **Higher-Kinded Types**: ShapeMappers and DualMappers with kind annotations
-- **Type Class Constraints**: Using pragmatic names (Comparable, Orderable, Mapper, Workflow)
+- **Higher-Kinded Types**: Type constructors with kind annotations
+- **Type Class Constraints**: Using pragmatic names (Comparable, Mapper, Pipeline)
 - **Row Polymorphism**: Extensible records and variants
-- **Polymorphic Variants**: Open sum types (Choices)
+- **Polymorphic Variants**: Open sum types
 - **Type Families**: Type-level computation
-- **Singleton Types**: Bridge between types and values
 - **Existential Types**: Abstract data types
-- **Session Types**: Protocol-safe communication as FlowSpaces
+- **Session Types**: Protocol-safe communication
 
 ### Effects and Purity
 - **Algebraic Effects**: First-class effect definitions
 - **Effect Handlers**: Flexible effect interpretation
-- **EffectfulFlows (Kleisli Arrows)**: Computations with effects
+- **EffectfulTransforms (Kleisli Arrows)**: Computations with effects
 - **Pure by Default**: Explicit effect annotations
 - **Effect Polymorphism**: Generic over effects
-- **WorkflowIO**: Effect lifting into Workflows
-
-### Operators
-- **Type-Level Equality**: `===`, `!==` for Comparable equality (built into language)
-- **Comparison**: `<`, `>`, `<=`, `>=` (built into language for convenience)
-- **Standard Library Operators**: Available as library functions (see [Standard Library](../guides/standard-library-overview.md))
-  - Mapper/StructuredMapper/Workflow: `map`/`<$>`, `apply`/`<*>`, `chain`/`>>=`
-  - Combiner: `append`/`<>`
-  - Composition: Flow composition, EffectfulFlow composition
-  - ContextReader (Comonad) operators
-
-### Testing and Verification
-- **Unit Tests**: Basic `test` blocks
-- **Property Testing**: `property` with `forall` quantification
-- **Law Verification**: `verify laws Trait for Type` - ensures categorical laws hold
-- **Test Suites**: `suite` for organizing related tests
-- **Benchmarks**: `benchmark` with baselines and requirements
-- **Conditional Properties**: Properties with `where` constraints
+- **PipelineIO**: Effect lifting into Pipelines
 
 ### Concurrency and Distribution
-- **Actor Model**: Type-safe processes as FlowSpaces
+- **Actor Model**: Type-safe processes with `actor` keyword
+- **Process Handlers**: Message handling with `process` keyword
 - **Supervision Trees**: Categorical fault tolerance
-- **Hot Code Reloading**: Version migration as Mappers
+- **Hot Code Reloading**: Version migration
 - **Distributed Types**: Location-transparent computation
-- **Choreographic Programming**: Global protocol definitions
 
 ### Developer Experience
-- **Mandatory Documentation**: Machine-checkable docs
+- **Mandatory Documentation**: Machine-checkable docs with `doc`
 - **First-Class Testing**: Tests as language primitives
-- **Property Testing**: Automated law verification for traits
-- **Pattern Matching**: Advanced patterns as Context Shifts
-- **DSL Creation**: Embedded FlowSpaces with custom syntax
+- **Property Testing**: Automated law verification
+- **Pattern Matching**: Advanced patterns with `match`
+- **DSL Creation**: Embedded Systems with custom syntax
 - **Pragmatic Terminology**: Developer-friendly names for CT concepts
-- **Standard Library**: Rich functional abstractions with both pragmatic and traditional names
-
-### BEAM Integration
-- **Process Isolation**: Each actor has independent heap
-- **Message Passing**: Type-safe communication as Flows
-- **Fault Tolerance**: Let-it-crash with types
-- **Distribution**: Transparent node communication
-- **Performance**: Zero-cost abstractions where possible
 
 ## Pragmatic Terminology Summary
 
 | Pragmatic Name | Category Theory Term | Description |
 |----------------|---------------------|-------------|
-| **Shape** | Object | Data structures and types |
-| **Flow** | Morphism | Pure transformations between Shapes |
-| **FlowSpace** | Category | Collection of Shapes and Flows with composition |
+| **Type** | Object | Data structures and types |
+| **Transform** | Morphism | Pure functions between Types |
+| **System** | Category | Collection of Types and Transforms |
 | **Comparable** | Setoid | Types with custom equality |
 | **Combiner** | Semigroup | Associative binary operation |
 | **Accumulator** | Monoid | Combiner with identity element |
-| **Reversible Accumulator** | Group | Accumulator with inverses |
-| **Mapper** | Functor | Lifts Flows to work inside contexts |
-| **StructuredMapper** | Applicative | Mapper with pure and apply |
-| **Workflow** | Monad | Chainable effectful computations |
-| **EffectfulFlow** | Kleisli Arrow | Flow that produces effects |
-| **WorkflowLayer** | Monad Transformer | Stacks workflow capabilities |
-| **ContextReader** | Comonad | Extract values from context |
-| **ContextShift** | Natural Transformation | Convert between Mappers |
-| **Bundle** | Product | Composite of two Shapes |
+| **Mapper** | Functor | Lifts Transforms to contexts |
+| **Applicator** | Applicative | Mapper with pure and apply |
+| **Pipeline** | Monad | Chainable effectful computations |
+| **EffectfulTransform** | Kleisli Arrow | Transform that produces effects |
+| **PipelineLayer** | Monad Transformer | Stacks pipeline capabilities |
+| **Extractor** | Comonad | Extract values from context |
+| **Adapter** | Natural Transformation | Convert between type constructors |
+| **Bundle** | Product | Composite of two Types |
 | **Choice** | Coproduct | One of many possibilities |
-| **Unit** | Terminal Object | Single-valued type |
-| **Never** | Initial Object | No possible values |
-| **ShapeMapper** | Endofunctor | Maps within same FlowSpace |
 | **DualMapper** | Bifunctor | Maps two type parameters |
 
 ## Conclusion
 
-Catena represents a unique synthesis of mathematical rigor and practical distributed systems programming. By using **pragmatic terminology** (Shapes, Flows, Workflows) alongside traditional category theory terms, it makes powerful mathematical abstractions accessible to all developers. The language enables you to write code that is simultaneously:
+Catena represents a unique synthesis of mathematical rigor and practical distributed systems programming. By using **pragmatic terminology** (Types, Transforms, Pipelines) alongside traditional category theory terms, it makes powerful mathematical abstractions accessible to all developers. The language enables you to write code that is simultaneously:
 
 - **Mathematically Sound**: Verified by categorical laws through property testing
-- **Intuitively Named**: Using developer-friendly terms like Mapper and Workflow
+- **Intuitively Named**: Using developer-friendly terms like Pipeline and Mapper
 - **Practically Useful**: Running on battle-tested BEAM
 - **Type Safe**: Catching errors at compile time with advanced type system
-- **Concurrent**: Leveraging actors as FlowSpaces
+- **Concurrent**: Leveraging actors with dedicated `process` handlers
 - **Testable**: With built-in testing, property verification, and benchmarking
 - **Maintainable**: Through mandatory documentation and clear effects
-- **Composable**: Via trait system and Flow composition
+- **Composable**: Via trait system and Transform composition
 
 The online store example demonstrates how these features work together with pragmatic terminology to create a robust, scalable, and maintainable system that leverages the best of functional programming, category theory, and the BEAM runtime.
