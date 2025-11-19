@@ -43,7 +43,8 @@ formatter_test_() ->
       {"Error with expression context", fun test_error_with_context/0},
       {"Multiple error formatting", fun test_multiple_errors/0},
       {"Color highlighting", fun test_color_highlighting/0},
-      {"Verbosity levels", fun test_verbosity_levels/0}
+      {"Verbosity levels", fun test_verbosity_levels/0},
+      {"Depth limiting protection", fun test_depth_limiting/0}
      ]}.
 
 %%%===================================================================
@@ -243,6 +244,46 @@ test_verbosity_levels() ->
     ?assert(string:str(VerboseOutput, "Fix suggestions:") > 0),
     ?assert(string:str(VerboseOutput, "Examples:") > 0),
     ?assert(string:str(VerboseOutput, "String.to_integer") > 0).
+
+test_depth_limiting() ->
+    %% Create a deeply nested type structure (more than 10 levels)
+    DeepType1 = make_deeply_nested(15, {tcon, integer}),
+    DeepType2 = make_deeply_nested(15, {tcon, string}),
+
+    %% This should not crash and should return a too_deep mismatch
+    Diffs = catena_type_error_formatter:find_type_differences(DeepType1, DeepType2),
+
+    %% Verify we get a too_deep mismatch
+    HasTooDeep = lists:any(
+        fun({mismatch, too_deep}) -> true;
+           (_) -> false
+        end, Diffs),
+    ?assert(HasTooDeep),
+
+    %% Test that normal depth still works correctly
+    Normal1 = make_deeply_nested(3, {tcon, integer}),
+    Normal2 = make_deeply_nested(3, {tcon, string}),
+    NormalDiffs = catena_type_error_formatter:find_type_differences(Normal1, Normal2),
+
+    %% Should find the actual difference, not too_deep
+    NoTooDeep = not lists:any(
+        fun({mismatch, too_deep}) -> true;
+           (_) -> false
+        end, NormalDiffs),
+    ?assert(NoTooDeep),
+
+    %% Should find the constructor mismatch at the innermost level
+    HasConstructor = lists:any(
+        fun({mismatch, constructor}) -> true;
+           (_) -> false
+        end, NormalDiffs),
+    ?assert(HasConstructor).
+
+%% Helper function to create deeply nested types
+make_deeply_nested(0, Base) ->
+    Base;
+make_deeply_nested(N, Base) ->
+    {tapp, {tcon, list}, make_deeply_nested(N - 1, Base)}.
 
 %%%===================================================================
 %%% Property Tests

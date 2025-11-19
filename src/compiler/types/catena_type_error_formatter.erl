@@ -254,91 +254,114 @@ highlight_difference(Type1, Type2) ->
 %%% Internal Functions
 %%%===================================================================
 
+%% Maximum depth for type difference analysis to prevent stack overflow
+%% on deeply nested or recursive types
+-define(MAX_DIFF_DEPTH, 10).
+
 %% @doc Find structural differences between two types
 -spec find_type_differences(catena_types:ty(), catena_types:ty()) ->
     [{path, [atom() | integer()]} | {mismatch, atom()}].
 find_type_differences(Type1, Type2) ->
-    find_differences_impl(Type1, Type2, []).
+    find_differences_impl(Type1, Type2, [], 0).
 
-find_differences_impl({tvar, V1}, {tvar, V2}, Path) when V1 =/= V2 ->
+find_differences_impl(_Type1, _Type2, Path, Depth) when Depth > ?MAX_DIFF_DEPTH ->
+    [{path, Path}, {mismatch, too_deep}];
+find_differences_impl({tvar, V1}, {tvar, V2}, Path, _Depth) when V1 =/= V2 ->
     [{path, Path}, {mismatch, var}];
-find_differences_impl({tcon, C1}, {tcon, C2}, Path) when C1 =/= C2 ->
+find_differences_impl({tcon, C1}, {tcon, C2}, Path, _Depth) when C1 =/= C2 ->
     [{path, Path}, {mismatch, constructor}];
-find_differences_impl({tapp, T1, A1}, {tapp, T2, A2}, Path) ->
-    find_differences_impl(T1, T2, [app_fun | Path]) ++
-    find_differences_impl(A1, A2, [app_arg | Path]);
-find_differences_impl({tfun, P1, R1, E1}, {tfun, P2, R2, E2}, Path) ->
-    ParamDiffs = find_differences_impl(P1, P2, [param | Path]),
-    ReturnDiffs = find_differences_impl(R1, R2, [return | Path]),
+find_differences_impl({tapp, T1, A1}, {tapp, T2, A2}, Path, Depth) ->
+    NewDepth = Depth + 1,
+    find_differences_impl(T1, T2, [app_fun | Path], NewDepth) ++
+    find_differences_impl(A1, A2, [app_arg | Path], NewDepth);
+find_differences_impl({tfun, P1, R1, E1}, {tfun, P2, R2, E2}, Path, Depth) ->
+    NewDepth = Depth + 1,
+    ParamDiffs = find_differences_impl(P1, P2, [param | Path], NewDepth),
+    ReturnDiffs = find_differences_impl(R1, R2, [return | Path], NewDepth),
     EffectDiffs = case {E1, E2} of
         {E, E} -> [];
         _ -> [{path, [effects | Path]}, {mismatch, effects}]
     end,
     ParamDiffs ++ ReturnDiffs ++ EffectDiffs;
-find_differences_impl({trecord, Fields1, _}, {trecord, Fields2, _}, Path) ->
-    find_record_differences(Fields1, Fields2, Path);
-find_differences_impl({tvariant, Ctors1}, {tvariant, Ctors2}, Path) ->
-    find_variant_differences(Ctors1, Ctors2, Path);
-find_differences_impl({ttuple, Elems1}, {ttuple, Elems2}, Path) ->
-    find_tuple_differences(Elems1, Elems2, Path);
-find_differences_impl(_, _, Path) when Path =/= [] ->
+find_differences_impl({trecord, Fields1, _}, {trecord, Fields2, _}, Path, Depth) ->
+    find_record_differences(Fields1, Fields2, Path, Depth + 1);
+find_differences_impl({tvariant, Ctors1}, {tvariant, Ctors2}, Path, Depth) ->
+    find_variant_differences(Ctors1, Ctors2, Path, Depth + 1);
+find_differences_impl({ttuple, Elems1}, {ttuple, Elems2}, Path, Depth) ->
+    find_tuple_differences(Elems1, Elems2, Path, Depth + 1);
+find_differences_impl(_, _, Path, _Depth) when Path =/= [] ->
     [{path, Path}, {mismatch, structure}];
-find_differences_impl(_, _, []) ->
+find_differences_impl(_, _, [], _Depth) ->
     [{mismatch, root}].
 
 %% @doc Find differences in record fields
-find_record_differences(Fields1, Fields2, Path) ->
-    F1Map = maps:from_list(Fields1),
-    F2Map = maps:from_list(Fields2),
-    Keys = sets:to_list(sets:union(
-        sets:from_list(maps:keys(F1Map)),
-        sets:from_list(maps:keys(F2Map))
-    )),
-    lists:flatmap(fun(Key) ->
-        case {maps:find(Key, F1Map), maps:find(Key, F2Map)} of
-            {{ok, T1}, {ok, T2}} ->
-                find_differences_impl(T1, T2, [{field, Key} | Path]);
-            {{ok, _}, error} ->
-                [{path, [{field, Key} | Path]}, {mismatch, missing_field}];
-            {error, {ok, _}} ->
-                [{path, [{field, Key} | Path]}, {mismatch, extra_field}];
-            _ -> []
-        end
-    end, Keys).
+find_record_differences(Fields1, Fields2, Path, Depth) ->
+    case Depth > ?MAX_DIFF_DEPTH of
+        true ->
+            [{path, Path}, {mismatch, too_deep}];
+        false ->
+            F1Map = maps:from_list(Fields1),
+            F2Map = maps:from_list(Fields2),
+            Keys = sets:to_list(sets:union(
+                sets:from_list(maps:keys(F1Map)),
+                sets:from_list(maps:keys(F2Map))
+            )),
+            lists:flatmap(fun(Key) ->
+                case {maps:find(Key, F1Map), maps:find(Key, F2Map)} of
+                    {{ok, T1}, {ok, T2}} ->
+                        find_differences_impl(T1, T2, [{field, Key} | Path], Depth);
+                    {{ok, _}, error} ->
+                        [{path, [{field, Key} | Path]}, {mismatch, missing_field}];
+                    {error, {ok, _}} ->
+                        [{path, [{field, Key} | Path]}, {mismatch, extra_field}];
+                    _ -> []
+                end
+            end, Keys)
+    end.
 
 %% @doc Find differences in variant constructors
-find_variant_differences(Ctors1, Ctors2, Path) ->
-    C1Map = maps:from_list(Ctors1),
-    C2Map = maps:from_list(Ctors2),
-    Keys = sets:to_list(sets:union(
-        sets:from_list(maps:keys(C1Map)),
-        sets:from_list(maps:keys(C2Map))
-    )),
-    lists:flatmap(fun(Key) ->
-        case {maps:find(Key, C1Map), maps:find(Key, C2Map)} of
-            {{ok, T1}, {ok, T2}} ->
-                find_differences_impl(T1, T2, [{constructor, Key} | Path]);
-            {{ok, _}, error} ->
-                [{path, [{constructor, Key} | Path]}, {mismatch, missing_ctor}];
-            {error, {ok, _}} ->
-                [{path, [{constructor, Key} | Path]}, {mismatch, extra_ctor}];
-            _ -> []
-        end
-    end, Keys).
+find_variant_differences(Ctors1, Ctors2, Path, Depth) ->
+    case Depth > ?MAX_DIFF_DEPTH of
+        true ->
+            [{path, Path}, {mismatch, too_deep}];
+        false ->
+            C1Map = maps:from_list(Ctors1),
+            C2Map = maps:from_list(Ctors2),
+            Keys = sets:to_list(sets:union(
+                sets:from_list(maps:keys(C1Map)),
+                sets:from_list(maps:keys(C2Map))
+            )),
+            lists:flatmap(fun(Key) ->
+                case {maps:find(Key, C1Map), maps:find(Key, C2Map)} of
+                    {{ok, T1}, {ok, T2}} ->
+                        find_differences_impl(T1, T2, [{constructor, Key} | Path], Depth);
+                    {{ok, _}, error} ->
+                        [{path, [{constructor, Key} | Path]}, {mismatch, missing_ctor}];
+                    {error, {ok, _}} ->
+                        [{path, [{constructor, Key} | Path]}, {mismatch, extra_ctor}];
+                    _ -> []
+                end
+            end, Keys)
+    end.
 
 %% @doc Find differences in tuple elements
-find_tuple_differences(Elems1, Elems2, Path) ->
-    case length(Elems1) =:= length(Elems2) of
+find_tuple_differences(Elems1, Elems2, Path, Depth) ->
+    case Depth > ?MAX_DIFF_DEPTH of
         true ->
-            lists:append([
-                find_differences_impl(E1, E2, [{elem, I} | Path])
-                || {I, E1, E2} <- lists:zip3(
-                    lists:seq(1, length(Elems1)),
-                    Elems1, Elems2
-                )
-            ]);
+            [{path, Path}, {mismatch, too_deep}];
         false ->
-            [{path, Path}, {mismatch, tuple_arity}]
+            case length(Elems1) =:= length(Elems2) of
+                true ->
+                    lists:append([
+                        find_differences_impl(E1, E2, [{elem, I} | Path], Depth)
+                        || {I, E1, E2} <- lists:zip3(
+                            lists:seq(1, length(Elems1)),
+                            Elems1, Elems2
+                        )
+                    ]);
+                false ->
+                    [{path, Path}, {mismatch, tuple_arity}]
+            end
     end.
 
 %% @doc Format a type with highlighting for differences
