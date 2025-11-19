@@ -6651,7 +6651,7 @@ yeccpars2_77_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                                    
-    make_error_declaration(extract_location(___1), "Incomplete flow declaration", ___2)
+    make_error_declaration(extract_location(___1), "Incomplete transform declaration", ___2)
   end | __Stack].
 
 -compile({inline,yeccpars2_78_/1}).
@@ -6913,7 +6913,7 @@ yeccpars2_116_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
                                                             
-    make_error_declaration(extract_location(___1), "Missing '=' or expression in flow declaration", ___4)
+    make_error_declaration(extract_location(___1), "Missing '=' or expression in transform declaration", ___4)
   end | __Stack].
 
 -compile({inline,yeccpars2_118_/1}).
@@ -10663,7 +10663,7 @@ yeccpars2_248_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
                                                
-    make_error_declaration(extract_location(___1), "Invalid flow name", ___2)
+    make_error_declaration(extract_location(___1), "Invalid transform name", ___2)
   end | __Stack].
 
 -compile({inline,yeccpars2_249_/1}).

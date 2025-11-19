@@ -118,13 +118,13 @@ Left     600 dot.             %% .
 %%    Example: "map f xs" parses as (map f) xs, not map (f xs)
 %%
 %% 2. FLOW DECLARATIONS (Signature vs. Implementation)
-%%    Location: flow_decl productions
-%%    Cause: After "flow name : Type", parser must decide:
+%%    Location: transform_decl productions
+%%    Cause: After "transform name : Type", parser must decide:
 %%           - Shift: Parse implementation body
 %%           - Reduce: Accept signature-only declaration
 %%    Resolution: SHIFT (allows implementation if present) ✓
 %%    Impact: ~1-2 conflicts
-%%    Example: "flow id : a -> a\n  id x = x" parses correctly
+%%    Example: "transform id : a -> a\n  id x = x" parses correctly
 %%
 %% 3. TYPE EXPRESSIONS (Parenthesized vs. Tuple Types)
 %%    Location: type_expr productions
@@ -426,7 +426,7 @@ transform_decl -> transform_signature :
         [],
         extract_location('$1')}.
 
-%% Simple flow without type signature (like minimal parser)
+%% Simple transform without type signature (like minimal parser)
 transform_decl -> transform lower_ident pattern_list equals expr :
     {transform_decl,
         extract_atom('$2'),
@@ -448,13 +448,13 @@ transform_decl -> transform lower_ident pattern_list equals match match_clauses 
         [{transform_clause, '$3', undefined, {match_expr, '$6', extract_location('$5')}, extract_location('$1')}],
         extract_location('$1')}.
 
-%% Error recovery for incomplete flow declarations
+%% Error recovery for incomplete transform declarations
 transform_decl -> transform error equals expr :
-    make_error_declaration(extract_location('$1'), "Invalid flow name", '$2').
+    make_error_declaration(extract_location('$1'), "Invalid transform name", '$2').
 transform_decl -> transform lower_ident pattern_list error :
-    make_error_declaration(extract_location('$1'), "Missing '=' or expression in flow declaration", '$4').
+    make_error_declaration(extract_location('$1'), "Missing '=' or expression in transform declaration", '$4').
 transform_decl -> transform error :
-    make_error_declaration(extract_location('$1'), "Incomplete flow declaration", '$2').
+    make_error_declaration(extract_location('$1'), "Incomplete transform declaration", '$2').
 
 transform_signature -> transform lower_ident colon type_expr :
     {transform_sig, extract_atom('$2'), '$4', extract_location('$1')}.

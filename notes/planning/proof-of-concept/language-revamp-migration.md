@@ -112,72 +112,75 @@ This section updates the parser grammar to use the new keywords throughout. The 
 **Implementation Status**: Section 1.2 completed on 2024-11-19. See `notes/implementation/language-revamp-section-1.2-summary.md` for details.
 **Note**: Parts of Section 1.3 were also completed as they were required to build the parser successfully.
 
-## 1.3 Parser Grammar Rules - Transform Declarations (2 hours)
+## 1.3 Parser Grammar Rules - Transform Declarations (2 hours) ✅ COMPLETE
 
 This section completes the parser updates by renaming all flow-related grammar rules to transform-related rules. This is a comprehensive update affecting multiple production rules.
 
-### 1.3.1 Rename Transform Declaration Rules
+### 1.3.1 Rename Transform Declaration Rules ✅ COMPLETE
 
-- [ ] 1.3.1.1 Update transform declaration with signature (lines 414-419)
+- [x] 1.3.1.1 Update transform declaration with signature (lines 414-419)
   - Change: `flow_decl -> flow_signature flow_clauses`
   - To: `transform_decl -> transform_signature transform_clauses`
   - Update AST node: `{flow_decl, ...}` to `{transform_decl, ...}`
   - Update helper calls: `extract_flow_name` to `extract_transform_name`
   - Update helper calls: `extract_flow_type` to `extract_transform_type`
 
-- [ ] 1.3.1.2 Update signature-only rule (lines 422-427)
+- [x] 1.3.1.2 Update signature-only rule (lines 422-427)
   - Change: `flow_decl -> flow_signature`
   - To: `transform_decl -> transform_signature`
   - Update AST node construction
 
-- [ ] 1.3.1.3 Update simple transform rule (lines 429-435)
+- [x] 1.3.1.3 Update simple transform rule (lines 429-435)
   - Change: `flow_decl -> flow lower_ident`
   - To: `transform_decl -> transform lower_ident`
   - Update AST nodes: `{flow_decl, ...}` and `{flow_clause, ...}`
   - To: `{transform_decl, ...}` and `{transform_clause, ...}`
 
-### 1.3.2 Update Transform Clauses and Signatures
+### 1.3.2 Update Transform Clauses and Signatures ✅ COMPLETE
 
-- [ ] 1.3.2.1 Update transform signature rule (lines 459-460)
+- [x] 1.3.2.1 Update transform signature rule (lines 459-460)
   - Change: `flow_signature -> flow lower_ident colon type_expr`
   - To: `transform_signature -> transform lower_ident colon type_expr`
   - Update AST: `{flow_sig, ...}` to `{transform_sig, ...}`
 
-- [ ] 1.3.2.2 Update transform clauses rules (lines 462-465)
+- [x] 1.3.2.2 Update transform clauses rules (lines 462-465)
   - Change: `flow_clauses -> flow_clause`
   - To: `transform_clauses -> transform_clause`
 
-- [ ] 1.3.2.3 Update transform clause rules (lines 467-486)
+- [x] 1.3.2.3 Update transform clause rules (lines 467-486)
   - Replace all `flow_clause` with `transform_clause`
   - Replace all `flow` keywords with `transform`
   - Update all AST nodes from `{flow_clause, ...}` to `{transform_clause, ...}`
 
-### 1.3.3 Update Helper Functions
+### 1.3.3 Update Helper Functions ✅ COMPLETE
 
-- [ ] 1.3.3.1 Rename `extract_flow_name` function (line 904)
+- [x] 1.3.3.1 Rename `extract_flow_name` function (line 904)
   - Change function name to `extract_transform_name`
   - Update pattern match: `{flow_sig, Name, _}` to `{transform_sig, Name, _}`
 
-- [ ] 1.3.3.2 Rename `extract_flow_type` function (line 907)
+- [x] 1.3.3.2 Rename `extract_flow_type` function (line 907)
   - Change function name to `extract_transform_type`
   - Update pattern match: `{flow_sig, _, Type}` to `{transform_sig, _, Type}`
 
-### 1.3.4 Rebuild Parser
+### 1.3.4 Rebuild Parser ✅ COMPLETE
 
-- [ ] 1.3.4.1 Run parser build script
+- [x] 1.3.4.1 Run parser build script
   ```bash
   ./scripts/build_parser.sh
   ```
 
-- [ ] 1.3.4.2 Verify generated `catena_parser.erl` contains new rules
+- [x] 1.3.4.2 Verify generated `catena_parser.erl` contains new rules
 
-### 1.3 Unit Tests
+### 1.3 Unit Tests ✅ COMPLETE
 
-- [ ] 1.3.T1 Test transform declarations with signatures
-- [ ] 1.3.T2 Test transform declarations without signatures
-- [ ] 1.3.T3 Test transform clauses with patterns
-- [ ] 1.3.T4 Test transform clauses with guards
-- [ ] 1.3.T5 Test transform clauses with match expressions
+- [x] 1.3.T1 Test transform declarations with signatures
+- [x] 1.3.T2 Test transform declarations without signatures
+- [x] 1.3.T3 Test transform clauses with patterns
+- [x] 1.3.T4 Test transform clauses with guards
+- [x] 1.3.T5 Test transform clauses with match expressions
+
+**Implementation Status**: Section 1.3 completed on 2024-11-19. See `notes/implementation/language-revamp-section-1.3-summary.md` for details.
+**Note**: Most of the technical work was completed during Section 1.2. This phase focused on cleanup and verification.
 
 ## 2.1 AST Node Definitions (1 hour)
 
