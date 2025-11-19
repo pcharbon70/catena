@@ -44,33 +44,33 @@ This section updates the lexical analyzer to recognize the new keywords `type` a
 
 **Implementation Status**: Section 1.1 completed on 2024-11-19. See `notes/implementation/language-revamp-section-1.1-summary.md` for details.
 
-## 1.2 Parser Grammar Rules - Core Updates (2 hours)
+## 1.2 Parser Grammar Rules - Core Updates (2 hours) ✅ COMPLETE
 
 This section updates the parser grammar to use the new keywords throughout. The parser defines the syntactic structure of the language and must be comprehensively updated to recognize the new syntax.
 
-### 1.2.1 Update Parser Nonterminals and Terminals
+### 1.2.1 Update Parser Nonterminals and Terminals ✅ COMPLETE
 
-- [ ] 1.2.1.1 Update nonterminals in `src/compiler/parser/catena_parser.yrl` (line 22)
+- [x] 1.2.1.1 Update nonterminals in `src/compiler/parser/catena_parser.yrl` (line 22)
   - Change: `shape_decl flow_decl effect_decl trait_decl instance_decl`
   - To: `type_decl transform_decl effect_decl trait_decl instance_decl`
 
-- [ ] 1.2.1.2 Update flow-related nonterminals (line 30)
+- [x] 1.2.1.2 Update flow-related nonterminals (line 30)
   - Change: `flow_signature flow_clauses flow_clause`
   - To: `transform_signature transform_clauses transform_clause`
 
-- [ ] 1.2.1.3 Update terminals list (line 51)
+- [x] 1.2.1.3 Update terminals list (line 51)
   - Change: `shape flow match where 'let' 'in' 'do' 'end'`
   - To: `type transform match where 'let' 'in' 'do' 'end'`
 
-### 1.2.2 Update Declaration Grammar Rules
+### 1.2.2 Update Declaration Grammar Rules ✅ COMPLETE
 
-- [ ] 1.2.2.1 Update declaration alternatives (lines 190-194)
+- [x] 1.2.2.1 Update declaration alternatives (lines 190-194)
   - Change: `declaration -> shape_decl : '$1'.`
   - To: `declaration -> type_decl : '$1'.`
   - Change: `declaration -> flow_decl : '$1'.`
   - To: `declaration -> transform_decl : '$1'.`
 
-- [ ] 1.2.2.2 Update error recovery rules (lines 197-200)
+- [x] 1.2.2.2 Update error recovery rules (lines 197-200)
   - Change: `declaration -> error shape : ...`
   - To: `declaration -> error type : ...`
   - Update error message: `"Malformed declaration before 'type'"`
@@ -78,36 +78,39 @@ This section updates the parser grammar to use the new keywords throughout. The 
   - To: `declaration -> error transform : ...`
   - Update error message: `"Malformed declaration before 'transform'"`
 
-### 1.2.3 Rename Type Declaration Rules
+### 1.2.3 Rename Type Declaration Rules ✅ COMPLETE
 
-- [ ] 1.2.3.1 Update section comment (line 208)
+- [x] 1.2.3.1 Update section comment (line 208)
   - Change: `%% Shape Declarations (Algebraic Data Types)`
   - To: `%% Type Declarations (Algebraic Data Types)`
 
-- [ ] 1.2.3.2 Rename all `shape_decl` rules to `type_decl` (lines 209-226)
+- [x] 1.2.3.2 Rename all `shape_decl` rules to `type_decl` (lines 209-226)
   - Replace all occurrences of `shape_decl` with `type_decl`
   - Replace all occurrences of `shape` keyword with `type`
   - Update all error messages from "shape declaration" to "type declaration"
 
-### 1.2.4 Update Trait and Instance Method Rules
+### 1.2.4 Update Trait and Instance Method Rules ✅ COMPLETE
 
-- [ ] 1.2.4.1 Update trait default method rule (line 358)
+- [x] 1.2.4.1 Update trait default method rule (line 358)
   - Change: `trait_default_method -> flow lower_ident`
   - To: `trait_default_method -> transform lower_ident`
 
-- [ ] 1.2.4.2 Update instance method rules (lines 404, 407)
+- [x] 1.2.4.2 Update instance method rules (lines 404, 407)
   - Change: `instance_method -> flow lower_ident pattern_list equals expr`
   - To: `instance_method -> transform lower_ident pattern_list equals expr`
   - Change: `instance_method -> flow lower_ident pattern_list equals match`
   - To: `instance_method -> transform lower_ident pattern_list equals match`
 
-### 1.2 Unit Tests
+### 1.2 Unit Tests ✅ COMPLETE
 
-- [ ] 1.2.T1 Test parser accepts `type` declarations
-- [ ] 1.2.T2 Test parser accepts `transform` declarations
-- [ ] 1.2.T3 Test parser rejects `shape` keyword
-- [ ] 1.2.T4 Test parser rejects `flow` keyword
-- [ ] 1.2.T5 Test parser error recovery with new keywords
+- [x] 1.2.T1 Test parser accepts `type` declarations
+- [x] 1.2.T2 Test parser accepts `transform` declarations
+- [x] 1.2.T3 Test parser rejects `shape` keyword
+- [x] 1.2.T4 Test parser rejects `flow` keyword
+- [x] 1.2.T5 Test parser error recovery with new keywords
+
+**Implementation Status**: Section 1.2 completed on 2024-11-19. See `notes/implementation/language-revamp-section-1.2-summary.md` for details.
+**Note**: Parts of Section 1.3 were also completed as they were required to build the parser successfully.
 
 ## 1.3 Parser Grammar Rules - Transform Declarations (2 hours)
 

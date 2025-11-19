@@ -19,7 +19,7 @@ Header
 Nonterminals
   catena_module
   declarations declaration
-  shape_decl flow_decl effect_decl trait_decl instance_decl
+  type_decl transform_decl effect_decl trait_decl instance_decl
   type_params type_params_nonempty constructors constructor constructor_fields
   effect_operations effect_operation
   trait_extends trait_extends_list trait_constraint
@@ -27,7 +27,7 @@ Nonterminals
   trait_methods trait_method trait_default_methods trait_default_method
   instance_type_args
   instance_constraints instance_methods instance_method
-  flow_signature flow_clauses flow_clause
+  transform_signature transform_clauses transform_clause
   match_clauses match_clause
   pattern_list pattern_list_nonempty pattern pattern_list_comma tuple_pattern_list
   guards guard
@@ -48,7 +48,7 @@ Nonterminals
 
 Terminals
   %% Keywords
-  shape flow match where 'let' 'in' 'do' 'end'
+  type transform match where 'let' 'in' 'do' 'end'
   'if' 'then' 'else' 'case' 'of' 'when'
   module import export exports as qualified private
   trait instance extends forall
@@ -187,17 +187,17 @@ declarations -> declaration :
 declarations -> declaration declarations :
     ['$1' | '$2'].
 
-declaration -> shape_decl : '$1'.
-declaration -> flow_decl : '$1'.
+declaration -> type_decl : '$1'.
+declaration -> transform_decl : '$1'.
 declaration -> effect_decl : '$1'.
 declaration -> trait_decl : '$1'.
 declaration -> instance_decl : '$1'.
 
 %% Error recovery: skip malformed declaration and continue with next
-declaration -> error shape :
-    make_error_declaration(extract_location('$2'), "Malformed declaration before 'shape'", '$1').
-declaration -> error flow :
-    make_error_declaration(extract_location('$2'), "Malformed declaration before 'flow'", '$1').
+declaration -> error type :
+    make_error_declaration(extract_location('$2'), "Malformed declaration before 'type'", '$1').
+declaration -> error transform :
+    make_error_declaration(extract_location('$2'), "Malformed declaration before 'transform'", '$1').
 declaration -> error effect :
     make_error_declaration(extract_location('$2'), "Malformed declaration before 'effect'", '$1').
 declaration -> error trait :
@@ -206,24 +206,24 @@ declaration -> error instance :
     make_error_declaration(extract_location('$2'), "Malformed declaration before 'instance'", '$1').
 
 %%----------------------------------------------------------------------------
-%% Shape Declarations (Algebraic Data Types)
+%% Type Declarations (Algebraic Data Types)
 %%----------------------------------------------------------------------------
 
-shape_decl -> shape upper_ident type_params equals constructors :
-    {shape_decl,
+type_decl -> type upper_ident type_params equals constructors :
+    {type_decl,
         extract_atom('$2'),
         '$3',
         '$5',
         [],
         extract_location('$1')}.
 
-%% Error recovery for incomplete shape declarations
-shape_decl -> shape error equals constructors :
-    make_error_declaration(extract_location('$1'), "Invalid shape name", '$2').
-shape_decl -> shape upper_ident type_params error :
-    make_error_declaration(extract_location('$1'), "Missing '=' or constructors in shape declaration", '$4').
-shape_decl -> shape error :
-    make_error_declaration(extract_location('$1'), "Incomplete shape declaration", '$2').
+%% Error recovery for incomplete type declarations
+type_decl -> type error equals constructors :
+    make_error_declaration(extract_location('$1'), "Invalid type name", '$2').
+type_decl -> type upper_ident type_params error :
+    make_error_declaration(extract_location('$1'), "Missing '=' or constructors in type declaration", '$4').
+type_decl -> type error :
+    make_error_declaration(extract_location('$1'), "Incomplete type declaration", '$2').
 
 type_params -> '$empty' :
     [].
@@ -355,7 +355,7 @@ trait_default_methods -> trait_default_method trait_default_methods :
     ['$1' | '$2'].
 
 %% Trait default method implementation (e.g., "fmap f x = ...")
-trait_default_method -> flow lower_ident pattern_list equals expr :
+trait_default_method -> transform lower_ident pattern_list equals expr :
     {extract_atom('$2'), {lambda, '$3', '$5', extract_location('$1')}}.
 
 %%----------------------------------------------------------------------------
@@ -401,85 +401,85 @@ instance_methods -> instance_method instance_methods :
     ['$1' | '$2'].
 
 %% Instance method implementation (e.g., "fmap f = match | None -> None | Some x -> Some (f x) end")
-instance_method -> flow lower_ident pattern_list equals expr :
+instance_method -> transform lower_ident pattern_list equals expr :
     {extract_atom('$2'), {lambda, '$3', '$5', extract_location('$1')}}.
 
-instance_method -> flow lower_ident pattern_list equals match match_clauses 'end' :
+instance_method -> transform lower_ident pattern_list equals match match_clauses 'end' :
     {extract_atom('$2'), {lambda, '$3', {match_expr, '$6', extract_location('$5')}, extract_location('$1')}}.
 
 %%----------------------------------------------------------------------------
-%% Flow Declarations (Function Definitions)
+%% Transform Declarations (Function Definitions)
 %%----------------------------------------------------------------------------
 
-flow_decl -> flow_signature flow_clauses :
-    {flow_decl,
-        extract_flow_name('$1'),
-        extract_flow_type('$1'),
+transform_decl -> transform_signature transform_clauses :
+    {transform_decl,
+        extract_transform_name('$1'),
+        extract_transform_type('$1'),
         '$2',
         extract_location('$1')}.
 
 %% Flow with only a type signature (no implementation)
-flow_decl -> flow_signature :
-    {flow_decl,
-        extract_flow_name('$1'),
-        extract_flow_type('$1'),
+transform_decl -> transform_signature :
+    {transform_decl,
+        extract_transform_name('$1'),
+        extract_transform_type('$1'),
         [],
         extract_location('$1')}.
 
 %% Simple flow without type signature (like minimal parser)
-flow_decl -> flow lower_ident pattern_list equals expr :
-    {flow_decl,
+transform_decl -> transform lower_ident pattern_list equals expr :
+    {transform_decl,
         extract_atom('$2'),
         undefined,
-        [{flow_clause, '$3', undefined, '$5', extract_location('$1')}],
+        [{transform_clause, '$3', undefined, '$5', extract_location('$1')}],
         extract_location('$1')}.
 
-flow_decl -> flow lower_ident pattern_list 'when' guards equals expr :
-    {flow_decl,
+transform_decl -> transform lower_ident pattern_list 'when' guards equals expr :
+    {transform_decl,
         extract_atom('$2'),
         undefined,
-        [{flow_clause, '$3', '$5', '$7', extract_location('$1')}],
+        [{transform_clause, '$3', '$5', '$7', extract_location('$1')}],
         extract_location('$1')}.
 
-flow_decl -> flow lower_ident pattern_list equals match match_clauses 'end' :
-    {flow_decl,
+transform_decl -> transform lower_ident pattern_list equals match match_clauses 'end' :
+    {transform_decl,
         extract_atom('$2'),
         undefined,
-        [{flow_clause, '$3', undefined, {match_expr, '$6', extract_location('$5')}, extract_location('$1')}],
+        [{transform_clause, '$3', undefined, {match_expr, '$6', extract_location('$5')}, extract_location('$1')}],
         extract_location('$1')}.
 
 %% Error recovery for incomplete flow declarations
-flow_decl -> flow error equals expr :
+transform_decl -> transform error equals expr :
     make_error_declaration(extract_location('$1'), "Invalid flow name", '$2').
-flow_decl -> flow lower_ident pattern_list error :
+transform_decl -> transform lower_ident pattern_list error :
     make_error_declaration(extract_location('$1'), "Missing '=' or expression in flow declaration", '$4').
-flow_decl -> flow error :
+transform_decl -> transform error :
     make_error_declaration(extract_location('$1'), "Incomplete flow declaration", '$2').
 
-flow_signature -> flow lower_ident colon type_expr :
-    {flow_sig, extract_atom('$2'), '$4', extract_location('$1')}.
+transform_signature -> transform lower_ident colon type_expr :
+    {transform_sig, extract_atom('$2'), '$4', extract_location('$1')}.
 
-flow_clauses -> flow_clause :
+transform_clauses -> transform_clause :
     ['$1'].
-flow_clauses -> flow_clause flow_clauses :
+transform_clauses -> transform_clause transform_clauses :
     ['$1' | '$2'].
 
-flow_clause -> flow lower_ident pattern_list equals expr :
-    {flow_clause,
+transform_clause -> transform lower_ident pattern_list equals expr :
+    {transform_clause,
         '$3',
         undefined,
         '$5',
         extract_location('$1')}.
 
-flow_clause -> flow lower_ident pattern_list 'when' guards equals expr :
-    {flow_clause,
+transform_clause -> transform lower_ident pattern_list 'when' guards equals expr :
+    {transform_clause,
         '$3',
         '$5',
         '$7',
         extract_location('$1')}.
 
-flow_clause -> flow lower_ident pattern_list equals match match_clauses 'end' :
-    {flow_clause,
+transform_clause -> transform lower_ident pattern_list equals match match_clauses 'end' :
+    {transform_clause,
         '$3',
         undefined,
         {match_expr, '$6', extract_location('$5')},
@@ -900,11 +900,11 @@ extract_value(Token) -> catena_compiler_utils:extract_value(Token).
 %% Supports both legacy {line, N} format and enhanced {location, ...} format
 extract_location(Node) -> catena_compiler_utils:extract_location(Node).
 
-%% @doc Extract flow name from flow signature
-extract_flow_name({flow_sig, Name, _Type, _Loc}) -> Name.
+%% @doc Extract transform name from transform signature
+extract_transform_name({transform_sig, Name, _Type, _Loc}) -> Name.
 
-%% @doc Extract flow type from flow signature
-extract_flow_type({flow_sig, _Name, Type, _Loc}) -> Type.
+%% @doc Extract transform type from transform signature
+extract_transform_type({transform_sig, _Name, Type, _Loc}) -> Type.
 
 %% @doc Create an error declaration node for error recovery
 %% Returns a special AST node that marks a parsing error
