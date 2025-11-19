@@ -12,35 +12,37 @@ This migration updates the Catena language to use more pragmatic, developer-frie
 
 This section updates the lexical analyzer to recognize the new keywords `type` and `transform` instead of `shape` and `flow`. The lexer is the first stage of compilation and must be updated before any other components.
 
-### 1.1.1 Update Lexer Token Definitions
+### 1.1.1 Update Lexer Token Definitions ✅ COMPLETE
 
-- [ ] 1.1.1.1 Update `src/compiler/lexer/catena_lexer.xrl` line 5 comment
+- [x] 1.1.1.1 Update `src/compiler/lexer/catena_lexer.xrl` line 5 comment
   - Change: `%% - Keywords (shape, flow, match, etc.)`
   - To: `%% - Keywords (type, transform, match, etc.)`
 
-- [ ] 1.1.1.2 Replace `shape` token with `type` token (line 51)
+- [x] 1.1.1.2 Replace `shape` token with `type` token (line 51)
   - Change: `shape : {token, {shape, TokenLine}}.`
   - To: `type : {token, {type, TokenLine}}.`
 
-- [ ] 1.1.1.3 Replace `flow` token with `transform` token (line 52)
+- [x] 1.1.1.3 Replace `flow` token with `transform` token (line 52)
   - Change: `flow : {token, {flow, TokenLine}}.`
   - To: `transform : {token, {transform, TokenLine}}.`
 
-### 1.1.2 Rebuild Lexer
+### 1.1.2 Rebuild Lexer ✅ COMPLETE
 
-- [ ] 1.1.2.1 Run lexer build script
+- [x] 1.1.2.1 Run lexer build script
   ```bash
   ./scripts/build_lexer.sh
   ```
 
-- [ ] 1.1.2.2 Verify generated `catena_lexer.erl` contains new tokens
+- [x] 1.1.2.2 Verify generated `catena_lexer.erl` contains new tokens
 
-### 1.1 Unit Tests
+### 1.1 Unit Tests ✅ COMPLETE
 
-- [ ] 1.1.T1 Test lexer recognizes `type` keyword
-- [ ] 1.1.T2 Test lexer recognizes `transform` keyword
-- [ ] 1.1.T3 Test lexer rejects `shape` as identifier (not keyword)
-- [ ] 1.1.T4 Test lexer rejects `flow` as identifier (not keyword)
+- [x] 1.1.T1 Test lexer recognizes `type` keyword
+- [x] 1.1.T2 Test lexer recognizes `transform` keyword
+- [x] 1.1.T3 Test lexer rejects `shape` as identifier (not keyword)
+- [x] 1.1.T4 Test lexer rejects `flow` as identifier (not keyword)
+
+**Implementation Status**: Section 1.1 completed on 2024-11-19. See `notes/implementation/language-revamp-section-1.1-summary.md` for details.
 
 ## 1.2 Parser Grammar Rules - Core Updates (2 hours)
 

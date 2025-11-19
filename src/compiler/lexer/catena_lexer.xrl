@@ -2,7 +2,7 @@
 %% Implements Task 1.1.1: Token Recognition
 %%
 %% This lexer recognizes all Catena language tokens including:
-%% - Keywords (shape, flow, match, etc.)
+%% - Keywords (type, transform, match, etc.)
 %% - Operators (|>, ->, :, =, etc.)
 %% - Delimiters ({, }, [, ], etc.)
 %% - Literals (integers, floats, strings)
@@ -48,8 +48,8 @@ Rules.
 -\} : {token, {comment_end, TokenLine}}.
 
 %% Keywords
-shape : {token, {shape, TokenLine}}.
-flow : {token, {flow, TokenLine}}.
+type : {token, {type, TokenLine}}.
+transform : {token, {transform, TokenLine}}.
 match : {token, {match, TokenLine}}.
 where : {token, {where, TokenLine}}.
 let : {token, {'let', TokenLine}}.
