@@ -6,6 +6,59 @@
 %%% It produces human-readable error messages with clear explanations
 %%% of type mismatches and suggestions for fixes.
 %%%
+%%% ## Example Output
+%%%
+%%% ### Basic Type Mismatch (normal mode):
+%%% ```
+%%% Type mismatch in function application 'add':
+%%%   Expected: Integer -> Integer -> Integer
+%%%   Got:      String -> Integer -> Integer
+%%%
+%%% The parameter types don't match:
+%%%   - Parameter 1: Expected Integer but got String
+%%% ```
+%%%
+%%% ### Terse Mode (for IDEs):
+%%% ```
+%%% Expected Integer -> Integer, got String -> Integer
+%%% ```
+%%%
+%%% ### Verbose Mode (with suggestions):
+%%% ```
+%%% Type mismatch in function application 'add':
+%%%   Expected: Integer -> Integer -> Integer
+%%%   Got:      String -> Integer -> Integer
+%%%
+%%% The parameter types don't match:
+%%%   - Parameter 1: Expected Integer but got String
+%%%
+%%% Fix suggestions:
+%%%   - Use String.to_integer to convert the string
+%%%   - Check if you meant to use a numeric literal
+%%%
+%%% Examples:
+%%%   Convert string to integer:
+%%%     value = String.to_integer("42")
+%%%     -- or handle parse errors:
+%%%     case String.to_integer(str) of
+%%%       Some(n) -> use_number(n)
+%%%       None -> handle_error()
+%%%     end
+%%% ```
+%%%
+%%% ## Verbosity Levels
+%%%
+%%% The formatter supports three verbosity levels:
+%%% - `terse`: Minimal output for space-constrained contexts
+%%% - `normal`: Standard developer-facing output (default)
+%%% - `verbose`: Full output with examples and suggestions
+%%%
+%%% Pass the verbosity level in the options map:
+%%% ```erlang
+%%% Opts = #{verbosity => verbose},
+%%% format_type_mismatch(Expected, Actual, Context, Opts)
+%%% ```
+%%%
 %%% @end
 %%%-------------------------------------------------------------------
 -module(catena_type_error_formatter).
@@ -19,7 +72,8 @@
     format_occurs_check/3,
     highlight_difference/2,
     format_error/1,
-    format_error/2
+    format_error/2,
+    format_error/3
 ]).
 
 %% Internal exports for testing
@@ -40,20 +94,24 @@ format_error(Error) ->
     format_error(Error, #{}).
 
 -spec format_error(catena_type_error:type_error(), map()) -> iolist().
-format_error({unification_error, Expected, Actual}, Context) ->
-    format_type_mismatch(Expected, Actual, Context);
-format_error({unsatisfied_constraint, Trait, Types, no_instance}, _Context) ->
+format_error(Error, Context) ->
+    format_error(Error, Context, #{}).
+
+-spec format_error(catena_type_error:type_error(), map(), map()) -> iolist().
+format_error({unification_error, Expected, Actual}, Context, Opts) ->
+    format_type_mismatch(Expected, Actual, Context, Opts);
+format_error({unsatisfied_constraint, Trait, Types, no_instance}, _Context, _Opts) ->
     format_missing_instance(Trait, Types);
-format_error({arity_mismatch, Expected, Actual, FunName}, Context) ->
+format_error({arity_mismatch, Expected, Actual, FunName}, Context, _Opts) ->
     format_arity_mismatch(Expected, Actual, FunName, Context);
-format_error({occurs_check, Var, Type}, Context) ->
+format_error({occurs_check, Var, Type}, Context, _Opts) ->
     format_occurs_check(Var, Type, Context);
-format_error({unbound_variable, Var}, _Context) ->
+format_error({unbound_variable, Var}, _Context, _Opts) ->
     io_lib:format("Unbound variable: ~s", [Var]);
-format_error({ambiguous_type, Var}, _Context) ->
+format_error({ambiguous_type, Var}, _Context, _Opts) ->
     io_lib:format("Cannot resolve ambiguous type variable: ~s",
                   [catena_type_pp:pp_type(Var)]);
-format_error(Other, _Context) ->
+format_error(Other, _Context, _Opts) ->
     %% Fallback to basic formatting
     io_lib:format("Type error: ~p", [Other]).
 
@@ -64,28 +122,70 @@ format_type_mismatch(Expected, Actual, Context) ->
 
 -spec format_type_mismatch(catena_types:ty(), catena_types:ty(), map(), map()) -> iolist().
 format_type_mismatch(Expected, Actual, Context, Opts) ->
-    Diffs = find_type_differences(Expected, Actual),
-    ExpectedFormatted = format_type_with_highlight(Expected,
-                                                   [{role, expected} | Diffs]),
-    ActualFormatted = format_type_with_highlight(Actual,
-                                                 [{role, actual} | Diffs]),
+    %% Extract verbosity level from options (defaults to normal)
+    Verbosity = maps:get(verbosity, Opts, normal),
 
-    Header = case maps:get(expr, Context, undefined) of
-        undefined -> "Type mismatch";
-        Expr -> io_lib:format("Type mismatch in ~s", [format_expr_context(Expr)])
-    end,
+    case Verbosity of
+        terse ->
+            %% Terse mode: Minimal output for IDE tooltips or quick summaries
+            ExpectedSimple = catena_type_pp:pp_type(Expected),
+            ActualSimple = catena_type_pp:pp_type(Actual),
+            io_lib:format("Expected ~s, got ~s", [ExpectedSimple, ActualSimple]);
 
-    Explanation = explain_type_difference(Expected, Actual),
+        normal ->
+            %% Normal mode: Standard developer-facing output with highlighting
+            Diffs = find_type_differences(Expected, Actual),
+            ExpectedFormatted = format_type_with_highlight(Expected,
+                                                           [{role, expected} | Diffs]),
+            ActualFormatted = format_type_with_highlight(Actual,
+                                                         [{role, actual} | Diffs]),
 
-    [
-        Header, ":\n",
-        "  Expected: ", ExpectedFormatted, "\n",
-        "  Got:      ", ActualFormatted, "\n",
-        case Explanation of
-            [] -> "";
-            Exp -> ["\n", Exp, "\n"]
-        end
-    ].
+            Header = case maps:get(expr, Context, undefined) of
+                undefined -> "Type mismatch";
+                Expr -> io_lib:format("Type mismatch in ~s", [format_expr_context(Expr)])
+            end,
+
+            Explanation = explain_type_difference(Expected, Actual),
+
+            [
+                Header, ":\n",
+                "  Expected: ", ExpectedFormatted, "\n",
+                "  Got:      ", ActualFormatted, "\n",
+                case Explanation of
+                    [] -> "";
+                    Exp -> ["\n", Exp, "\n"]
+                end
+            ];
+
+        verbose ->
+            %% Verbose mode: Full output with examples and suggestions
+            Diffs = find_type_differences(Expected, Actual),
+            ExpectedFormatted = format_type_with_highlight(Expected,
+                                                           [{role, expected} | Diffs]),
+            ActualFormatted = format_type_with_highlight(Actual,
+                                                         [{role, actual} | Diffs]),
+
+            Header = case maps:get(expr, Context, undefined) of
+                undefined -> "Type mismatch";
+                Expr -> io_lib:format("Type mismatch in ~s", [format_expr_context(Expr)])
+            end,
+
+            Explanation = explain_type_difference(Expected, Actual),
+            Suggestions = generate_suggestions(Expected, Actual),
+            Examples = generate_examples(Expected, Actual),
+
+            [
+                Header, ":\n",
+                "  Expected: ", ExpectedFormatted, "\n",
+                "  Got:      ", ActualFormatted, "\n",
+                case Explanation of
+                    [] -> "";
+                    Exp -> ["\n", Exp, "\n"]
+                end,
+                "\nFix suggestions:\n", Suggestions,
+                "\nExamples:\n", Examples
+            ]
+    end.
 
 %% @doc Format a missing trait instance error
 -spec format_missing_instance(atom(), [catena_types:ty()]) -> iolist().
@@ -396,4 +496,55 @@ format_expr_context({match, _, _, _}) ->
     "match expression";
 format_expr_context(_) ->
     "expression".
+
+%% @doc Generate fix suggestions based on type mismatch patterns
+-spec generate_suggestions(catena_types:ty(), catena_types:ty()) -> iolist().
+generate_suggestions({tfun, _, _, _}, Type) when element(1, Type) =/= tfun ->
+    [
+        "  - Add parentheses if you meant to call the function\n",
+        "  - Check if you're passing a function where a value is expected\n"
+    ];
+generate_suggestions({tcon, integer}, {tcon, string}) ->
+    [
+        "  - Use String.to_integer to convert the string\n",
+        "  - Check if you meant to use a numeric literal\n"
+    ];
+generate_suggestions({tcon, string}, {tcon, integer}) ->
+    [
+        "  - Use Integer.to_string to convert the number\n",
+        "  - Add quotes around the value to make it a string\n"
+    ];
+generate_suggestions({tapp, {tcon, list}, _}, {tapp, {tcon, maybe_type}, _}) ->
+    [
+        "  - Use List.head to get the first element as a Maybe\n",
+        "  - Use pattern matching to handle the list\n"
+    ];
+generate_suggestions(_, _) ->
+    [
+        "  - Check the type signatures of the functions involved\n",
+        "  - Add explicit type annotations to clarify intent\n",
+        "  - Verify the expected types match your usage\n"
+    ].
+
+%% @doc Generate examples for common type fixes
+-spec generate_examples(catena_types:ty(), catena_types:ty()) -> iolist().
+generate_examples({tcon, integer}, {tcon, string}) ->
+    [
+        "  Convert string to integer:\n",
+        "    value = String.to_integer(\"42\")\n",
+        "    -- or handle parse errors:\n",
+        "    case String.to_integer(str) of\n",
+        "      Some(n) -> use_number(n)\n",
+        "      None -> handle_error()\n",
+        "    end\n"
+    ];
+generate_examples({tapp, {tcon, list}, _}, _) ->
+    [
+        "  Working with lists:\n",
+        "    List.map(fn x -> x + 1, my_list)\n",
+        "    List.filter(fn x -> x > 0, my_list)\n",
+        "    List.head(my_list)  -- returns Maybe\n"
+    ];
+generate_examples(_, _) ->
+    "  Consult the documentation for specific type conversion functions.\n".
 

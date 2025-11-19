@@ -42,7 +42,8 @@ formatter_test_() ->
       {"Effect set differences", fun test_effect_differences/0},
       {"Error with expression context", fun test_error_with_context/0},
       {"Multiple error formatting", fun test_multiple_errors/0},
-      {"Color highlighting", fun test_color_highlighting/0}
+      {"Color highlighting", fun test_color_highlighting/0},
+      {"Verbosity levels", fun test_verbosity_levels/0}
      ]}.
 
 %%%===================================================================
@@ -128,7 +129,7 @@ test_arity_mismatch() ->
 
 test_occurs_check() ->
     Var = {tvar, "a"},
-    Type = {tapp, {tcon, list}, {tvar, "a"}},
+    Type = {tapp, {tcon, list}, [{tvar, "a"}]},
 
     Result = catena_type_error_formatter:format_occurs_check(
                Var, Type, #{}),
@@ -215,6 +216,33 @@ test_color_highlighting() ->
 
     %% Clean up
     application:set_env(catena, use_color, false).
+
+test_verbosity_levels() ->
+    T1 = {tcon, integer},
+    T2 = {tcon, string},
+    Context = #{},
+
+    %% Test terse mode
+    TerseOpts = #{verbosity => terse},
+    TerseResult = catena_type_error_formatter:format_type_mismatch(T1, T2, Context, TerseOpts),
+    TerseOutput = lists:flatten(TerseResult),
+    ?assertEqual("Expected integer, got string", TerseOutput),
+
+    %% Test normal mode (default)
+    NormalOpts = #{},
+    NormalResult = catena_type_error_formatter:format_type_mismatch(T1, T2, Context, NormalOpts),
+    NormalOutput = lists:flatten(NormalResult),
+    ?assert(string:str(NormalOutput, "Type mismatch") > 0),
+    ?assert(string:str(NormalOutput, "Expected:") > 0),
+    ?assert(string:str(NormalOutput, "Got:") > 0),
+
+    %% Test verbose mode
+    VerboseOpts = #{verbosity => verbose},
+    VerboseResult = catena_type_error_formatter:format_type_mismatch(T1, T2, Context, VerboseOpts),
+    VerboseOutput = lists:flatten(VerboseResult),
+    ?assert(string:str(VerboseOutput, "Fix suggestions:") > 0),
+    ?assert(string:str(VerboseOutput, "Examples:") > 0),
+    ?assert(string:str(VerboseOutput, "String.to_integer") > 0).
 
 %%%===================================================================
 %%% Property Tests

@@ -44,8 +44,8 @@
 %% @example
 %% ```
 %% %% Type variable
-%% Str1 = catena_type_pp:pp_type({tvar, 1}).
-%% %% → "α1"
+%% Str1 = catena_type_pp:pp_type({tvar, alpha}).
+%% %% → "alpha"
 %%
 %% %% Function type with effects
 %% FuncType = catena_types:tfun(
@@ -71,11 +71,20 @@ format(Type) ->
     pp_type(Type).
 
 %% Internal helper that builds iolists for efficiency
-pp_type_iolist({tvar, Id}) ->
-    ["a", integer_to_list(Id)];
+pp_type_iolist({tvar, Id}) when is_atom(Id) ->
+    atom_to_list(Id);
+pp_type_iolist({tvar, Id}) when is_list(Id) ->
+    Id;
+pp_type_iolist({tvar, Id}) when is_integer(Id) ->
+    ["α", integer_to_list(Id)];
 
 pp_type_iolist({tcon, Name}) ->
-    atom_to_list(Name);
+    % Handle special case for maybe_type -> maybe (user-friendly naming)
+    % Note: 'maybe' is a reserved word in Erlang/OTP 25+, so we use maybe_type internally
+    case Name of
+        maybe_type -> "maybe";
+        _ -> atom_to_list(Name)
+    end;
 
 pp_type_iolist({tapp, Constructor, Args}) ->
     case Args of
@@ -112,6 +121,16 @@ pp_type_iolist({trecord, Fields, RowVar}) ->
             case FieldStrs of
                 [] -> ["{| ρ", integer_to_list(VarId), "}"];
                 _ -> ["{", FieldsStr, " | ρ", integer_to_list(VarId), "}"]
+            end;
+        VarId when is_atom(VarId) ->
+            case FieldStrs of
+                [] -> ["{| ", atom_to_list(VarId), "}"];
+                _ -> ["{", FieldsStr, " | ", atom_to_list(VarId), "}"]
+            end;
+        VarId when is_list(VarId) ->
+            case FieldStrs of
+                [] -> ["{| ", VarId, "}"];
+                _ -> ["{", FieldsStr, " | ", VarId, "}"]
             end
     end;
 
@@ -232,8 +251,16 @@ pp_effects_iolist({effect_set, Effects}) ->
 pp_scheme({mono, Type}) ->
     pp_type(Type);
 pp_scheme({poly, Vars, Type}) ->
-    VarStrs = [["α", integer_to_list(V)] || V <- Vars],
+    VarStrs = [format_type_var(V) || V <- Vars],
     lists:flatten(["∀", join(VarStrs, " "), ". ", pp_type_iolist(Type)]).
+
+%% Helper to format type variables consistently
+format_type_var(V) when is_integer(V) ->
+    ["α", integer_to_list(V)];
+format_type_var(V) when is_atom(V) ->
+    atom_to_list(V);
+format_type_var(V) when is_list(V) ->
+    V.
 
 %%====================================================================
 %% Internal Functions
