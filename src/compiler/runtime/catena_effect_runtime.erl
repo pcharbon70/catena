@@ -216,17 +216,29 @@ io_println(Text) ->
     ok.
 
 io_read_file(Path) ->
-    case file:read_file(to_string(Path)) of
-        {ok, Content} ->
-            Content;
+    PathStr = path_to_string(Path),
+    case validate_io_path(PathStr) of
+        {ok, ValidPath} ->
+            case file:read_file(ValidPath) of
+                {ok, Content} ->
+                    Content;
+                {error, Reason} ->
+                    erlang:error({io_error, readFile, Reason})
+            end;
         {error, Reason} ->
             erlang:error({io_error, readFile, Reason})
     end.
 
 io_write_file(Path, Content) ->
-    case file:write_file(to_string(Path), to_string(Content)) of
-        ok ->
-            ok;
+    PathStr = path_to_string(Path),
+    case validate_io_path(PathStr) of
+        {ok, ValidPath} ->
+            case file:write_file(ValidPath, to_string(Content)) of
+                ok ->
+                    ok;
+                {error, Reason} ->
+                    erlang:error({io_error, writeFile, Reason})
+            end;
         {error, Reason} ->
             erlang:error({io_error, writeFile, Reason})
     end.
@@ -280,6 +292,37 @@ process_self() ->
 %% Utilities
 %%====================================================================
 
+%% Validate IO path for security
+%% Blocks: path traversal (..), null bytes, system paths
+%% Allows: absolute paths to /tmp and user directories
+-spec validate_io_path(string()) -> {ok, string()} | {error, term()}.
+validate_io_path(Path) ->
+    NormalizedPath = filename:absname(Path),
+    case is_safe_io_path(Path, NormalizedPath) of
+        true -> {ok, NormalizedPath};
+        false -> {error, {path_security_error, Path}}
+    end.
+
+is_safe_io_path(OriginalPath, NormalizedPath) ->
+    not has_path_traversal(OriginalPath) andalso
+    not has_null_bytes(OriginalPath) andalso
+    not is_system_path(NormalizedPath).
+
+%% Check for path traversal sequences
+has_path_traversal(Path) ->
+    string:find(Path, "..") =/= nomatch.
+
+%% Check for null bytes (used to obfuscate paths)
+has_null_bytes(Path) ->
+    lists:member(0, Path).
+
+%% Check if path is a protected system directory
+is_system_path(Path) ->
+    SystemPaths = ["/etc", "/sys", "/proc", "/dev", "/root", "/boot", "/var/log"],
+    lists:any(fun(Prefix) ->
+        lists:prefix(Prefix, Path)
+    end, SystemPaths).
+
 %% Convert various types to string/binary for IO
 to_string(Bin) when is_binary(Bin) -> Bin;
 to_string(List) when is_list(List) -> list_to_binary(List);
@@ -287,3 +330,8 @@ to_string(Atom) when is_atom(Atom) -> atom_to_binary(Atom, utf8);
 to_string(Int) when is_integer(Int) -> integer_to_binary(Int);
 to_string(Float) when is_float(Float) -> float_to_binary(Float);
 to_string(Other) -> list_to_binary(io_lib:format("~p", [Other])).
+
+%% Convert path to string (list) for validation
+path_to_string(Bin) when is_binary(Bin) -> binary_to_list(Bin);
+path_to_string(List) when is_list(List) -> List;
+path_to_string(Atom) when is_atom(Atom) -> atom_to_list(Atom).

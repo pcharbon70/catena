@@ -307,14 +307,18 @@ file_io_test_() ->
 test_write_core_file() ->
     Module = simple_module(),
     {ok, CoreModule} = catena_codegen_module:generate_module(Module),
-    TempFile = "/tmp/test_module.core",
-    Result = catena_codegen_module:write_core_file(CoreModule, TempFile),
-    ?assertEqual(ok, Result),
-    %% Verify file was written
-    {ok, Content} = file:read_file(TempFile),
-    ?assert(byte_size(Content) > 0),
-    %% Cleanup
-    file:delete(TempFile).
+    %% Use workspace-relative path (write_core_file validates paths)
+    TempFile = "_build/test_module_" ++ integer_to_list(erlang:unique_integer([positive])) ++ ".core",
+    try
+        Result = catena_codegen_module:write_core_file(CoreModule, TempFile),
+        ?assertEqual(ok, Result),
+        %% Verify file was written
+        {ok, Content} = file:read_file(TempFile),
+        ?assert(byte_size(Content) > 0)
+    after
+        %% Cleanup
+        file:delete(TempFile)
+    end.
 
 %%====================================================================
 %% Error Handling Tests
@@ -328,5 +332,6 @@ error_handling_test_() ->
 test_invalid_file_path() ->
     Module = simple_module(),
     {ok, CoreModule} = catena_codegen_module:generate_module(Module),
+    %% Path outside workspace should be rejected by path validation
     Result = catena_codegen_module:write_core_file(CoreModule, "/nonexistent/path/file.core"),
-    ?assertMatch({error, {write_failed, _}}, Result).
+    ?assertMatch({error, {path_traversal_attack, _}}, Result).

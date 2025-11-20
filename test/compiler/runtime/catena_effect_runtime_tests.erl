@@ -437,7 +437,9 @@ error_handling_test_() ->
     [
         ?_test(test_no_handler_error()),
         ?_test(test_handler_exception()),
-        ?_test(test_io_file_not_found())
+        ?_test(test_io_file_not_found()),
+        ?_test(test_io_path_traversal()),
+        ?_test(test_io_system_path())
     ].
 
 test_no_handler_error() ->
@@ -466,6 +468,28 @@ test_io_file_not_found() ->
     ?assertError(
         {io_error, readFile, enoent},
         catena_effect_runtime:perform('IO', readFile, ["/nonexistent/path/file.txt"])
+    ).
+
+test_io_path_traversal() ->
+    %% Test that path traversal attacks are blocked
+    ?assertError(
+        {io_error, readFile, {path_security_error, _}},
+        catena_effect_runtime:perform('IO', readFile, ["../../../etc/passwd"])
+    ),
+    ?assertError(
+        {io_error, writeFile, {path_security_error, _}},
+        catena_effect_runtime:perform('IO', writeFile, ["../../../tmp/evil", <<"data">>])
+    ).
+
+test_io_system_path() ->
+    %% Test that system paths are blocked
+    ?assertError(
+        {io_error, readFile, {path_security_error, _}},
+        catena_effect_runtime:perform('IO', readFile, ["/etc/passwd"])
+    ),
+    ?assertError(
+        {io_error, writeFile, {path_security_error, _}},
+        catena_effect_runtime:perform('IO', writeFile, ["/etc/evil", <<"data">>])
     ).
 
 %%====================================================================

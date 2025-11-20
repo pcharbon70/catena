@@ -223,13 +223,19 @@ get_arity({transform_typed, _, _, Params, _, _}) -> length(Params).
 %% @doc Write Core Erlang module to file
 -spec write_core_file(cerl:cerl(), string()) -> ok | {error, term()}.
 write_core_file(CoreModule, FilePath) ->
-    %% Format module to Core Erlang string
-    CoreString = module_to_core_string(CoreModule),
+    %% Validate path for security
+    case catena_error:validate_source_path(FilePath) of
+        {ok, ValidPath} ->
+            %% Format module to Core Erlang string
+            CoreString = module_to_core_string(CoreModule),
 
-    %% Write to file
-    case file:write_file(FilePath, CoreString) of
-        ok -> ok;
-        {error, Reason} -> {error, {write_failed, Reason}}
+            %% Write to file
+            case file:write_file(ValidPath, CoreString) of
+                ok -> ok;
+                {error, Reason} -> {error, {write_failed, Reason}}
+            end;
+        {error, path_traversal_attack} ->
+            {error, {path_traversal_attack, FilePath}}
     end.
 
 %% @doc Convert Core Erlang module to string representation
