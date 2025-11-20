@@ -192,15 +192,15 @@ Extend the type system to handle trait hierarchies, instance resolution, and tra
 After parsing and type checking, we generate Core Erlang code that executes on the BEAM VM. Core Erlang is a simplified functional language that serves as an intermediate representation for all BEAM languages. We translate Catena's typed AST into Core Erlang expressions, compiling shapes to tagged tuples, flows to functions, and pattern matching to case expressions. The generated code must preserve Catena semantics while leveraging BEAM optimizations.
 
 ### 1.3.1 Expression Translation
-- [ ] **Task 1.3.1 Complete**
+- [x] **Task 1.3.1 Complete**
 
 We translate Catena expressions to equivalent Core Erlang expressions. Function applications become Core Erlang calls, let bindings become Core Erlang let expressions, and composition operators become function call chains. **Effect operations (perform and try/with) translate to process-based message passing.** We must handle tail-call optimization correctly, ensuring recursive functions don't overflow the stack. Literals translate directly, and variables map to Core Erlang variables.
 
-- [ ] 1.3.1.1 Implement translation of function applications to Core Erlang call expressions
-- [ ] 1.3.1.2 Implement translation of let bindings to Core Erlang let expressions with proper scoping
-- [ ] 1.3.1.3 Implement translation of composition operators (|>) to nested function calls
-- [ ] 1.3.1.4 Implement translation of literals (numbers, strings, atoms) to Core Erlang constants
-- [ ] 1.3.1.5 Implement translation of perform operations to process send/receive messages and try/with handlers to process spawning and message handling (success: generate Core Erlang that executes effects via BEAM processes)
+- [x] 1.3.1.1 Implement translation of function applications to Core Erlang call expressions
+- [x] 1.3.1.2 Implement translation of let bindings to Core Erlang let expressions with proper scoping
+- [x] 1.3.1.3 Implement translation of composition operators (|>) to nested function calls
+- [x] 1.3.1.4 Implement translation of literals (numbers, strings, atoms) to Core Erlang constants
+- [x] 1.3.1.5 Implement translation of perform operations to process send/receive messages and try/with handlers to process spawning and message handling (success: generate Core Erlang that executes effects via BEAM processes)
 
 ### 1.3.2 Pattern Compilation
 - [ ] **Task 1.3.2 Complete**
