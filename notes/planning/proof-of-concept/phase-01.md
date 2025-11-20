@@ -233,14 +233,14 @@ Each Catena module compiles to a BEAM module with exports, imports, and module a
 - [x] 1.3.4.4 Implement Core Erlang file output writing valid .core files that erlc can compile
 
 ### 1.3.5 Effect Runtime System
-- [ ] **Task 1.3.5 Complete**
+- [x] **Task 1.3.5 Complete**
 
 The effect runtime implements process-based effect handlers leveraging BEAM's lightweight processes. Each try/with handler spawns a handler process that receives perform messages, executes handler operations, and sends results back. This provides true effect isolation and leverages BEAM's strengths in concurrency and message passing. **PoC implements minimal runtime with IO and Process effects only.**
 
-- [ ] 1.3.5.1 Implement handler process spawning where try/with blocks spawn handler process with operation implementations and register for effect operations
-- [ ] 1.3.5.2 Implement perform operation compilation translating perform to send message to handler process and receive result with timeout handling
-- [ ] 1.3.5.3 Implement effect message protocol using tagged tuples `{perform, EffectName, Operation, Args, ReplyPid}` and `{effect_result, Value}` for bidirectional communication
-- [ ] 1.3.5.4 Implement builtin IO effect handler providing readFile, writeFile, print operations as baseline demonstrating process-based effect handling (success: can execute simple programs with IO effects)
+- [x] 1.3.5.1 Implement handler process spawning where try/with blocks spawn handler process with operation implementations and register for effect operations
+- [x] 1.3.5.2 Implement perform operation compilation translating perform to send message to handler process and receive result with timeout handling
+- [x] 1.3.5.3 Implement effect message protocol using tagged tuples `{perform, EffectName, Operation, Args, ReplyPid}` and `{effect_result, Value}` for bidirectional communication
+- [x] 1.3.5.4 Implement builtin IO effect handler providing readFile, writeFile, print operations as baseline demonstrating process-based effect handling (success: can execute simple programs with IO effects)
 
 ### Unit Tests - Section 1.3
 - [ ] **Unit Tests 1.3 Complete**
