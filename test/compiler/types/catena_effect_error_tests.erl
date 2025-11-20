@@ -166,7 +166,8 @@ effect_context_chain_test_() ->
      ?_test(test_effect_context_chain_constructor()),
      ?_test(test_effect_context_chain_formatting()),
      ?_test(test_effect_context_chain_empty()),
-     ?_test(test_effect_context_chain_multiple())
+     ?_test(test_effect_context_chain_multiple()),
+     ?_test(test_effect_context_chain_truncation())
     ].
 
 test_effect_context_chain_constructor() ->
@@ -210,6 +211,22 @@ test_effect_context_chain_multiple() ->
     ?assert(string:find(Msg, "10:1") =/= nomatch),
     ?assert(string:find(Msg, "20:1") =/= nomatch),
     ?assert(string:find(Msg, "30:1") =/= nomatch).
+
+test_effect_context_chain_truncation() ->
+    %% Create a chain with more than 50 entries to test truncation
+    Chain = [{list_to_atom("func_" ++ integer_to_list(N)), catena_location:new(N, 1)}
+             || N <- lists:seq(1, 60)],
+    Error = catena_type_error:effect_context_chain(large_effect, Chain),
+    Msg = catena_type_error:format_error(Error),
+
+    %% Should show first 50 entries
+    ?assert(string:find(Msg, "func_1") =/= nomatch),
+    ?assert(string:find(Msg, "func_50") =/= nomatch),
+    %% Should NOT show entries beyond 50
+    ?assertEqual(nomatch, string:find(Msg, "func_51")),
+    %% Should show truncation message
+    ?assert(string:find(Msg, "truncated") =/= nomatch),
+    ?assert(string:find(Msg, "10") =/= nomatch).  %% 10 more entries
 
 %%====================================================================
 %% Integration Tests

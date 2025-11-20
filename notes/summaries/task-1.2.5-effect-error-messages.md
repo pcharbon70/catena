@@ -125,7 +125,7 @@ Consider handling the effect at an appropriate point in this chain.
 
 ## Test Results
 
-- **New tests**: 17 passed
+- **New tests**: 18 passed (17 original + 1 truncation test)
 - **Full test suite**: 397 passed, 6 failed (pre-existing issues)
 - **No regressions** introduced by these changes
 
@@ -180,6 +180,17 @@ The integration will happen as part of tasks 1.2.6 (Trait Constraint System) and
 
 ---
 
+## Review Fixes
+
+After code review, the following improvements were made:
+
+1. **Type Safety**: Changed all location parameters from `tuple()` to `catena_location:location()` in type specs
+2. **Resource Protection**: Added chain length limit (50 entries) to `format_effect_chain` to prevent resource exhaustion
+3. **New Test**: Added `test_effect_context_chain_truncation/0` to verify truncation behavior
+
+---
+
 ## Commits
 
 - Initial implementation of effect-specific error types and tests
+- Address review findings: proper location types and chain length limit

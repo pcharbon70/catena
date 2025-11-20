@@ -99,11 +99,11 @@
     {effect_mismatch, catena_types:effect_set(), catena_types:effect_set()} |
 
     % Effect-specific errors (Task 1.2.5)
-    {unhandled_effect, atom(), atom(), tuple()} |  % {EffectName, FunctionName, Location}
-    {handler_missing_operation, atom(), atom(), tuple()} |  % {EffectName, OperationName, HandlerLoc}
-    {handler_arity_mismatch, atom(), atom(), non_neg_integer(), non_neg_integer(), tuple()} |  % {Effect, Op, Expected, Actual, Loc}
+    {unhandled_effect, atom(), atom(), catena_location:location()} |  % {EffectName, FunctionName, Location}
+    {handler_missing_operation, atom(), atom(), catena_location:location()} |  % {EffectName, OperationName, HandlerLoc}
+    {handler_arity_mismatch, atom(), atom(), non_neg_integer(), non_neg_integer(), catena_location:location()} |  % {Effect, Op, Expected, Actual, Loc}
     {effect_annotation_mismatch, atom(), catena_types:effect_set(), catena_types:effect_set()} |  % {FuncName, Declared, Inferred}
-    {effect_context_chain, atom(), [{atom(), tuple()}]} |  % {EffectName, [{FuncName, Location}]}
+    {effect_context_chain, atom(), [{atom(), catena_location:location()}]} |  % {EffectName, [{FuncName, Location}]}
 
     % Record/field errors
     {missing_field, atom(), catena_types:ty()} |
@@ -389,11 +389,17 @@ format_error(Error) ->
     lists:flatten(io_lib:format("Unknown type error: ~p", [Error])).
 
 %% Helper function to format effect propagation chain
+%% Limited to MAX_CHAIN_LENGTH entries to prevent resource exhaustion
+-define(MAX_CHAIN_LENGTH, 50).
+
 format_effect_chain(Chain) ->
     format_effect_chain(Chain, 1, []).
 
 format_effect_chain([], _N, Acc) ->
     lists:flatten(lists:reverse(Acc));
+format_effect_chain(_Rest, N, Acc) when N > ?MAX_CHAIN_LENGTH ->
+    Truncated = io_lib:format("  ... and ~p more entries (truncated)~n", [length(_Rest)]),
+    lists:flatten(lists:reverse([Truncated | Acc]));
 format_effect_chain([{FuncName, Location} | Rest], N, Acc) ->
     LocStr = catena_location:format(Location),
     Line = io_lib:format("  ~p. ~s at ~s~n", [N, atom_to_list(FuncName), LocStr]),
@@ -501,7 +507,7 @@ unsatisfied_constraint(TraitName, TypeArgs, Reason) ->
 %% @param EffectName The name of the unhandled effect
 %% @param FunctionName The name of the function with the unhandled effect
 %% @param Location The source location where the effect was introduced
--spec unhandled_effect(atom(), atom(), tuple()) -> type_error().
+-spec unhandled_effect(atom(), atom(), catena_location:location()) -> type_error().
 unhandled_effect(EffectName, FunctionName, Location) ->
     {unhandled_effect, EffectName, FunctionName, Location}.
 
@@ -514,7 +520,7 @@ unhandled_effect(EffectName, FunctionName, Location) ->
 %% @param EffectName The name of the effect
 %% @param OperationName The name of the missing operation
 %% @param HandlerLocation The source location of the handler
--spec handler_missing_operation(atom(), atom(), tuple()) -> type_error().
+-spec handler_missing_operation(atom(), atom(), catena_location:location()) -> type_error().
 handler_missing_operation(EffectName, OperationName, HandlerLocation) ->
     {handler_missing_operation, EffectName, OperationName, HandlerLocation}.
 
@@ -529,7 +535,7 @@ handler_missing_operation(EffectName, OperationName, HandlerLocation) ->
 %% @param Expected The expected number of arguments
 %% @param Actual The actual number of arguments in the handler
 %% @param Location The source location of the handler case
--spec handler_arity_mismatch(atom(), atom(), non_neg_integer(), non_neg_integer(), tuple()) -> type_error().
+-spec handler_arity_mismatch(atom(), atom(), non_neg_integer(), non_neg_integer(), catena_location:location()) -> type_error().
 handler_arity_mismatch(EffectName, OperationName, Expected, Actual, Location) ->
     {handler_arity_mismatch, EffectName, OperationName, Expected, Actual, Location}.
 
@@ -553,7 +559,7 @@ effect_annotation_mismatch(FunctionName, Declared, Inferred) ->
 %%
 %% @param EffectName The name of the effect being traced
 %% @param Chain List of {FunctionName, Location} pairs showing propagation
--spec effect_context_chain(atom(), [{atom(), tuple()}]) -> type_error().
+-spec effect_context_chain(atom(), [{atom(), catena_location:location()}]) -> type_error().
 effect_context_chain(EffectName, Chain) ->
     {effect_context_chain, EffectName, Chain}.
 
@@ -566,10 +572,10 @@ effect_context_chain(EffectName, Chain) ->
 %% Combines location information with the formatted error message
 %% to provide better error reporting with source context.
 %%
-%% @param Location Source location tuple (from catena_location)
+%% @param Location Source location (from catena_location)
 %% @param Error The type error to format
 %% @returns Formatted error message with location prefix
--spec format_error_with_location(tuple(), type_error()) -> string().
+-spec format_error_with_location(catena_location:location(), type_error()) -> string().
 format_error_with_location(Location, Error) ->
     LocStr = catena_location:format(Location),
     ErrorStr = format_error(Error),
