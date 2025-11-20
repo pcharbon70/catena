@@ -24,7 +24,7 @@ basic_types_test_() ->
 
 test_pp_var() ->
     Var = catena_types:tvar(1),
-    ?assertEqual("a1", catena_type_pp:pp_type(Var)),
+    ?assertEqual("α1", catena_type_pp:pp_type(Var)),
 
     Var2 = catena_types:tvar(42),
     ?assertEqual("α42", catena_type_pp:pp_type(Var2)).
@@ -192,7 +192,7 @@ test_pp_simple_variant() ->
         {'None', []},
         {'Some', [catena_types:tvar(1)]}
     ]),
-    ?assertEqual("None | Some a1", catena_type_pp:pp_type(Variant)).
+    ?assertEqual("None | Some α1", catena_type_pp:pp_type(Variant)).
 
 test_pp_variant_with_args() ->
     % Red | Green | Blue Int String
@@ -227,7 +227,7 @@ test_pp_poly_scheme() ->
         catena_types:empty_effects()
     ),
     Scheme = catena_type_scheme:poly([1], Type),
-    ?assertEqual("∀a1. a1 -> a1", catena_type_pp:pp_scheme(Scheme)).
+    ?assertEqual("∀α1. α1 -> α1", catena_type_pp:pp_scheme(Scheme)).
 
 test_pp_complex_poly_scheme() ->
     % ∀a1 a2. (a1 -> a2) -> List<a1> -> List<a2>
@@ -258,7 +258,7 @@ test_pp_complex_poly_scheme() ->
     ),
 
     Scheme = catena_type_scheme:poly([1, 2], MapType),
-    Expected = "∀a1 a2. (a1 -> a2) -> List<a1> -> List<a2>",
+    Expected = "∀α1 α2. (α1 -> α2) -> List<α1> -> List<α2>",
     ?assertEqual(Expected, catena_type_pp:pp_scheme(Scheme)).
 
 %%====================================================================
@@ -323,5 +323,5 @@ test_complex_nested_type() ->
     ),
 
     Scheme = catena_type_scheme:poly([1, 2], MapType),
-    Expected = "∀a1 a2. (a1 -> a2 / {io}) -> List<a1> -> List<a2> / {io}",
+    Expected = "∀α1 α2. (α1 -> α2 / {io}) -> List<α1> -> List<α2> / {io}",
     ?assertEqual(Expected, catena_type_pp:pp_scheme(Scheme)).
