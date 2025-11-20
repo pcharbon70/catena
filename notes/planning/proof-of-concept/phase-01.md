@@ -243,14 +243,14 @@ The effect runtime implements process-based effect handlers leveraging BEAM's li
 - [x] 1.3.5.4 Implement builtin IO effect handler providing readFile, writeFile, print operations as baseline demonstrating process-based effect handling (success: can execute simple programs with IO effects)
 
 ### Unit Tests - Section 1.3
-- [ ] **Unit Tests 1.3 Complete**
-- [ ] Test expression translation generating correct Core Erlang for all expression forms
-- [ ] Test pattern compilation producing optimal decision trees with exhaustiveness checking
-- [ ] Test type erasure preserving semantics while removing all type information
-- [ ] Test module generation producing valid .core files that compile to working .beam modules
-- [ ] Test effect runtime system spawning handler processes and routing perform messages correctly
-- [ ] Test builtin IO effect handler executing file operations and returning results via message passing
-- [ ] Test effect translation generating correct Core Erlang for perform operations and try/with handlers
+- [x] **Unit Tests 1.3 Complete**
+- [x] Test expression translation generating correct Core Erlang for all expression forms
+- [x] Test pattern compilation producing optimal decision trees with exhaustiveness checking
+- [x] Test type erasure preserving semantics while removing all type information
+- [x] Test module generation producing valid .core files that compile to working .beam modules
+- [x] Test effect runtime system spawning handler processes and routing perform messages correctly
+- [x] Test builtin IO effect handler executing file operations and returning results via message passing
+- [x] Test effect translation generating correct Core Erlang for perform operations and try/with handlers
 
 ---
 
