@@ -268,6 +268,11 @@ infer({ann, Expr, AnnotType}, Env, State) ->
     end.
 
 %% @doc Instantiate a type scheme by replacing quantified variables with fresh ones
+%%
+%% TODO: Consider consolidating with catena_type_scheme:instantiate/2.
+%% This version differs by also applying the current state's substitution
+%% to the result, which is needed during inference. A careful analysis is
+%% needed before consolidation to preserve this behavior.
 -spec instantiate(catena_type_scheme:scheme(), catena_infer_state:infer_state()) ->
     {catena_types:type(), catena_constraint:constraint_set(), catena_infer_state:infer_state()}.
 instantiate({mono, Type}, State) ->

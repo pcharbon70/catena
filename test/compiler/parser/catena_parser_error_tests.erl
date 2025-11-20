@@ -27,8 +27,8 @@
 %%   Section 4: Invalid Pattern Errors (6 tests)
 %%   Section 5: Invalid Type Expression Errors (6 tests)
 %%   Section 6: Lexer vs Parser Errors (4 tests)
-%%   Section 7: Shape Declaration Errors (5 tests)
-%%   Section 8: Flow Declaration Errors (6 tests)
+%%   Section 7: Type Declaration Errors (5 tests)
+%%   Section 8: Transform Declaration Errors (6 tests)
 %%   Section 9: Guard Errors (4 tests)
 %%   Section 10: Nested Error Cases (4 tests)
 %%
@@ -327,16 +327,16 @@ tokens_in_wrong_order_test() ->
     assert_error_has_location(Result).
 
 %%====================================================================
-%% Section 7: Shape Declaration Errors
+%% Section 7: Type Declaration Errors
 %%====================================================================
 
-%% Test 7.1: Shape with lowercase name
+%% Test 7.1: Type with lowercase name
 %% Source: type option a = Some a
 lowercase_shape_name_test() ->
     Result = assert_parse_error("type option a = Some a"),
     assert_error_has_location(Result).
 
-%% Test 7.2: Shape with duplicate type parameters
+%% Test 7.2: Type with duplicate type parameters
 %% Source: type Maybe a a = Some a
 %% Note: This might be caught in type checking, not parsing
 duplicate_type_params_test() ->
@@ -345,7 +345,7 @@ duplicate_type_params_test() ->
     _ = parse_and_expect_error(Source),
     ok.
 
-%% Test 7.3: Shape with missing equals
+%% Test 7.3: Type with missing equals
 %% Source: type Maybe a Some a
 missing_equals_in_shape_test() ->
     Result = assert_parse_error("type Maybe a Some a"),
@@ -367,16 +367,16 @@ empty_constructor_list_test() ->
     assert_error_has_location(Result).
 
 %%====================================================================
-%% Section 8: Flow Declaration Errors
+%% Section 8: Transform Declaration Errors
 %%====================================================================
 
-%% Test 8.1: Flow with uppercase name
+%% Test 8.1: Transform with uppercase name
 %% Source: transform Map = x
 uppercase_flow_name_test() ->
     Result = assert_parse_error("transform Map = x"),
     assert_error_has_location(Result).
 
-%% Test 8.2: Flow with missing name
+%% Test 8.2: Transform with missing name
 %% Source: transform = x
 missing_flow_name_test() ->
     Result = assert_parse_error("transform = x"),
@@ -388,14 +388,14 @@ syntax_invalid_type_sig_test() ->
     Result = assert_parse_error("transform f : a ->\ "),
     assert_error_has_location(Result).
 
-%% Test 8.4: Multiple equals in flow
+%% Test 8.4: Multiple equals in transform
 %% Source: transform f = x = y
 multiple_equals_in_flow_test() ->
     Result = assert_parse_error("transform f = x = y"),
     assert_error_has_location(Result).
 
-%% Test 8.5: Flow with only keyword
-%% Source: flow
+%% Test 8.5: Transform with only keyword
+%% Source: transform
 only_flow_keyword_test() ->
     Result = assert_parse_error("transform"),
     assert_error_has_location(Result).

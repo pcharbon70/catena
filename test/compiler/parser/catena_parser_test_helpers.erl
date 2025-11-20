@@ -10,7 +10,7 @@
 
 -export([
     % Parsing helpers
-    parse_flow/1,
+    parse_transform/1,
     parse_type_sig/1,
     parse_single_decl/1,
 
@@ -29,14 +29,14 @@
 %% Useful for testing transform syntax, patterns, and guards.
 %%
 %% Example:
-%%   FlowDecl = parse_flow("transform id x = x"),
-%%   Patterns = get_patterns(FlowDecl).
--spec parse_flow(string()) -> term().
-parse_flow(Source) ->
+%%   TransformDecl = parse_transform("transform id x = x"),
+%%   Patterns = get_patterns(TransformDecl).
+-spec parse_transform(string()) -> term().
+parse_transform(Source) ->
     {ok, Tokens} = catena_lexer:tokenize(Source),
     {ok, AST} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = AST,
-    FlowDecl.
+    {module, _, _, _, [TransformDecl], _} = AST,
+    TransformDecl.
 
 %% @doc Parse a Catena type signature from source code
 %% Parses a type signature by adding a dummy transform body.
@@ -50,8 +50,8 @@ parse_type_sig(Source) ->
     FullSource = Source ++ "\ntransform f = x",
     {ok, Tokens} = catena_lexer:tokenize(FullSource),
     {ok, AST} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = AST,
-    {transform_decl, _Name, TypeSig, _Clauses, _Loc} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = AST,
+    {transform_decl, _Name, TypeSig, _Clauses, _Loc} = TransformDecl,
     TypeSig.
 
 %% @doc Parse tokens and extract the single declaration
@@ -78,12 +78,12 @@ parse_single_decl(Tokens) ->
 %% Returns the list of patterns from the first clause.
 %%
 %% Example:
-%%   FlowDecl = parse_flow("transform add x y = x + y"),
-%%   [P1, P2] = get_patterns(FlowDecl),
+%%   TransformDecl = parse_transform("transform add x y = x + y"),
+%%   [P1, P2] = get_patterns(TransformDecl),
 %%   ?assertMatch({pat_var, x, _}, P1).
 -spec get_patterns(term()) -> list().
-get_patterns(FlowDecl) ->
-    {transform_decl, _Name, _Type, [Clause], _Loc} = FlowDecl,
+get_patterns(TransformDecl) ->
+    {transform_decl, _Name, _Type, [Clause], _Loc} = TransformDecl,
     {transform_clause, Patterns, _Guards, _Body, _ClauseLoc} = Clause,
     Patterns.
 
@@ -92,12 +92,12 @@ get_patterns(FlowDecl) ->
 %% Returns the guards from the first clause.
 %%
 %% Example:
-%%   FlowDecl = parse_flow("transform positive x when x > 0 = x"),
-%%   Guards = get_guards(FlowDecl),
+%%   TransformDecl = parse_transform("transform positive x when x > 0 = x"),
+%%   Guards = get_guards(TransformDecl),
 %%   ?assertMatch([{op, '>', _, _}], Guards).
 -spec get_guards(term()) -> list().
-get_guards(FlowDecl) ->
-    {transform_decl, _Name, _Type, [Clause], _Loc} = FlowDecl,
+get_guards(TransformDecl) ->
+    {transform_decl, _Name, _Type, [Clause], _Loc} = TransformDecl,
     {transform_clause, _Patterns, Guards, _Body, _ClauseLoc} = Clause,
     Guards.
 
@@ -106,12 +106,12 @@ get_guards(FlowDecl) ->
 %% Returns the body expression from the first clause.
 %%
 %% Example:
-%%   FlowDecl = parse_flow("transform id x = x"),
-%%   Body = get_body(FlowDecl),
+%%   TransformDecl = parse_transform("transform id x = x"),
+%%   Body = get_body(TransformDecl),
 %%   ?assertMatch({var, x, _}, Body).
 -spec get_body(term()) -> term().
-get_body(FlowDecl) ->
-    {transform_decl, _Name, _Type, [Clause], _Loc} = FlowDecl,
+get_body(TransformDecl) ->
+    {transform_decl, _Name, _Type, [Clause], _Loc} = TransformDecl,
     {transform_clause, _Patterns, _Guards, Body, _ClauseLoc} = Clause,
     Body.
 

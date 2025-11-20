@@ -379,7 +379,7 @@ multi_error_recovery_multiple_bad_shapes_test() ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
             {error, Errors} ->
-                % Should find multiple errors (at least 2 from malformed shapes)
+                % Should find multiple errors (at least 2 from malformed types)
                 ?assert(length(Errors) >= 2),
                 % All should be syntax errors
                 lists:foreach(
@@ -450,7 +450,7 @@ multi_error_recovery_continues_after_error_test() ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
             {error, Errors} ->
-                % Should have at least one error from malformed shape
+                % Should have at least one error from malformed type
                 ?assert(length(Errors) >= 1),
                 % Parser should have continued and found the valid declaration after the error
                 % (This is evidenced by more than just stopping at first error)

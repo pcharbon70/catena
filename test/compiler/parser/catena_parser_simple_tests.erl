@@ -2,7 +2,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 %%====================================================================
-%% Test 1.1.2.1: Shape Declaration Parsing
+%% Test 1.1.2.1: Type Declaration Parsing
 %%====================================================================
 
 parse_simple_shape_test() ->
@@ -20,7 +20,7 @@ parse_simple_shape_test() ->
     ?assertMatch({type_decl, 'Bool', [], [_, _], [], _}, ShapeDecl).
 
 %%====================================================================
-%% Test 1.1.2.2: Flow Declaration Parsing
+%% Test 1.1.2.2: Transform Declaration Parsing
 %%====================================================================
 
 parse_simple_flow_test() ->

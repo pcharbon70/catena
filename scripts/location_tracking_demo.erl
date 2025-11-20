@@ -12,7 +12,7 @@ main([]) ->
     code:add_patha("src/compiler/lexer"),
 
     %% Demo 1: Simple declaration with location tracking
-    demo_simple_shape(),
+    demo_simple_type(),
 
     %% Demo 2: Multi-line function with location spans
     demo_multiline_function(),
@@ -30,16 +30,16 @@ main([]) ->
 %% Demo Functions
 %%============================================================================
 
-demo_simple_shape() ->
-    io:format("1. Simple Shape Declaration~n"),
-    io:format("   Source: shape Bool = True | False~n"),
+demo_simple_type() ->
+    io:format("1. Simple Type Declaration~n"),
+    io:format("   Source: type Bool = True | False~n"),
 
-    Source = "shape Bool = True | False",
+    Source = "type Bool = True | False",
     {ok, Tokens} = catena_lexer:tokenize(Source),
-    {ok, {module, _, _, _, [ShapeDecl], _}} = catena_parser:parse(Tokens),
+    {ok, {module, _, _, _, [TypeDecl], _}} = catena_parser:parse(Tokens),
 
-    {shape_decl, 'Bool', [], Constructors, [], Loc} = ShapeDecl,
-    io:format("   Shape location: ~s~n", [catena_location:format(Loc)]),
+    {type_decl, 'Bool', [], Constructors, [], Loc} = TypeDecl,
+    io:format("   Type location: ~s~n", [catena_location:format(Loc)]),
 
     lists:foreach(fun({constructor, Name, _, ConsLoc}) ->
         io:format("     Constructor ~p at ~s~n",
@@ -49,19 +49,19 @@ demo_simple_shape() ->
 
 demo_multiline_function() ->
     io:format("2. Multi-line Function~n"),
-    Source = "flow length xs = match\n"
+    Source = "transform length xs = match\n"
              "  | Nil -> 0\n"
              "  | Cons(_ rest) -> 1\n"
              "end",
     io:format("   Source:~n~s~n", [Source]),
 
     {ok, Tokens} = catena_lexer:tokenize(Source),
-    {ok, {module, _, _, _, [FlowDecl], _}} = catena_parser:parse(Tokens),
+    {ok, {module, _, _, _, [TransformDecl], _}} = catena_parser:parse(Tokens),
 
-    {flow_decl, length, _Type, Clauses, FlowLoc} = FlowDecl,
-    io:format("   Flow declaration at ~s~n", [catena_location:format(FlowLoc)]),
+    {transform_decl, length, _Type, Clauses, TransformLoc} = TransformDecl,
+    io:format("   Transform declaration at ~s~n", [catena_location:format(TransformLoc)]),
 
-    lists:foreach(fun({flow_clause, _Patterns, _Guards, Body, ClauseLoc}) ->
+    lists:foreach(fun({transform_clause, _Patterns, _Guards, Body, ClauseLoc}) ->
         io:format("     Clause at ~s~n", [catena_location:format(ClauseLoc)]),
         case Body of
             {match_expr, MatchClauses, MatchLoc} ->
@@ -82,7 +82,7 @@ demo_error_locations() ->
     io:format("3. Location-Aware Error Messages~n"),
 
     %% Parse error
-    Source1 = "flow bad syntax",
+    Source1 = "transform bad syntax",
     io:format("   Source: ~s~n", [Source1]),
     case catena_parse:parse(Source1) of
         {error, Error} ->
@@ -106,16 +106,16 @@ demo_error_locations() ->
 
 demo_ast_locations() ->
     io:format("4. Extract Locations from AST~n"),
-    Source = "flow add x y = x + y",
+    Source = "transform add x y = x + y",
     io:format("   Source: ~s~n", [Source]),
 
     {ok, Tokens} = catena_lexer:tokenize(Source),
-    {ok, {module, _, _, _, [FlowDecl], _}} = catena_parser:parse(Tokens),
+    {ok, {module, _, _, _, [TransformDecl], _}} = catena_parser:parse(Tokens),
 
-    {flow_decl, add, _Type, [Clause], FlowLoc} = FlowDecl,
-    {flow_clause, Patterns, _, Body, ClauseLoc} = Clause,
+    {transform_decl, add, _Type, [Clause], TransformLoc} = TransformDecl,
+    {transform_clause, Patterns, _, Body, ClauseLoc} = Clause,
 
-    io:format("   Flow at ~s~n", [catena_location:format(FlowLoc)]),
+    io:format("   Transform at ~s~n", [catena_location:format(TransformLoc)]),
     io:format("   Clause at ~s~n", [catena_location:format(ClauseLoc)]),
 
     %% Show pattern locations

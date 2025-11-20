@@ -35,7 +35,7 @@ demo_token_limit() ->
         application:set_env(catena, max_token_count, 5),
         io:format("   Limit set to: 5 tokens~n"),
 
-        Source = "shape Bool = True | False",
+        Source = "type Bool = True | False",
         io:format("   Source: ~s~n", [Source]),
 
         case catena_parse:parse(Source) of
@@ -64,7 +64,7 @@ demo_pattern_depth() ->
         io:format("   Limit set to: 2 levels~n"),
 
         %% Create a deeply nested pattern
-        Source = "flow f Some(Some(Some(x))) = x",
+        Source = "transform f Some(Some(Some(x))) = x",
         io:format("   Source: ~s~n", [Source]),
         io:format("   Pattern depth: 3 (exceeds limit)~n"),
 

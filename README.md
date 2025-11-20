@@ -141,31 +141,31 @@ See the [research directory README](notes/research/README.md) for a detailed ove
 ## Example Code
 
 ```catena
--- Define a shape (algebraic data type)
-shape User = {
+-- Define a type (algebraic data type)
+type User = {
   name: Text,
   age: Natural,
   email: Email
 } derives [Eq, Show, Mappable]
 
--- Define a flow (pure function)
-flow greet : User -> Text
-flow greet user = "Hello, " <> user.name
+-- Define a transform (pure function)
+transform greet : User -> Text
+transform greet user = "Hello, " <> user.name
 
 -- Composition with the pipe operator
-flow process_user : User -> Result Success Error
-flow process_user =
+transform process_user : User -> Result Success Error
+transform process_user =
   validate
-  |> transform
+  |> process
   |> persist
 
 -- Actor as immutable state machine
 actor Counter = {
-  shape State = { count: Natural }
-  shape Message = Increment | Decrement | Get
+  type State = { count: Natural }
+  type Message = Increment | Decrement | Get
 
-  flow handle : Message -> State -> (State, Maybe Reply)
-  flow handle = match
+  transform handle : Message -> State -> (State, Maybe Reply)
+  transform handle = match
     | Increment, s -> ({ count: s.count + 1 }, None)
     | Decrement, s -> ({ count: s.count - 1 }, None)
     | Get, s       -> (s, Some s.count)

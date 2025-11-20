@@ -39,7 +39,7 @@ parse_simple_flow_test() ->
     ?assertEqual(1, length(Clauses)).
 
 %% Test 1.3: Parse transform with type signature
-parse_flow_with_type_sig_test() ->
+parse_transform_with_type_sig_test() ->
     Source = "transform identity : a -> a\n"
              "transform identity x = x",
     Result = catena_parse:parse(Source),
@@ -128,7 +128,7 @@ lex_error_input_too_large_test() ->
 %% Section 3: Parser Error Handling
 %%----------------------------------------------------------------------------
 
-%% Test 3.1: Missing equals in flow
+%% Test 3.1: Missing equals in transform
 parse_error_missing_equals_test() ->
     Source = "transform f x y",
     Result = catena_parse:parse(Source),

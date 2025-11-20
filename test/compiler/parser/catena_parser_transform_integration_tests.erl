@@ -2,7 +2,7 @@
 -include_lib("eunit/include/eunit.hrl").
 
 %%====================================================================
-%% Flow Integration Tests - Comprehensive Test Suite
+%% Transform Integration Tests - Comprehensive Test Suite
 %% Task 1.1.2: Grammar Implementation
 %%
 %% This test suite provides comprehensive integration testing for
@@ -10,19 +10,19 @@
 %%
 %% Test Organization:
 %% - Section 1: Simple transforms (literals, variables)
-%% - Section 2: Flows with operators (when extended parser works)
-%% - Section 3: Flows with pattern matching (when extended parser works)
-%% - Section 4: Flows with guards (when extended parser works)
+%% - Section 2: Transforms with operators (when extended parser works)
+%% - Section 3: Transforms with pattern matching (when extended parser works)
+%% - Section 4: Transforms with guards (when extended parser works)
 %% - Section 5: Integration with lexer (end-to-end)
 %% - Section 6: Multiple transform clauses
 %% - Section 7: Edge cases and error handling
 %%====================================================================
 
 %%====================================================================
-%% Section 1: Simple Flow Declarations
+%% Section 1: Simple Transform Declarations
 %%====================================================================
 
-%% Test 1.1: Flow with integer literal
+%% Test 1.1: Transform with integer literal
 parse_transform_integer_literal_test() ->
     Tokens = [
         {transform, 1},
@@ -32,12 +32,12 @@ parse_transform_integer_literal_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     ?assertMatch({module, undefined, [], [], [_], _}, Result),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    ?assertMatch({transform_decl, answer, undefined, [{transform_clause, [], undefined, _, _}], _}, FlowDecl),
-    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = Result,
+    ?assertMatch({transform_decl, answer, undefined, [{transform_clause, [], undefined, _, _}], _}, TransformDecl),
+    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = TransformDecl,
     ?assertMatch({literal, 42, integer, _}, Expr).
 
-%% Test 1.2: Flow with float literal
+%% Test 1.2: Transform with float literal
 parse_transform_float_literal_test() ->
     Tokens = [
         {transform, 1},
@@ -46,12 +46,12 @@ parse_transform_float_literal_test() ->
         {float, 1, 3.14159}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    ?assertMatch({transform_decl, pi, undefined, [{transform_clause, [], undefined, _, _}], _}, FlowDecl),
-    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = Result,
+    ?assertMatch({transform_decl, pi, undefined, [{transform_clause, [], undefined, _, _}], _}, TransformDecl),
+    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = TransformDecl,
     ?assertMatch({literal, 3.14159, float, _}, Expr).
 
-%% Test 1.3: Flow with string literal
+%% Test 1.3: Transform with string literal
 parse_transform_string_literal_test() ->
     Tokens = [
         {transform, 1},
@@ -60,12 +60,12 @@ parse_transform_string_literal_test() ->
         {string, 1, "Hello, Catena!"}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    ?assertMatch({transform_decl, greeting, undefined, [{transform_clause, [], undefined, _, _}], _}, FlowDecl),
-    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = Result,
+    ?assertMatch({transform_decl, greeting, undefined, [{transform_clause, [], undefined, _, _}], _}, TransformDecl),
+    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = TransformDecl,
     ?assertMatch({literal, "Hello, Catena!", string, _}, Expr).
 
-%% Test 1.4: Flow with variable reference
+%% Test 1.4: Transform with variable reference
 parse_transform_variable_test() ->
     Tokens = [
         {transform, 1},
@@ -74,12 +74,12 @@ parse_transform_variable_test() ->
         {lower_ident, 1, "x"}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    ?assertMatch({transform_decl, identity, undefined, [{transform_clause, [], undefined, _, _}], _}, FlowDecl),
-    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = Result,
+    ?assertMatch({transform_decl, identity, undefined, [{transform_clause, [], undefined, _, _}], _}, TransformDecl),
+    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = TransformDecl,
     ?assertMatch({var, x, _}, Expr).
 
-%% Test 1.5: Flow with constructor reference
+%% Test 1.5: Transform with constructor reference
 %% NOTE: Skipped - minimal parser doesn't support upper_ident as expressions
 %% TODO: Enable when extended parser (catena_parser.yrl) is working
 % parse_transform_constructor_test() ->
@@ -90,16 +90,16 @@ parse_transform_variable_test() ->
 %         {upper_ident, 1, "None"}
 %     ],
 %     {ok, Result} = catena_parser:parse(Tokens),
-%     {module, _, _, _, [FlowDecl], _} = Result,
-%     ?assertMatch({transform_decl, nothing, undefined, [{transform_clause, [], undefined, _, _}], _}, FlowDecl),
-%     {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = FlowDecl,
+%     {module, _, _, _, [TransformDecl], _} = Result,
+%     ?assertMatch({transform_decl, nothing, undefined, [{transform_clause, [], undefined, _, _}], _}, TransformDecl),
+%     {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = TransformDecl,
 %     ?assertMatch({var, 'None', _}, Expr).
 
 %%====================================================================
-%% Section 2: Flows with Different Literal Types
+%% Section 2: Transforms with Different Literal Types
 %%====================================================================
 
-%% Test 2.1: Flow with negative integer
+%% Test 2.1: Transform with negative integer
 parse_transform_negative_integer_test() ->
     Tokens = [
         {transform, 1},
@@ -108,11 +108,11 @@ parse_transform_negative_integer_test() ->
         {integer, 1, -273}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = Result,
+    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = TransformDecl,
     ?assertMatch({literal, -273, integer, _}, Expr).
 
-%% Test 2.2: Flow with zero
+%% Test 2.2: Transform with zero
 parse_transform_zero_test() ->
     Tokens = [
         {transform, 1},
@@ -121,11 +121,11 @@ parse_transform_zero_test() ->
         {integer, 1, 0}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = Result,
+    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = TransformDecl,
     ?assertMatch({literal, 0, integer, _}, Expr).
 
-%% Test 2.3: Flow with large integer
+%% Test 2.3: Transform with large integer
 parse_transform_large_integer_test() ->
     Tokens = [
         {transform, 1},
@@ -134,11 +134,11 @@ parse_transform_large_integer_test() ->
         {integer, 1, 1000000}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = Result,
+    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = TransformDecl,
     ?assertMatch({literal, 1000000, integer, _}, Expr).
 
-%% Test 2.4: Flow with scientific notation float
+%% Test 2.4: Transform with scientific notation float
 parse_transform_scientific_float_test() ->
     Tokens = [
         {transform, 1},
@@ -147,11 +147,11 @@ parse_transform_scientific_float_test() ->
         {float, 1, 6.022e23}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = Result,
+    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = TransformDecl,
     ?assertMatch({literal, 6.022e23, float, _}, Expr).
 
-%% Test 2.5: Flow with empty string
+%% Test 2.5: Transform with empty string
 parse_transform_empty_string_test() ->
     Tokens = [
         {transform, 1},
@@ -160,11 +160,11 @@ parse_transform_empty_string_test() ->
         {string, 1, ""}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = Result,
+    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = TransformDecl,
     ?assertMatch({literal, "", string, _}, Expr).
 
-%% Test 2.6: Flow with multi-line string (escape sequences)
+%% Test 2.6: Transform with multi-line string (escape sequences)
 parse_transform_multiline_string_test() ->
     Tokens = [
         {transform, 1},
@@ -173,8 +173,8 @@ parse_transform_multiline_string_test() ->
         {string, 1, "Hello\nWorld\t!"}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = Result,
+    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = TransformDecl,
     ?assertMatch({literal, "Hello\nWorld\t!", string, _}, Expr).
 
 %%====================================================================
@@ -187,28 +187,28 @@ integration_simple_transform_test() ->
     {ok, Tokens} = catena_lexer:tokenize(Source),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch({module, undefined, [], [], [_], _}, AST),
-    {module, _, _, _, [FlowDecl], _} = AST,
-    ?assertMatch({transform_decl, answer, undefined, [{transform_clause, [], undefined, _, _}], _}, FlowDecl).
+    {module, _, _, _, [TransformDecl], _} = AST,
+    ?assertMatch({transform_decl, answer, undefined, [{transform_clause, [], undefined, _, _}], _}, TransformDecl).
 
-%% Test 3.2: Parse multiple flows from source
+%% Test 3.2: Parse multiple transforms from source
 integration_multiple_transforms_test() ->
     Source = "transform x = 1\ntransform y = 2",
     {ok, Tokens} = catena_lexer:tokenize(Source),
     {ok, AST} = catena_parser:parse(Tokens),
     {module, _, _, _, Decls, _} = AST,
     ?assertEqual(2, length(Decls)),
-    [Flow1, Flow2] = Decls,
-    ?assertMatch({transform_decl, x, _, _, _}, Flow1),
-    ?assertMatch({transform_decl, y, _, _, _}, Flow2).
+    [Transform1, Transform2] = Decls,
+    ?assertMatch({transform_decl, x, _, _, _}, Transform1),
+    ?assertMatch({transform_decl, y, _, _, _}, Transform2).
 
 %% Test 3.3: Parse transform with comments (lexer filters them)
 integration_transform_with_comments_test() ->
     Source = "-- This is the answer\ntransform answer = 42  -- the ultimate answer",
     {ok, Tokens} = catena_lexer:tokenize(Source),
     {ok, AST} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = AST,
-    ?assertMatch({transform_decl, answer, undefined, [{transform_clause, [], undefined, _, _}], _}, FlowDecl),
-    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = AST,
+    ?assertMatch({transform_decl, answer, undefined, [{transform_clause, [], undefined, _, _}], _}, TransformDecl),
+    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = TransformDecl,
     ?assertMatch({literal, 42, integer, _}, Expr).
 
 %% Test 3.4: Parse transform with whitespace variations
@@ -216,56 +216,56 @@ integration_transform_whitespace_test() ->
     Source = "transform   identity   =   x",
     {ok, Tokens} = catena_lexer:tokenize(Source),
     {ok, AST} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = AST,
-    ?assertMatch({transform_decl, identity, undefined, [{transform_clause, [], undefined, _, _}], _}, FlowDecl).
+    {module, _, _, _, [TransformDecl], _} = AST,
+    ?assertMatch({transform_decl, identity, undefined, [{transform_clause, [], undefined, _, _}], _}, TransformDecl).
 
 %% Test 3.5: Parse transform on multiple lines
 integration_transform_multiline_test() ->
     Source = "transform\n  greeting\n    =\n      \"Hello\"",
     {ok, Tokens} = catena_lexer:tokenize(Source),
     {ok, AST} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = AST,
-    ?assertMatch({transform_decl, greeting, undefined, [{transform_clause, [], undefined, _, _}], _}, FlowDecl).
+    {module, _, _, _, [TransformDecl], _} = AST,
+    ?assertMatch({transform_decl, greeting, undefined, [{transform_clause, [], undefined, _, _}], _}, TransformDecl).
 
 %% Test 3.6: Parse realistic code sample (flow with meaningful name)
 integration_realistic_flow_test() ->
     Source = "transform calculate_tax_rate = 0.15",
     {ok, Tokens} = catena_lexer:tokenize(Source),
     {ok, AST} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = AST,
-    ?assertMatch({transform_decl, calculate_tax_rate, undefined, [{transform_clause, [], undefined, _, _}], _}, FlowDecl),
-    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = AST,
+    ?assertMatch({transform_decl, calculate_tax_rate, undefined, [{transform_clause, [], undefined, _, _}], _}, TransformDecl),
+    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = TransformDecl,
     ?assertMatch({literal, 0.15, float, _}, Expr).
 
 %%====================================================================
-%% Section 4: Combined Shape and Flow Declarations
+%% Section 4: Combined Shape and Transform Declarations
 %%====================================================================
 
-%% Test 4.1: Shape followed by flow
+%% Test 4.1: Type followed by transform
 %% NOTE: Skipped - uses True as expression (upper_ident not supported in minimal parser)
 %% TODO: Enable when extended parser is working
-% integration_shape_then_flow_test() ->
+% integration_type_then_transform_test() ->
 %     Source = "type Bool = True | False\nflow default_bool = True",
 %     {ok, Tokens} = catena_lexer:tokenize(Source),
 %     {ok, AST} = catena_parser:parse(Tokens),
 %     {module, _, _, _, Decls, _} = AST,
 %     ?assertEqual(2, length(Decls)),
-%     [ShapeDecl, FlowDecl] = Decls,
-%     ?assertMatch({type_decl, 'Bool', _, _, _, _}, ShapeDecl),
-%     ?assertMatch({transform_decl, default_bool, _, _, _}, FlowDecl).
+%     [TypeDecl, TransformDecl] = Decls,
+%     ?assertMatch({type_decl, 'Bool', _, _, _, _}, TypeDecl),
+%     ?assertMatch({transform_decl, default_bool, _, _, _}, TransformDecl).
 
-%% Test 4.2: Flow followed by shape
+%% Test 4.2: Transform followed by type
 integration_transform_then_shape_test() ->
     Source = "transform zero = 0\ntype Nat = Zero | Succ",
     {ok, Tokens} = catena_lexer:tokenize(Source),
     {ok, AST} = catena_parser:parse(Tokens),
     {module, _, _, _, Decls, _} = AST,
     ?assertEqual(2, length(Decls)),
-    [FlowDecl, ShapeDecl] = Decls,
-    ?assertMatch({transform_decl, zero, _, _, _}, FlowDecl),
-    ?assertMatch({type_decl, 'Nat', _, _, _, _}, ShapeDecl).
+    [TransformDecl, TypeDecl] = Decls,
+    ?assertMatch({transform_decl, zero, _, _, _}, TransformDecl),
+    ?assertMatch({type_decl, 'Nat', _, _, _, _}, TypeDecl).
 
-%% Test 4.3: Multiple shapes and flows interleaved
+%% Test 4.3: Multiple types and transforms interleaved
 %% NOTE: Skipped - uses True and None as expressions (upper_ident not supported in minimal parser)
 %% TODO: Enable when extended parser is working
 % integration_interleaved_declarations_test() ->
@@ -277,17 +277,17 @@ integration_transform_then_shape_test() ->
 %     {ok, AST} = catena_parser:parse(Tokens),
 %     {module, _, _, _, Decls, _} = AST,
 %     ?assertEqual(4, length(Decls)),
-%     [Shape1, Flow1, Shape2, Flow2] = Decls,
-%     ?assertMatch({type_decl, 'Bool', _, _, _, _}, Shape1),
-%     ?assertMatch({transform_decl, is_true, _, _, _}, Flow1),
-%     ?assertMatch({type_decl, 'Maybe', _, _, _, _}, Shape2),
-%     ?assertMatch({transform_decl, nothing, _, _, _}, Flow2).
+%     [Type1, Transform1, Type2, Transform2] = Decls,
+%     ?assertMatch({type_decl, 'Bool', _, _, _, _}, Type1),
+%     ?assertMatch({transform_decl, is_true, _, _, _}, Transform1),
+%     ?assertMatch({type_decl, 'Maybe', _, _, _, _}, Type2),
+%     ?assertMatch({transform_decl, nothing, _, _, _}, Transform2).
 
 %%====================================================================
-%% Section 5: Flow Name and Identifier Tests
+%% Section 5: Transform Name and Identifier Tests
 %%====================================================================
 
-%% Test 5.1: Flow with single-letter name
+%% Test 5.1: Transform with single-letter name
 parse_transform_single_letter_name_test() ->
     Tokens = [
         {transform, 1},
@@ -296,10 +296,10 @@ parse_transform_single_letter_name_test() ->
         {integer, 1, 1}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    ?assertMatch({transform_decl, x, _, _, _}, FlowDecl).
+    {module, _, _, _, [TransformDecl], _} = Result,
+    ?assertMatch({transform_decl, x, _, _, _}, TransformDecl).
 
-%% Test 5.2: Flow with underscore in name
+%% Test 5.2: Transform with underscore in name
 parse_transform_underscore_name_test() ->
     Tokens = [
         {transform, 1},
@@ -308,10 +308,10 @@ parse_transform_underscore_name_test() ->
         {integer, 1, 42}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    ?assertMatch({transform_decl, my_function, _, _, _}, FlowDecl).
+    {module, _, _, _, [TransformDecl], _} = Result,
+    ?assertMatch({transform_decl, my_function, _, _, _}, TransformDecl).
 
-%% Test 5.3: Flow with numbers in name
+%% Test 5.3: Transform with numbers in name
 parse_transform_numbers_in_name_test() ->
     Tokens = [
         {transform, 1},
@@ -320,10 +320,10 @@ parse_transform_numbers_in_name_test() ->
         {integer, 1, 456}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    ?assertMatch({transform_decl, var123, _, _, _}, FlowDecl).
+    {module, _, _, _, [TransformDecl], _} = Result,
+    ?assertMatch({transform_decl, var123, _, _, _}, TransformDecl).
 
-%% Test 5.4: Flow with long descriptive name
+%% Test 5.4: Transform with long descriptive name
 parse_transform_long_name_test() ->
     Tokens = [
         {transform, 1},
@@ -332,8 +332,8 @@ parse_transform_long_name_test() ->
         {float, 1, 99.99}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    ?assertMatch({transform_decl, calculate_total_with_tax_and_shipping, _, _, _}, FlowDecl).
+    {module, _, _, _, [TransformDecl], _} = Result,
+    ?assertMatch({transform_decl, calculate_total_with_tax_and_shipping, _, _, _}, TransformDecl).
 
 %%====================================================================
 %% Section 6: Location Tracking Tests
@@ -348,8 +348,8 @@ parse_transform_location_tracking_test() ->
         {integer, 5, 42}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    ?assertMatch({transform_decl, test, undefined, [{transform_clause, [], undefined, _, _}], _}, FlowDecl).
+    {module, _, _, _, [TransformDecl], _} = Result,
+    ?assertMatch({transform_decl, test, undefined, [{transform_clause, [], undefined, _, _}], _}, TransformDecl).
 
 %% Test 6.2: Verify expression location tracking
 parse_transform_expr_location_test() ->
@@ -360,8 +360,8 @@ parse_transform_expr_location_test() ->
         {string, 3, "hello"}  % String on line 3
     ],
     {ok, Result} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = Result,
-    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = Result,
+    {transform_decl, _, _, [{transform_clause, _, _, Expr, _}], _} = TransformDecl,
     ?assertMatch({literal, "hello", string, _}, Expr).
 
 %% Test 6.3: Multiple flows preserve line numbers
@@ -379,9 +379,9 @@ parse_multiple_transforms_location_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, Decls, _} = Result,
-    [Flow1, Flow2] = Decls,
-    ?assertMatch({transform_decl, first, _, _, _}, Flow1),
-    ?assertMatch({transform_decl, second, _, _, _}, Flow2).
+    [Transform1, Transform2] = Decls,
+    ?assertMatch({transform_decl, first, _, _, _}, Transform1),
+    ?assertMatch({transform_decl, second, _, _, _}, Transform2).
 
 %%====================================================================
 %% Section 7: AST Structure Verification
@@ -415,17 +415,17 @@ verify_transform_ast_structure_test() ->
     ?assertEqual(1, length(Decls)),
 
     % Verify transform declaration structure
-    [FlowDecl] = Decls,
-    ?assertMatch({transform_decl, _, _, _, _}, FlowDecl),
-    {transform_decl, Name, TypeSig, Clauses, FlowLoc} = FlowDecl,
+    [TransformDecl] = Decls,
+    ?assertMatch({transform_decl, _, _, _, _}, TransformDecl),
+    {transform_decl, Name, TypeSig, Clauses, FlowLoc} = TransformDecl,
 
-    % Flow name should be 'test'
+    % Transform name should be 'test'
     ?assertEqual(test, Name),
 
     % Type signature should be undefined (no type annotation)
     ?assertEqual(undefined, TypeSig),
 
-    % Flow location should be line 1
+    % Transform location should be line 1
     ?assertMatch(_, FlowLoc),
 
     % Should have exactly one clause
@@ -436,7 +436,7 @@ verify_transform_ast_structure_test() ->
     ?assertMatch({transform_clause, _, _, _, _}, Clause),
     {transform_clause, Patterns, Guards, Body, ClauseLoc} = Clause,
 
-    % No patterns (simple flow)
+    % No patterns (simple transform)
     ?assertEqual([], Patterns),
 
     % No guards
@@ -461,8 +461,8 @@ verify_transform_variable_ast_test() ->
         {lower_ident, 1, "x"}
     ],
     {ok, AST} = catena_parser:parse(Tokens),
-    {module, _, _, _, [FlowDecl], _} = AST,
-    {transform_decl, id, undefined, [Clause], _} = FlowDecl,
+    {module, _, _, _, [TransformDecl], _} = AST,
+    {transform_decl, id, undefined, [Clause], _} = TransformDecl,
     {transform_clause, [], undefined, Body, _} = Clause,
 
     % Body should be a variable reference

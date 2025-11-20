@@ -249,17 +249,17 @@ cp src/compiler/parser/catena_parser.yrl{,.backup}
 ## Success Criteria
 
 1. **Functional Requirements**:
-   - [ ] All tests pass with new keywords
-   - [ ] Parser correctly recognizes `type` instead of `shape`
-   - [ ] Parser correctly recognizes `transform` instead of `flow`
-   - [ ] AST generation works with new node types
-   - [ ] Type inference works with new AST nodes
+   - [x] All tests pass with new keywords
+   - [x] Parser correctly recognizes `type` instead of `shape`
+   - [x] Parser correctly recognizes `transform` instead of `flow`
+   - [x] AST generation works with new node types
+   - [x] Type inference works with new AST nodes
 
 2. **Quality Requirements**:
-   - [ ] Test coverage remains ≥86%
-   - [ ] No performance degradation
-   - [ ] Error messages are clear and use new terminology
-   - [ ] Documentation is consistent with implementation
+   - [x] Test coverage remains ≥86%
+   - [x] No performance degradation
+   - [x] Error messages are clear and use new terminology
+   - [x] Documentation is consistent with implementation
 
 3. **Backwards Compatibility**:
    - Note: This is a breaking change. Old Catena source files using `shape` and `flow` will need to be updated.
