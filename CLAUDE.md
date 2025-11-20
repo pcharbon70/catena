@@ -97,7 +97,7 @@ All modules follow the `catena_*` naming pattern:
 The Catena compiler follows a traditional multi-pass architecture:
 
 ### Phase 1: Lexer and Parser (✓ Complete)
-- **Lexer** (leex): Tokenizes source code including keywords (`shape`, `flow`, `effect`, `trait`), operators (`|>`, `>>=`, `<$>`, `<*>`), and literals
+- **Lexer** (leex): Tokenizes source code including keywords (`type`, `transform`, `effect`, `trait`), operators (`|>`, `>>=`, `<$>`, `<*>`), and literals
 - **Parser** (yecc): Builds AST from tokens, handles operator precedence, supports effect syntax, trait system declarations
 - **Error Recovery**: Panic-mode recovery for syntax errors with helpful messages
 
@@ -133,16 +133,16 @@ Current focus is on completing Phase 1 type system implementation.
 ## Language Syntax Examples
 
 ```catena
--- Shape (algebraic data type)
-shape User = {
+-- Type (algebraic data type)
+type User = {
   name: Text,
   age: Natural,
   email: Email
 } derives [Eq, Show, Mappable]
 
--- Flow (pure function)
-flow greet : User -> Text
-flow greet user = "Hello, " <> user.name
+-- Transform (pure function)
+transform greet : User -> Text
+transform greet user = "Hello, " <> user.name
 
 -- Effect declaration
 effect FileIO {
@@ -151,10 +151,10 @@ effect FileIO {
 }
 
 -- Function with effects
-flow process_file : String -> String / {FileIO}
-flow process_file path =
+transform process_file : String -> String / {FileIO}
+transform process_file path =
   let content = perform FileIO.read(path)
-  in content |> transform |> validate
+  in content |> process |> validate
 
 -- Trait declaration
 trait Functor f where

@@ -223,7 +223,7 @@ suggest_missing_instance_fix(Trait, [Type]) ->
                   "instance ~s ~s where\n"
                   "  -- implement required methods here\n\n"
                   "Or derive it automatically (if supported):\n\n"
-                  "shape ~s = ... derives [~s]",
+                  "type ~s = ... derives [~s]",
                   [Trait, TypeStr, TypeStr, Trait]);
 
 suggest_missing_instance_fix(Trait, Types) ->
@@ -241,7 +241,7 @@ suggest_arity_fix(Expected, Actual) when Actual < Expected ->
 
 suggest_infinite_type_fix() ->
     "To fix:\n"
-    "  1. Add a wrapper type to break the cycle (e.g., shape Wrapper = W(Type))\n"
+    "  1. Add a wrapper type to break the cycle (e.g., type Wrapper = W(Type))\n"
     "  2. Use an explicit recursive type with a base case\n"
     "  3. Check for typos in type variable names".
 

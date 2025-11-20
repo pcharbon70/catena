@@ -32,7 +32,7 @@
 %% @doc Maximum number of constraints in a constraint set
 %%
 %% Prevents DoS via constraint explosion:
-%%   shape Evil a = (Eq a, Ord a, Show a, ...[1000 constraints]...) => T a
+%%   type Evil a = (Eq a, Ord a, Show a, ...[1000 constraints]...) => T a
 %%
 %% Recommendation: 1000 constraints is more than any reasonable type needs
 -spec max_constraint_set_size() -> pos_integer().

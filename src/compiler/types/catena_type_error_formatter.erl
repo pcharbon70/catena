@@ -202,7 +202,7 @@ format_missing_instance(Trait, Types) ->
         io_lib:format("     instance ~s ~s where\n", [Trait, TypesStr]),
         "       -- implement required methods\n",
         "  2. Derive the trait if possible:\n",
-        io_lib:format("     shape MyType = ... derives [~s]\n", [Trait]),
+        io_lib:format("     type MyType = ... derives [~s]\n", [Trait]),
         "  3. Check if the type is correct for this operation\n"
     ].
 
