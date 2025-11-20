@@ -22,7 +22,7 @@
 %%% ```
 %%% %% Extract from tokens
 %%% Atom = catena_compiler_utils:extract_atom({lower_ident, 1, "foo"}),
-%%% Loc = catena_compiler_utils:extract_location({flow, 5}),
+%%% Loc = catena_compiler_utils:extract_location({transform, 5}),
 %%%
 %%% %% Get configuration
 %%% MaxTokens = catena_compiler_utils:get_max_token_count(),
@@ -49,8 +49,8 @@
     extract_value/1,
     extract_location/1,
     extract_name/1,
-    extract_flow_name/1,
-    extract_flow_type/1,
+    extract_transform_name/1,
+    extract_transform_type/1,
     extract_trait_constraint/1
 ]).
 
@@ -154,12 +154,12 @@ extract_value({_Tag, _Line, Value}) -> Value.
 %%
 %% Supported formats:
 %% <ul>
-%%%   <li>Simple tokens: `{flow, 5}' → `{location, 5, 0}'</li>
+%%%   <li>Simple tokens: `{transform, 5}' → `{location, 5, 0}'</li>
 %%%   <li>Value tokens: `{integer, 10, 42}' → `{location, 10, 0}'</li>
 %%%   <li>Expression nodes: `{var, x, Loc}' → `Loc'</li>
 %%%   <li>Pattern nodes: `{pat_constructor, Name, Args, Loc}' → `Loc'</li>
 %%%   <li>Type nodes: `{type_fun, From, To, Loc}' → `Loc'</li>
-%%%   <li>Declaration nodes: `{flow_decl, Name, Type, Clauses, Loc}' → `Loc'</li>
+%%%   <li>Declaration nodes: `{transform_decl, Name, Type, Clauses, Loc}' → `Loc'</li>
 %% </ul>
 %%
 %% @param Node A token or AST node containing location information
@@ -171,7 +171,7 @@ extract_value({_Tag, _Line, Value}) -> Value.
 %% @example
 %% ```
 %% %% From tokens
-%% Loc1 = extract_location({flow, 5}),            %% → {location, 5, 0}
+%% Loc1 = extract_location({transform, 5}),       %% → {location, 5, 0}
 %% Loc2 = extract_location({integer, 10, 42}),    %% → {location, 10, 0}
 %%%
 %% %% From AST nodes
@@ -183,7 +183,7 @@ extract_location({_Tag, Line}) when is_integer(Line) ->
     catena_location:from_token({_Tag, Line});
 extract_location({_Tag, Line, _Value}) when is_integer(Line) ->
     catena_location:from_token({_Tag, Line, _Value});
-extract_location({flow_sig, _Name, _Type, Loc}) -> Loc;
+extract_location({transform_sig, _Name, _Type, Loc}) -> Loc;
 extract_location({var, _Name, Loc}) -> Loc;
 extract_location({literal, _Value, _Type, Loc}) -> Loc;
 extract_location({record_access, _Expr, _Field, Loc}) -> Loc;
@@ -195,7 +195,7 @@ extract_location({match_expr, _Clauses, Loc}) -> Loc;
 extract_location({if_expr, _Cond, _Then, _Else, Loc}) -> Loc;
 extract_location({let_expr, _Bindings, _Body, Loc}) -> Loc;
 extract_location({match_clause, _Pattern, _Guard, _Body, Loc}) -> Loc;
-extract_location({flow_clause, _Patterns, _Guard, _Body, Loc}) -> Loc;
+extract_location({transform_clause, _Patterns, _Guard, _Body, Loc}) -> Loc;
 extract_location({type_fun, _From, _To, Loc}) -> Loc;
 extract_location({type_forall, _Vars, _Type, Loc}) -> Loc;
 extract_location({type_app, _Con, _Args, Loc}) -> Loc;
@@ -211,9 +211,9 @@ extract_location({pat_list, _Elements, Loc}) -> Loc;
 extract_location({pat_tuple, _Elements, Loc}) -> Loc;
 extract_location({pat_record, _Fields, Loc}) -> Loc;
 extract_location({record_expr, _Fields, _Base, Loc}) -> Loc;
-extract_location({shape_decl, _Name, _Params, _Constructors, _Traits, Loc}) -> Loc;
+extract_location({type_decl, _Name, _Params, _Constructors, _Traits, Loc}) -> Loc;
 extract_location({constructor, _Name, _Fields, Loc}) -> Loc;
-extract_location({flow_decl, _Name, _Type, _Clauses, Loc}) -> Loc;
+extract_location({transform_decl, _Name, _Type, _Clauses, Loc}) -> Loc;
 %% Effect syntax AST nodes
 extract_location({effect_decl, _Name, _Operations, Loc}) -> Loc;
 extract_location({effect_operation, _Name, _Type, Loc}) -> Loc;
@@ -249,11 +249,11 @@ extract_location(Tuple) when is_tuple(Tuple) ->
 %% @param Node An AST node tuple
 %% @returns The extracted name atom, or `undefined' if no name found
 %%
-%% @see extract_flow_name/1
+%% @see extract_transform_name/1
 %%
 %% @example
 %% ```
-%% Name1 = extract_name({shape_decl, 'Maybe', [], [], [], Loc}),  %% → 'Maybe'
+%% Name1 = extract_name({type_decl, 'Maybe', [], [], [], Loc}),   %% → 'Maybe'
 %% Name2 = extract_name({var, x, Loc}),                           %% → x
 %% Name3 = extract_name({literal, 42, integer, Loc}),             %% → undefined
 %% '''
@@ -263,42 +263,42 @@ extract_name({_, Name, _, _}) when is_atom(Name) -> Name;
 extract_name({_, Name, _}) when is_atom(Name) -> Name;
 extract_name(_) -> undefined.
 
-%% @doc Extract flow name from flow signature.
+%% @doc Extract transform name from transform signature.
 %%
-%% Specialized extraction for flow signature nodes, which contain
-%% the name and type of a flow (function) declaration.
+%% Specialized extraction for transform signature nodes, which contain
+%% the name and type of a transform (function) declaration.
 %%
-%% @param FlowSig A flow signature tuple `{flow_sig, Name, Type, Loc}'
-%% @returns The flow name atom
+%% @param TransformSig A transform signature tuple `{transform_sig, Name, Type, Loc}'
+%% @returns The transform name atom
 %%
-%% @see extract_flow_type/1
+%% @see extract_transform_type/1
 %% @see extract_name/1
 %%
 %% @example
 %% ```
-%% Name = extract_flow_name({flow_sig, map, TypeExpr, Loc}),  %% → map
+%% Name = extract_transform_name({transform_sig, map, TypeExpr, Loc}),  %% → map
 %% '''
--spec extract_flow_name(tuple()) -> atom().
-extract_flow_name({flow_sig, Name, _Type, _Loc}) -> Name.
+-spec extract_transform_name(tuple()) -> atom().
+extract_transform_name({transform_sig, Name, _Type, _Loc}) -> Name.
 
-%% @doc Extract flow type from flow signature.
+%% @doc Extract transform type from transform signature.
 %%
-%% Extracts the type expression from a flow signature node.
-%% The type expression describes the flow's parameter and return types.
+%% Extracts the type expression from a transform signature node.
+%% The type expression describes the transform's parameter and return types.
 %%
-%% @param FlowSig A flow signature tuple `{flow_sig, Name, Type, Loc}'
+%% @param TransformSig A transform signature tuple `{transform_sig, Name, Type, Loc}'
 %% @returns The type expression (typically a `type_fun' node)
 %%
-%% @see extract_flow_name/1
+%% @see extract_transform_name/1
 %%
 %% @example
 %% ```
-%% %% For flow signature: map : (a -> b) -> List a -> List b
-%% Type = extract_flow_type({flow_sig, map, TypeExpr, Loc}),
+%% %% For transform signature: map : (a -> b) -> List a -> List b
+%% Type = extract_transform_type({transform_sig, map, TypeExpr, Loc}),
 %% %% Type → {type_fun, ...}
 %% '''
--spec extract_flow_type(tuple()) -> term().
-extract_flow_type({flow_sig, _Name, Type, _Loc}) -> Type.
+-spec extract_transform_type(tuple()) -> term().
+extract_transform_type({transform_sig, _Name, Type, _Loc}) -> Type.
 
 %% @doc Extract trait constraint from type expression.
 %%
@@ -813,18 +813,18 @@ ast_depth(AST) ->
 
 ast_depth({module, _, _, _, Decls, _}, CurrentDepth) ->
     lists:max([0 | [ast_depth(D, CurrentDepth + 1) || D <- Decls]]);
-ast_depth({shape_decl, _, _, Constructors, _, _}, CurrentDepth) ->
+ast_depth({type_decl, _, _, Constructors, _, _}, CurrentDepth) ->
     lists:max([CurrentDepth | [ast_depth(C, CurrentDepth + 1) || C <- Constructors]]);
 ast_depth({constructor, _, Fields, _}, CurrentDepth) ->
     lists:max([CurrentDepth | [ast_depth(F, CurrentDepth + 1) || F <- Fields]]);
-ast_depth({flow_decl, _, Type, Clauses, _}, CurrentDepth) ->
+ast_depth({transform_decl, _, Type, Clauses, _}, CurrentDepth) ->
     TypeDepth = case Type of
         undefined -> CurrentDepth;
         _ -> ast_depth(Type, CurrentDepth + 1)
     end,
     ClauseDepths = [ast_depth(C, CurrentDepth + 1) || C <- Clauses],
     lists:max([TypeDepth | ClauseDepths]);
-ast_depth({flow_clause, Patterns, Guards, Body, _}, CurrentDepth) ->
+ast_depth({transform_clause, Patterns, Guards, Body, _}, CurrentDepth) ->
     PatternDepths = [ast_depth(P, CurrentDepth + 1) || P <- Patterns],
     GuardDepths = case Guards of
         undefined -> [CurrentDepth];
@@ -986,12 +986,12 @@ pattern_depth({pat_record, Fields, _}, CurrentDepth) ->
         [] -> NewDepth;
         _ -> lists:max([pattern_depth(P, NewDepth) || {_, P} <- Fields])
     end;
-pattern_depth({flow_clause, Patterns, _, _, _}, CurrentDepth) ->
+pattern_depth({transform_clause, Patterns, _, _, _}, CurrentDepth) ->
     case Patterns of
         [] -> CurrentDepth;
         _ -> lists:max([pattern_depth(P, CurrentDepth) || P <- Patterns])
     end;
-pattern_depth({flow_decl, _, _, Clauses, _}, CurrentDepth) ->
+pattern_depth({transform_decl, _, _, Clauses, _}, CurrentDepth) ->
     case Clauses of
         [] -> CurrentDepth;
         _ -> lists:max([pattern_depth(C, CurrentDepth) || C <- Clauses])
@@ -1070,12 +1070,12 @@ type_depth({type_record, Fields, _, _}, CurrentDepth) ->
         [] -> NewDepth;
         _ -> lists:max([type_depth(T, NewDepth) || {_, T} <- Fields])
     end;
-type_depth({flow_decl, _, Type, _, _}, CurrentDepth) ->
+type_depth({transform_decl, _, Type, _, _}, CurrentDepth) ->
     case Type of
         undefined -> CurrentDepth;
         _ -> type_depth(Type, CurrentDepth)
     end;
-type_depth({shape_decl, _, _, Constructors, _, _}, CurrentDepth) ->
+type_depth({type_decl, _, _, Constructors, _, _}, CurrentDepth) ->
     case Constructors of
         [] -> CurrentDepth;
         _ -> lists:max([type_depth(C, CurrentDepth) || C <- Constructors])
@@ -1129,12 +1129,12 @@ ast_map(_Fun, AST) ->
 
 ast_map_children(Fun, {module, Name, Exports, Imports, Decls, Loc}) ->
     {module, Name, Exports, Imports, [ast_map(Fun, D) || D <- Decls], Loc};
-ast_map_children(Fun, {flow_decl, Name, Type, Clauses, Loc}) ->
+ast_map_children(Fun, {transform_decl, Name, Type, Clauses, Loc}) ->
     Type1 = case Type of
         undefined -> undefined;
         _ -> ast_map(Fun, Type)
     end,
-    {flow_decl, Name, Type1, [ast_map(Fun, C) || C <- Clauses], Loc};
+    {transform_decl, Name, Type1, [ast_map(Fun, C) || C <- Clauses], Loc};
 ast_map_children(_Fun, AST) ->
     %% Add more cases as needed
     AST.
@@ -1171,7 +1171,7 @@ ast_map_children(_Fun, AST) ->
 %%%
 %% %% Example: Collect all function names
 %% CollectNames = fun
-%%     ({flow_decl, Name, _, _, _}, Acc) -> [Name | Acc];
+%%     ({transform_decl, Name, _, _, _}, Acc) -> [Name | Acc];
 %%     (_, Acc) -> Acc
 %% end,
 %% Names = ast_fold(CollectNames, [], AST).
@@ -1187,17 +1187,17 @@ ast_fold(_Fun, Acc, _AST) ->
 
 ast_fold_children(Fun, Acc, {module, _, _, _, Decls, _}) ->
     lists:foldl(fun(D, A) -> ast_fold(Fun, A, D) end, Acc, Decls);
-ast_fold_children(Fun, Acc, {shape_decl, _, _, Constructors, _, _}) ->
+ast_fold_children(Fun, Acc, {type_decl, _, _, Constructors, _, _}) ->
     lists:foldl(fun(C, A) -> ast_fold(Fun, A, C) end, Acc, Constructors);
 ast_fold_children(Fun, Acc, {constructor, _, Fields, _}) ->
     lists:foldl(fun(F, A) -> ast_fold(Fun, A, F) end, Acc, Fields);
-ast_fold_children(Fun, Acc, {flow_decl, _, Type, Clauses, _}) ->
+ast_fold_children(Fun, Acc, {transform_decl, _, Type, Clauses, _}) ->
     Acc1 = case Type of
         undefined -> Acc;
         _ -> ast_fold(Fun, Acc, Type)
     end,
     lists:foldl(fun(C, A) -> ast_fold(Fun, A, C) end, Acc1, Clauses);
-ast_fold_children(Fun, Acc, {flow_clause, Patterns, Guards, Body, _}) ->
+ast_fold_children(Fun, Acc, {transform_clause, Patterns, Guards, Body, _}) ->
     Acc1 = lists:foldl(fun(P, A) -> ast_fold(Fun, A, P) end, Acc, Patterns),
     Acc2 = case Guards of
         undefined -> Acc1;

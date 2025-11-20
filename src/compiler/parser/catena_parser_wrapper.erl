@@ -121,7 +121,7 @@ parse_with_recovery(Tokens, File, SourceLines, AccErrors) ->
             end
     end.
 
-%% @doc Find the next synchronization point (shape, flow, effect keyword) after an error
+%% @doc Find the next synchronization point (type, transform, effect keyword) after an error
 -spec find_sync_point_and_continue([term()], integer()) -> {ok, [term()]} | {error, no_sync_point}.
 find_sync_point_and_continue(Tokens, ErrorLine) ->
     % Skip past the error line and find next declaration keyword
@@ -130,7 +130,7 @@ find_sync_point_and_continue(Tokens, ErrorLine) ->
         RemainingTokens -> {ok, RemainingTokens}
     end.
 
-%% @doc Skip tokens until we find the next declaration keyword (shape, flow, effect)
+%% @doc Skip tokens until we find the next declaration keyword (type, transform, effect)
 %% Must skip at least one token to avoid infinite loops
 -spec skip_to_next_declaration([term()], integer()) -> [term()].
 skip_to_next_declaration([], _ErrorLine) ->
@@ -143,9 +143,9 @@ skip_to_next_declaration([_ | Rest], ErrorLine) ->
 -spec find_next_declaration([term()], integer()) -> [term()].
 find_next_declaration([], _ErrorLine) ->
     [];
-find_next_declaration([{shape, _} = Token | Rest], _ErrorLine) ->
+find_next_declaration([{type, _} = Token | Rest], _ErrorLine) ->
     [Token | Rest];
-find_next_declaration([{flow, _} = Token | Rest], _ErrorLine) ->
+find_next_declaration([{transform, _} = Token | Rest], _ErrorLine) ->
     [Token | Rest];
 find_next_declaration([{effect, _} = Token | Rest], _ErrorLine) ->
     [Token | Rest];
@@ -321,7 +321,7 @@ detect_suggestion(["syntax error before: ", Token]) ->
         "'}'" -> "Check for missing opening '{' or extra '}'";
         "']'" -> "Check for missing opening '[' or extra ']'";
         "')'" -> "Check for missing opening '(' or extra ')'";
-        "'|'" -> "In shape declarations, use '|' to separate constructors";
+        "'|'" -> "In type declarations, use '|' to separate constructors";
         _ ->
             % Check for missing '=' in declarations
             case detect_missing_equals(Token) of
@@ -350,7 +350,7 @@ detect_suggestion(["syntax error before: ", Token]) ->
 detect_suggestion(_) ->
     undefined.
 
-%% @doc Detect missing '=' in shape/flow declarations
+%% @doc Detect missing '=' in type/transform declarations
 detect_missing_equals(Token) ->
     % Common tokens that would follow '=' in declarations
     case Token of
@@ -360,7 +360,7 @@ detect_missing_equals(Token) ->
                 $' ->
                     % It's a quoted token, check if it starts with uppercase
                     case length(T) > 3 andalso lists:nth(2, T) >= $A andalso lists:nth(2, T) =< $Z of
-                        true -> "Missing '=' in declaration? Expected 'shape Name = Constructor' or 'flow name = ...'.";
+                        true -> "Missing '=' in declaration? Expected 'type Name = Constructor' or 'transform name = ...'.";
                         false -> undefined
                     end;
                 _ -> undefined
@@ -368,7 +368,7 @@ detect_missing_equals(Token) ->
         _ -> undefined
     end.
 
-%% @doc Detect missing '->' in match expressions or flow clauses
+%% @doc Detect missing '->' in match expressions or transform clauses
 detect_missing_arrow(Token) ->
     % Common patterns that suggest missing '->'
     case Token of
@@ -401,7 +401,7 @@ detect_keyword_typo(Token) ->
 
     % List of Catena keywords to check against
     Keywords = [
-        "shape", "flow", "effect", "match", "where", "let", "in", "do", "end",
+        "type", "transform", "effect", "match", "where", "let", "in", "do", "end",
         "if", "then", "else", "case", "of", "when", "module", "import", "export",
         "trait", "instance", "forall", "actor", "supervisor", "perform", "handle",
         "try", "with", "resume"

@@ -40,8 +40,8 @@
 %% Declarations
 %%====================================================================
 
-%% Shape declaration (algebraic data type)
--record(shape_decl, {
+%% Type declaration (algebraic data type)
+-record(type_decl, {
     name :: atom(),
     type_params :: [atom()],
     constructors :: list(), % [#constructor{}] - forward ref commented temporarily
@@ -57,22 +57,22 @@
 
 -type constructor() :: #constructor{}.
 
-%% Flow declaration (function definition)
--record(flow_decl, {
+%% Transform declaration (function definition)
+-record(transform_decl, {
     name :: atom(),
     type_sig :: type_expr() | undefined,
-    clauses :: list(), % [#flow_clause{}] - forward ref commented temporarily
+    clauses :: list(), % [#transform_clause{}] - forward ref commented temporarily
     location :: location()
 }).
 
--record(flow_clause, {
+-record(transform_clause, {
     patterns :: [pattern()],
     guards :: [expr()] | undefined,
     body :: expr(),
     location :: location()
 }).
 
--type flow_clause() :: #flow_clause{}.
+-type transform_clause() :: #transform_clause{}.
 
 %% Trait declaration (type class)
 -record(trait_decl, {
@@ -156,7 +156,7 @@
 %% Type definitions for trait system
 -type trait_constraint() :: #trait_constraint{}.
 
--type declaration() :: #shape_decl{} | #flow_decl{} | #trait_decl{} |
+-type declaration() :: #type_decl{} | #transform_decl{} | #trait_decl{} |
                        #instance_decl{} | #effect_decl{}.
 
 %%====================================================================

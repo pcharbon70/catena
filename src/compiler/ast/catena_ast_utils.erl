@@ -394,9 +394,9 @@ check_valid_names(AST) ->
                     Params
                 ),
                 ok;
-            #flow_decl{name=Name} ->
+            #transform_decl{name=Name} ->
                 check_is_valid_name(Name);
-            #shape_decl{name=Name} ->
+            #type_decl{name=Name} ->
                 check_is_valid_name(Name);
             #effect_decl{name=Name} ->
                 check_is_valid_name(Name);
@@ -427,8 +427,8 @@ check_is_valid_name(Name) when is_atom(Name), Name =/= undefined, Name =/= '' ->
 check_is_valid_name(Name) ->
     throw({error, {invalid_name, Name}}).
 
-get_decl_name(#shape_decl{name=Name}) -> Name;
-get_decl_name(#flow_decl{name=Name}) -> Name;
+get_decl_name(#type_decl{name=Name}) -> Name;
+get_decl_name(#transform_decl{name=Name}) -> Name;
 get_decl_name(#effect_decl{name=Name}) -> Name;
 get_decl_name(#trait_decl{name=Name}) -> Name;
 get_decl_name(_) -> undefined.
@@ -511,10 +511,10 @@ format_type(_) ->
     "?".
 
 %% @doc Format a declaration as a string
-format_decl(#shape_decl{name=Name}) ->
-    io_lib:format("shape ~s", [atom_to_list(Name)]);
-format_decl(#flow_decl{name=Name}) ->
-    io_lib:format("flow ~s", [atom_to_list(Name)]);
+format_decl(#type_decl{name=Name}) ->
+    io_lib:format("type ~s", [atom_to_list(Name)]);
+format_decl(#transform_decl{name=Name}) ->
+    io_lib:format("transform ~s", [atom_to_list(Name)]);
 format_decl(#effect_decl{name=Name}) ->
     io_lib:format("effect ~s", [atom_to_list(Name)]);
 format_decl(_) ->

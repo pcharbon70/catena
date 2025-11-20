@@ -29,25 +29,29 @@ This document outlines the comprehensive migration plan to update the Catena cod
 
 ## Migration Phases
 
-### Phase 1: Core Grammar Updates (Critical Path)
+### Phase 1: Core Grammar Updates (Critical Path) ✅ COMPLETED
 
-#### 1.1 Lexer Updates (`src/compiler/lexer/catena_lexer.xrl`)
-- [ ] Update line 5 comment: Keywords list
-- [ ] Line 51: Change `shape` token to `type`
-- [ ] Line 52: Change `flow` token to `transform`
+#### 1.1 Lexer Updates (`src/compiler/lexer/catena_lexer.xrl`) ✅
+- [x] Update line 5 comment: Keywords list
+- [x] Line 51: Change `shape` token to `type`
+- [x] Line 52: Change `flow` token to `transform`
 
-#### 1.2 Parser Grammar (`src/compiler/parser/catena_parser.yrl`)
-- [ ] Update nonterminals (lines 22, 30)
-- [ ] Update terminals (line 51)
-- [ ] Update declaration rules (lines 190-194)
-- [ ] Update error recovery rules (lines 197-206)
-- [ ] Rename entire `shape_decl` section to `type_decl` (lines 208-226)
-- [ ] Update trait default methods (line 358)
-- [ ] Update instance methods (lines 404, 407)
-- [ ] Rename entire `flow_decl` section to `transform_decl` (lines 410-486)
-- [ ] Rename helper functions `extract_flow_*` to `extract_transform_*` (lines 904, 907)
+**Completed**: 2025-11-20 (Section 1.1)
 
-#### 1.3 Rebuild Generated Files
+#### 1.2 Parser Grammar (`src/compiler/parser/catena_parser.yrl`) ✅
+- [x] Update nonterminals (lines 22, 30)
+- [x] Update terminals (line 51)
+- [x] Update declaration rules (lines 190-194)
+- [x] Update error recovery rules (lines 197-206)
+- [x] Rename entire `shape_decl` section to `type_decl` (lines 208-226)
+- [x] Update trait default methods (line 358)
+- [x] Update instance methods (lines 404, 407)
+- [x] Rename entire `flow_decl` section to `transform_decl` (lines 410-486)
+- [x] Rename helper functions `extract_flow_*` to `extract_transform_*` (lines 904, 907)
+
+**Completed**: 2025-11-20 (Sections 1.2 & 1.3)
+
+#### 1.3 Rebuild Generated Files ✅
 ```bash
 # After lexer/parser updates
 ./scripts/build.sh
@@ -55,32 +59,40 @@ This document outlines the comprehensive migration plan to update the Catena cod
 make clean && make compile
 ```
 
-### Phase 2: AST and Type System Updates
+**Completed**: 2025-11-20
 
-#### 2.1 AST Node Definitions (`src/compiler/parser/catena_ast.hrl`)
-- [ ] Rename `shape_decl` record to `type_decl`
-- [ ] Rename `flow_decl` record to `transform_decl`
-- [ ] Rename `flow_signature` record to `transform_signature`
-- [ ] Rename `flow_clause` record to `transform_clause`
+### Phase 2: AST and Type System Updates ✅ COMPLETED
 
-#### 2.2 AST Smart Constructors (`src/compiler/ast/catena_ast.erl`)
-- [ ] Update export declarations (lines 54-56)
-- [ ] Rename all `shape_decl` functions to `type_decl`
-- [ ] Rename all `flow_decl` functions to `transform_decl`
-- [ ] Rename all `flow_clause` functions to `transform_clause`
-- [ ] Update all `flow_sig` tuples to `transform_sig`
+#### 2.1 AST Node Definitions (`src/compiler/parser/catena_ast.hrl`) ✅
+- [x] Rename `shape_decl` record to `type_decl`
+- [x] Rename `flow_decl` record to `transform_decl`
+- [x] Rename `flow_signature` record to `transform_signature`
+- [x] Rename `flow_clause` record to `transform_clause`
 
-#### 2.3 AST Utilities (`src/compiler/ast/catena_ast_utils.erl`)
-- [ ] Update pattern matches for new AST node types
-- [ ] Update `format_decl/1` cases
+#### 2.2 AST Smart Constructors (`src/compiler/ast/catena_ast.erl`) ✅
+- [x] Update export declarations (lines 54-56)
+- [x] Rename all `shape_decl` functions to `type_decl`
+- [x] Rename all `flow_decl` functions to `transform_decl`
+- [x] Rename all `flow_clause` functions to `transform_clause`
+- [x] Update all `flow_sig` tuples to `transform_sig`
 
-#### 2.4 Parser Utilities
-- [ ] Update `src/compiler/parser/catena_parse.erl`
-- [ ] Update `src/compiler/parser/catena_parser_wrapper.erl` (line 207: keyword suggestions)
-- [ ] Check `src/compiler/parser/catena_location.erl`
+#### 2.3 AST Utilities (`src/compiler/ast/catena_ast_utils.erl`) ✅
+- [x] Update pattern matches for new AST node types
+- [x] Update `format_decl/1` cases
 
-#### 2.5 Compiler Utilities (`src/compiler/catena_compiler_utils.erl`)
-- [ ] Update references to old AST node types
+#### 2.4 Parser Utilities ✅
+- [x] Update `src/compiler/parser/catena_parse.erl`
+- [x] Update `src/compiler/parser/catena_parser_wrapper.erl` (line 207: keyword suggestions)
+- [x] Check `src/compiler/parser/catena_location.erl`
+
+#### 2.5 Compiler Utilities (`src/compiler/catena_compiler_utils.erl`) ✅
+- [x] Update references to old AST node types
+- [x] Update `extract_flow_name/1` → `extract_transform_name/1`
+- [x] Update `extract_flow_type/1` → `extract_transform_type/1`
+- [x] Update all AST depth/pattern/type calculation functions
+- [x] Update ast_map_children and ast_fold_children functions
+
+**Completed**: 2025-11-20
 
 ### Phase 3: Error Messages and Documentation
 

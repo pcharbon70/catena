@@ -51,10 +51,10 @@
     type_tuple/2, type_tuple/1,
     type_effect/3, type_effect/2,
     % Declarations
-    shape_decl/5, shape_decl/4,
+    type_decl/5, type_decl/4,
     constructor/3, constructor/2,
-    flow_decl/4, flow_decl/3,
-    flow_clause/4, flow_clause/3,
+    transform_decl/4, transform_decl/3,
+    transform_clause/4, transform_clause/3,
     effect_decl/3, effect_decl/2,
     effect_operation/3, effect_operation/2,
     trait_decl/4, trait_decl/3
@@ -511,10 +511,10 @@ type_effect(Type, Effects) ->
 %% Smart Constructors - Declarations
 %%====================================================================
 
-%% @doc Create a shape declaration with explicit location
--spec shape_decl(atom(), [atom()], [#constructor{}], [atom()], location()) -> #shape_decl{}.
-shape_decl(Name, TypeParams, Constructors, Derives, Loc) when is_atom(Name), is_list(TypeParams), is_list(Constructors), is_list(Derives) ->
-    #shape_decl{
+%% @doc Create a type declaration with explicit location
+-spec type_decl(atom(), [atom()], [#constructor{}], [atom()], location()) -> #type_decl{}.
+type_decl(Name, TypeParams, Constructors, Derives, Loc) when is_atom(Name), is_list(TypeParams), is_list(Constructors), is_list(Derives) ->
+    #type_decl{
         name = Name,
         type_params = TypeParams,
         constructors = Constructors,
@@ -522,12 +522,12 @@ shape_decl(Name, TypeParams, Constructors, Derives, Loc) when is_atom(Name), is_
         location = Loc
     }.
 
-%% @doc Create a shape declaration with location inferred from first constructor
--spec shape_decl(atom(), [atom()], [#constructor{}], [atom()]) -> #shape_decl{}.
-shape_decl(Name, TypeParams, [FirstCons | _] = Constructors, Derives) ->
-    shape_decl(Name, TypeParams, Constructors, Derives, location(FirstCons));
-shape_decl(Name, TypeParams, [], Derives) ->
-    shape_decl(Name, TypeParams, [], Derives, default_location()).
+%% @doc Create a type declaration with location inferred from first constructor
+-spec type_decl(atom(), [atom()], [#constructor{}], [atom()]) -> #type_decl{}.
+type_decl(Name, TypeParams, [FirstCons | _] = Constructors, Derives) ->
+    type_decl(Name, TypeParams, Constructors, Derives, location(FirstCons));
+type_decl(Name, TypeParams, [], Derives) ->
+    type_decl(Name, TypeParams, [], Derives, default_location()).
 
 %% @doc Create a constructor with explicit location
 -spec constructor(atom(), [type_expr()], location()) -> #constructor{}.
@@ -541,37 +541,37 @@ constructor(Name, [FirstField | _] = Fields) ->
 constructor(Name, []) ->
     constructor(Name, [], default_location()).
 
-%% @doc Create a flow declaration with explicit location
--spec flow_decl(atom(), type_expr() | undefined, [#flow_clause{}], location()) -> #flow_decl{}.
-flow_decl(Name, TypeSig, Clauses, Loc) when is_atom(Name), is_list(Clauses) ->
-    #flow_decl{
+%% @doc Create a transform declaration with explicit location
+-spec transform_decl(atom(), type_expr() | undefined, [#transform_clause{}], location()) -> #transform_decl{}.
+transform_decl(Name, TypeSig, Clauses, Loc) when is_atom(Name), is_list(Clauses) ->
+    #transform_decl{
         name = Name,
         type_sig = TypeSig,
         clauses = Clauses,
         location = Loc
     }.
 
-%% @doc Create a flow declaration with location inferred from first clause
--spec flow_decl(atom(), type_expr() | undefined, [#flow_clause{}]) -> #flow_decl{}.
-flow_decl(Name, TypeSig, [FirstClause | _] = Clauses) ->
-    flow_decl(Name, TypeSig, Clauses, location(FirstClause));
-flow_decl(Name, TypeSig, []) ->
-    flow_decl(Name, TypeSig, [], default_location()).
+%% @doc Create a transform declaration with location inferred from first clause
+-spec transform_decl(atom(), type_expr() | undefined, [#transform_clause{}]) -> #transform_decl{}.
+transform_decl(Name, TypeSig, [FirstClause | _] = Clauses) ->
+    transform_decl(Name, TypeSig, Clauses, location(FirstClause));
+transform_decl(Name, TypeSig, []) ->
+    transform_decl(Name, TypeSig, [], default_location()).
 
-%% @doc Create a flow clause with explicit location
--spec flow_clause([pattern()], [expr()] | undefined, expr(), location()) -> #flow_clause{}.
-flow_clause(Patterns, Guards, Body, Loc) when is_list(Patterns) ->
-    #flow_clause{
+%% @doc Create a transform clause with explicit location
+-spec transform_clause([pattern()], [expr()] | undefined, expr(), location()) -> #transform_clause{}.
+transform_clause(Patterns, Guards, Body, Loc) when is_list(Patterns) ->
+    #transform_clause{
         patterns = Patterns,
         guards = Guards,
         body = Body,
         location = Loc
     }.
 
-%% @doc Create a flow clause with location inferred from body
--spec flow_clause([pattern()], [expr()] | undefined, expr()) -> #flow_clause{}.
-flow_clause(Patterns, Guards, Body) ->
-    flow_clause(Patterns, Guards, Body, location(Body)).
+%% @doc Create a transform clause with location inferred from body
+-spec transform_clause([pattern()], [expr()] | undefined, expr()) -> #transform_clause{}.
+transform_clause(Patterns, Guards, Body) ->
+    transform_clause(Patterns, Guards, Body, location(Body)).
 
 %% @doc Create an effect declaration with explicit location
 -spec effect_decl(atom(), [#effect_operation{}], location()) -> #effect_decl{}.
