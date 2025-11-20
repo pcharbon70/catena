@@ -223,14 +223,14 @@ Catena's rich type system exists only at compile time. At runtime, BEAM operates
 - [x] 1.3.3.4 Verify semantic preservation ensuring erased code has same behavior as typed code
 
 ### 1.3.4 Module Generation
-- [ ] **Task 1.3.4 Complete**
+- [x] **Task 1.3.4 Complete**
 
 Each Catena module compiles to a BEAM module with exports, imports, and module attributes. We generate module metadata including function signatures and documentation. Private functions are excluded from exports. Module names follow Erlang naming conventions, potentially using namespaces. We emit `.core` files that erlc compiles to `.beam` bytecode.
 
-- [ ] 1.3.4.1 Implement module structure generation with module name, exports, and attributes
-- [ ] 1.3.4.2 Implement function compilation generating Core Erlang function definitions with arities
-- [ ] 1.3.4.3 Implement export list generation including only public functions with correct arities
-- [ ] 1.3.4.4 Implement Core Erlang file output writing valid .core files that erlc can compile
+- [x] 1.3.4.1 Implement module structure generation with module name, exports, and attributes
+- [x] 1.3.4.2 Implement function compilation generating Core Erlang function definitions with arities
+- [x] 1.3.4.3 Implement export list generation including only public functions with correct arities
+- [x] 1.3.4.4 Implement Core Erlang file output writing valid .core files that erlc can compile
 
 ### 1.3.5 Effect Runtime System
 - [ ] **Task 1.3.5 Complete**

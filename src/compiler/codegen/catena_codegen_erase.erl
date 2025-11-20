@@ -17,6 +17,7 @@
 -export([
     %% Main erasure
     erase_module/1,
+    erase_decl/1,
     erase_expr/1,
     erase_pattern/1,
 
