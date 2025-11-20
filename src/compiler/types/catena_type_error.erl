@@ -54,7 +54,13 @@
     effect_mismatch/2,
     missing_field/2,
     unsatisfied_constraint/3,
-    invalid_type_application/2
+    invalid_type_application/2,
+    %% Effect-specific errors (Task 1.2.5)
+    unhandled_effect/3,
+    handler_missing_operation/3,
+    handler_arity_mismatch/5,
+    effect_annotation_mismatch/3,
+    effect_context_chain/2
 ]).
 
 %%====================================================================
@@ -91,6 +97,13 @@
 
     % Effect errors
     {effect_mismatch, catena_types:effect_set(), catena_types:effect_set()} |
+
+    % Effect-specific errors (Task 1.2.5)
+    {unhandled_effect, atom(), atom(), tuple()} |  % {EffectName, FunctionName, Location}
+    {handler_missing_operation, atom(), atom(), tuple()} |  % {EffectName, OperationName, HandlerLoc}
+    {handler_arity_mismatch, atom(), atom(), non_neg_integer(), non_neg_integer(), tuple()} |  % {Effect, Op, Expected, Actual, Loc}
+    {effect_annotation_mismatch, atom(), catena_types:effect_set(), catena_types:effect_set()} |  % {FuncName, Declared, Inferred}
+    {effect_context_chain, atom(), [{atom(), tuple()}]} |  % {EffectName, [{FuncName, Location}]}
 
     % Record/field errors
     {missing_field, atom(), catena_types:ty()} |
@@ -258,6 +271,92 @@ format_error({effect_mismatch, Expected, Actual}) ->
             ))
     end;
 
+%% Effect-specific errors (Task 1.2.5)
+
+format_error({unhandled_effect, EffectName, FunctionName, Location}) ->
+    LocStr = catena_location:format(Location),
+    lists:flatten(io_lib:format(
+        "Unhandled effect '~s' in function '~s'~n"
+        "Effect introduced at: ~s~n"
+        "~n"
+        "The function performs an operation that requires the ~s effect,~n"
+        "but this effect is not declared in the function's type signature.~n"
+        "~n"
+        "To fix this, either:~n"
+        "  1. Add the effect to the function signature: / {~s}~n"
+        "  2. Handle the effect with a try/with block",
+        [atom_to_list(EffectName), atom_to_list(FunctionName), LocStr,
+         atom_to_list(EffectName), atom_to_list(EffectName)]
+    ));
+
+format_error({handler_missing_operation, EffectName, OperationName, HandlerLoc}) ->
+    LocStr = catena_location:format(HandlerLoc),
+    lists:flatten(io_lib:format(
+        "Missing handler for operation '~s.~s'~n"
+        "Handler at: ~s~n"
+        "~n"
+        "The handler for effect '~s' does not handle the '~s' operation.~n"
+        "All operations of an effect must be handled.~n"
+        "~n"
+        "Add a handler case:~n"
+        "  | ~s(args) -> result",
+        [atom_to_list(EffectName), atom_to_list(OperationName), LocStr,
+         atom_to_list(EffectName), atom_to_list(OperationName),
+         atom_to_list(OperationName)]
+    ));
+
+format_error({handler_arity_mismatch, EffectName, OperationName, Expected, Actual, Location}) ->
+    LocStr = catena_location:format(Location),
+    lists:flatten(io_lib:format(
+        "Handler arity mismatch for '~s.~s'~n"
+        "At: ~s~n"
+        "~n"
+        "  Expected: ~p arguments~n"
+        "  Got:      ~p arguments~n"
+        "~n"
+        "The handler must accept the same number of arguments as the operation declaration.",
+        [atom_to_list(EffectName), atom_to_list(OperationName), LocStr,
+         Expected, Actual]
+    ));
+
+format_error({effect_annotation_mismatch, FunctionName, Declared, Inferred}) ->
+    DeclaredStr = catena_type_pp:pp_effects(Declared),
+    InferredStr = catena_type_pp:pp_effects(Inferred),
+
+    %% Determine which effects are extra or missing
+    {effect_set, DeclaredEffects} = Declared,
+    {effect_set, InferredEffects} = Inferred,
+    Missing = InferredEffects -- DeclaredEffects,
+    Extra = DeclaredEffects -- InferredEffects,
+
+    MissingStr = case Missing of
+        [] -> "";
+        _ -> io_lib:format("~n  Missing from annotation: ~p", [Missing])
+    end,
+    ExtraStr = case Extra of
+        [] -> "";
+        _ -> io_lib:format("~n  Not used but declared: ~p", [Extra])
+    end,
+
+    lists:flatten(io_lib:format(
+        "Effect annotation mismatch in function '~s'~n"
+        "  Declared: ~ts~n"
+        "  Inferred: ~ts~ts~ts~n"
+        "~n"
+        "The effect annotation does not match the effects actually used by the function.",
+        [atom_to_list(FunctionName), DeclaredStr, InferredStr, MissingStr, ExtraStr]
+    ));
+
+format_error({effect_context_chain, EffectName, Chain}) ->
+    ChainStr = format_effect_chain(Chain),
+    lists:flatten(io_lib:format(
+        "Effect '~s' propagation trace:~n"
+        "~s~n"
+        "The effect was introduced and propagated through the following call chain.~n"
+        "Consider handling the effect at an appropriate point in this chain.",
+        [atom_to_list(EffectName), ChainStr]
+    ));
+
 %% Record/field errors
 format_error({missing_field, Field, RecordType}) ->
     RecordStr = catena_type_pp:pp_type(RecordType),
@@ -288,6 +387,17 @@ format_error({unsatisfied_constraint, TraitName, TypeArgs, Reason}) ->
 %% Catch-all for unknown errors
 format_error(Error) ->
     lists:flatten(io_lib:format("Unknown type error: ~p", [Error])).
+
+%% Helper function to format effect propagation chain
+format_effect_chain(Chain) ->
+    format_effect_chain(Chain, 1, []).
+
+format_effect_chain([], _N, Acc) ->
+    lists:flatten(lists:reverse(Acc));
+format_effect_chain([{FuncName, Location} | Rest], N, Acc) ->
+    LocStr = catena_location:format(Location),
+    Line = io_lib:format("  ~p. ~s at ~s~n", [N, atom_to_list(FuncName), LocStr]),
+    format_effect_chain(Rest, N + 1, [Line | Acc]).
 
 %%====================================================================
 %% Error Constructor Functions
@@ -377,6 +487,75 @@ missing_field(Field, RecordType) ->
 -spec unsatisfied_constraint(catena_constraint:trait_name(), [catena_types:ty()], term()) -> type_error().
 unsatisfied_constraint(TraitName, TypeArgs, Reason) ->
     {unsatisfied_constraint, TraitName, TypeArgs, Reason}.
+
+%%====================================================================
+%% Effect-Specific Error Constructors (Task 1.2.5)
+%%====================================================================
+
+%% @doc Create an unhandled effect error
+%%
+%% Reports when a function performs an effect that is not declared
+%% in its type signature. Includes the location where the effect was
+%% introduced (the perform site).
+%%
+%% @param EffectName The name of the unhandled effect
+%% @param FunctionName The name of the function with the unhandled effect
+%% @param Location The source location where the effect was introduced
+-spec unhandled_effect(atom(), atom(), tuple()) -> type_error().
+unhandled_effect(EffectName, FunctionName, Location) ->
+    {unhandled_effect, EffectName, FunctionName, Location}.
+
+%% @doc Create a handler missing operation error
+%%
+%% Reports when a try/with handler does not handle all operations
+%% of an effect. All operations must be handled for the effect to
+%% be properly resolved.
+%%
+%% @param EffectName The name of the effect
+%% @param OperationName The name of the missing operation
+%% @param HandlerLocation The source location of the handler
+-spec handler_missing_operation(atom(), atom(), tuple()) -> type_error().
+handler_missing_operation(EffectName, OperationName, HandlerLocation) ->
+    {handler_missing_operation, EffectName, OperationName, HandlerLocation}.
+
+%% @doc Create a handler arity mismatch error
+%%
+%% Reports when a handler case has the wrong number of parameters
+%% for an operation. The handler must accept the same number of
+%% arguments as declared in the effect operation.
+%%
+%% @param EffectName The name of the effect
+%% @param OperationName The name of the operation
+%% @param Expected The expected number of arguments
+%% @param Actual The actual number of arguments in the handler
+%% @param Location The source location of the handler case
+-spec handler_arity_mismatch(atom(), atom(), non_neg_integer(), non_neg_integer(), tuple()) -> type_error().
+handler_arity_mismatch(EffectName, OperationName, Expected, Actual, Location) ->
+    {handler_arity_mismatch, EffectName, OperationName, Expected, Actual, Location}.
+
+%% @doc Create an effect annotation mismatch error
+%%
+%% Reports when the declared effect annotation on a function does not
+%% match the effects actually inferred from the function body.
+%%
+%% @param FunctionName The name of the function
+%% @param Declared The declared effect set from the annotation
+%% @param Inferred The inferred effect set from the function body
+-spec effect_annotation_mismatch(atom(), catena_types:effect_set(), catena_types:effect_set()) -> type_error().
+effect_annotation_mismatch(FunctionName, Declared, Inferred) ->
+    {effect_annotation_mismatch, FunctionName, Declared, Inferred}.
+
+%% @doc Create an effect context chain error
+%%
+%% Shows the propagation path of an effect from where it was introduced
+%% through the chain of callers. Helps developers understand where the
+%% effect came from and where it might need to be handled.
+%%
+%% @param EffectName The name of the effect being traced
+%% @param Chain List of {FunctionName, Location} pairs showing propagation
+-spec effect_context_chain(atom(), [{atom(), tuple()}]) -> type_error().
+effect_context_chain(EffectName, Chain) ->
+    {effect_context_chain, EffectName, Chain}.
 
 %%====================================================================
 %% Location Formatting

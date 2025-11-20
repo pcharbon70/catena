@@ -152,14 +152,14 @@ Type errors are among the most common errors developers encounter. We provide cl
 - [x] 1.2.4.4 Implement error recovery attempting to continue type checking after errors to report multiple issues (partial - design complete)
 
 ### 1.2.5 Effect-Specific Error Messages
-- [ ] **Task 1.2.5 Complete**
+- [x] **Task 1.2.5 Complete**
 
 Effect system errors require specialized messages to help developers understand which effects are unhandled, which handler operations are missing or mismatched, and where effects were introduced. We provide clear explanations of effect requirements and handler mismatches.
 
-- [ ] 1.2.5.1 Implement unhandled effect errors showing "Unhandled effect E in function f" with perform site location where effect was introduced
-- [ ] 1.2.5.2 Implement handler mismatch errors for incorrect arities ("Handler for E.operation expects N arguments, got M") and missing operations ("Missing handler for operation E.op")
-- [ ] 1.2.5.3 Implement effect annotation errors for mismatched effect sets between declared and inferred effects
-- [ ] 1.2.5.4 Implement effect context explanation showing effect propagation chain from perform through callers
+- [x] 1.2.5.1 Implement unhandled effect errors showing "Unhandled effect E in function f" with perform site location where effect was introduced
+- [x] 1.2.5.2 Implement handler mismatch errors for incorrect arities ("Handler for E.operation expects N arguments, got M") and missing operations ("Missing handler for operation E.op")
+- [x] 1.2.5.3 Implement effect annotation errors for mismatched effect sets between declared and inferred effects
+- [x] 1.2.5.4 Implement effect context explanation showing effect propagation chain from perform through callers
 
 ### 1.2.6 Trait Constraint System
 - [ ] **Task 1.2.6 Complete**
@@ -181,7 +181,7 @@ Extend the type system to handle trait hierarchies, instance resolution, and tra
 - [ ] Test instance resolution finding correct instances for trait constraints
 - [ ] Test coherence checking detecting overlapping instances
 - [x] Test effect tracking in type inference correctly propagating effect sets through expressions
-- [ ] Test effect handler checking detecting unhandled effects and missing handler operations
+- [x] Test effect handler checking detecting unhandled effects and missing handler operations
 - [x] Test type error formatting with highlighting and explanations (13/14 tests passing)
 
 ---
