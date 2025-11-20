@@ -162,24 +162,24 @@ Effect system errors require specialized messages to help developers understand 
 - [x] 1.2.5.4 Implement effect context explanation showing effect propagation chain from perform through callers
 
 ### 1.2.6 Trait Constraint System
-- [ ] **Task 1.2.6 Complete**
+- [x] **Task 1.2.6 Complete**
 
 Extend the type system to handle trait hierarchies, instance resolution, and trait method type inference. This completes the foundation for Catena's category-theory-first approach by making traits the general abstraction mechanism for all polymorphism (replacing ad-hoc overloading with principled type classes).
 
-- [ ] 1.2.6.1 Implement trait hierarchy checking ensuring extends relationships form valid DAG without cycles
-- [ ] 1.2.6.2 Implement instance search and resolution finding matching instances for trait constraints during type checking
-- [ ] 1.2.6.3 Implement trait method type inference checking method signatures match trait declarations and inferring implementation types
-- [ ] 1.2.6.4 Implement coherence checking detecting overlapping instances and ensuring unique resolution (no ambiguous instances)
+- [x] 1.2.6.1 Implement trait hierarchy checking ensuring extends relationships form valid DAG without cycles
+- [x] 1.2.6.2 Implement instance search and resolution finding matching instances for trait constraints during type checking
+- [x] 1.2.6.3 Implement trait method type inference checking method signatures match trait declarations and inferring implementation types
+- [x] 1.2.6.4 Implement coherence checking detecting overlapping instances and ensuring unique resolution (no ambiguous instances)
 
 ### Unit Tests - Section 1.2
 - [ ] **Unit Tests 1.2 Complete**
 - [x] Test type inference for simple expressions inferring correct types without annotations
 - [x] Test type inference for polymorphic functions with proper generalization and instantiation
 - [x] Test type checking catching type errors with clear error messages
-- [ ] Test trait constraint solving resolving instances correctly and detecting missing instances
-- [ ] Test trait hierarchy checking detecting cycles and validating extends relationships
-- [ ] Test instance resolution finding correct instances for trait constraints
-- [ ] Test coherence checking detecting overlapping instances
+- [x] Test trait constraint solving resolving instances correctly and detecting missing instances
+- [x] Test trait hierarchy checking detecting cycles and validating extends relationships
+- [x] Test instance resolution finding correct instances for trait constraints
+- [x] Test coherence checking detecting overlapping instances
 - [x] Test effect tracking in type inference correctly propagating effect sets through expressions
 - [x] Test effect handler checking detecting unhandled effects and missing handler operations
 - [x] Test type error formatting with highlighting and explanations (13/14 tests passing)

@@ -28,7 +28,10 @@
     resolve_constraint/2,
     resolve_constraints/2,
     find_matching_instances/2,
-    unify_instance/2
+    unify_instance/2,
+    %% Enhanced resolution with superclass constraints (Task 1.2.6.2)
+    resolve_with_superclasses/3,
+    get_superclass_constraints/3
 ]).
 
 %% Internal functions exported for testing
@@ -175,6 +178,62 @@ resolve_constraint_impl({trait, TraitName, TypeArgs, _Loc}, DB, _Depth) ->
         Multiple ->
             % Ambiguous - multiple instances match
             {error, {ambiguous, Multiple}}
+    end.
+
+%% @doc Resolve a constraint with superclass constraint generation (Task 1.2.6.2)
+%%
+%% When resolving a constraint like `Ord Int`, this function:
+%% 1. Finds the matching instance
+%% 2. Looks up the trait's superclasses (e.g., Ord extends Eq)
+%% 3. Generates superclass constraints (e.g., Eq Int)
+%% 4. Returns both the resolution and new constraints to solve
+%%
+%% TraitDefs is a map of trait_name => {trait_name, [extends], location}
+%%
+-spec resolve_with_superclasses(
+    catena_constraint:constraint(),
+    instance_db(),
+    catena_trait_hierarchy:trait_defs()
+) ->
+    {ok, instance(), catena_type_subst:subst(), [catena_constraint:constraint()]} |
+    {error, term()}.
+resolve_with_superclasses(Constraint, DB, TraitDefs) ->
+    case resolve_constraint(Constraint, DB) of
+        {ok, Instance, Subst} ->
+            %% Generate superclass constraints
+            SuperConstraints = get_superclass_constraints(Constraint, Subst, TraitDefs),
+            {ok, Instance, Subst, SuperConstraints};
+        {error, Reason} ->
+            {error, Reason}
+    end.
+
+%% @doc Generate superclass constraints for a resolved constraint
+%%
+%% Given Constraint = Ord Int and TraitDefs showing Ord extends Eq,
+%% returns [Eq Int] as constraints that must also be satisfied.
+%%
+-spec get_superclass_constraints(
+    catena_constraint:constraint(),
+    catena_type_subst:subst(),
+    catena_trait_hierarchy:trait_defs()
+) -> [catena_constraint:constraint()].
+get_superclass_constraints({trait, TraitName, TypeArgs, Loc}, Subst, TraitDefs) ->
+    %% Get the trait's superclasses
+    case catena_trait_hierarchy:get_extends(TraitName, TraitDefs) of
+        {ok, Supertraits} ->
+            %% For each supertrait, create a constraint with the same type args
+            %% Apply the substitution to propagate any type variable bindings
+            lists:map(
+                fun(SupertraitName) ->
+                    %% Apply substitution to type args
+                    SubstArgs = [catena_type_subst:apply(Subst, Arg) || Arg <- TypeArgs],
+                    catena_constraint:trait_constraint(SupertraitName, SubstArgs, Loc)
+                end,
+                Supertraits
+            );
+        {error, not_found} ->
+            %% Trait not in definitions (might be builtin), no superclasses
+            []
     end.
 
 %% @doc Resolve multiple constraints
