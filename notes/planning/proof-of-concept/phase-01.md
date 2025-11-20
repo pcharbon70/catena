@@ -203,14 +203,14 @@ We translate Catena expressions to equivalent Core Erlang expressions. Function 
 - [x] 1.3.1.5 Implement translation of perform operations to process send/receive messages and try/with handlers to process spawning and message handling (success: generate Core Erlang that executes effects via BEAM processes)
 
 ### 1.3.2 Pattern Compilation
-- [ ] **Task 1.3.2 Complete**
+- [x] **Task 1.3.2 Complete**
 
 Pattern matching is central to functional programming. We compile Catena patterns to Core Erlang case expressions using decision tree algorithms. This involves converting high-level patterns (guards, or-patterns, as-patterns) into primitive match operations. We optimize pattern matching order to minimize runtime checks and detect unreachable branches.
 
-- [ ] 1.3.2.1 Implement basic pattern compilation for constructors, variables, and wildcards
-- [ ] 1.3.2.2 Implement guard compilation translating guard expressions to Core Erlang conditions
-- [ ] 1.3.2.3 Implement decision tree generation optimizing pattern match ordering for efficiency
-- [ ] 1.3.2.4 Implement exhaustiveness checking warning about non-exhaustive patterns at compile time
+- [x] 1.3.2.1 Implement basic pattern compilation for constructors, variables, and wildcards
+- [x] 1.3.2.2 Implement guard compilation translating guard expressions to Core Erlang conditions
+- [x] 1.3.2.3 Implement decision tree generation optimizing pattern match ordering for efficiency
+- [x] 1.3.2.4 Implement exhaustiveness checking warning about non-exhaustive patterns at compile time
 
 ### 1.3.3 Type Erasure
 - [ ] **Task 1.3.3 Complete**
