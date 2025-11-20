@@ -213,14 +213,14 @@ Pattern matching is central to functional programming. We compile Catena pattern
 - [x] 1.3.2.4 Implement exhaustiveness checking warning about non-exhaustive patterns at compile time
 
 ### 1.3.3 Type Erasure
-- [ ] **Task 1.3.3 Complete**
+- [x] **Task 1.3.3 Complete**
 
 Catena's rich type system exists only at compile time. At runtime, BEAM operates on untyped terms. Type erasure removes all type information from the AST, leaving only computational content. Polymorphic functions use uniform representation with runtime type information where necessary, and type classes disappear after instance resolution through dictionary-passing transformation. We ensure that erasure preserves program semantics—well-typed programs don't change behavior.
 
-- [ ] 1.3.3.1 Implement type annotation removal stripping all type information from expressions
-- [ ] 1.3.3.2 Implement trait dictionary passing for type classes converting to explicit parameters
-- [ ] 1.3.3.3 Implement polymorphism handling through monomorphization or uniform representation
-- [ ] 1.3.3.4 Verify semantic preservation ensuring erased code has same behavior as typed code
+- [x] 1.3.3.1 Implement type annotation removal stripping all type information from expressions
+- [x] 1.3.3.2 Implement trait dictionary passing for type classes converting to explicit parameters
+- [x] 1.3.3.3 Implement polymorphism handling through monomorphization or uniform representation
+- [x] 1.3.3.4 Verify semantic preservation ensuring erased code has same behavior as typed code
 
 ### 1.3.4 Module Generation
 - [ ] **Task 1.3.4 Complete**
