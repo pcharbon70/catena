@@ -12,15 +12,15 @@
 %%--------------------------------------------------------------------
 
 parse_setoid_eq_chaining_fails_test() ->
-    %% flow test : Bool
-    %% flow test = x === y === z
+    %% transform test : Bool
+    %% transform test = x === y === z
     %% Should fail: === is non-associative
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -33,15 +33,15 @@ parse_setoid_eq_chaining_fails_test() ->
     ?assertMatch({error, _}, Result).
 
 parse_setoid_neq_chaining_fails_test() ->
-    %% flow test : Bool
-    %% flow test = x !== y !== z
+    %% transform test : Bool
+    %% transform test = x !== y !== z
     %% Should fail: !== is non-associative
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -54,15 +54,15 @@ parse_setoid_neq_chaining_fails_test() ->
     ?assertMatch({error, _}, Result).
 
 parse_mixed_equality_chaining_fails_test() ->
-    %% flow test : Bool
-    %% flow test = x === y !== z
+    %% transform test : Bool
+    %% transform test = x === y !== z
     %% Should fail: cannot chain different equality operators
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -165,7 +165,7 @@ parse_invalid_one_element_tuple_type_test() ->
     %% Type signatures like (a) should parse as parenthesized type, not tuple
     %% This test verifies we don't accidentally create 1-element tuples
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {lparen, 1},
@@ -173,14 +173,14 @@ parse_invalid_one_element_tuple_type_test() ->
         {rparen, 1},
         {arrow, 1},
         {lower_ident, 1, "a"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, TypeSig, _, _} = FlowDecl,
+    {transform_decl, test, TypeSig, _, _} = FlowDecl,
 
     %% Should be a function type, NOT a tuple
     ?assertMatch({type_fun, _, _, _}, TypeSig),
@@ -194,15 +194,15 @@ parse_invalid_one_element_tuple_type_test() ->
 %%--------------------------------------------------------------------
 
 parse_setoid_eq_with_arithmetic_test() ->
-    %% flow test : Bool
-    %% flow test = (x + 1) === (y + 1)
+    %% transform test : Bool
+    %% transform test = (x + 1) === (y + 1)
     %% Should parse successfully with correct precedence
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lparen, 2},
@@ -221,16 +221,16 @@ parse_setoid_eq_with_arithmetic_test() ->
     ?assertMatch({ok, _}, Result).
 
 parse_setoid_eq_precedence_without_parens_test() ->
-    %% flow test : Bool
-    %% flow test = x + 1 === y + 1
+    %% transform test : Bool
+    %% transform test = x + 1 === y + 1
     %% Should parse as (x + 1) === (y + 1) due to precedence
     %% (+ has higher precedence than ===)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -245,17 +245,17 @@ parse_setoid_eq_precedence_without_parens_test() ->
     ?assertMatch({ok, _}, Result).
 
 parse_setoid_eq_with_comparison_test() ->
-    %% flow test : Bool
-    %% flow test = x < y === z < w
+    %% transform test : Bool
+    %% transform test = x < y === z < w
     %% Actually parses as: (x < y) === (z < w)
     %% Both < and === are nonassoc but at different precedence levels
     %% < binds tighter (precedence 310) than === (precedence 300)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -323,15 +323,15 @@ parse_trait_method_invalid_type_application_test() ->
 %%--------------------------------------------------------------------
 
 parse_operator_without_right_operand_test() ->
-    %% flow test : Bool
-    %% flow test = x ===
+    %% transform test : Bool
+    %% transform test = x ===
     %% Should fail: missing right operand
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -342,15 +342,15 @@ parse_operator_without_right_operand_test() ->
     ?assertMatch({error, _}, Result).
 
 parse_operator_without_left_operand_test() ->
-    %% flow test : Bool
-    %% flow test = === y
+    %% transform test : Bool
+    %% transform test = === y
     %% Should fail: missing left operand
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {setoid_eq, 2},  %% No left operand
@@ -364,18 +364,18 @@ parse_operator_without_left_operand_test() ->
 %%--------------------------------------------------------------------
 
 parse_empty_parentheses_in_type_test() ->
-    %% flow test : () -> a
+    %% transform test : () -> a
     %% Empty parens should parse as unit type (if supported)
     %% or error (if not supported)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {lparen, 1},
         {rparen, 1},
         {arrow, 1},
         {lower_ident, 1, "a"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"}
@@ -386,10 +386,10 @@ parse_empty_parentheses_in_type_test() ->
     ?assertMatch({error, _}, Result).
 
 parse_nested_empty_tuples_test() ->
-    %% flow test : ((,)) -> a
+    %% transform test : ((,)) -> a
     %% Should fail: malformed tuple syntax
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {lparen, 1},
@@ -399,7 +399,7 @@ parse_nested_empty_tuples_test() ->
         {rparen, 1},
         {arrow, 1},
         {lower_ident, 1, "a"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"}

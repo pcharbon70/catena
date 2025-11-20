@@ -27,15 +27,15 @@
 %%====================================================================
 
 parse_multiplication_before_equality_test() ->
-    %% flow test : Bool
-    %% flow test = x * 2 === y * 2
+    %% transform test : Bool
+    %% transform test = x * 2 === y * 2
     %% Should parse as: (x * 2) === (y * 2)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -48,8 +48,8 @@ parse_multiplication_before_equality_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Should be: (x * 2) === (y * 2)
     ?assertMatch({binary_op, setoid_eq, _, _, _}, Body),
@@ -58,15 +58,15 @@ parse_multiplication_before_equality_test() ->
     ?assertMatch({binary_op, star, _, _, _}, Right).
 
 parse_addition_before_equality_test() ->
-    %% flow test : Bool
-    %% flow test = x + 1 === y + 1
+    %% transform test : Bool
+    %% transform test = x + 1 === y + 1
     %% Should parse as: (x + 1) === (y + 1)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -79,8 +79,8 @@ parse_addition_before_equality_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Should be: (x + 1) === (y + 1)
     ?assertMatch({binary_op, setoid_eq, _, _, _}, Body),
@@ -89,15 +89,15 @@ parse_addition_before_equality_test() ->
     ?assertMatch({binary_op, plus, _, _, _}, Right).
 
 parse_subtraction_before_equality_test() ->
-    %% flow test : Bool
-    %% flow test = x - 1 === y - 1
+    %% transform test : Bool
+    %% transform test = x - 1 === y - 1
     %% Should parse as: (x - 1) === (y - 1)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -110,8 +110,8 @@ parse_subtraction_before_equality_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Should be: (x - 1) === (y - 1)
     ?assertMatch({binary_op, setoid_eq, _, _, _}, Body),
@@ -120,15 +120,15 @@ parse_subtraction_before_equality_test() ->
     ?assertMatch({binary_op, minus, _, _, _}, Right).
 
 parse_division_before_equality_test() ->
-    %% flow test : Bool
-    %% flow test = x / 2 === y / 2
+    %% transform test : Bool
+    %% transform test = x / 2 === y / 2
     %% Should parse as: (x / 2) === (y / 2)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -141,8 +141,8 @@ parse_division_before_equality_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Should be: (x / 2) === (y / 2)
     ?assertMatch({binary_op, setoid_eq, _, _, _}, Body),
@@ -155,15 +155,15 @@ parse_division_before_equality_test() ->
 %%====================================================================
 
 parse_comparison_before_equality_test() ->
-    %% flow test : Bool
-    %% flow test = x < y === z < w
+    %% transform test : Bool
+    %% transform test = x < y === z < w
     %% Should parse as: (x < y) === (z < w)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -176,8 +176,8 @@ parse_comparison_before_equality_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Should be: (x < y) === (z < w)
     ?assertMatch({binary_op, setoid_eq, _, _, _}, Body),
@@ -186,15 +186,15 @@ parse_comparison_before_equality_test() ->
     ?assertMatch({binary_op, lt, _, _, _}, Right).
 
 parse_greater_than_before_equality_test() ->
-    %% flow test : Bool
-    %% flow test = x > y === z > w
+    %% transform test : Bool
+    %% transform test = x > y === z > w
     %% Should parse as: (x > y) === (z > w)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -207,8 +207,8 @@ parse_greater_than_before_equality_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Should be: (x > y) === (z > w)
     ?assertMatch({binary_op, setoid_eq, _, _, _}, Body),
@@ -217,15 +217,15 @@ parse_greater_than_before_equality_test() ->
     ?assertMatch({binary_op, gt, _, _, _}, Right).
 
 parse_mixed_comparison_before_equality_test() ->
-    %% flow test : Bool
-    %% flow test = x <= y === z >= w
+    %% transform test : Bool
+    %% transform test = x <= y === z >= w
     %% Should parse as: (x <= y) === (z >= w)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -238,8 +238,8 @@ parse_mixed_comparison_before_equality_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Should be: (x <= y) === (z >= w)
     ?assertMatch({binary_op, setoid_eq, _, _, _}, Body),
@@ -252,15 +252,15 @@ parse_mixed_comparison_before_equality_test() ->
 %%====================================================================
 
 parse_arithmetic_before_comparison_test() ->
-    %% flow test : Bool
-    %% flow test = x + 1 < y * 2
+    %% transform test : Bool
+    %% transform test = x + 1 < y * 2
     %% Should parse as: (x + 1) < (y * 2)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -273,8 +273,8 @@ parse_arithmetic_before_comparison_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Should be: (x + 1) < (y * 2)
     ?assertMatch({binary_op, lt, _, _, _}, Body),
@@ -287,15 +287,15 @@ parse_arithmetic_before_comparison_test() ->
 %%====================================================================
 
 parse_complex_precedence_chain_test() ->
-    %% flow test : Bool
-    %% flow test = x * 2 + 1 < y - 3 === z / 4 > w
+    %% transform test : Bool
+    %% transform test = x * 2 + 1 < y - 3 === z / 4 > w
     %% Should parse as: ((x * 2) + 1) < (y - 3)) === ((z / 4) > w)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -316,8 +316,8 @@ parse_complex_precedence_chain_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Top level: ===
     ?assertMatch({binary_op, setoid_eq, _, _, _}, Body),
@@ -339,16 +339,16 @@ parse_complex_precedence_chain_test() ->
 %%====================================================================
 
 parse_pipe_before_equality_test() ->
-    %% flow test : Bool
-    %% flow test = x |> f === y |> g
+    %% transform test : Bool
+    %% transform test = x |> f === y |> g
     %% Note: Pipe (160) is looser than === (300), so parses right-to-left
     %% Actual parse: x |> (f === (y |> g))
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -361,8 +361,8 @@ parse_pipe_before_equality_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Pipe is right-associative and loosest, so: x |> (f === (y |> g))
     ?assertMatch({binary_op, pipe_right, _, _, _}, Body),
@@ -375,15 +375,15 @@ parse_pipe_before_equality_test() ->
 %%====================================================================
 
 parse_parentheses_override_arithmetic_test() ->
-    %% flow test : Nat
-    %% flow test = 2 * (3 + 4)
+    %% transform test : Nat
+    %% transform test = 2 * (3 + 4)
     %% Should parse as: 2 * (3 + 4), NOT (2 * 3) + 4
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Nat"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {integer, 2, 2},
@@ -396,8 +396,8 @@ parse_parentheses_override_arithmetic_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Should be: 2 * (3 + 4)
     ?assertMatch({binary_op, star, _, _, _}, Body),
@@ -406,16 +406,16 @@ parse_parentheses_override_arithmetic_test() ->
     ?assertMatch({binary_op, plus, _, _, _}, Right).
 
 parse_parentheses_override_comparison_test() ->
-    %% flow test : Bool
-    %% flow test = (x === y) < (z === w)
+    %% transform test : Bool
+    %% transform test = (x === y) < (z === w)
     %% Should parse as: (x === y) < (z === w)
     %% Parentheses force === to bind before <
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lparen, 2},
@@ -432,8 +432,8 @@ parse_parentheses_override_comparison_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Should be: (x === y) < (z === w)
     ?assertMatch({binary_op, lt, _, _, _}, Body),
@@ -446,15 +446,15 @@ parse_parentheses_override_comparison_test() ->
 %%====================================================================
 
 parse_left_associative_addition_test() ->
-    %% flow test : Nat
-    %% flow test = x + y + z
+    %% transform test : Nat
+    %% transform test = x + y + z
     %% Should parse as: (x + y) + z (left associative)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Nat"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -465,8 +465,8 @@ parse_left_associative_addition_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Should be: (x + y) + z
     ?assertMatch({binary_op, plus, _, _, _}, Body),
@@ -475,15 +475,15 @@ parse_left_associative_addition_test() ->
     ?assertMatch({var, z, _}, Right).
 
 parse_left_associative_multiplication_test() ->
-    %% flow test : Nat
-    %% flow test = x * y * z
+    %% transform test : Nat
+    %% transform test = x * y * z
     %% Should parse as: (x * y) * z (left associative)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Nat"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -494,8 +494,8 @@ parse_left_associative_multiplication_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Should be: (x * y) * z
     ?assertMatch({binary_op, star, _, _, _}, Body),
@@ -504,10 +504,10 @@ parse_left_associative_multiplication_test() ->
     ?assertMatch({var, z, _}, Right).
 
 parse_right_associative_arrow_test() ->
-    %% flow test : a -> (b -> c)
+    %% transform test : a -> (b -> c)
     %% Type arrow is right associative: a -> b -> c means a -> (b -> c)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {lower_ident, 1, "a"},
@@ -515,14 +515,14 @@ parse_right_associative_arrow_test() ->
         {lower_ident, 1, "b"},
         {arrow, 1},
         {lower_ident, 1, "c"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, TypeSig, _, _} = FlowDecl,
+    {transform_decl, test, TypeSig, _, _} = FlowDecl,
 
     %% Should be: a -> (b -> c) (right associative)
     ?assertMatch({type_fun, _, _, _}, TypeSig),
@@ -538,16 +538,16 @@ parse_right_associative_arrow_test() ->
 %%====================================================================
 
 parse_mixed_arithmetic_same_level_test() ->
-    %% flow test : Nat
-    %% flow test = x + y - z
+    %% transform test : Nat
+    %% transform test = x + y - z
     %% Both + and - have precedence 400, left associative
     %% Should parse as: (x + y) - z
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Nat"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -558,8 +558,8 @@ parse_mixed_arithmetic_same_level_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Should be: (x + y) - z
     ?assertMatch({binary_op, minus, _, _, _}, Body),
@@ -568,16 +568,16 @@ parse_mixed_arithmetic_same_level_test() ->
     ?assertMatch({var, z, _}, Right).
 
 parse_mixed_multiplicative_same_level_test() ->
-    %% flow test : Nat
-    %% flow test = x * y / z
+    %% transform test : Nat
+    %% transform test = x * y / z
     %% Both * and / have precedence 500, left associative
     %% Should parse as: (x * y) / z
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Nat"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "x"},
@@ -588,8 +588,8 @@ parse_mixed_multiplicative_same_level_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Should be: (x * y) / z
     ?assertMatch({binary_op, slash, _, _, _}, Body),
@@ -602,15 +602,15 @@ parse_mixed_multiplicative_same_level_test() ->
 %%====================================================================
 
 parse_full_precedence_chain_test() ->
-    %% flow test : Bool
-    %% flow test = a * b + c - d < e + f === g * h > i
+    %% transform test : Bool
+    %% transform test = a * b + c - d < e + f === g * h > i
     %% Expected precedence: ((((a * b) + c) - d) < (e + f)) === ((g * h) > i)
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "test"},
         {colon, 1},
         {upper_ident, 1, "Bool"},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "test"},
         {equals, 2},
         {lower_ident, 2, "a"},
@@ -633,8 +633,8 @@ parse_full_precedence_chain_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, test, _, [Clause], _} = FlowDecl,
-    {flow_clause, [], undefined, Body, _} = Clause,
+    {transform_decl, test, _, [Clause], _} = FlowDecl,
+    {transform_clause, [], undefined, Body, _} = Clause,
 
     %% Top level: ===
     ?assertMatch({binary_op, setoid_eq, _, _, _}, Body),

@@ -2,7 +2,7 @@
 %%% @doc Integration tests for type error formatting with inference
 %%%
 %%% These tests simulate the full error reporting pipeline, showing
-%%% how type errors flow from inference through formatting to final
+%%% how type errors transform from inference through formatting to final
 %%% user-facing messages.
 %%%
 %%% @end

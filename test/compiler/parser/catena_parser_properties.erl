@@ -420,7 +420,7 @@ build_method_tokens([{MethodName, FromType, ToType} | Rest]) ->
 
 build_instance_method_tokens([]) -> [];
 build_instance_method_tokens([{MethodName, Param, Body} | Rest]) ->
-    [{flow, 2}, {lower_ident, 2, MethodName}, {lower_ident, 2, Param}, {equals, 2}, {lower_ident, 2, Body}] ++
+    [{transform, 2}, {lower_ident, 2, MethodName}, {lower_ident, 2, Param}, {equals, 2}, {lower_ident, 2, Body}] ++
     build_instance_method_tokens(Rest).
 
 generate_nested_function_type(Depth) ->

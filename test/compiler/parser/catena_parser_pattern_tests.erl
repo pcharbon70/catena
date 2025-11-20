@@ -9,7 +9,7 @@
 %%====================================================================
 %%
 %% This module tests the parser's ability to parse pattern matching
-%% in flow declarations. Pattern matching is a core feature of Catena,
+%% in transform declarations. Pattern matching is a core feature of Catena,
 %% allowing destructuring of data in function arguments.
 %%
 %% Test Organization:
@@ -40,7 +40,7 @@
 %% Test 1.1: Single variable pattern
 %% Pattern: x
 single_variable_pattern_test() ->
-    FlowDecl = parse_flow("flow id x = x"),
+    FlowDecl = parse_flow("transform id x = x"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -49,7 +49,7 @@ single_variable_pattern_test() ->
 %% Test 1.2: Multiple variable patterns
 %% Pattern: x y
 multiple_variable_patterns_test() ->
-    FlowDecl = parse_flow("flow add x y = x + y"),
+    FlowDecl = parse_flow("transform add x y = x + y"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(2, length(Patterns)),
     [P1, P2] = Patterns,
@@ -59,7 +59,7 @@ multiple_variable_patterns_test() ->
 %% Test 1.3: Three variable patterns
 %% Pattern: x y z
 three_variable_patterns_test() ->
-    FlowDecl = parse_flow("flow sum3 x y z = x + y + z"),
+    FlowDecl = parse_flow("transform sum3 x y z = x + y + z"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(3, length(Patterns)),
     [P1, P2, P3] = Patterns,
@@ -70,7 +70,7 @@ three_variable_patterns_test() ->
 %% Test 1.4: Variable pattern with underscore in name
 %% Pattern: some_var
 variable_with_underscore_test() ->
-    FlowDecl = parse_flow("flow test some_var = some_var"),
+    FlowDecl = parse_flow("transform test some_var = some_var"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -79,7 +79,7 @@ variable_with_underscore_test() ->
 %% Test 1.5: Empty pattern list
 %% Pattern: (none)
 empty_pattern_list_test() ->
-    FlowDecl = parse_flow("flow answer = 42"),
+    FlowDecl = parse_flow("transform answer = 42"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(0, length(Patterns)),
     ?assertEqual([], Patterns).
@@ -91,7 +91,7 @@ empty_pattern_list_test() ->
 %% Test 2.1: Single wildcard pattern
 %% Pattern: _
 single_wildcard_pattern_test() ->
-    FlowDecl = parse_flow("flow ignore _ = 42"),
+    FlowDecl = parse_flow("transform ignore _ = 42"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -100,7 +100,7 @@ single_wildcard_pattern_test() ->
 %% Test 2.2: Wildcard with variable pattern
 %% Pattern: x _
 wildcard_with_variable_test() ->
-    FlowDecl = parse_flow("flow const x _ = x"),
+    FlowDecl = parse_flow("transform const x _ = x"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(2, length(Patterns)),
     [P1, P2] = Patterns,
@@ -110,7 +110,7 @@ wildcard_with_variable_test() ->
 %% Test 2.3: Multiple wildcards
 %% Pattern: _ _ _
 multiple_wildcards_test() ->
-    FlowDecl = parse_flow("flow ignoreAll _ _ _ = 0"),
+    FlowDecl = parse_flow("transform ignoreAll _ _ _ = 0"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(3, length(Patterns)),
     [P1, P2, P3] = Patterns,
@@ -125,7 +125,7 @@ multiple_wildcards_test() ->
 %% Test 3.1: Integer literal pattern
 %% Pattern: 0
 integer_literal_pattern_test() ->
-    FlowDecl = parse_flow("flow isZero 0 = true"),
+    FlowDecl = parse_flow("transform isZero 0 = true"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -134,7 +134,7 @@ integer_literal_pattern_test() ->
 %% Test 3.2: Large integer pattern
 %% Pattern: 42
 large_integer_pattern_test() ->
-    FlowDecl = parse_flow("flow isFortyTwo 42 = true"),
+    FlowDecl = parse_flow("transform isFortyTwo 42 = true"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -143,7 +143,7 @@ large_integer_pattern_test() ->
 %% Test 3.3: Float literal pattern
 %% Pattern: 3.14
 float_literal_pattern_test() ->
-    FlowDecl = parse_flow("flow isPi 3.14 = true"),
+    FlowDecl = parse_flow("transform isPi 3.14 = true"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -152,7 +152,7 @@ float_literal_pattern_test() ->
 %% Test 3.4: String literal pattern
 %% Pattern: "hello"
 string_literal_pattern_test() ->
-    FlowDecl = parse_flow("flow greet \"hello\" = \"world\""),
+    FlowDecl = parse_flow("transform greet \"hello\" = \"world\""),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -161,7 +161,7 @@ string_literal_pattern_test() ->
 %% Test 3.5: Empty string pattern
 %% Pattern: ""
 empty_string_pattern_test() ->
-    FlowDecl = parse_flow("flow isEmpty \"\" = true"),
+    FlowDecl = parse_flow("transform isEmpty \"\" = true"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -170,7 +170,7 @@ empty_string_pattern_test() ->
 %% Test 3.6: Multiple literal patterns
 %% Pattern: 0 1
 multiple_literal_patterns_test() ->
-    FlowDecl = parse_flow("flow isBinary 0 1 = true"),
+    FlowDecl = parse_flow("transform isBinary 0 1 = true"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(2, length(Patterns)),
     [P1, P2] = Patterns,
@@ -184,7 +184,7 @@ multiple_literal_patterns_test() ->
 %% Test 4.1: Nullary constructor pattern
 %% Pattern: None
 nullary_constructor_pattern_test() ->
-    FlowDecl = parse_flow("flow isNone None = true"),
+    FlowDecl = parse_flow("transform isNone None = true"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -193,7 +193,7 @@ nullary_constructor_pattern_test() ->
 %% Test 4.2: Constructor with single argument
 %% Pattern: Some(x)
 constructor_with_single_arg_test() ->
-    FlowDecl = parse_flow("flow unwrap Some(x) = x"),
+    FlowDecl = parse_flow("transform unwrap Some(x) = x"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -205,7 +205,7 @@ constructor_with_single_arg_test() ->
 %% Test 4.3: Constructor with multiple arguments
 %% Pattern: Point(x, y)
 constructor_with_multiple_args_test() ->
-    FlowDecl = parse_flow("flow getX Point(x y) = x"),
+    FlowDecl = parse_flow("transform getX Point(x y) = x"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -220,7 +220,7 @@ constructor_with_multiple_args_test() ->
 %% Test 4.4: Constructor with wildcard argument
 %% Pattern: Some(_)
 constructor_with_wildcard_test() ->
-    FlowDecl = parse_flow("flow isSome Some(_) = true"),
+    FlowDecl = parse_flow("transform isSome Some(_) = true"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -232,7 +232,7 @@ constructor_with_wildcard_test() ->
 %% Test 4.5: Constructor with literal argument
 %% Pattern: Some(0)
 constructor_with_literal_test() ->
-    FlowDecl = parse_flow("flow isSomeZero Some(0) = true"),
+    FlowDecl = parse_flow("transform isSomeZero Some(0) = true"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -244,7 +244,7 @@ constructor_with_literal_test() ->
 %% Test 4.6: Multiple constructor patterns
 %% Pattern: Left(x) Right(y)
 multiple_constructor_patterns_test() ->
-    FlowDecl = parse_flow("flow merge Left(x) Right(y) = x + y"),
+    FlowDecl = parse_flow("transform merge Left(x) Right(y) = x + y"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(2, length(Patterns)),
     [P1, P2] = Patterns,
@@ -264,7 +264,7 @@ multiple_constructor_patterns_test() ->
 %% Test 5.1: Empty list pattern
 %% Pattern: []
 empty_list_pattern_test() ->
-    FlowDecl = parse_flow("flow isEmpty [] = true"),
+    FlowDecl = parse_flow("transform isEmpty [] = true"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -273,7 +273,7 @@ empty_list_pattern_test() ->
 %% Test 5.2: List with single element pattern
 %% Pattern: [x]
 single_element_list_pattern_test() ->
-    FlowDecl = parse_flow("flow single [x] = x"),
+    FlowDecl = parse_flow("transform single [x] = x"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -285,7 +285,7 @@ single_element_list_pattern_test() ->
 %% Test 5.3: List with multiple elements
 %% Pattern: [x y z]
 multiple_element_list_pattern_test() ->
-    FlowDecl = parse_flow("flow triple [x y z] = x + y + z"),
+    FlowDecl = parse_flow("transform triple [x y z] = x + y + z"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -301,7 +301,7 @@ multiple_element_list_pattern_test() ->
 %% Test 5.4: List with wildcard elements
 %% Pattern: [x _ z]
 list_with_wildcards_test() ->
-    FlowDecl = parse_flow("flow firstAndThird [x _ z] = x + z"),
+    FlowDecl = parse_flow("transform firstAndThird [x _ z] = x + z"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -317,7 +317,7 @@ list_with_wildcards_test() ->
 %% Test 5.5: List with literal elements
 %% Pattern: [1 2 3]
 list_with_literals_test() ->
-    FlowDecl = parse_flow("flow isOneTwoThree [1 2 3] = true"),
+    FlowDecl = parse_flow("transform isOneTwoThree [1 2 3] = true"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -337,7 +337,7 @@ list_with_literals_test() ->
 %% Test 6.1: Nested constructor patterns
 %% Pattern: Some(Some(x))
 nested_constructor_pattern_test() ->
-    FlowDecl = parse_flow("flow unwrapTwice Some(Some(x)) = x"),
+    FlowDecl = parse_flow("transform unwrapTwice Some(Some(x)) = x"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -353,7 +353,7 @@ nested_constructor_pattern_test() ->
 %% Test 6.2: Constructor with list pattern
 %% Pattern: Node([x y])
 constructor_with_list_pattern_test() ->
-    FlowDecl = parse_flow("flow getFirst Node([x y]) = x"),
+    FlowDecl = parse_flow("transform getFirst Node([x y]) = x"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -370,7 +370,7 @@ constructor_with_list_pattern_test() ->
 %% Test 6.3: List with constructor elements
 %% Pattern: [Some(x) None]
 list_with_constructor_elements_test() ->
-    FlowDecl = parse_flow("flow test [Some(x) None] = x"),
+    FlowDecl = parse_flow("transform test [Some(x) None] = x"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -385,7 +385,7 @@ list_with_constructor_elements_test() ->
 %% Test 6.4: Deeply nested pattern
 %% Pattern: Pair(Some([x]) None)
 deeply_nested_pattern_test() ->
-    FlowDecl = parse_flow("flow extract Pair(Some([x]) None) = x"),
+    FlowDecl = parse_flow("transform extract Pair(Some([x]) None) = x"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -406,21 +406,21 @@ deeply_nested_pattern_test() ->
 %% Test 7.1: Simple guard with comparison
 %% Pattern: x  when x > 0
 simple_guard_test() ->
-    FlowDecl = parse_flow("flow positive x when x > 0 = true"),
+    FlowDecl = parse_flow("transform positive x when x > 0 = true"),
     Guards = get_guards(FlowDecl),
     ?assertMatch([{binary_op, gt, {var, x, _}, {literal, 0, integer, _}, _}], Guards).
 
 %% Test 7.2: Guard with equality check
 %% Pattern: x  when x == 0
 guard_with_equality_test() ->
-    FlowDecl = parse_flow("flow isZero x when x == 0 = true"),
+    FlowDecl = parse_flow("transform isZero x when x == 0 = true"),
     Guards = get_guards(FlowDecl),
     ?assertMatch([{binary_op, eq, {var, x, _}, {literal, 0, integer, _}, _}], Guards).
 
 %% Test 7.3: Guard with multiple conditions
 %% Pattern: x y  when x > 0, y > 0
 multiple_guard_conditions_test() ->
-    FlowDecl = parse_flow("flow bothPositive x y when x > 0, y > 0 = true"),
+    FlowDecl = parse_flow("transform bothPositive x y when x > 0, y > 0 = true"),
     Guards = get_guards(FlowDecl),
     ?assertEqual(2, length(Guards)),
     [G1, G2] = Guards,
@@ -430,7 +430,7 @@ multiple_guard_conditions_test() ->
 %% Test 7.4: Guard with arithmetic
 %% Pattern: x  when x + 1 > 10
 guard_with_arithmetic_test() ->
-    FlowDecl = parse_flow("flow test x when x + 1 > 10 = true"),
+    FlowDecl = parse_flow("transform test x when x + 1 > 10 = true"),
     Guards = get_guards(FlowDecl),
     ?assertEqual(1, length(Guards)),
     [Guard] = Guards,
@@ -445,7 +445,7 @@ guard_with_arithmetic_test() ->
 %% Test 7.5: Constructor pattern with guard
 %% Pattern: Some(x)  when x > 0
 constructor_with_guard_test() ->
-    FlowDecl = parse_flow("flow positiveSome Some(x) when x > 0 = x"),
+    FlowDecl = parse_flow("transform positiveSome Some(x) when x > 0 = x"),
     Patterns = get_patterns(FlowDecl),
     Guards = get_guards(FlowDecl),
     ?assertMatch([{pat_constructor, 'Some', [{pat_var, x, _}], _}], Patterns),
@@ -457,7 +457,7 @@ constructor_with_guard_test() ->
 
 %% Test 8.1: Variable pattern has location
 variable_pattern_location_test() ->
-    FlowDecl = parse_flow("flow id x = x"),
+    FlowDecl = parse_flow("transform id x = x"),
     Patterns = get_patterns(FlowDecl),
     [Pattern] = Patterns,
     {pat_var, x, Loc} = Pattern,
@@ -465,7 +465,7 @@ variable_pattern_location_test() ->
 
 %% Test 8.2: Constructor pattern has location
 constructor_pattern_location_test() ->
-    FlowDecl = parse_flow("flow test Some(x) = x"),
+    FlowDecl = parse_flow("transform test Some(x) = x"),
     Patterns = get_patterns(FlowDecl),
     [Pattern] = Patterns,
     {pat_constructor, 'Some', _, Loc} = Pattern,
@@ -473,7 +473,7 @@ constructor_pattern_location_test() ->
 
 %% Test 8.3: List pattern has location
 list_pattern_location_test() ->
-    FlowDecl = parse_flow("flow test [x y] = x"),
+    FlowDecl = parse_flow("transform test [x y] = x"),
     Patterns = get_patterns(FlowDecl),
     [Pattern] = Patterns,
     {pat_list, _, Loc} = Pattern,
@@ -486,7 +486,7 @@ list_pattern_location_test() ->
 %% Test 9.1: Multiple patterns of different types
 %% Pattern: 0 None [] _
 mixed_pattern_types_test() ->
-    FlowDecl = parse_flow("flow complex 0 None [] _ = true"),
+    FlowDecl = parse_flow("transform complex 0 None [] _ = true"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(4, length(Patterns)),
     [P1, P2, P3, P4] = Patterns,
@@ -498,7 +498,7 @@ mixed_pattern_types_test() ->
 %% Test 9.2: Constructor with mixed nested patterns
 %% Pattern: Pair([1 x] Some(_))
 complex_nested_mixed_test() ->
-    FlowDecl = parse_flow("flow test Pair([1 x] Some(_)) = x"),
+    FlowDecl = parse_flow("transform test Pair([1 x] Some(_)) = x"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -516,7 +516,7 @@ complex_nested_mixed_test() ->
 %% Test 9.3: All pattern types in one flow
 %% Pattern: x _ 0 "hi" None [a] Point(p)
 all_pattern_types_test() ->
-    FlowDecl = parse_flow("flow kitchen_sink x _ 0 \"hi\" None [a] Point(p) = x"),
+    FlowDecl = parse_flow("transform kitchen_sink x _ 0 \"hi\" None [a] Point(p) = x"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(7, length(Patterns)),
     [P1, P2, P3, P4, P5, P6, P7] = Patterns,

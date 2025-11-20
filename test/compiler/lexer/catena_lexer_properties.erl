@@ -68,7 +68,7 @@ valid_float() ->
 %% Generate keywords
 keyword() ->
     oneof([
-        "shape", "flow", "match", "where", "let", "in", "do", "end",
+        "type", "transform", "match", "where", "let", "in", "do", "end",
         "if", "then", "else", "case", "of", "when",
         "trait", "instance", "extends", "forall",
         "effect", "operation", "perform", "try", "with"
@@ -427,10 +427,10 @@ prop_multiple_tokens() ->
 %% Property: Token boundaries are respected
 prop_token_boundaries() ->
     begin
-        % "shapeshape" should be one identifier, not two "shape" keywords
-        {ok, Tokens, _} = catena_lexer:string("shapeshape"),
+        % "typetype" should be one identifier, not two "type" keywords
+        {ok, Tokens, _} = catena_lexer:string("typetype"),
         case Tokens of
-            [{lower_ident, _, "shapeshape"}] -> true;
+            [{lower_ident, _, "typetype"}] -> true;
             _ -> false
         end
     end.

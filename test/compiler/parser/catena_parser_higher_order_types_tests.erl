@@ -231,10 +231,10 @@ parse_tuple_type_three_elements_test() ->
 %%--------------------------------------------------------------------
 
 parse_parenthesized_not_tuple_test() ->
-    %% flow id : (a -> a)
+    %% transform id : (a -> a)
     %% This should parse as a parenthesized function type, NOT a tuple
     Tokens = [
-        {flow, 1},
+        {transform, 1},
         {lower_ident, 1, "id"},
         {colon, 1},
         {lparen, 1},
@@ -242,14 +242,14 @@ parse_parenthesized_not_tuple_test() ->
         {arrow, 1},
         {lower_ident, 1, "a"},
         {rparen, 1},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "id"},
         {equals, 2},
         {lower_ident, 2, "x"}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = Result,
-    {flow_decl, id, TypeSig, _, _} = FlowDecl,
+    {transform_decl, id, TypeSig, _, _} = FlowDecl,
 
     %% Should be a function type, not a tuple
     ?assertMatch({type_fun, _, _, _}, TypeSig),

@@ -17,10 +17,10 @@ token_types(Tokens) ->
 
 keywords_test() ->
     %% Test all Catena keywords
-    {ok, Tokens} = catena_lexer:tokenize("shape flow match where let in do end"),
+    {ok, Tokens} = catena_lexer:tokenize("type transform match where let in do end"),
     ?assertEqual([
-        {shape, 1},
-        {flow, 1},
+        {type, 1},
+        {transform, 1},
         {match, 1},
         {where, 1},
         {'let', 1},
@@ -31,7 +31,7 @@ keywords_test() ->
 
 all_keywords_test() ->
     %% Test comprehensive keyword list
-    Input = "shape flow match where let in do end if then else case of when "
+    Input = "type transform match where let in do end if then else case of when "
             "module import export exports as qualified private trait instance forall actor supervisor",
     {ok, Tokens} = catena_lexer:tokenize(Input),
     Expected = [shape, flow, match, where, 'let', 'in', 'do', 'end', 'if', 'then', 'else',
@@ -452,23 +452,23 @@ mixed_comments_test() ->
 
 realistic_catena_code_test() ->
     %% Test a realistic piece of Catena code
-    Code = "flow factorial : Natural -> Natural\n"
-           "flow factorial n = match n\n"
+    Code = "transform factorial : Natural -> Natural\n"
+           "transform factorial n = match n\n"
            "  | 0 -> 1\n"
            "  | n -> n * factorial (n - 1)\n"
            "end",
     {ok, Tokens} = catena_lexer:tokenize(Code),
     %% Verify it tokenizes without errors
     ?assert(length(Tokens) > 0),
-    %% Check that flow keyword appears twice
-    FlowCount = length([T || T = {flow, _} <- Tokens]),
+    %% Check that transform keyword appears twice
+    FlowCount = length([T || T = {transform, _} <- Tokens]),
     ?assertEqual(2, FlowCount).
 
 shape_definition_test() ->
-    Code = "shape Maybe a = Some a | None",
+    Code = "type Maybe a = Some a | None",
     {ok, Tokens} = catena_lexer:tokenize(Code),
     ?assertMatch([
-        {shape, 1},
+        {type, 1},
         {upper_ident, 1, "Maybe"},
         {lower_ident, 1, "a"},
         {equals, 1},
@@ -494,7 +494,7 @@ effect_syntax_test() ->
     Code = "effect FileIO\n"
            "  operation readFile\n"
            "end\n"
-           "flow loadConfig = perform FileIO readFile\n"
+           "transform loadConfig = perform FileIO readFile\n"
            "try\n"
            "  loadConfig\n"
            "with FileIO",

@@ -18,55 +18,55 @@
 %% Section 1: Basic Parsing Tests
 %%----------------------------------------------------------------------------
 
-%% Test 1.1: Parse simple shape declaration
+%% Test 1.1: Parse simple type declaration
 parse_simple_shape_test() ->
-    Source = "shape Bool = True | False",
+    Source = "type Bool = True | False",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result),
     {ok, {module, _, _, _, Decls, _}} = Result,
     ?assertEqual(1, length(Decls)),
-    [{shape_decl, 'Bool', [], Constructors, [], _}] = Decls,
+    [{type_decl, 'Bool', [], Constructors, [], _}] = Decls,
     ?assertEqual(2, length(Constructors)).
 
-%% Test 1.2: Parse simple flow declaration
+%% Test 1.2: Parse simple transform declaration
 parse_simple_flow_test() ->
-    Source = "flow add x y = x + y",
+    Source = "transform add x y = x + y",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result),
     {ok, {module, _, _, _, Decls, _}} = Result,
     ?assertEqual(1, length(Decls)),
-    [{flow_decl, add, undefined, Clauses, _}] = Decls,
+    [{transform_decl, add, undefined, Clauses, _}] = Decls,
     ?assertEqual(1, length(Clauses)).
 
-%% Test 1.3: Parse flow with type signature
+%% Test 1.3: Parse transform with type signature
 parse_flow_with_type_sig_test() ->
-    Source = "flow identity : a -> a\n"
-             "flow identity x = x",
+    Source = "transform identity : a -> a\n"
+             "transform identity x = x",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result),
     {ok, {module, _, _, _, Decls, _}} = Result,
     ?assertEqual(1, length(Decls)),
-    [{flow_decl, identity, TypeSig, Clauses, _}] = Decls,
+    [{transform_decl, identity, TypeSig, Clauses, _}] = Decls,
     ?assertMatch({type_fun, _, _, _}, TypeSig),
     ?assertEqual(1, length(Clauses)).
 
 %% Test 1.4: Parse complex expression
 parse_complex_expression_test() ->
-    Source = "flow complex x = (x + 1) * 2 |> identity",
+    Source = "transform complex x = (x + 1) * 2 |> identity",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result).
 
 %% Test 1.5: Parse match expression
 parse_match_expression_test() ->
-    Source = "flow length xs = match\n"
+    Source = "transform length xs = match\n"
              "  | Nil -> 0\n"
              "  | Cons(_ rest) -> 1 + length rest\n"
              "end",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result),
     {ok, {module, _, _, _, Decls, _}} = Result,
-    [{flow_decl, length, undefined, Clauses, _}] = Decls,
-    [{flow_clause, _, undefined, {match_expr, MatchClauses, _}, _}] = Clauses,
+    [{transform_decl, length, undefined, Clauses, _}] = Decls,
+    [{transform_clause, _, undefined, {match_expr, MatchClauses, _}, _}] = Clauses,
     ?assertEqual(2, length(MatchClauses)).
 
 %%----------------------------------------------------------------------------
@@ -75,7 +75,7 @@ parse_match_expression_test() ->
 
 %% Test 2.1: Unclosed comment
 lex_error_unclosed_comment_test() ->
-    Source = "flow f x = {- unclosed comment",
+    Source = "transform f x = {- unclosed comment",
     Result = catena_parse:parse(Source),
     ?assertMatch({error, {lex_error, _, _}}, Result),
     {error, ErrorTuple} = Result,
@@ -85,7 +85,7 @@ lex_error_unclosed_comment_test() ->
 
 %% Test 2.2: Invalid token
 lex_error_invalid_token_test() ->
-    Source = "flow f x = @invalid",
+    Source = "transform f x = @invalid",
     Result = catena_parse:parse(Source),
     %% Note: @ might be valid or invalid depending on lexer rules
     %% This test verifies we handle lexer errors properly
@@ -103,7 +103,7 @@ lex_error_invalid_token_test() ->
 lex_error_long_identifier_test() ->
     %% Create an identifier longer than the limit (255 chars)
     LongIdent = lists:duplicate(300, $a),
-    Source = "flow " ++ LongIdent ++ " x = x",
+    Source = "transform " ++ LongIdent ++ " x = x",
     Result = catena_parse:parse(Source),
     ?assertMatch({error, {lex_error, _, _}}, Result).
 
@@ -114,7 +114,7 @@ lex_error_input_too_large_test() ->
     OldMax = application:get_env(catena, max_input_size, undefined),
     try
         application:set_env(catena, max_input_size, 10),
-        Source = "flow f x = x",  % More than 10 chars
+        Source = "transform f x = x",  % More than 10 chars
         Result = catena_parse:parse(Source),
         ?assertMatch({error, {lex_error, _, _}}, Result)
     after
@@ -130,7 +130,7 @@ lex_error_input_too_large_test() ->
 
 %% Test 3.1: Missing equals in flow
 parse_error_missing_equals_test() ->
-    Source = "flow f x y",
+    Source = "transform f x y",
     Result = catena_parse:parse(Source),
     ?assertMatch({error, {parse_error, _, _}}, Result),
     {error, ErrorTuple} = Result,
@@ -139,19 +139,19 @@ parse_error_missing_equals_test() ->
 
 %% Test 3.2: Unclosed parenthesis
 parse_error_unclosed_paren_test() ->
-    Source = "flow f x = (x + 1",
+    Source = "transform f x = (x + 1",
     Result = catena_parse:parse(Source),
     ?assertMatch({error, {parse_error, _, _}}, Result).
 
 %% Test 3.3: Invalid pattern
 parse_error_invalid_pattern_test() ->
-    Source = "flow f 123.456.789 = x",
+    Source = "transform f 123.456.789 = x",
     Result = catena_parse:parse(Source),
     ?assertMatch({error, {parse_error, _, _}}, Result).
 
 %% Test 3.4: Mismatched delimiters
 parse_error_mismatched_delimiters_test() ->
-    Source = "flow f x = [1, 2, 3}",
+    Source = "transform f x = [1, 2, 3}",
     Result = catena_parse:parse(Source),
     ?assertMatch({error, {parse_error, _, _}}, Result).
 
@@ -164,9 +164,9 @@ parse_file_success_test() ->
     %% We can use the examples from test data if they exist
     %% For now, we'll create a temporary file
     Filename = "/tmp/catena_parse_test.tps",
-    Source = "shape Bool = True | False\n"
-             "flow not : Bool -> Bool\n"
-             "flow not x = match\n"
+    Source = "type Bool = True | False\n"
+             "transform not : Bool -> Bool\n"
+             "transform not x = match\n"
              "  | True -> False\n"
              "  | False -> True\n"
              "end",
@@ -190,7 +190,7 @@ parse_file_not_found_test() ->
 parse_file_permission_denied_test() ->
     %% Create a file with no read permissions
     Filename = "/tmp/catena_no_read.tps",
-    ok = file:write_file(Filename, "shape X = Y"),
+    ok = file:write_file(Filename, "type X = Y"),
     try
         ok = file:change_mode(Filename, 8#000),
         Result = catena_parse:parse_file(Filename),
@@ -211,7 +211,7 @@ ast_depth_limit_test() ->
     try
         application:set_env(catena, max_ast_depth, 5),
         %% Create deeply nested expression: (((((x)))))
-        Source = "flow f x = ((((((x))))))",
+        Source = "transform f x = ((((((x))))))",
         Result = catena_parse:parse(Source),
         %% Should exceed depth limit
         ?assertMatch({error, {ast_too_deep, _, _}}, Result),
@@ -232,7 +232,7 @@ ast_node_count_limit_test() ->
     try
         application:set_env(catena, max_ast_nodes, 20),
         %% Create expression with many nodes
-        Source = "flow f x = x + x + x + x + x + x + x + x + x + x + x + x",
+        Source = "transform f x = x + x + x + x + x + x + x + x + x + x + x + x",
         Result = catena_parse:parse(Source),
         %% Should exceed node count limit
         ?assertMatch({error, {ast_too_large, _, _}}, Result),
@@ -248,16 +248,16 @@ ast_node_count_limit_test() ->
 
 %% Test 5.3: Normal AST passes limits
 ast_normal_passes_limits_test() ->
-    Source = "flow add x y = x + y",
+    Source = "transform add x y = x + y",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result).
 
 %% Test 5.4: Large but valid AST
 ast_large_but_valid_test() ->
     %% Create a moderately complex AST that should pass default limits
-    Source = "shape Tree a = Leaf a | Node (Tree a) a (Tree a)\n"
-             "flow sum : Tree Int -> Int\n"
-             "flow sum tree = match\n"
+    Source = "type Tree a = Leaf a | Node (Tree a) a (Tree a)\n"
+             "transform sum : Tree Int -> Int\n"
+             "transform sum tree = match\n"
              "  | Leaf(x) -> x\n"
              "  | Node(left val right) -> (sum left) + val + (sum right)\n"
              "end",
@@ -379,9 +379,9 @@ parse_comments_only_test() ->
 
 %% Test 8.4: Multiple declarations
 parse_multiple_declarations_test() ->
-    Source = "shape Bool = True | False\n"
-             "shape Maybe a = Some a | None\n"
-             "flow id x = x",
+    Source = "type Bool = True | False\n"
+             "type Maybe a = Some a | None\n"
+             "transform id x = x",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result),
     {ok, {module, _, _, _, Decls, _}} = Result,
@@ -393,9 +393,9 @@ parse_multiple_declarations_test() ->
 
 %% Test 9.1: Parse example from language spec
 parse_spec_example_test() ->
-    Source = "shape List a = Nil | Cons a (List a)\n"
-             "flow sum : List Int -> Int\n"
-             "flow sum xs = match\n"
+    Source = "type List a = Nil | Cons a (List a)\n"
+             "transform sum : List Int -> Int\n"
+             "transform sum xs = match\n"
              "  | Nil -> 0\n"
              "  | Cons(x rest) -> x + (sum rest)\n"
              "end",
@@ -404,21 +404,21 @@ parse_spec_example_test() ->
 
 %% Test 9.2: Parse record example
 parse_record_example_test() ->
-    Source = "flow makePoint x y = {x: x, y: y}\n"
-             "flow distance point = point.x * point.x + point.y * point.y",
+    Source = "transform makePoint x y = {x: x, y: y}\n"
+             "transform distance point = point.x * point.x + point.y * point.y",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result).
 
 %% Test 9.3: Parse tuple example
 parse_tuple_example_test() ->
-    Source = "flow swap (a, b) = (b, a)",
+    Source = "transform swap (a, b) = (b, a)",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result).
 
 %% Test 9.4: Parse complex type signature
 parse_complex_type_example_test() ->
-    Source = "flow fold : forall a b . (a -> b -> b) -> b -> List a -> b\n"
-             "flow fold f acc xs = match\n"
+    Source = "transform fold : forall a b . (a -> b -> b) -> b -> List a -> b\n"
+             "transform fold f acc xs = match\n"
              "  | Nil -> acc\n"
              "  | Cons(x rest) -> f x (fold f acc rest)\n"
              "end",

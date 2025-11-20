@@ -28,7 +28,7 @@ compile_source(Source) ->
 
 single_error_missing_end_test() ->
     % Missing 'end' keyword
-    Source = "shape Bool = True | False\n",
+    Source = "type Bool = True | False\n",
     Result = compile_source(Source),
 
     case Result of
@@ -46,7 +46,7 @@ single_error_missing_end_test() ->
 
 single_error_unexpected_token_test() ->
     % Extra closing brace
-    Source = "shape Foo = Bar }\n",
+    Source = "type Foo = Bar }\n",
     Result = compile_source(Source),
 
     case Result of
@@ -59,7 +59,7 @@ single_error_unexpected_token_test() ->
 
 single_error_has_source_context_test() ->
     % Create multi-line source with error
-    Source = "shape Foo = Bar\nshape Baz = \nshape Qux = Quux\n",
+    Source = "type Foo = Bar\ntype Baz = \ntype Qux = Quux\n",
     Result = compile_source(Source),
 
     case Result of
@@ -75,7 +75,7 @@ single_error_has_source_context_test() ->
 %%====================================================================
 
 lexer_error_unterminated_string_test() ->
-    Source = "shape Foo = \"unterminated\n",
+    Source = "type Foo = \"unterminated\n",
     Result = compile_source(Source),
 
     case Result of
@@ -90,7 +90,7 @@ lexer_error_unterminated_string_test() ->
 
 lexer_error_illegal_character_test() ->
     % Tab character might be illegal in some contexts
-    Source = "shape\t\tFoo = Bar\n",
+    Source = "type\t\tFoo = Bar\n",
     Result = compile_source(Source),
 
     % Either succeeds or fails with lexer error
@@ -105,7 +105,7 @@ lexer_error_illegal_character_test() ->
 %%====================================================================
 
 error_can_be_formatted_test() ->
-    Source = "shape = Bar\n",  % Missing type name
+    Source = "type = Bar\n",  % Missing type name
     Result = compile_source(Source),
 
     case Result of
@@ -123,7 +123,7 @@ error_can_be_formatted_test() ->
     end.
 
 error_list_can_be_formatted_test() ->
-    Source = "shape Foo =\n",  % Incomplete declaration
+    Source = "type Foo =\n",  % Incomplete declaration
     Result = compile_source(Source),
 
     case Result of
@@ -141,7 +141,7 @@ error_list_can_be_formatted_test() ->
     end.
 
 formatted_error_contains_message_test() ->
-    Source = "shape\n",  % Incomplete
+    Source = "type\n",  % Incomplete
     Result = compile_source(Source),
 
     case Result of
@@ -160,7 +160,7 @@ formatted_error_contains_message_test() ->
 %%====================================================================
 
 color_mode_respected_test() ->
-    Source = "shape = \n",  % Error
+    Source = "type = \n",  % Error
     Result = compile_source(Source),
 
     case Result of
@@ -179,7 +179,7 @@ color_mode_respected_test() ->
     end.
 
 colored_error_severity_test() ->
-    Source = "shape Foo =\n",
+    Source = "type Foo =\n",
     Result = compile_source(Source),
 
     case Result of
@@ -224,7 +224,7 @@ empty_file_test() ->
     end.
 
 single_line_source_test() ->
-    Source = "shape Bool = True | False",  % No newline
+    Source = "type Bool = True | False",  % No newline
     Result = compile_source(Source),
 
     % Should handle source without trailing newline
@@ -237,7 +237,7 @@ single_line_source_test() ->
 very_long_line_test() ->
     % Create a line with 500+ characters
     LongName = lists:duplicate(500, $x),
-    Source = "shape " ++ LongName ++ " = Bar\n",
+    Source = "type " ++ LongName ++ " = Bar\n",
     Result = compile_source(Source),
 
     % Should handle or error gracefully
@@ -256,7 +256,7 @@ very_long_line_test() ->
 
 parse_file_integration_test() ->
     TestFile = "/tmp/catena_file_integration_test.catena",
-    Content = "shape Bool = True | False\n",
+    Content = "type Bool = True | False\n",
     create_test_file(TestFile, Content),
 
     Result = catena_parser_wrapper:parse_file(TestFile),
@@ -293,7 +293,7 @@ parse_nonexistent_file_test() ->
 %%====================================================================
 
 suggestion_provided_test() ->
-    Source = "shape Foo = Bar end\n",  % Extra 'end'
+    Source = "type Foo = Bar end\n",  % Extra 'end'
     Result = compile_source(Source),
 
     case Result of
@@ -310,7 +310,7 @@ suggestion_provided_test() ->
     end.
 
 suggestion_in_formatted_output_test() ->
-    Source = "shape Foo = Bar }\n",  % Unmatched brace
+    Source = "type Foo = Bar }\n",  % Unmatched brace
     Result = compile_source(Source),
 
     case Result of
@@ -348,7 +348,7 @@ multiline_context_test() ->
     end.
 
 error_location_accurate_test() ->
-    Source = "shape Foo = Bar\nshape Baz =\n",  % Error on line 2
+    Source = "type Foo = Bar\ntype Baz =\n",  % Error on line 2
     Result = compile_source(Source),
 
     case Result of

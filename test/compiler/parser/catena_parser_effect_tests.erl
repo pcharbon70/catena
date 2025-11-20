@@ -51,14 +51,14 @@ effect_decl_empty_with_whitespace_test() ->
 %%====================================================================
 %% Empty Effect Annotation Tests
 %%====================================================================
-% TODO: Add support for empty effect annotations in flow type signatures.
+% TODO: Add support for empty effect annotations in transform type signatures.
 % These tests document the desired behavior for pure functions.
 
 %% Test pure function with empty effect annotation (desired behavior)
 effect_annotation_empty_desired_test() ->
     %% This test documents the desired behavior: pure functions with {}
     %% TODO: Update parser grammar to support empty effect annotations
-    Code = "flow pureAdd : Int / {}",
+    Code = "transform pureAdd : Int / {}",
     Result = parse_and_expect_error(Code),
     io:format("Empty effect annotation gap: ~p~n", [Result]),
     ?assertMatch({error, _}, Result).  % Current behavior - should be fixed
@@ -67,7 +67,7 @@ effect_annotation_empty_desired_test() ->
 effect_annotation_empty_with_whitespace_desired_test() ->
     %% This test documents the desired behavior with formatting
     %% TODO: Update parser grammar to support empty effect annotations
-    Code = "flow pureFunc : String / { }",
+    Code = "transform pureFunc : String / { }",
     Result = parse_and_expect_error(Code),
     io:format("Empty effect annotation with whitespace gap: ~p~n", [Result]),
     ?assertMatch({error, _}, Result).  % Current behavior - should be fixed
@@ -210,8 +210,8 @@ effect_limits_annotation_size_test() ->
     try
         application:set_env(catena, max_effects_in_annotation, 2),
         
-        %% Create flow with 3 effects in annotation (exceeds limit of 2)
-        Code = "flow heavyComputation : Int / {FileIO, Console, Network}\n"
+        %% Create transform with 3 effects in annotation (exceeds limit of 2)
+        Code = "transform heavyComputation : Int / {FileIO, Console, Network}\n"
                "heavyComputation _ = 1",
         Result = parse_and_expect_error(Code),
         ?assertMatch({error, {too_many_effects_in_annotation, 3, 2}}, Result),
@@ -247,7 +247,7 @@ effect_limits_valid_within_bounds_test() ->
                "  operation read : String\n"
                "  operation write : String\n"
                "end\n\n"
-               "flow validFunc : Int / {ValidEffect}\n"
+               "transform validFunc : Int / {ValidEffect}\n"
                "validFunc _ = 42",
         Result = parse_and_expect_success(Code),
         ?assertMatch({module, _, _, _, _, _}, Result)
@@ -385,13 +385,13 @@ effect_decl_actual_function_type_test() ->
 
 perform_expr_no_args_no_parens_test() ->
     %% Test perform expression without arguments (parentheses required in current implementation)
-    Code = "flow main = perform Console.print()",
+    Code = "transform main = perform Console.print()",
     Tokens = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
-            {flow_decl, main, undefined, [
-                {flow_clause, [], undefined,
+            {transform_decl, main, undefined, [
+                {transform_clause, [], undefined,
                     {perform_expr, 'Console', print, [], _},
                 _}
             ], _}
@@ -401,13 +401,13 @@ perform_expr_no_args_no_parens_test() ->
 
 perform_expr_no_args_with_parens_test() ->
     %% Test perform expression with empty parentheses
-    Code = "flow main = perform FileIO.readFile()",
+    Code = "transform main = perform FileIO.readFile()",
     Tokens = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
-            {flow_decl, main, undefined, [
-                {flow_clause, [], undefined,
+            {transform_decl, main, undefined, [
+                {transform_clause, [], undefined,
                     {perform_expr, 'FileIO', readFile, [], _},
                 _}
             ], _}
@@ -417,13 +417,13 @@ perform_expr_no_args_with_parens_test() ->
 
 perform_expr_single_arg_test() ->
     %% Test perform expression with single argument
-    Code = "flow writeLog msg = perform FileIO.writeFile(msg)",
+    Code = "transform writeLog msg = perform FileIO.writeFile(msg)",
     Tokens = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
-            {flow_decl, writeLog, undefined, [
-                {flow_clause, [{pat_var, msg, _}], undefined,
+            {transform_decl, writeLog, undefined, [
+                {transform_clause, [{pat_var, msg, _}], undefined,
                     {perform_expr, 'FileIO', writeFile, [
                         {var, msg, _}
                     ], _},
@@ -435,13 +435,13 @@ perform_expr_single_arg_test() ->
 
 perform_expr_multiple_args_test() ->
     %% Test perform expression with multiple arguments
-    Code = "flow copyFile src dst = perform FileIO.copy(src, dst)",
+    Code = "transform copyFile src dst = perform FileIO.copy(src, dst)",
     Tokens = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
-            {flow_decl, copyFile, undefined, [
-                {flow_clause, [{pat_var, src, _}, {pat_var, dst, _}], undefined,
+            {transform_decl, copyFile, undefined, [
+                {transform_clause, [{pat_var, src, _}, {pat_var, dst, _}], undefined,
                     {perform_expr, 'FileIO', copy, [
                         {var, src, _},
                         {var, dst, _}
@@ -458,7 +458,7 @@ perform_expr_multiple_args_test() ->
 
 try_with_single_handler_single_operation_test() ->
     %% Test try-with with single handler and single operation
-    Code = "flow safe =\n"
+    Code = "transform safe =\n"
            "  try\n"
            "    perform FileIO.readFile()\n"
            "  with FileIO {\n"
@@ -469,8 +469,8 @@ try_with_single_handler_single_operation_test() ->
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
-            {flow_decl, safe, undefined, [
-                {flow_clause, [], undefined,
+            {transform_decl, safe, undefined, [
+                {transform_clause, [], undefined,
                     {try_with_expr,
                         {perform_expr, 'FileIO', readFile, [], _},
                         [
@@ -489,7 +489,7 @@ try_with_single_handler_single_operation_test() ->
 
 try_with_single_handler_multiple_operations_test() ->
     %% Test try-with with single handler and multiple operations
-    Code = "flow safeIO =\n"
+    Code = "transform safeIO =\n"
            "  try\n"
            "    perform FileIO.readFile()\n"
            "  with FileIO {\n"
@@ -501,8 +501,8 @@ try_with_single_handler_multiple_operations_test() ->
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
-            {flow_decl, safeIO, undefined, [
-                {flow_clause, [], undefined,
+            {transform_decl, safeIO, undefined, [
+                {transform_clause, [], undefined,
                     {try_with_expr,
                         {perform_expr, 'FileIO', readFile, [], _},
                         [
@@ -524,7 +524,7 @@ try_with_single_handler_multiple_operations_test() ->
 
 try_with_operation_with_params_test() ->
     %% Test try-with with operation that has parameters
-    Code = "flow handleWrite =\n"
+    Code = "transform handleWrite =\n"
            "  try\n"
            "    perform FileIO.writeFile()\n"
            "  with FileIO {\n"
@@ -535,8 +535,8 @@ try_with_operation_with_params_test() ->
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
-            {flow_decl, handleWrite, undefined, [
-                {flow_clause, [], undefined,
+            {transform_decl, handleWrite, undefined, [
+                {transform_clause, [], undefined,
                     {try_with_expr,
                         {perform_expr, 'FileIO', writeFile, [], _},
                         [
@@ -558,7 +558,7 @@ try_with_operation_with_params_test() ->
 
 try_with_multiple_handlers_test() ->
     %% Test try-with with multiple handlers
-    Code = "flow multiEffect =\n"
+    Code = "transform multiEffect =\n"
            "  try\n"
            "    perform FileIO.readFile()\n"
            "  with FileIO {\n"
@@ -572,8 +572,8 @@ try_with_multiple_handlers_test() ->
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
-            {flow_decl, multiEffect, undefined, [
-                {flow_clause, [], undefined,
+            {transform_decl, multiEffect, undefined, [
+                {transform_clause, [], undefined,
                     {try_with_expr,
                         {perform_expr, 'FileIO', readFile, [], _},
                         [
@@ -603,12 +603,12 @@ try_with_multiple_handlers_test() ->
 
 effect_annotation_single_effect_test() ->
     %% Test type with single effect annotation
-    Code = "flow readConfig : String / {FileIO}",
+    Code = "transform readConfig : String / {FileIO}",
     Tokens = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
-            {flow_decl, readConfig,
+            {transform_decl, readConfig,
                 {type_effect,
                     {type_con, 'String', _},
                     ['FileIO'],
@@ -620,12 +620,12 @@ effect_annotation_single_effect_test() ->
 
 effect_annotation_multiple_effects_test() ->
     %% Test type with multiple effect annotations
-    Code = "flow interactive : String / {FileIO, Console, Network}",
+    Code = "transform interactive : String / {FileIO, Console, Network}",
     Tokens = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
-            {flow_decl, interactive,
+            {transform_decl, interactive,
                 {type_effect,
                     {type_con, 'String', _},
                     ['FileIO', 'Console', 'Network'],
@@ -645,10 +645,10 @@ integration_effect_complete_program_test() ->
            "  operation readFile : String\n"
            "end\n"
            "\n"
-           "flow loadConfig =\n"
+           "transform loadConfig =\n"
            "  perform FileIO.readFile()\n"
            "\n"
-           "flow main =\n"
+           "transform main =\n"
            "  try\n"
            "    loadConfig\n"
            "  with FileIO {\n"
@@ -662,13 +662,13 @@ integration_effect_complete_program_test() ->
             {effect_decl, 'FileIO', [
                 {effect_operation, readFile, {type_con, 'String', _}, _}
             ], _},
-            {flow_decl, loadConfig, undefined, [
-                {flow_clause, [], undefined,
+            {transform_decl, loadConfig, undefined, [
+                {transform_clause, [], undefined,
                     {perform_expr, 'FileIO', readFile, [], _},
                 _}
             ], _},
-            {flow_decl, main, undefined, [
-                {flow_clause, [], undefined,
+            {transform_decl, main, undefined, [
+                {transform_clause, [], undefined,
                     {try_with_expr,
                         {var, loadConfig, _},
                         [
@@ -719,13 +719,13 @@ error_effect_missing_operation_name_test() ->
 
 %% Test missing effect name in perform expression
 error_perform_missing_effect_name_test() ->
-    Code = "flow bad = perform op()",
+    Code = "transform bad = perform op()",
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
 %% Test incomplete handler - missing operation case
 error_handler_missing_operation_case_test() ->
-    Code = "flow bad =\n"
+    Code = "transform bad =\n"
            "  try\n"
            "    42\n"
            "  with Effect {\n"
@@ -737,7 +737,7 @@ error_handler_missing_operation_case_test() ->
 %% Test malformed type annotation
 error_malformed_type_annotation_test() ->
     %% Changed from empty effect set (which should be supported) to真正 malformed case
-    Code = "flow bad : String / {  , }",  % Empty element with comma - truly malformed
+    Code = "transform bad : String / {  , }",  % Empty element with comma - truly malformed
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
@@ -745,14 +745,14 @@ error_malformed_type_annotation_test() ->
 effect_annotation_empty_supported_test() ->
     %% Documentation test: empty effect annotations should be supported
     %% This test will demonstrate the issue and its resolution
-    Code = "flow pureFunc : String / {}",
+    Code = "transform pureFunc : String / {}",
     Result = parse_and_expect_error(Code),
     ?assertMatch({error, _}, Result),  % Currently fails - this is the gap to fix
     io:format("Issue confirmed: Empty effect annotations not supported: ~p~n", [Result]).
 
 %% Test missing 'with' clause in try-with
 error_try_with_missing_with_test() ->
-    Code = "flow bad =\n"
+    Code = "transform bad =\n"
            "  try\n"
            "    perform Effect.op()\n"
            "  end",
@@ -761,7 +761,7 @@ error_try_with_missing_with_test() ->
 
 %% Test malformed perform expression - missing required parentheses
 error_perform_missing_parentheses_test() ->
-    Code = "flow bad = perform Effect.op",
+    Code = "transform bad = perform Effect.op",
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
@@ -807,25 +807,25 @@ error_effect_invalid_token_after_operation_test() ->
 
 %% Test perform with missing operation name
 error_perform_missing_operation_name_test() ->
-    Code = "flow bad = perform Effect.()",
+    Code = "transform bad = perform Effect.()",
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
 %% Test perform with missing dot separator
 error_perform_missing_dot_test() ->
-    Code = "flow bad = perform Effect op()",
+    Code = "transform bad = perform Effect op()",
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
 %% Test perform with invalid arguments
 error_perform_invalid_args_test() ->
-    Code = "flow bad = perform Effect.op(arg1, , arg3)",
+    Code = "transform bad = perform Effect.op(arg1, , arg3)",
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
 %% Test perform with mismatched parentheses
 error_perform_mismatched_parens_test() ->
-    Code = "flow bad = perform Effect.op(arg1",
+    Code = "transform bad = perform Effect.op(arg1",
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
@@ -835,7 +835,7 @@ error_perform_mismatched_parens_test() ->
 
 %% Test try-with with missing opening brace in handler
 error_handler_missing_opening_brace_test() ->
-    Code = "flow bad =\n"
+    Code = "transform bad =\n"
            "  try\n"
            "    perform Effect.op()\n"
            "  with Effect\n"
@@ -846,7 +846,7 @@ error_handler_missing_opening_brace_test() ->
 
 %% Test try-with with missing closing brace in handler
 error_handler_missing_closing_brace_test() ->
-    Code = "flow bad =\n"
+    Code = "transform bad =\n"
            "  try\n"
            "    perform Effect.op()\n"
            "  with Effect {\n"
@@ -857,7 +857,7 @@ error_handler_missing_closing_brace_test() ->
 
 %% Test handler with malformed operation case
 error_handler_malformed_operation_case_test() ->
-    Code = "flow bad =\n"
+    Code = "transform bad =\n"
            "  try\n"
            "    perform Effect.op()\n"
            "  with Effect {\n"
@@ -869,7 +869,7 @@ error_handler_malformed_operation_case_test() ->
 
 %% Test handler with missing arrow in operation case
 error_handler_missing_arrow_test() ->
-    Code = "flow bad =\n"
+    Code = "transform bad =\n"
            "  try\n"
            "    perform Effect.op()\n"
            "  with Effect {\n"
@@ -885,25 +885,25 @@ error_handler_missing_arrow_test() ->
 
 %% Test effect annotation with malformed effect list
 error_effect_annotation_malformed_list_test() ->
-    Code = "flow bad : String / {Effect1 Effect2}",
+    Code = "transform bad : String / {Effect1 Effect2}",
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
 %% Test effect annotation with missing opening brace
 error_effect_annotation_missing_opening_brace_test() ->
-    Code = "flow bad : String / Effect1, Effect2}",
+    Code = "transform bad : String / Effect1, Effect2}",
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
 %% Test effect annotation with missing closing brace
 error_effect_annotation_missing_closing_brace_test() ->
-    Code = "flow bad : String / {Effect1, Effect2",
+    Code = "transform bad : String / {Effect1, Effect2",
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
 %% Test effect annotation with invalid effect name
 error_effect_annotation_invalid_effect_test() ->
-    Code = "flow bad : String / {123Invalid}",
+    Code = "transform bad : String / {123Invalid}",
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
@@ -919,19 +919,19 @@ error_incomplete_effect_declaration_test() ->
 
 %% Test incomplete perform expression
 error_incomplete_perform_expression_test() ->
-    Code = "flow bad = perform",
+    Code = "transform bad = perform",
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
 %% Test incomplete try-with statement
 error_incomplete_try_with_test() ->
-    Code = "flow bad = try",
+    Code = "transform bad = try",
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
 %% Test handler with invalid operation parameters
 error_handler_invalid_params_test() ->
-    Code = "flow bad =\n"
+    Code = "transform bad =\n"
            "  try\n"
            "    perform Effect.op()\n"
            "  with Effect {\n"
@@ -984,7 +984,7 @@ security_deeply_nested_try_with_test() ->
     NestingLevel = 50,
     BaseExpr = "perform Effect.op()",
     NestedExpr = create_nested_try_with(NestingLevel, BaseExpr),
-    Code = "flow nestedTest = " ++ NestedExpr,
+    Code = "transform nestedTest = " ++ NestedExpr,
     %% This should either parse successfully or hit parser limits gracefully
     case catena_lexer:tokenize(Code) of
         {ok, Tokens} ->
@@ -1023,7 +1023,7 @@ security_many_handlers_test() ->
     HandlerCount = 20,
     Handlers = [lists:flatten(io_lib:format("  Effect~p { op~p -> ~p }", [I, I, I])) || I <- lists:seq(1, HandlerCount)],
     HandlerCode = string:join(Handlers, "\n"),
-    Code = "flow manyHandlers =\n"
+    Code = "transform manyHandlers =\n"
            "  try\n"
            "    perform Effect1.op1()\n"
            "  with\n"
@@ -1048,7 +1048,7 @@ security_many_effects_test() ->
     EffectCount = 20,
     Effects = [lists:flatten(io_lib:format("Effect~p", [I])) || I <- lists:seq(1, EffectCount)],
     EffectList = string:join(Effects, ", "),
-    Code = "flow manyEffects : String / {" ++ EffectList ++ "}",
+    Code = "transform manyEffects : String / {" ++ EffectList ++ "}",
     case catena_lexer:tokenize(Code) of
         {ok, Tokens} ->
             case catena_parser:parse(Tokens) of
@@ -1218,7 +1218,7 @@ security_deep_parameter_nesting_test() ->
 %% Test ambiguous perform expression syntax
 security_perform_ambiguity_test() ->
     %% Test perform expressions that might confuse the parser
-    Code = "flow test = perform A.B.C.D.E.F()",
+    Code = "transform test = perform A.B.C.D.E.F()",
     %% Should either parse clearly or reject unambiguously
     case catena_lexer:tokenize(Code) of
         {ok, Tokens} ->
@@ -1236,11 +1236,11 @@ security_perform_ambiguity_test() ->
 security_malformed_effect_set_test() ->
     %% Test various malformed effect set syntaxes
     MalformedSets = [
-        "flow bad : Int / {  , Effect }",      % Empty element in set
-        "flow bad2 : Int / { Effect, }",      % Trailing comma
-        "flow bad3 : Int / {Effect Effect}",  % Missing comma
-        "flow bad4 : Int / {{Effect}}",       % Double braces
-        "flow bad5 : Int / {}Effect"          % Missing separator
+        "transform bad : Int / {  , Effect }",      % Empty element in set
+        "transform bad2 : Int / { Effect, }",      % Trailing comma
+        "transform bad3 : Int / {Effect Effect}",  % Missing comma
+        "transform bad4 : Int / {{Effect}}",       % Double braces
+        "transform bad5 : Int / {}Effect"          % Missing separator
     ],
     %% All should be rejected cleanly
     lists:foreach(fun(TestCode) ->
@@ -1254,10 +1254,10 @@ security_malformed_effect_set_test() ->
 
 %% Test large number of perform expressions
 security_many_perform_expressions_test() ->
-    %% Create flow with many perform expressions
+    %% Create transform with many perform expressions
     PerformCount = 50,
     Performs = [lists:flatten(io_lib:format("  perform Effect~p.op~p()", [I, I])) || I <- lists:seq(1, PerformCount)],
-    PerformCode = "flow manyPerforms =\n" ++ string:join(Performs, "\n"),
+    PerformCode = "transform manyPerforms =\n" ++ string:join(Performs, "\n"),
     %% Should handle many performs within memory limits
     case catena_lexer:tokenize(PerformCode) of
         {ok, Tokens} ->
@@ -1274,7 +1274,7 @@ security_many_perform_expressions_test() ->
 %% Test complex nested handlers
 security_complex_nested_handlers_test() ->
     %% Create complex nested try-with structures
-    Code = "flow complex =\n"
+    Code = "transform complex =\n"
            "  try\n"
            "    try\n"
            "      perform Effect1.op()\n"
@@ -1310,7 +1310,7 @@ security_exponential_complexity_test() ->
     BaseEffects = ["E" ++ integer_to_list(I) || I <- lists:seq(1, 10)],
     %% Create combinations to test parser limits
     ComplexEffects = string:join(BaseEffects, ", "),
-    Code = "flow complexAnnotated : Int / {" ++ ComplexEffects ++ "}",
+    Code = "transform complexAnnotated : Int / {" ++ ComplexEffects ++ "}",
     %% Should handle within complexity limits or reject gracefully
     case catena_lexer:tokenize(Code) of
         {ok, Tokens} ->
@@ -1330,7 +1330,7 @@ security_token_flood_test() ->
     FloodCount = 50,
     SimpleTokens = ["Effect" ++ integer_to_list(I) || I <- lists:seq(1, FloodCount)],
     EffectList = string:join(SimpleTokens, ", "),
-    Code = "flow tokenFlood : Int / {" ++ EffectList ++ "}",
+    Code = "transform tokenFlood : Int / {" ++ EffectList ++ "}",
     %% Should handle token flood safely within limits
     case catena_lexer:tokenize(Code) of
         {ok, LexTokens} ->
@@ -1351,7 +1351,7 @@ security_pathological_nesting_test() ->
     %% Create nested pattern like: perform E1.op1() where perform E2.op2() where ...
     NestedPerforms = [lists:flatten(io_lib:format("perform E~p.op~p()", [I, I])) || I <- lists:seq(1, NestingDepth)],
     NestedExpr = string:join(NestedPerforms, " where "),
-    Code = "flow deepTest = " ++ NestedExpr,
+    Code = "transform deepTest = " ++ NestedExpr,
     %% Should either handle within depth limits or reject gracefully
     case catena_lexer:tokenize(Code) of
         {ok, Tokens} ->
@@ -1421,7 +1421,7 @@ error_security_nested_malformed_test() ->
     MalformedInner = string:join(
         [lists:flatten(io_lib:format(" try " ++ string:copies("{ ", I) ++ " perform~p() end", [I])) 
          || I <- lists:seq(1, NestDepth)], " "),
-    Code = "flow malformedNested = " ++ MalformedInner,
+    Code = "transform malformedNested = " ++ MalformedInner,
     %% Should handle resource exhaustion attempt within malformed syntax
     case catena_lexer:tokenize(Code) of
         {ok, Tokens} ->
@@ -1444,7 +1444,7 @@ error_security_malformed_token_flood_test() ->
     AllTokens = MixTokens ++ MalformedTokens,
     MalformedEffectList = string:join(AllTokens, ", "),
     %% Introduce malformed effect annotation syntax
-    Code = "flow malformedFlood : Int / {" ++ MalformedEffectList ++ ":::",  % Extra colon makes it malformed
+    Code = "transform malformedFlood : Int / {" ++ MalformedEffectList ++ ":::",  % Extra colon makes it malformed
     %% Should handle malformed flood safely
     case catena_lexer:tokenize(Code) of
         {ok, Tokens} ->
@@ -1462,7 +1462,7 @@ error_security_malformed_token_flood_test() ->
 error_security_perform_unicode_control_test() ->
     %% Combine unicode, control characters, and malformed perform syntax
     MalformedPerform = "perform Effect" ++ [0, 255] ++ "." ++ "𝔘𝔫𝔦𝔠𝔬𝔡𝔢" ++ "(, ,",  % Malformed args with unicode and controls
-    Code = "flow unicodeControlMalformed = " ++ MalformedPerform,
+    Code = "transform unicodeControlMalformed = " ++ MalformedPerform,
     %% Should reject combination attack safely
     case catena_lexer:tokenize(Code) of
         {ok, Tokens} ->
@@ -1482,7 +1482,7 @@ error_security_handler_memory_stress_test() ->
     MalformedHandlersNum = 50,
     MalformedCases = lists:duplicate(MalformedHandlersNum, "  -> 42"),  % Missing operation name
     HandlerBody = string:join(MalformedCases, "\n"),
-    Code = "flow memoryStressMalformed =\n"
+    Code = "transform memoryStressMalformed =\n"
            "  try\n"
            "    perform Effect.op()\n"
            "  with Effect {\n"
@@ -1510,7 +1510,7 @@ error_security_recovery_resilience_test() ->
         "perform (",  % Malformed perform
         "try { end",  % Malformed try-with
         "effect X { operation ",  % Malformed operation
-        "flow bad : Int / {"  % Malformed annotation
+        "transform bad : Int / {"  % Malformed annotation
     ],
     %% Process multiple malformed attacks in sequence
     lists:foreach(fun(MalformedCode) ->

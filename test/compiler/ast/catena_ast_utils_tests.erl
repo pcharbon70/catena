@@ -818,8 +818,8 @@ format_decl_unknown_test() ->
 validate_ast_with_all_decl_types_test() ->
     %% Test validation with all declaration types (no duplicates)
     AST = #module{name = undefined, exports = [], imports = [], declarations = [
-        #shape_decl{name = 'Maybe', type_params = [], constructors = [], derives = [], location = {line, 1}},
-        #flow_decl{name = map, type_sig = undefined, clauses = [], location = {line, 2}},
+        #type_decl{name = 'Maybe', type_params = [], constructors = [], derives = [], location = {line, 1}},
+        #transform_decl{name = map, type_sig = undefined, clauses = [], location = {line, 2}},
         #effect_decl{name = 'IO', operations = [], supereffects = [], type_params = [], constraints = [], location = {line, 3}},
         #trait_decl{name = 'Show', type_params = [], extends = undefined, methods = [], default_methods = undefined, location = {line, 4}}
     ], location = {line, 1}},
@@ -828,8 +828,8 @@ validate_ast_with_all_decl_types_test() ->
 validate_ast_duplicate_across_types_test() ->
     %% Test validation detects duplicates across different declaration types
     AST = #module{name = undefined, exports = [], imports = [], declarations = [
-        #shape_decl{name = foo, type_params = [], constructors = [], derives = [], location = {line, 1}},
-        #flow_decl{name = foo, type_sig = undefined, clauses = [], location = {line, 2}}
+        #type_decl{name = foo, type_params = [], constructors = [], derives = [], location = {line, 1}},
+        #transform_decl{name = foo, type_sig = undefined, clauses = [], location = {line, 2}}
     ], location = {line, 1}},
     Result = catena_ast_utils:validate_ast(AST),
     ?assertMatch({error, {duplicate_declaration, foo}}, Result).
@@ -837,10 +837,10 @@ validate_ast_duplicate_across_types_test() ->
 validate_ast_multiple_duplicates_test() ->
     %% Test validation with multiple duplicate names (should report first)
     AST = #module{name = undefined, exports = [], imports = [], declarations = [
-        #flow_decl{name = foo, type_sig = undefined, clauses = [], location = {line, 1}},
-        #flow_decl{name = foo, type_sig = undefined, clauses = [], location = {line, 2}},
-        #flow_decl{name = bar, type_sig = undefined, clauses = [], location = {line, 3}},
-        #flow_decl{name = bar, type_sig = undefined, clauses = [], location = {line, 4}}
+        #transform_decl{name = foo, type_sig = undefined, clauses = [], location = {line, 1}},
+        #transform_decl{name = foo, type_sig = undefined, clauses = [], location = {line, 2}},
+        #transform_decl{name = bar, type_sig = undefined, clauses = [], location = {line, 3}},
+        #transform_decl{name = bar, type_sig = undefined, clauses = [], location = {line, 4}}
     ], location = {line, 1}},
     Result = catena_ast_utils:validate_ast(AST),
     %% Should report the first duplicate found
@@ -849,9 +849,9 @@ validate_ast_multiple_duplicates_test() ->
 check_duplicate_names_with_undefined_name_test() ->
     %% Test duplicate checking handles declarations with undefined names
     AST = #module{name = undefined, exports = [], imports = [], declarations = [
-        #flow_decl{name = foo, type_sig = undefined, clauses = [], location = {line, 1}},
+        #transform_decl{name = foo, type_sig = undefined, clauses = [], location = {line, 1}},
         {unknown_decl, data, {line, 2}},  % Will return undefined name
-        #flow_decl{name = bar, type_sig = undefined, clauses = [], location = {line, 3}}
+        #transform_decl{name = bar, type_sig = undefined, clauses = [], location = {line, 3}}
     ], location = {line, 1}},
     %% Should not crash on undefined name
     Result = catena_ast_utils:validate_ast(AST),
@@ -883,8 +883,8 @@ integration_map_then_format_test() ->
 integration_fold_then_validate_test() ->
     %% Test folding to collect info, then using it for validation
     AST = #module{name = undefined, exports = [], imports = [], declarations = [
-        #flow_decl{name = foo, type_sig = undefined, clauses = [], location = {line, 1}},
-        #flow_decl{name = bar, type_sig = undefined, clauses = [], location = {line, 2}}
+        #transform_decl{name = foo, type_sig = undefined, clauses = [], location = {line, 1}},
+        #transform_decl{name = bar, type_sig = undefined, clauses = [], location = {line, 2}}
     ], location = {line, 1}},
 
     %% Count all nodes using fold (module node itself only, declarations aren't recursed)
@@ -1027,17 +1027,17 @@ validate_empty_ast_test() ->
 check_duplicate_names_no_duplicates_test() ->
     %% Test no duplicates
     AST = {module, undefined, [], [], [
-        {flow_decl, foo, undefined, [], {line, 1}},
-        {flow_decl, bar, undefined, [], {line, 2}},
-        {shape_decl, baz, [], [], [], {line, 3}}
+        {transform_decl, foo, undefined, [], {line, 1}},
+        {transform_decl, bar, undefined, [], {line, 2}},
+        {type_decl, baz, [], [], [], {line, 3}}
     ], {line, 1}},
     ?assertEqual(ok, catena_ast_utils:validate_ast(AST)).
 
 check_duplicate_names_with_duplicates_test() ->
     %% Test duplicate detection
     AST = {module, undefined, [], [], [
-        {flow_decl, foo, undefined, [], {line, 1}},
-        {flow_decl, foo, undefined, [], {line, 2}}
+        {transform_decl, foo, undefined, [], {line, 1}},
+        {transform_decl, foo, undefined, [], {line, 2}}
     ], {line, 1}},
     Result = catena_ast_utils:validate_ast(AST),
     ?assertMatch({error, {duplicate_declaration, foo}}, Result).
@@ -1049,7 +1049,7 @@ check_duplicate_names_with_duplicates_test() ->
 check_location_formats_valid_line_test() ->
     %% Test valid line location format
     AST = {module, undefined, [], [], [
-        {flow_decl, foo, undefined, [], {line, 1}}
+        {transform_decl, foo, undefined, [], {line, 1}}
     ], {line, 1}},
     ?assertEqual(ok, catena_ast_utils:validate_ast(AST)).
 
@@ -1186,29 +1186,29 @@ check_valid_names_pat_var_undefined_test() ->
     ?assertMatch({error, {invalid_name, undefined}}, Result).
 
 check_valid_names_flow_decl_valid_test() ->
-    %% Test valid flow declaration name
-    AST = {flow_decl, my_function, undefined, [], {line, 1}},
+    %% Test valid transform declaration name
+    AST = {transform_decl, my_function, undefined, [], {line, 1}},
     ?assertEqual(ok, catena_ast_utils:validate_ast(AST)).
 
 check_valid_names_flow_decl_undefined_test() ->
-    %% Test undefined flow declaration name
+    %% Test undefined transform declaration name
     AST = {module, undefined, [], [], [
-        {flow_decl, undefined, undefined, [], {line, 1}}
+        {transform_decl, undefined, undefined, [], {line, 1}}
     ], {line, 1}},
     Result = catena_ast_utils:validate_ast(AST),
     ?assertMatch({error, {invalid_name, undefined}}, Result).
 
 check_valid_names_shape_decl_valid_test() ->
-    %% Test valid shape declaration name
+    %% Test valid type declaration name
     AST = {module, undefined, [], [], [
-        {shape_decl, 'MyShape', [], [], [], {line, 1}}
+        {type_decl, 'MyShape', [], [], [], {line, 1}}
     ], {line, 1}},
     ?assertEqual(ok, catena_ast_utils:validate_ast(AST)).
 
 check_valid_names_shape_decl_undefined_test() ->
-    %% Test undefined shape declaration name
+    %% Test undefined type declaration name
     AST = {module, undefined, [], [], [
-        {shape_decl, undefined, [], [], [], {line, 1}}
+        {type_decl, undefined, [], [], [], {line, 1}}
     ], {line, 1}},
     Result = catena_ast_utils:validate_ast(AST),
     ?assertMatch({error, {invalid_name, undefined}}, Result).
@@ -1243,7 +1243,7 @@ check_valid_names_nested_lambda_test() ->
 multi_validation_all_valid_test() ->
     %% Test AST that passes all validation checks
     AST = {module, undefined, [], [], [
-        {flow_decl, foo,
+        {transform_decl, foo,
             {type_signature, [], {type_ref, integer, {line, 1}}, {line, 1}},
             [{clause, [],
                 {binary_op, plus,
@@ -1252,7 +1252,7 @@ multi_validation_all_valid_test() ->
                     {line, 2}},
                 {line, 2}}],
             {line, 1}},
-        {shape_decl, 'Point', [],
+        {type_decl, 'Point', [],
             [{constructor, 'Point', [
                 {type_ref, float, {line, 3}},
                 {type_ref, float, {line, 3}}
@@ -1266,8 +1266,8 @@ multi_validation_duplicate_and_invalid_location_test() ->
     %% Test AST with both duplicate names and invalid location
     %% Should catch the first error encountered
     AST = {module, undefined, [], [], [
-        {flow_decl, foo, undefined, [], {line, 0}},
-        {flow_decl, foo, undefined, [], {line, 2}}
+        {transform_decl, foo, undefined, [], {line, 0}},
+        {transform_decl, foo, undefined, [], {line, 2}}
     ], {line, 1}},
     Result = catena_ast_utils:validate_ast(AST),
     %% Should catch invalid location first (before duplicate check)
@@ -1449,16 +1449,16 @@ format_type_effect_test() ->
     ?assertEqual("String / {FileIO, Network}", Result).
 
 format_decl_shape_test() ->
-    Decl = #shape_decl{name = 'Maybe', type_params = [], constructors = [],
+    Decl = #type_decl{name = 'Maybe', type_params = [], constructors = [],
                        derives = [], location = {line, 1}},
     Result = lists:flatten(catena_ast_utils:format_decl(Decl)),
-    ?assertEqual("shape Maybe", Result).
+    ?assertEqual("type Maybe", Result).
 
 format_decl_flow_test() ->
-    Decl = #flow_decl{name = foo, type_sig = undefined, clauses = [],
+    Decl = #transform_decl{name = foo, type_sig = undefined, clauses = [],
                       location = {line, 1}},
     Result = lists:flatten(catena_ast_utils:format_decl(Decl)),
-    ?assertEqual("flow foo", Result).
+    ?assertEqual("transform foo", Result).
 
 format_decl_effect_test() ->
     Decl = #effect_decl{name = 'FileIO', operations = [], supereffects = [],

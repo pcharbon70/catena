@@ -29,7 +29,7 @@ new_span_test() ->
 
 %% Test 1.3: Create location from token (2-tuple)
 from_token_simple_test() ->
-    Token = {flow, 15},
+    Token = {transform, 15},
     Loc = catena_location:from_token(Token),
     ?assertEqual({location, 15, 0}, Loc).
 
@@ -41,7 +41,7 @@ from_token_with_value_test() ->
 
 %% Test 1.5: Create location from token with length
 from_token_with_length_test() ->
-    Token = {flow, 10},
+    Token = {transform, 10},
     Loc = catena_location:from_token(Token, 4),
     ?assertEqual({location, 10, 0, 10, 4}, Loc).
 
@@ -208,14 +208,14 @@ format_span_no_start_col_test() ->
 
 %% Test 6.1: Track function definition span
 track_function_definition_test() ->
-    %% Simulate: flow add x y = x + y
+    %% Simulate: transform add x y = x + y
     %%          Line 10, cols 0-21
-    FlowToken = {flow, 10},
+    FlowToken = {transform, 10},
     _NameToken = {lower_ident, 10, "add"},
 
-    FlowLoc = catena_location:from_token(FlowToken, 4),  % "flow"
+    FlowLoc = catena_location:from_token(FlowToken, 4),  % "transform"
 
-    %% Span from flow keyword to end of expression (simulated)
+    %% Span from transform keyword to end of expression (simulated)
     EndLoc = catena_location:new(10, 21),
     FullSpan = catena_location:span(FlowLoc, EndLoc),
 
@@ -224,12 +224,12 @@ track_function_definition_test() ->
 %% Test 6.2: Track multi-line match expression
 track_multiline_match_test() ->
     %% Simulate:
-    %% flow length xs = match
+    %% transform length xs = match
     %%   | Nil -> 0
     %%   | Cons _ rest -> 1 + length rest
     %% end
 
-    StartLoc = catena_location:new(10, 0),      % "flow"
+    StartLoc = catena_location:new(10, 0),      % "transform"
     EndLoc = catena_location:new(13, 3),        % "end"
 
     Span = catena_location:span(StartLoc, EndLoc),

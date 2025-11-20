@@ -36,14 +36,14 @@ parse_setoid_eq_in_trait_test() ->
 
 parse_instance_with_setoid_operators_test() ->
     %% instance Setoid Bool where
-    %%   flow eq x y = x === y
+    %%   transform eq x y = x === y
     %% end
     Tokens = [
         {instance, 1},
         {upper_ident, 1, "Setoid"},
         {upper_ident, 1, "Bool"},
         {where, 1},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "eq"},
         {lower_ident, 2, "x"},
         {lower_ident, 2, "y"},
@@ -60,14 +60,14 @@ parse_instance_with_setoid_operators_test() ->
 
 parse_instance_with_setoid_neq_test() ->
     %% instance Test T where
-    %%   flow neq x y = x !== y
+    %%   transform neq x y = x !== y
     %% end
     Tokens = [
         {instance, 1},
         {upper_ident, 1, "Test"},
         {upper_ident, 1, "T"},
         {where, 1},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "neq"},
         {lower_ident, 2, "x"},
         {lower_ident, 2, "y"},

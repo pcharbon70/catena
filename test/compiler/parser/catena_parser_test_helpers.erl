@@ -24,12 +24,12 @@
 %% Parsing Helpers
 %%====================================================================
 
-%% @doc Parse a Catena flow declaration from source code
-%% Tokenizes and parses source, extracting the single flow declaration.
-%% Useful for testing flow syntax, patterns, and guards.
+%% @doc Parse a Catena transform declaration from source code
+%% Tokenizes and parses source, extracting the single transform declaration.
+%% Useful for testing transform syntax, patterns, and guards.
 %%
 %% Example:
-%%   FlowDecl = parse_flow("flow id x = x"),
+%%   FlowDecl = parse_flow("transform id x = x"),
 %%   Patterns = get_patterns(FlowDecl).
 -spec parse_flow(string()) -> term().
 parse_flow(Source) ->
@@ -39,19 +39,19 @@ parse_flow(Source) ->
     FlowDecl.
 
 %% @doc Parse a Catena type signature from source code
-%% Parses a type signature by adding a dummy flow body.
-%% Useful for testing type expressions without full flow implementation.
+%% Parses a type signature by adding a dummy transform body.
+%% Useful for testing type expressions without full transform implementation.
 %%
 %% Example:
-%%   TypeSig = parse_type_sig("flow f : Int -> Int"),
+%%   TypeSig = parse_type_sig("transform f : Int -> Int"),
 %%   ?assertMatch({type_fun, _, _}, TypeSig).
 -spec parse_type_sig(string()) -> term().
 parse_type_sig(Source) ->
-    FullSource = Source ++ "\nflow f = x",
+    FullSource = Source ++ "\ntransform f = x",
     {ok, Tokens} = catena_lexer:tokenize(FullSource),
     {ok, AST} = catena_parser:parse(Tokens),
     {module, _, _, _, [FlowDecl], _} = AST,
-    {flow_decl, _Name, TypeSig, _Clauses, _Loc} = FlowDecl,
+    {transform_decl, _Name, TypeSig, _Clauses, _Loc} = FlowDecl,
     TypeSig.
 
 %% @doc Parse tokens and extract the single declaration
@@ -73,46 +73,46 @@ parse_single_decl(Tokens) ->
 %% AST Extraction Helpers
 %%====================================================================
 
-%% @doc Extract the pattern list from a flow declaration
-%% Assumes a flow with a single clause (most common in tests).
+%% @doc Extract the pattern list from a transform declaration
+%% Assumes a transform with a single clause (most common in tests).
 %% Returns the list of patterns from the first clause.
 %%
 %% Example:
-%%   FlowDecl = parse_flow("flow add x y = x + y"),
+%%   FlowDecl = parse_flow("transform add x y = x + y"),
 %%   [P1, P2] = get_patterns(FlowDecl),
 %%   ?assertMatch({pat_var, x, _}, P1).
 -spec get_patterns(term()) -> list().
 get_patterns(FlowDecl) ->
-    {flow_decl, _Name, _Type, [Clause], _Loc} = FlowDecl,
-    {flow_clause, Patterns, _Guards, _Body, _ClauseLoc} = Clause,
+    {transform_decl, _Name, _Type, [Clause], _Loc} = FlowDecl,
+    {transform_clause, Patterns, _Guards, _Body, _ClauseLoc} = Clause,
     Patterns.
 
-%% @doc Extract guards from a flow declaration
-%% Assumes a flow with a single clause (most common in tests).
+%% @doc Extract guards from a transform declaration
+%% Assumes a transform with a single clause (most common in tests).
 %% Returns the guards from the first clause.
 %%
 %% Example:
-%%   FlowDecl = parse_flow("flow positive x when x > 0 = x"),
+%%   FlowDecl = parse_flow("transform positive x when x > 0 = x"),
 %%   Guards = get_guards(FlowDecl),
 %%   ?assertMatch([{op, '>', _, _}], Guards).
 -spec get_guards(term()) -> list().
 get_guards(FlowDecl) ->
-    {flow_decl, _Name, _Type, [Clause], _Loc} = FlowDecl,
-    {flow_clause, _Patterns, Guards, _Body, _ClauseLoc} = Clause,
+    {transform_decl, _Name, _Type, [Clause], _Loc} = FlowDecl,
+    {transform_clause, _Patterns, Guards, _Body, _ClauseLoc} = Clause,
     Guards.
 
-%% @doc Extract the body expression from a flow declaration
-%% Assumes a flow with a single clause (most common in tests).
+%% @doc Extract the body expression from a transform declaration
+%% Assumes a transform with a single clause (most common in tests).
 %% Returns the body expression from the first clause.
 %%
 %% Example:
-%%   FlowDecl = parse_flow("flow id x = x"),
+%%   FlowDecl = parse_flow("transform id x = x"),
 %%   Body = get_body(FlowDecl),
 %%   ?assertMatch({var, x, _}, Body).
 -spec get_body(term()) -> term().
 get_body(FlowDecl) ->
-    {flow_decl, _Name, _Type, [Clause], _Loc} = FlowDecl,
-    {flow_clause, _Patterns, _Guards, Body, _ClauseLoc} = Clause,
+    {transform_decl, _Name, _Type, [Clause], _Loc} = FlowDecl,
+    {transform_clause, _Patterns, _Guards, Body, _ClauseLoc} = Clause,
     Body.
 
 %%====================================================================

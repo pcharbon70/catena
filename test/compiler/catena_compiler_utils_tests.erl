@@ -45,7 +45,7 @@ extract_value_string_test() ->
 %% Test 1.3: extract_location from tokens
 %% NOTE: These tests depend on catena_location module (not yet implemented)
 %% extract_location_simple_token_test() ->
-%%     Token = {flow, 5},
+%%     Token = {transform, 5},
 %%     Loc = catena_compiler_utils:extract_location(Token),
 %%     ?assertMatch({location, 5, 0}, Loc).
 %%
@@ -70,8 +70,8 @@ extract_location_from_binary_op_test() ->
     Loc = catena_compiler_utils:extract_location(BinOp),
     ?assertEqual({location, 1, 3}, Loc).
 
-extract_location_from_flow_decl_test() ->
-    FlowDecl = {flow_decl, test, undefined, [], {location, 7, 0}},
+extract_location_from_transform_decl_test() ->
+    FlowDecl = {transform_decl, test, undefined, [], {location, 7, 0}},
     Loc = catena_compiler_utils:extract_location(FlowDecl),
     ?assertEqual({location, 7, 0}, Loc).
 
@@ -94,15 +94,15 @@ extract_name_undefined_test() ->
     Node = {literal, 42, integer, {location, 1, 0}},
     ?assertEqual(undefined, catena_compiler_utils:extract_name(Node)).
 
-%% Test 1.6: extract_flow_name and extract_flow_type
-extract_flow_name_test() ->
-    FlowSig = {flow_sig, my_function, undefined, {location, 1, 0}},
-    ?assertEqual(my_function, catena_compiler_utils:extract_flow_name(FlowSig)).
+%% Test 1.6: extract_transform_name and extract_transform_type
+extract_transform_name_test() ->
+    FlowSig = {transform_sig, my_function, undefined, {location, 1, 0}},
+    ?assertEqual(my_function, catena_compiler_utils:extract_transform_name(FlowSig)).
 
-extract_flow_type_test() ->
+extract_transform_type_test() ->
     Type = {type_var, a, {location, 1, 10}},
-    FlowSig = {flow_sig, my_function, Type, {location, 1, 0}},
-    ?assertEqual(Type, catena_compiler_utils:extract_flow_type(FlowSig)).
+    FlowSig = {transform_sig, my_function, Type, {location, 1, 0}},
+    ?assertEqual(Type, catena_compiler_utils:extract_transform_type(FlowSig)).
 
 %%----------------------------------------------------------------------------
 %% Section 2: Configuration Management
@@ -267,10 +267,10 @@ ast_depth_nested_binary_op_test() ->
     Depth = catena_compiler_utils:ast_depth(AST),
     ?assertEqual(3, Depth).
 
-ast_depth_flow_decl_test() ->
+ast_depth_transform_decl_test() ->
     Body = {literal, 42, integer, {location, 1, 15}},
-    Clause = {flow_clause, [], undefined, Body, {location, 1, 0}},
-    AST = {flow_decl, test, undefined, [Clause], {location, 1, 0}},
+    Clause = {transform_clause, [], undefined, Body, {location, 1, 0}},
+    AST = {transform_decl, test, undefined, [Clause], {location, 1, 0}},
     Depth = catena_compiler_utils:ast_depth(AST),
     ?assert(Depth >= 2).
 
@@ -405,8 +405,8 @@ ast_map_nested_transformation_test() ->
 ast_map_module_test() ->
     %% Test mapping over a module structure
     Body = {literal, 42, integer, {location, 1, 15}},
-    Clause = {flow_clause, [], undefined, Body, {location, 1, 0}},
-    FlowDecl = {flow_decl, test, undefined, [Clause], {location, 1, 0}},
+    Clause = {transform_clause, [], undefined, Body, {location, 1, 0}},
+    FlowDecl = {transform_decl, test, undefined, [Clause], {location, 1, 0}},
     Module = {module, undefined, [], [], [FlowDecl], {location, 1, 0}},
 
     %% Count how many times the function is called
@@ -443,13 +443,13 @@ ast_fold_collect_names_test() ->
 ast_fold_module_test() ->
     %% Test folding over a module structure
     Body = {literal, 42, integer, {location, 1, 15}},
-    Clause = {flow_clause, [], undefined, Body, {location, 1, 0}},
-    FlowDecl = {flow_decl, test, undefined, [Clause], {location, 1, 0}},
+    Clause = {transform_clause, [], undefined, Body, {location, 1, 0}},
+    FlowDecl = {transform_decl, test, undefined, [Clause], {location, 1, 0}},
     Module = {module, undefined, [], [], [FlowDecl], {location, 1, 0}},
 
     Counter = fun(_, Acc) -> Acc + 1 end,
     Count = catena_compiler_utils:ast_fold(Counter, 0, Module),
-    ?assert(Count >= 4).  % module + flow_decl + clause + body
+    ?assert(Count >= 4).  % module + transform_decl + clause + body
 
 ast_fold_pattern_test() ->
     %% Test folding over patterns
@@ -522,8 +522,8 @@ validate_timeout_exceeds_limit_test() ->
 integration_ast_depth_module_test() ->
     %% Create a simple module AST
     Body = {literal, 42, integer, {location, 1, 15}},
-    Clause = {flow_clause, [], undefined, Body, {location, 1, 0}},
-    FlowDecl = {flow_decl, test, undefined, [Clause], {location, 1, 0}},
+    Clause = {transform_clause, [], undefined, Body, {location, 1, 0}},
+    FlowDecl = {transform_decl, test, undefined, [Clause], {location, 1, 0}},
     Module = {module, undefined, [], [], [FlowDecl], {location, 1, 0}},
 
     Depth = catena_compiler_utils:ast_depth(Module),
@@ -533,8 +533,8 @@ integration_ast_depth_module_test() ->
 integration_ast_node_count_module_test() ->
     %% Create a simple module AST
     Body = {literal, 42, integer, {location, 1, 15}},
-    Clause = {flow_clause, [], undefined, Body, {location, 1, 0}},
-    FlowDecl = {flow_decl, test, undefined, [Clause], {location, 1, 0}},
+    Clause = {transform_clause, [], undefined, Body, {location, 1, 0}},
+    FlowDecl = {transform_decl, test, undefined, [Clause], {location, 1, 0}},
     Module = {module, undefined, [], [], [FlowDecl], {location, 1, 0}},
 
     Count = catena_compiler_utils:ast_node_count(Module),

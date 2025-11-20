@@ -63,7 +63,7 @@ make_basic_instance_tokens(TraitName, TypeName, MethodName, MethodParam, MethodB
         {upper_ident, 1, TraitName},
         {upper_ident, 1, TypeName},
         {where, 1},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, MethodName},
         {lower_ident, 2, MethodParam},
         {equals, 2},
@@ -79,7 +79,7 @@ make_multi_arg_instance_tokens(TraitName, TypeNames, MethodName, MethodParam, Me
         {upper_ident, 1, TraitName}
     ] ++ TypeTokens ++ [
         {where, 1},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, MethodName},
         {lower_ident, 2, MethodParam},
         {equals, 2},
@@ -354,7 +354,7 @@ parse_trait_valid_multiple_methods_test() ->
 
 parse_instance_valid_basic_test() ->
     %% instance Functor Maybe where
-    %%   flow fmap f = f
+    %%   transform fmap f = f
     %% end
     %% REFACTORED: Now just 2 lines for instance tests!
     Tokens = make_basic_instance_tokens("Functor", "Maybe", "fmap", "f", "f"),
@@ -374,7 +374,7 @@ parse_instance_valid_basic_test() ->
 
 parse_instance_valid_simple_expression_test() ->
     %% instance Show Bool where
-    %%   flow show x = x
+    %%   transform show x = x
     %% end
     Tokens = make_basic_instance_tokens("Show", "Bool", "show", "x", "x"),
     InstanceDecl = parse_single_decl(Tokens),
@@ -387,7 +387,7 @@ parse_instance_valid_simple_expression_test() ->
 
 parse_instance_valid_two_type_args_test() ->
     %% instance Functor List where
-    %%   flow map f = f
+    %%   transform map f = f
     %% end
     %% REFACTORED: Clean and simple
     Tokens = make_basic_instance_tokens("Functor", "List", "map", "f", "f"),
@@ -407,7 +407,7 @@ parse_combined_valid_trait_and_instance_test() ->
     %%   eq : a -> a -> Bool
     %% end
     %% instance Eq Bool where
-    %%   flow eq x = x
+    %%   transform eq x = x
     %% end
     Tokens = [
         {trait, 1},
@@ -426,7 +426,7 @@ parse_combined_valid_trait_and_instance_test() ->
         {upper_ident, 4, "Eq"},
         {upper_ident, 4, "Bool"},
         {where, 4},
-        {flow, 5},
+        {transform, 5},
         {lower_ident, 5, "eq"},
         {lower_ident, 5, "x"},
         {equals, 5},
@@ -579,13 +579,13 @@ parse_trait_invalid_malformed_extends_test() ->
 
 %% Test instance with lowercase trait name (should fail)
 parse_instance_invalid_lowercase_trait_test() ->
-    %% instance functor Maybe where flow fmap f = f end
+    %% instance functor Maybe where transform fmap f = f end
     Tokens = [
         {instance, 1},
         {lower_ident, 1, "functor"},  %% Invalid: should be uppercase
         {upper_ident, 1, "Maybe"},
         {where, 1},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "fmap"},
         {lower_ident, 2, "f"},
         {equals, 2},
@@ -597,13 +597,13 @@ parse_instance_invalid_lowercase_trait_test() ->
 
 %% Test instance without 'where' keyword (should fail)
 parse_instance_invalid_missing_where_test() ->
-    %% instance Functor Maybe flow fmap f = f end
+    %% instance Functor Maybe transform fmap f = f end
     Tokens = [
         {instance, 1},
         {upper_ident, 1, "Functor"},
         {upper_ident, 1, "Maybe"},
         %% Missing 'where'
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "fmap"},
         {lower_ident, 2, "f"},
         {equals, 2},
@@ -615,13 +615,13 @@ parse_instance_invalid_missing_where_test() ->
 
 %% Test instance without 'end' keyword (should fail)
 parse_instance_invalid_missing_end_test() ->
-    %% instance Functor Maybe where flow fmap f = f
+    %% instance Functor Maybe where transform fmap f = f
     Tokens = [
         {instance, 1},
         {upper_ident, 1, "Functor"},
         {upper_ident, 1, "Maybe"},
         {where, 1},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "fmap"},
         {lower_ident, 2, "f"},
         {equals, 2},
@@ -653,7 +653,7 @@ parse_instance_invalid_empty_methods_test() ->
 parse_trait_valid_default_method_test() ->
     %% trait Functor f where
     %%   fmap : a -> b
-    %%   flow mapConst x = fmap x
+    %%   transform mapConst x = fmap x
     %% end
     Tokens = [
         {trait, 1},
@@ -665,7 +665,7 @@ parse_trait_valid_default_method_test() ->
         {lower_ident, 2, "a"},
         {arrow, 2},
         {lower_ident, 2, "b"},
-        {flow, 3},
+        {transform, 3},
         {lower_ident, 3, "mapConst"},
         {lower_ident, 3, "x"},
         {equals, 3},
@@ -689,8 +689,8 @@ parse_trait_valid_default_method_test() ->
 parse_trait_valid_multiple_defaults_test() ->
     %% trait Monad m where
     %%   bind : a -> b
-    %%   flow then x = bind x
-    %%   flow join x = bind x
+    %%   transform then x = bind x
+    %%   transform join x = bind x
     %% end
     Tokens = [
         {trait, 1},
@@ -702,13 +702,13 @@ parse_trait_valid_multiple_defaults_test() ->
         {lower_ident, 2, "a"},
         {arrow, 2},
         {lower_ident, 2, "b"},
-        {flow, 3},
+        {transform, 3},
         {lower_ident, 3, "then"},
         {lower_ident, 3, "x"},
         {equals, 3},
         {lower_ident, 3, "bind"},
         {lower_ident, 3, "x"},
-        {flow, 4},
+        {transform, 4},
         {lower_ident, 4, "join"},
         {lower_ident, 4, "x"},
         {equals, 4},
@@ -731,7 +731,7 @@ parse_trait_valid_multiple_defaults_test() ->
 %% Test instance with single constraint
 parse_instance_valid_constraint_test() ->
     %% instance Eq a => Eq (Maybe a) where
-    %%   flow eq x = x
+    %%   transform eq x = x
     %% end
     Tokens = [
         {instance, 1},
@@ -742,7 +742,7 @@ parse_instance_valid_constraint_test() ->
         {upper_ident, 1, "Maybe"},
         {lower_ident, 1, "a"},
         {where, 1},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "eq"},
         {lower_ident, 2, "x"},
         {equals, 2},
@@ -770,7 +770,7 @@ parse_instance_valid_constraint_test() ->
 %% Test instance with multiple constraints
 parse_instance_valid_multiple_constraints_test() ->
     %% instance Eq a, Show a => Ord (Maybe a) where
-    %%   flow compare x = x
+    %%   transform compare x = x
     %% end
     Tokens = [
         {instance, 1},
@@ -784,7 +784,7 @@ parse_instance_valid_multiple_constraints_test() ->
         {upper_ident, 1, "Maybe"},
         {lower_ident, 1, "a"},
         {where, 1},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "compare"},
         {lower_ident, 2, "x"},
         {equals, 2},
@@ -811,7 +811,7 @@ parse_instance_valid_multiple_constraints_test() ->
 %% Test instance with 3 type arguments - works perfectly
 parse_instance_valid_three_type_args_test() ->
     %% instance Functor Either Error Value where
-    %%   flow fmap f = f
+    %%   transform fmap f = f
     %% end
     %% REFACTORED: Multi-arg instance built elegantly with helper!
     Tokens = make_multi_arg_instance_tokens("Functor", ["Either", "Error", "Value"], "fmap", "f", "f"),
@@ -827,7 +827,7 @@ parse_instance_valid_three_type_args_test() ->
 %% Test instance with 4 type arguments - demonstrates current limitation
 parse_instance_valid_four_type_args_test() ->
     %% instance Complex A B C D where
-    %%   flow method x = x
+    %%   transform method x = x
     %% end
     %%
     %% NOTE: This test verifies unlimited type argument support.
@@ -840,7 +840,7 @@ parse_instance_valid_four_type_args_test() ->
         {upper_ident, 1, "C"},
         {upper_ident, 1, "D"},
         {where, 1},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "method"},
         {lower_ident, 2, "x"},
         {equals, 2},
@@ -873,7 +873,7 @@ parse_instance_valid_four_type_args_test() ->
 parse_trait_valid_extends_and_defaults_test() ->
     %% trait Monad m extends Applicative m where
     %%   bind : a -> b
-    %%   flow then x = bind x
+    %%   transform then x = bind x
     %% end
     Tokens = [
         {trait, 1},
@@ -888,7 +888,7 @@ parse_trait_valid_extends_and_defaults_test() ->
         {lower_ident, 2, "a"},
         {arrow, 2},
         {lower_ident, 2, "b"},
-        {flow, 3},
+        {transform, 3},
         {lower_ident, 3, "then"},
         {lower_ident, 3, "x"},
         {equals, 3},
@@ -1002,7 +1002,7 @@ parse_trait_valid_trailing_comma_test() ->
 %% Grammar has TWO instance_method rules: one for expr, one for match expressions
 parse_instance_valid_match_expression_test() ->
     %% instance Functor Maybe where
-    %%   flow fmap f = match
+    %%   transform fmap f = match
     %%     | None -> None
     %%     | Some(x) -> Some(x)
     %%   end
@@ -1012,7 +1012,7 @@ parse_instance_valid_match_expression_test() ->
         {upper_ident, 1, "Functor"},
         {upper_ident, 1, "Maybe"},
         {where, 1},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "fmap"},
         {lower_ident, 2, "f"},
         {equals, 2},
@@ -1051,20 +1051,20 @@ parse_instance_valid_match_expression_test() ->
 %% Test multiple instance methods (tests instance_methods -> instance_method instance_methods rule)
 parse_instance_valid_multiple_methods_test() ->
     %% instance Eq Bool where
-    %%   flow eq x = x
-    %%   flow neq y = y
+    %%   transform eq x = x
+    %%   transform neq y = y
     %% end
     Tokens = [
         {instance, 1},
         {upper_ident, 1, "Eq"},
         {upper_ident, 1, "Bool"},
         {where, 1},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "eq"},
         {lower_ident, 2, "x"},
         {equals, 2},
         {lower_ident, 2, "x"},
-        {flow, 3},
+        {transform, 3},
         {lower_ident, 3, "neq"},
         {lower_ident, 3, "y"},
         {equals, 3},
@@ -1140,14 +1140,14 @@ parse_trait_invalid_method_missing_type_test() ->
 %% Test instance method missing equals sign
 parse_instance_invalid_method_missing_equals_test() ->
     %% instance Functor Maybe where
-    %%   flow fmap f x  %% Missing equals
+    %%   transform fmap f x  %% Missing equals
     %% end
     Tokens = [
         {instance, 1},
         {upper_ident, 1, "Functor"},
         {upper_ident, 1, "Maybe"},
         {where, 1},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "fmap"},
         {lower_ident, 2, "f"},
         {lower_ident, 2, "x"},  %% Missing equals before expression
@@ -1190,7 +1190,7 @@ parse_instance_invalid_malformed_constraint_test() ->
         {upper_ident, 1, "Eq"},
         {lower_ident, 1, "a"},
         {where, 1},
-        {flow, 2},
+        {transform, 2},
         {lower_ident, 2, "eq"},
         {lower_ident, 2, "x"},
         {equals, 2},
@@ -1201,11 +1201,11 @@ parse_instance_invalid_malformed_constraint_test() ->
     %% Should now parse successfully (changed from expecting error)
     ?assertMatch({ok, _}, Result).
 
-%% Test trait default method with invalid syntax (missing flow keyword)
+%% Test trait default method with invalid syntax (missing transform keyword)
 parse_trait_invalid_default_method_syntax_test() ->
     %% trait Eq a where
     %%   eq : a -> Bool
-    %%   neq x = not (eq x)  %% Missing 'flow' keyword
+    %%   neq x = not (eq x)  %% Missing 'transform' keyword
     %% end
     Tokens = [
         {trait, 1},
@@ -1217,7 +1217,7 @@ parse_trait_invalid_default_method_syntax_test() ->
         {lower_ident, 2, "a"},
         {arrow, 2},
         {upper_ident, 2, "Bool"},
-        {lower_ident, 3, "neq"},  %% Missing 'flow' keyword
+        {lower_ident, 3, "neq"},  %% Missing 'transform' keyword
         {lower_ident, 3, "x"},
         {equals, 3},
         {lower_ident, 3, "x"},

@@ -18,7 +18,7 @@
 
 %% Test 1.1: Normal token count passes
 token_count_normal_test() ->
-    Source = "shape Bool = True | False",
+    Source = "type Bool = True | False",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result).
 
@@ -29,7 +29,7 @@ token_count_excessive_test() ->
     try
         application:set_env(catena, max_token_count, 5),
         %% This will generate more than 5 tokens
-        Source = "shape Bool = True | False",
+        Source = "type Bool = True | False",
         Result = catena_parse:parse(Source),
         ?assertMatch({error, {too_many_tokens, _, _}}, Result),
         {error, ErrorTuple} = Result,
@@ -48,7 +48,7 @@ token_count_boundary_test() ->
     try
         %% Set limit to exact token count
         application:set_env(catena, max_token_count, 6),
-        Source = "shape Bool = True | False",
+        Source = "type Bool = True | False",
         %% Should succeed (6 tokens exactly)
         Result = catena_parse:parse(Source),
         ?assertMatch({ok, _}, Result)
@@ -65,7 +65,7 @@ token_count_boundary_test() ->
 
 %% Test 2.1: Fast parse completes
 parse_time_normal_test() ->
-    Source = "shape Bool = True | False",
+    Source = "type Bool = True | False",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result).
 
@@ -76,7 +76,7 @@ parse_time_short_timeout_test() ->
     try
         application:set_env(catena, max_parse_time, 0),
         %% Even simple parse might exceed 0ms
-        Source = "shape Bool = True | False",
+        Source = "type Bool = True | False",
         Result = catena_parse:parse(Source),
         %% Should either succeed quickly or timeout
         case Result of
@@ -95,9 +95,9 @@ parse_time_reasonable_test() ->
     OldMax = application:get_env(catena, max_parse_time, undefined),
     try
         application:set_env(catena, max_parse_time, 5000),  % 5 seconds
-        Source = "shape List a = Nil | Cons a (List a)\n"
-                 "flow map : (a -> b) -> List a -> List b\n"
-                 "flow map f xs = match\n"
+        Source = "type List a = Nil | Cons a (List a)\n"
+                 "transform map : (a -> b) -> List a -> List b\n"
+                 "transform map f xs = match\n"
                  "  | Nil -> Nil\n"
                  "  | Cons(x rest) -> x\n"
                  "end",
@@ -116,14 +116,14 @@ parse_time_reasonable_test() ->
 
 %% Test 3.1: Shallow pattern passes
 pattern_depth_shallow_test() ->
-    Source = "flow f x = x",
+    Source = "transform f x = x",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result).
 
 %% Test 3.2: Nested pattern passes with high limit
 pattern_depth_moderate_test() ->
     %% Nested tuple pattern: ((a, b), (c, d))
-    Source = "flow f ((a, b), (c, d)) = a",
+    Source = "transform f ((a, b), (c, d)) = a",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result).
 
@@ -133,7 +133,7 @@ pattern_depth_excessive_test() ->
     try
         application:set_env(catena, max_pattern_depth, 2),
         %% Create a deeply nested pattern: Some(Some(Some(x)))
-        Source = "flow f Some(Some(Some(x))) = x",
+        Source = "transform f Some(Some(Some(x))) = x",
         Result = catena_parse:parse(Source),
         ?assertMatch({error, {pattern_too_deep, _, _}}, Result),
         {error, ErrorTuple} = Result,
@@ -152,7 +152,7 @@ pattern_depth_list_test() ->
     try
         application:set_env(catena, max_pattern_depth, 2),
         %% Nested list pattern [[[x]]] (depth 3, exceeds limit of 2)
-        Source = "flow f [[[x]]] = x",
+        Source = "transform f [[[x]]] = x",
         Result = catena_parse:parse(Source),
         ?assertMatch({error, {pattern_too_deep, _, _}}, Result)
     after
@@ -168,13 +168,13 @@ pattern_depth_list_test() ->
 
 %% Test 4.1: Simple type passes
 type_depth_simple_test() ->
-    Source = "flow f : Int -> Int\nflow f x = x",
+    Source = "transform f : Int -> Int\nflow f x = x",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result).
 
 %% Test 4.2: Function type chain passes
 type_depth_moderate_test() ->
-    Source = "flow f : Int -> Int -> Int -> Int\nflow f x y z = x",
+    Source = "transform f : Int -> Int -> Int -> Int\nflow f x y z = x",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result).
 
@@ -184,8 +184,8 @@ type_depth_excessive_test() ->
     try
         application:set_env(catena, max_type_depth, 3),
         %% Deeply nested type: Maybe (Maybe (Maybe (Maybe Int)))
-        Source = "flow f : Maybe (Maybe (Maybe (Maybe Int))) -> Int\n"
-                 "flow f x = 0",
+        Source = "transform f : Maybe (Maybe (Maybe (Maybe Int))) -> Int\n"
+                 "transform f x = 0",
         Result = catena_parse:parse(Source),
         ?assertMatch({error, {type_too_deep, _, _}}, Result),
         {error, ErrorTuple} = Result,
@@ -204,8 +204,8 @@ type_depth_forall_test() ->
     try
         application:set_env(catena, max_type_depth, 2),
         %% forall a . forall b . forall c . a -> b -> c
-        Source = "flow f : forall a . forall b . forall c . a -> b -> c\n"
-                 "flow f x y = y",
+        Source = "transform f : forall a . forall b . forall c . a -> b -> c\n"
+                 "transform f x y = y",
         Result = catena_parse:parse(Source),
         ?assertMatch({error, {type_too_deep, _, _}}, Result)
     after
@@ -277,9 +277,9 @@ override_parse_time_test() ->
 
 %% Test 6.1: Complex valid code passes all limits
 integration_complex_valid_test() ->
-    Source = "shape Tree a = Leaf a | Node (Tree a) a (Tree a)\n"
-             "flow sum : Tree Int -> Int\n"
-             "flow sum tree = match\n"
+    Source = "type Tree a = Leaf a | Node (Tree a) a (Tree a)\n"
+             "transform sum : Tree Int -> Int\n"
+             "transform sum tree = match\n"
              "  | Leaf(x) -> x\n"
              "  | Node(left val right) -> (sum left) + val + (sum right)\n"
              "end",
@@ -295,8 +295,8 @@ integration_multiple_limits_test() ->
         application:set_env(catena, max_token_count, 100),
         application:set_env(catena, max_ast_depth, 50),
 
-        Source = "shape Bool = True | False\n"
-                 "flow not x = match | True -> False | False -> True end",
+        Source = "type Bool = True | False\n"
+                 "transform not x = match | True -> False | False -> True end",
 
         Result = catena_parse:parse(Source),
         %% Should succeed (within both limits)
@@ -314,12 +314,12 @@ integration_multiple_limits_test() ->
 
 %% Test 6.3: All limits at default pass reasonable code
 integration_defaults_test() ->
-    Source = "shape List a = Nil | Cons a (List a)\n"
-             "flow length xs = match\n"
+    Source = "type List a = Nil | Cons a (List a)\n"
+             "transform length xs = match\n"
              "  | Nil -> 0\n"
              "  | Cons(_ rest) -> 1 + length rest\n"
              "end\n"
-             "flow map f xs = match\n"
+             "transform map f xs = match\n"
              "  | Nil -> Nil\n"
              "  | Cons(x rest) -> x\n"
              "end",

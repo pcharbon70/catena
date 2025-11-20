@@ -11,7 +11,7 @@ parse_file_nonexistent_test() ->
     ?assertMatch({error, [#error{code = 'E000_file_error'}]}, Result).
 
 parse_file_valid_simple_test() ->
-    Content = "shape Bool = True | False\n",
+    Content = "type Bool = True | False\n",
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         ?assertMatch({ok, _AST}, Result)
@@ -32,9 +32,9 @@ parse_file_empty_test() ->
 %%====================================================================
 
 parse_tokens_valid_test() ->
-    % Simple valid token stream for: shape Bool = True | False
+    % Simple valid token stream for: type Bool = True | False
     Tokens = [
-        {shape, 1},
+        {type, 1},
         {type_id, 1, "Bool"},
         {'=', 1},
         {constructor_id, 1, "True"},
@@ -61,7 +61,7 @@ parse_tokens_empty_test() ->
 %%====================================================================
 
 parse_file_lexer_error_unterminated_string_test() ->
-    Content = "shape Foo = Bar \"unterminated string\n",
+    Content = "type Foo = Bar \"unterminated string\n",
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
@@ -79,9 +79,9 @@ parse_file_lexer_error_unterminated_string_test() ->
 %%====================================================================
 
 parse_tokens_parser_error_test() ->
-    % Invalid token stream: shape = (missing type name)
+    % Invalid token stream: type = (missing type name)
     Tokens = [
-        {shape, 1},
+        {type, 1},
         {'=', 1},
         {constructor_id, 1, "True"}
     ],
@@ -90,7 +90,7 @@ parse_tokens_parser_error_test() ->
 
 parse_tokens_parser_error_severity_test() ->
     Tokens = [
-        {shape, 1},
+        {type, 1},
         {'=', 1},
         {constructor_id, 1, "True"}
     ],
@@ -102,7 +102,7 @@ parse_tokens_parser_error_severity_test() ->
 %%====================================================================
 
 parse_file_error_with_context_test() ->
-    Content = "shape Foo = Bar\nshape Baz =\nshape Qux = Quux\n",
+    Content = "type Foo = Bar\ntype Baz =\ntype Qux = Quux\n",
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
@@ -118,7 +118,7 @@ parse_file_error_with_context_test() ->
     end).
 
 parse_file_error_has_file_location_test() ->
-    Content = "shape",  % Incomplete declaration
+    Content = "type",  % Incomplete declaration
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
@@ -138,7 +138,7 @@ parse_file_error_has_file_location_test() ->
 parse_tokens_suggestion_for_extra_end_test() ->
     % Test that extra 'end' keyword generates a suggestion
     Tokens = [
-        {shape, 1},
+        {type, 1},
         {type_id, 1, "Foo"},
         {'=', 1},
         {constructor_id, 1, "Bar"},
@@ -160,7 +160,7 @@ parse_tokens_suggestion_for_extra_end_test() ->
 parse_tokens_suggestion_for_unmatched_brace_test() ->
     % Test unmatched closing brace
     Tokens = [
-        {shape, 1},
+        {type, 1},
         {type_id, 1, "Foo"},
         {'=', 1},
         {'{', 1},
@@ -184,7 +184,7 @@ parse_tokens_suggestion_for_invalid_operator_double_equals_test() ->
     % Test that '==' suggests using '=' for pattern matching
     % Note: This test checks if the suggestion system can handle '==' token
     % The parser may not generate this exact error, but the suggestion system should handle it
-    Content = "shape Foo == Bar\n",  % Invalid: should be '='
+    Content = "type Foo == Bar\n",  % Invalid: should be '='
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
@@ -199,7 +199,7 @@ parse_tokens_suggestion_for_invalid_operator_double_equals_test() ->
 
 parse_tokens_suggestion_for_invalid_operator_not_equals_test() ->
     % Test that '!=' suggests using '/='
-    Content = "flow test x = x != 0\n",  % Invalid: should be '/='
+    Content = "transform test x = x != 0\n",  % Invalid: should be '/='
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
@@ -212,8 +212,8 @@ parse_tokens_suggestion_for_invalid_operator_not_equals_test() ->
     end).
 
 parse_tokens_suggestion_for_typo_in_keyword_sahpe_test() ->
-    % Test typo detection: 'sahpe' instead of 'shape'
-    Content = "sahpe Foo = Bar\n",  % Typo: should be 'shape'
+    % Test typo detection: 'sahpe' instead of 'type'
+    Content = "tyep Foo = Bar\n",  % Typo: should be 'type'
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
@@ -224,8 +224,8 @@ parse_tokens_suggestion_for_typo_in_keyword_sahpe_test() ->
                         case Err#error.suggestion of
                             undefined -> false;
                             Sugg ->
-                                % Check if suggestion mentions 'shape'
-                                string:find(Sugg, "shape") =/= nomatch orelse
+                                % Check if suggestion mentions 'type'
+                                string:find(Sugg, "type") =/= nomatch orelse
                                 string:find(Sugg, "typo") =/= nomatch orelse
                                 string:find(Sugg, "Did you mean") =/= nomatch
                         end
@@ -240,8 +240,8 @@ parse_tokens_suggestion_for_typo_in_keyword_sahpe_test() ->
     end).
 
 parse_tokens_suggestion_for_typo_in_keyword_flwo_test() ->
-    % Test typo detection: 'flwo' instead of 'flow'
-    Content = "flwo test x = x\n",  % Typo: should be 'flow'
+    % Test typo detection: 'flwo' instead of 'transform'
+    Content = "tlwo test x = x\n",  % Typo: should be 'transform'
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
@@ -255,7 +255,7 @@ parse_tokens_suggestion_for_typo_in_keyword_flwo_test() ->
 
 parse_tokens_suggestion_for_typo_in_keyword_mtach_test() ->
     % Test typo detection: 'mtach' instead of 'match'
-    Content = "flow test x = mtach x\n  | 0 -> true\nend\n",  % Typo: should be 'match'
+    Content = "transform test x = mtach x\n  | 0 -> true\nend\n",  % Typo: should be 'match'
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
@@ -272,7 +272,7 @@ parse_tokens_suggestion_for_typo_in_keyword_mtach_test() ->
 
 parse_tokens_error_message_not_empty_test() ->
     Tokens = [
-        {shape, 1},
+        {type, 1},
         {'=', 1}
     ],
     {error, [Err]} = catena_parser_wrapper:parse_tokens(Tokens),
@@ -280,7 +280,7 @@ parse_tokens_error_message_not_empty_test() ->
 
 parse_tokens_error_has_code_test() ->
     Tokens = [
-        {shape, 1},
+        {type, 1},
         {'=', 1}
     ],
     {error, [Err]} = catena_parser_wrapper:parse_tokens(Tokens),
@@ -293,7 +293,7 @@ parse_tokens_error_has_code_test() ->
 
 parse_tokens_single_error_list_test() ->
     Tokens = [
-        {shape, 1},
+        {type, 1},
         {'=', 1}
     ],
     {error, Errors} = catena_parser_wrapper:parse_tokens(Tokens),
@@ -306,7 +306,7 @@ parse_tokens_single_error_list_test() ->
 
 parse_file_unicode_test() ->
     % Use simpler content to avoid unicode encoding issues in file writing
-    Content = "shape Foo = Bar\n",
+    Content = "type Foo = Bar\n",
     test_helpers:with_temp_file(unicode:characters_to_binary(Content), fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         % Should either parse or error gracefully
@@ -319,7 +319,7 @@ parse_file_unicode_test() ->
 
 parse_tokens_with_file_undefined_file_test() ->
     Tokens = [
-        {shape, 1},
+        {type, 1},
         {'=', 1}
     ],
     Result = catena_parser_wrapper:parse_tokens_with_file(Tokens, undefined, undefined),
@@ -332,7 +332,7 @@ parse_tokens_with_file_undefined_file_test() ->
 
 parse_tokens_with_file_specified_file_test() ->
     Tokens = [
-        {shape, 1},
+        {type, 1},
         {'=', 1}
     ],
     Result = catena_parser_wrapper:parse_tokens_with_file(Tokens, "test.catena", undefined),
@@ -349,7 +349,7 @@ parse_tokens_with_file_specified_file_test() ->
 
 parse_tokens_error_can_be_formatted_test() ->
     Tokens = [
-        {shape, 1},
+        {type, 1},
         {'=', 1}
     ],
     {error, [Err]} = catena_parser_wrapper:parse_tokens(Tokens),
@@ -359,7 +359,7 @@ parse_tokens_error_can_be_formatted_test() ->
 
 parse_tokens_error_list_can_be_formatted_test() ->
     Tokens = [
-        {shape, 1},
+        {type, 1},
         {'=', 1}
     ],
     {error, Errors} = catena_parser_wrapper:parse_tokens(Tokens),
@@ -372,9 +372,9 @@ parse_tokens_error_list_can_be_formatted_test() ->
 %%====================================================================
 
 multi_error_recovery_multiple_bad_shapes_test() ->
-    % Source with multiple malformed shape declarations
+    % Source with multiple malformed type declarations
     % Each should trigger error recovery and continue parsing
-    Content = "shape\nshape Foo = Bar\nshape\nshape Baz = Qux\n",
+    Content = "type\ntype Foo = Bar\nshape\ntype Baz = Qux\n",
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
@@ -396,7 +396,7 @@ multi_error_recovery_multiple_bad_shapes_test() ->
 
 multi_error_recovery_mixed_declarations_test() ->
     % Mix of good and bad declarations
-    Content = "shape Bool = True | False\nshape\nshape Maybe a = Some a | None\nflow\nshape Result = Ok | Err\n",
+    Content = "type Bool = True | False\nshape\ntype Maybe a = Some a | None\ntransform\ntype Result = Ok | Err\n",
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
@@ -418,7 +418,7 @@ multi_error_recovery_mixed_declarations_test() ->
 
 multi_error_three_to_five_errors_test() ->
     % Test requirement: "Can report at least 3-5 errors in one compilation pass"
-    Content = "shape\nshape Foo = Bar\nshape\nflow\nshape Baz = Qux\nflow\n",
+    Content = "type\ntype Foo = Bar\nshape\ntransform\ntype Baz = Qux\ntransform\n",
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
@@ -445,7 +445,7 @@ multi_error_three_to_five_errors_test() ->
 
 multi_error_recovery_continues_after_error_test() ->
     % Verify that parser continues after encountering an error
-    Content = "shape Foo = Bar\nshape\nshape Valid = Constructor\n",
+    Content = "type Foo = Bar\nshape\ntype Valid = Constructor\n",
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
@@ -462,7 +462,7 @@ multi_error_recovery_continues_after_error_test() ->
 
 multi_error_recovery_error_locations_test() ->
     % Verify that each error has correct line number
-    Content = "shape Foo = Bar\nshape\nshape Baz = Qux\nflow\n",
+    Content = "type Foo = Bar\nshape\ntype Baz = Qux\ntransform\n",
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
@@ -502,7 +502,7 @@ parse_file_invalid_utf8_test() ->
 parse_file_incomplete_utf8_test() ->
     % Test that incomplete UTF-8 is properly handled
     % Incomplete UTF-8: start of 2-byte sequence without continuation
-    IncompleteUtf8 = <<"shape Foo = Bar\n", 16#C2>>,
+    IncompleteUtf8 = <<"type Foo = Bar\n", 16#C2>>,
     test_helpers:with_temp_file(IncompleteUtf8, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         % Should return file error
@@ -519,7 +519,7 @@ parse_file_incomplete_utf8_test() ->
 parse_file_valid_utf8_with_unicode_chars_test() ->
     % Test that valid UTF-8 with multi-byte characters works
     % Valid UTF-8 with lambda, arrow, and forall symbols
-    ValidUtf8 = <<"shape Option a = Some a | None\n">>,
+    ValidUtf8 = <<"type Option a = Some a | None\n">>,
     test_helpers:with_temp_file(ValidUtf8, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         % Should parse successfully or have syntax error (not unicode error)

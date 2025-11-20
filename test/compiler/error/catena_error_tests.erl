@@ -90,8 +90,8 @@ add_related_accumulate_test() ->
 
 set_source_line_test() ->
     Err = catena_error:new_error('E001', "Error", {5, 1}, undefined),
-    Err2 = catena_error:set_source_line(Err, "flow foo = bar"),
-    ?assertEqual("flow foo = bar", Err2#error.source_line).
+    Err2 = catena_error:set_source_line(Err, "transform foo = bar"),
+    ?assertEqual("transform foo = bar", Err2#error.source_line).
 
 %%====================================================================
 %% Error Accumulation Tests
@@ -371,7 +371,7 @@ read_source_context_invalid_utf8_test() ->
 read_source_context_incomplete_utf8_test() ->
     % Create a file with incomplete UTF-8 sequence at end
     % Incomplete UTF-8: start of 2-byte sequence without continuation
-    IncompleteUtf8 = <<"shape Foo = Bar\n", 16#C2>>,
+    IncompleteUtf8 = <<"type Foo = Bar\n", 16#C2>>,
     test_helpers:with_temp_file(IncompleteUtf8, fun(TestFile) ->
         Result = catena_error:read_source_context(TestFile, 1, 1),
         % Should return unicode error
@@ -381,7 +381,7 @@ read_source_context_incomplete_utf8_test() ->
 read_source_context_valid_utf8_test() ->
     % Create a file with valid UTF-8 including multi-byte characters
     % Valid UTF-8 with lambda, arrow, and forall symbols (properly encoded)
-    ValidUtf8String = "shape λ → ∀\n",
+    ValidUtf8String = "type λ → ∀\n",
     ValidUtf8Binary = unicode:characters_to_binary(ValidUtf8String, utf8, utf8),
     test_helpers:with_temp_file(ValidUtf8Binary, fun(TestFile) ->
         Result = catena_error:read_source_context(TestFile, 1, 0),
@@ -405,7 +405,7 @@ read_source_context_valid_utf8_test() ->
 
 % Test that context lines exceeding MAX_CONTEXT_LINES is rejected
 read_source_context_exceeds_max_test() ->
-    test_helpers:with_temp_file("shape Foo = Bar\n", fun(TestFile) ->
+    test_helpers:with_temp_file("type Foo = Bar\n", fun(TestFile) ->
         % Try to read 101 context lines (MAX_CONTEXT_LINES = 100)
         Result = catena_error:read_source_context(TestFile, 1, 101),
         ?assertMatch({error, {context_too_large, 101, 100}}, Result)
@@ -413,7 +413,7 @@ read_source_context_exceeds_max_test() ->
 
 % Test that negative context lines is rejected
 read_source_context_negative_test() ->
-    test_helpers:with_temp_file("shape Foo = Bar\n", fun(TestFile) ->
+    test_helpers:with_temp_file("type Foo = Bar\n", fun(TestFile) ->
         % Try to read negative context lines
         Result = catena_error:read_source_context(TestFile, 1, -5),
         ?assertMatch({error, negative_context_lines}, Result)
@@ -421,7 +421,7 @@ read_source_context_negative_test() ->
 
 % Test that exactly MAX_CONTEXT_LINES is allowed
 read_source_context_at_max_test() ->
-    test_helpers:with_temp_file("shape Foo = Bar\n", fun(TestFile) ->
+    test_helpers:with_temp_file("type Foo = Bar\n", fun(TestFile) ->
         % Read exactly 100 context lines (should be allowed)
         Result = catena_error:read_source_context(TestFile, 1, 100),
         ?assertMatch({ok, _}, Result)

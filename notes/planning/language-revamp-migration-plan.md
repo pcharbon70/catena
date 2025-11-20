@@ -109,35 +109,43 @@ make clean && make compile
 
 **Completed**: 2025-11-20
 
-### Phase 4: Test Suite Updates
+### Phase 4: Test Suite Updates ✅ COMPLETED
 
-#### 4.1 Lexer Tests
-- [ ] Update `test/compiler/lexer/catena_lexer_properties.erl`
+#### 4.1 Lexer Tests ✅
+- [x] Update `test/compiler/lexer/catena_lexer_properties.erl`
   - Update keyword lists in generators
   - Update property descriptions
 
-#### 4.2 Parser Tests (Critical - 109+ pattern matches)
-- [ ] `catena_parser_negative_tests.erl`
-- [ ] `catena_parser_flow_integration_tests.erl` (18+ occurrences)
-- [ ] `catena_parser_simple_tests.erl`
-- [ ] `catena_parser_effect_tests.erl`
-- [ ] `catena_parser_precedence_tests.erl`
-- [ ] `catena_parser_higher_order_types_tests.erl`
-- [ ] `catena_parse_tests.erl`
-- [ ] `catena_parser_test_helpers.erl`
-- [ ] `catena_parser_wrapper_tests.erl`
+#### 4.2 Parser Tests (Critical - 109+ pattern matches) ✅
+- [x] `catena_parser_negative_tests.erl`
+- [x] `catena_parser_transform_integration_tests.erl` (renamed from flow_integration)
+- [x] `catena_parser_simple_tests.erl`
+- [x] `catena_parser_effect_tests.erl`
+- [x] `catena_parser_precedence_tests.erl`
+- [x] `catena_parser_higher_order_types_tests.erl`
+- [x] `catena_parse_tests.erl`
+- [x] `catena_parser_test_helpers.erl`
+- [x] `catena_parser_wrapper_tests.erl`
+- [x] `catena_parser_error_tests.erl`
+- [x] `catena_parser_pattern_tests.erl`
+- [x] `catena_parser_type_tests.erl`
+- [x] `catena_parser_trait_tests.erl`
 
-#### 4.3 AST Tests
-- [ ] `catena_ast_utils_tests.erl`
-- [ ] `catena_compiler_utils_tests.erl`
+#### 4.3 AST Tests ✅
+- [x] `catena_ast_utils_tests.erl`
+- [x] `catena_compiler_utils_tests.erl`
 
-#### 4.4 Test Patterns to Update
+#### 4.4 Test Patterns Updated ✅
 - All `{shape_decl, ...}` → `{type_decl, ...}`
 - All `{flow_decl, ...}` → `{transform_decl, ...}`
 - All `{flow_clause, ...}` → `{transform_clause, ...}`
 - All `{flow_sig, ...}` → `{transform_sig, ...}`
+- All `{flow, N}` → `{transform, N}` tokens
+- All `{shape, N}` → `{type, N}` tokens
 - Test case names and descriptions
 - Helper function names
+
+**Completed**: 2025-11-20
 
 ### Phase 5: Validation and Testing
 
