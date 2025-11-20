@@ -168,7 +168,7 @@ test_compose_function() ->
 
     % Pretty-print
     PP = catena_type_pp:pp_scheme(ComposeScheme),
-    Expected = "∀α1 α2 α3. (a2 -> α3) -> (a1 -> α2) -> α1 -> α3",
+    Expected = "∀α1 α2 α3. (α2 -> α3) -> (α1 -> α2) -> α1 -> α3",
     ?assertEqual(Expected, PP).
 
 test_map_function() ->
@@ -216,7 +216,7 @@ test_map_function() ->
 
     % Pretty-print
     PP = catena_type_pp:pp_scheme(MapScheme),
-    Expected = "∀α1 α2. (a1 -> α2) -> List<a1> -> List<a2>",
+    Expected = "∀α1 α2. (α1 -> α2) -> List<α1> -> List<α2>",
     ?assertEqual(Expected, PP).
 
 %%====================================================================
@@ -260,7 +260,7 @@ test_substitution_before_generalization() ->
     ?assertMatch({poly, [_], _}, Scheme),
 
     PP = catena_type_pp:pp_scheme(Scheme),
-    ?assertEqual("∀a2. integer -> α2", PP).
+    ?assertEqual("∀α2. integer -> α2", PP).
 
 test_environment_with_substitution() ->
     % Build environment with multiple bindings, apply substitution
@@ -356,7 +356,7 @@ test_effectful_map() ->
     Scheme = catena_type_scheme:generalize(MapType, EnvFreeVars),
 
     PP = catena_type_pp:pp_scheme(Scheme),
-    Expected = "∀α1 α2. (a1 -> α2 / {io}) -> List<a1> -> List<a2> / {io}",
+    Expected = "∀α1 α2. (α1 -> α2 / {io}) -> List<α1> -> List<α2> / {io}",
     ?assertEqual(Expected, PP).
 
 test_nested_type_application() ->
@@ -464,5 +464,5 @@ test_multiple_let_bindings() ->
     AppPP = catena_type_pp:pp_scheme(AppScheme),
 
     ?assertEqual("∀α1. α1 -> α1", IdPP),
-    ?assertEqual("∀a2 α3. α2 -> α3 -> α2", ConstPP),
+    ?assertEqual("∀α2 α3. α2 -> α3 -> α2", ConstPP),
     ?assertEqual("∀α4 α5. (α4 -> α5) -> α4 -> α5", AppPP).

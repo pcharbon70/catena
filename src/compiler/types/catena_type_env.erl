@@ -178,7 +178,13 @@ lookup(Env, VarName) ->
 %% '''
 -spec extend(env(), atom(), catena_type_scheme:scheme()) -> env().
 extend(Env, VarName, Scheme) ->
-    maps:put(VarName, Scheme, Env).
+    Result = maps:put(VarName, Scheme, Env),
+    ResultSize = maps:size(Result),
+    MaxSize = catena_config:get_max_environment_size(),
+    case ResultSize > MaxSize of
+        true -> error(catena_type_error:environment_too_large(ResultSize, MaxSize));
+        false -> Result
+    end.
 
 %% @doc Remove a variable binding from the environment.
 %%

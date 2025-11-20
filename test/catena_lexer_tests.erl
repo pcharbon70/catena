@@ -34,7 +34,7 @@ all_keywords_test() ->
     Input = "type transform match where let in do end if then else case of when "
             "module import export exports as qualified private trait instance forall actor supervisor",
     {ok, Tokens} = catena_lexer:tokenize(Input),
-    Expected = [shape, flow, match, where, 'let', 'in', 'do', 'end', 'if', 'then', 'else',
+    Expected = [type, transform, match, where, 'let', 'in', 'do', 'end', 'if', 'then', 'else',
                 'case', 'of', 'when', 'module', 'import', 'export', exports, as, qualified,
                 private, trait, instance, forall, actor, supervisor],
     ?assertEqual(Expected, token_types(Tokens)).

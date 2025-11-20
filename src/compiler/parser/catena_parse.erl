@@ -560,10 +560,10 @@ validate_declarations_for_annotations([Decl | Rest], MaxEffects) ->
 
 %% @doc Validate effect annotations in a single declaration
 -spec validate_single_declaration_annotations(term(), pos_integer()) -> {ok, term()} | {error, term()}.
-validate_single_declaration_annotations({flow_decl, _Name, Type, _Clauses, _}, MaxEffects) ->
+validate_single_declaration_annotations({transform_decl, _Name, Type, _Clauses, _}, MaxEffects) ->
     validate_type_for_effects(Type, MaxEffects);
-validate_single_declaration_annotations({shape_decl, _Name, _Params, _Constructors, _}, _MaxEffects) ->
-    {ok, {}};  % Shape declarations don't have effect annotations
+validate_single_declaration_annotations({type_decl, _Name, _Params, _Constructors, _}, _MaxEffects) ->
+    {ok, {}};  % Type declarations don't have effect annotations
 validate_single_declaration_annotations({effect_decl, _Name, _Operations, _}, _MaxEffects) ->
     {ok, {}};  % Effect declarations don't have effect annotations
 validate_single_declaration_annotations(_, _MaxEffects) ->
