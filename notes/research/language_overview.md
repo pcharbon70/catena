@@ -10,7 +10,7 @@
 | **transform** | Define pure functions | `transform greet : User -> Text` |
 | **let** | Local bindings | `let x = 5 in x + 1` |
 | **match** | Pattern matching | `match x \| Some v -> v \| None -> 0` |
-| **trait** | Define type classes | `trait Mapper f { ... }` |
+| **trait** | Define type classes | `trait Mapper f where ... end` |
 | **instance** | Implement traits | `instance Mapper List where ... end` |
 | **effect** | Define algebraic effects | `effect FileIO { ... } end` |
 | **perform** | Use effects | `perform FileIO.read(path)` |
@@ -115,6 +115,7 @@ trait Comparable a where
   -- Default implementations
   not_equals : a -> a -> Bool
   not_equals x y = not (equals x y)
+end
 
 -- Define operators for traits
 operator (===) = equals
@@ -126,28 +127,34 @@ trait Orderable a : Comparable a where
 
   less_than : a -> a -> Bool
   less_than x y = compare x y == LT
+end
 
 -- Mapper trait (Functor in category theory)
 trait Mapper (f : Type -> Type) where
   map : (a -> b) -> f a -> f b
+end
 
 -- Applicator trait (Applicative Functor in category theory)
 trait Applicator (f : Type -> Type) : Mapper f where
   pure : a -> f a
   apply : f (a -> b) -> f a -> f b
+end
 
 -- Chainable trait (Chain/Bind in category theory)
 trait Chainable (m : Type -> Type) : Mapper m where
   chain : (a -> m b) -> m a -> m b
+end
 
 -- Pipeline trait (Monad in category theory)
 trait Pipeline (m : Type -> Type) : Applicator m, Chainable m where
   -- Combines pure and chain from parent traits
+end
 
 -- Extractor trait (Comonad in category theory)
 trait Extractor (w : Type -> Type) : Mapper w where
   extract : w a -> a
   extend : (w a -> b) -> w a -> w b
+end
 
 -- Trait laws (verified by property testing)
 laws Mapper f where
@@ -158,6 +165,7 @@ laws Mapper f where
   property "composition" =
     forall x : f a, g : (a -> b), h : (b -> c) ->
       map (h . g) x === (map h . map g) x
+end
 ```
 
 ### 4. Instances (Trait Implementations)
@@ -167,38 +175,46 @@ Instances provide concrete implementations of traits for specific types.
 ```catena
 -- Simple instance
 instance Comparable Natural where
-  equals = (==)
+  transform equals x y = x == y
+end
 
 -- Instance with constraints
 instance Comparable a => Comparable (List a) where
-  equals Nil Nil = True
-  equals (Cons x xs) (Cons y ys) = x === y && xs === ys
-  equals _ _ = False
+  transform equals Nil Nil = True
+  transform equals (Cons x xs) (Cons y ys) = x === y && xs === ys
+  transform equals _ _ = False
+end
 
 -- Instance for Mapper
 instance Mapper List where
-  map = List.map
+  transform map f xs = List.map f xs
+end
 
 -- Instance for Applicator
 instance Applicator List where
-  pure x = [x]
-  apply fs xs = List.flat_map (\f -> map f xs) fs
+  transform pure x = [x]
+  transform apply fs xs = List.flat_map (\f -> map f xs) fs
+end
 
 -- Instance for Pipeline (Monad)
 instance Pipeline Maybe where
-  pure = Some
-  apply = match
+  transform pure x = Some x
+  transform apply mf mx = match mf, mx
     | None, _ -> None
     | _, None -> None
     | Some f, Some x -> Some (f x)
-  chain f = match
+  end
+  transform chain f mx = match mx
     | None -> None
     | Some x -> f x
+  end
+end
 
 -- Instance for Extractor (Comonad)
 instance Extractor NonEmptyList where
-  extract (NEL x _) = x
-  extend f w@(NEL x xs) = NEL (f w) (extend_list f xs x [])
+  transform extract (NEL x _) = x
+  transform extend f w@(NEL x xs) = NEL (f w) (extend_list f xs x [])
+end
 ```
 
 ### 5. Systems (Categories/Modules)

@@ -1,0 +1,28 @@
+-- Error Effect
+-- Error handling as an algebraic effect
+
+module Effect.Error
+
+export effect Error
+
+-- Error Effect declaration
+-- Parameterized by the error type e
+effect Error e {
+  operation raise : e -> a
+  operation catch : (Unit -> a / {Error e}) -> (e -> a / {Error e}) -> a
+}
+
+-- Example usage:
+--
+-- transform divide : Natural -> Natural -> Natural / {Error String}
+-- transform divide x y = match y
+--   | 0 -> perform Error.raise "Division by zero"
+--   | _ -> x / y
+-- end
+--
+-- transform safeDivide : Natural -> Natural -> Result Natural String
+-- transform safeDivide x y =
+--   handle divide x y
+--     | Error.raise e resume -> Err e
+--     | return v -> Ok v
+--   end

@@ -31,13 +31,13 @@ This feature reduces the Catena language from 26+ keywords to a minimal core of 
 ### Parser Updates (`src/compiler/parser/catena_parser.yrl`)
 
 1. **Trait Declaration Syntax**
-   - Uses `{ }` braces instead of `where...end`
+   - Uses `where...end` syntax for consistency
    - Uses `:` instead of `extends` for inheritance
-   - Example: `trait Orderable a : Comparable a { ... }`
+   - Example: `trait Orderable a : Comparable a where ... end`
 
 2. **Instance Declaration Syntax**
-   - Retains `where...end` syntax for clarity
-   - Example: `instance Mapper List where ... end`
+   - Uses `where...end` syntax with `transform` for methods
+   - Example: `instance Mapper List where transform map f xs = ... end`
 
 3. **Effect Handling**
    - Uses `handle expr { handlers }` instead of `try expr with handlers end`
@@ -78,13 +78,17 @@ Created `lib/catena/stdlib/` with:
 4. **`effect/state.catena`** - State effect:
    - `get`, `put`, `modify`
 
+5. **`effect/error.catena`** - Error effect:
+   - `raise`, `catch`
+
 ### Language Specification Updates
 
 Updated `notes/research/language_overview.md`:
-- Documented 12 core keywords
+- Documented 12 core keywords with examples
 - Listed syntax keywords
 - Explained removed keywords and their replacements
-- Updated trait syntax examples to use `:` inheritance
+- Updated all trait examples to use `where...end` syntax
+- Updated all instance examples to use `transform` and `end`
 
 ## Benefits
 
@@ -95,9 +99,9 @@ Updated `notes/research/language_overview.md`:
 
 ## Test Status
 
-- Lexer tests: 92/95 passing
-- Parser tests: Most passing, some need syntax updates
-- Pre-existing failures unrelated to this feature
+- Lexer tests: Passing
+- Parser trait tests: 41/41 passing
+- Pre-existing type system test failures unrelated to this feature
 
 ## Files Changed
 
@@ -111,6 +115,7 @@ Updated `notes/research/language_overview.md`:
 - `lib/catena/stdlib/test.catena` (new)
 - `lib/catena/stdlib/effect/io.catena` (new)
 - `lib/catena/stdlib/effect/state.catena` (new)
+- `lib/catena/stdlib/effect/error.catena` (new)
 
 ## Branch
 
@@ -118,8 +123,8 @@ Updated `notes/research/language_overview.md`:
 
 ## Future Work
 
-1. Update remaining parser tests for new syntax
-2. Implement `if/then/else` desugaring
-3. Implement `do` notation desugaring
-4. Add more standard library modules
-5. Complete actor/process syntax support
+1. Implement `if/then/else` desugaring to `match`
+2. Implement `do` notation desugaring to `>>=`
+3. Add more standard library modules (data types, utilities)
+4. Complete actor/process syntax support
+5. Add attribute support for `@doc`, `@operator`

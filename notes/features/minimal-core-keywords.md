@@ -133,24 +133,24 @@ lib/catena/stdlib/
 - [x] Update effect handling to use `handle`
 - [ ] Add attribute support for `@doc`, `@operator` (deferred to future work)
 
-### Step 3: Create Standard Library Structure ⬜
-- [ ] Create stdlib directory structure
-- [ ] Write prelude.catena with core traits
-- [ ] Write test.catena with testing framework
-- [ ] Write effect modules
+### Step 3: Create Standard Library Structure ✅
+- [x] Create stdlib directory structure
+- [x] Write prelude.catena with core traits (updated to use `where...end` syntax)
+- [x] Write test.catena with testing framework
+- [x] Write effect modules (io, state, error)
 
-### Step 4: Update Language Specification ⬜
-- [ ] Update notes/research/language_overview.md
-- [ ] Update keyword table
-- [ ] Update examples
+### Step 4: Update Language Specification ✅
+- [x] Update notes/research/language_overview.md
+- [x] Update keyword table
+- [x] Update examples
 
 ### Step 5: Update Tests ✅
 - [x] Adapt lexer tests for new keywords
 - [x] Adapt parser tests for new syntax (trait/instance syntax using `where...end`)
 - [ ] Add stdlib tests (deferred until stdlib implemented)
 
-### Step 6: Documentation ⬜
-- [ ] Write summary document
+### Step 6: Documentation ✅
+- [x] Write summary document
 - [ ] Request commit permission
 
 ---
@@ -163,10 +163,12 @@ lib/catena/stdlib/
 - Lexer updated with 12 core keywords
 - Parser updated with simplified trait syntax (`:` for inheritance, `where...end` for body)
 - Parser tests updated and passing (41/41 trait tests)
+- Standard library created with prelude, test, and effect modules
+- Language specification updated with new syntax examples
 
 ### What's Next
-- Create standard library structure
-- Update language specification documentation
+- Write summary document
+- Request commit permission to merge to main
 
 ### How to Run
 ```bash
