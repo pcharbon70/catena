@@ -1,0 +1,26 @@
+-- IO Effect
+-- Standard input/output operations as algebraic effects
+
+module Effect.IO
+
+export effect IO
+
+-- IO Effect declaration
+effect IO {
+  operation print : String -> Unit
+  operation println : String -> Unit
+  operation readLine : Unit -> String
+  operation readFile : String -> String
+  operation writeFile : String -> String -> Unit
+}
+
+-- Example usage:
+--
+-- transform greet : String -> Unit / {IO}
+-- transform greet name =
+--   perform IO.println ("Hello, " ++ name ++ "!")
+--
+-- transform main : Unit -> Unit / {IO}
+-- transform main () =
+--   let name = perform IO.readLine ()
+--   greet name

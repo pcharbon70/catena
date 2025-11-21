@@ -1,0 +1,30 @@
+-- State Effect
+-- Mutable state as an algebraic effect
+
+module Effect.State
+
+export effect State
+
+-- State Effect declaration
+-- Parameterized by the state type s
+effect State s {
+  operation get : Unit -> s
+  operation put : s -> Unit
+  operation modify : (s -> s) -> Unit
+}
+
+-- Example usage:
+--
+-- transform counter : Unit -> Natural / {State Natural}
+-- transform counter () =
+--   let current = perform State.get ()
+--   perform State.put (current + 1)
+--   current
+--
+-- transform runWithState : s -> (Unit -> a / {State s}) -> (a, s)
+-- transform runWithState initial computation =
+--   handle computation ()
+--     | State.get () resume -> resume initial
+--     | State.put newState resume -> resume ()
+--     | State.modify f resume -> resume ()
+--   end

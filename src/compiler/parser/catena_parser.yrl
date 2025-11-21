@@ -47,13 +47,17 @@ Nonterminals
 %%============================================================================
 
 Terminals
-  %% Keywords
-  type transform match where 'let' 'in' 'do' 'end'
-  'if' 'then' 'else' 'case' 'of' 'when'
-  module import export exports as qualified private
-  trait instance extends forall
-  actor supervisor
-  effect operation perform 'try' with
+  %% Core Keywords (12 keywords requiring compiler support)
+  type transform match 'let' 'in' 'end'
+  trait instance where
+  effect operation perform handle
+  actor process module
+
+  %% Syntax Keywords (supplementary keywords)
+  'case' 'of' 'when' as forall
+
+  %% Module Keywords
+  import export exports qualified private
 
   %% Operators
   pipe_right arrow double_arrow
@@ -292,8 +296,9 @@ effect_operation -> operation lower_ident colon type_expr :
 %% Trait Declarations (Type Classes)
 %%----------------------------------------------------------------------------
 
-%% Consolidated trait declaration with optional extends and default methods
-trait_decl -> trait upper_ident type_params maybe_trait_extends where trait_methods maybe_default_methods 'end' :
+%% Consolidated trait declaration with optional inheritance and default methods
+%% Uses colon syntax: trait Orderable a : Comparable a where ...
+trait_decl -> trait upper_ident type_params maybe_trait_extends lbrace trait_methods maybe_default_methods rbrace :
     {trait_decl,
         extract_atom('$2'),
         '$3',
@@ -306,8 +311,8 @@ trait_decl -> trait upper_ident type_params maybe_trait_extends where trait_meth
 trait_decl -> trait error :
     make_error_declaration(extract_location('$1'), "Incomplete trait declaration", '$2').
 
-%% Optional trait extends clause
-maybe_trait_extends -> extends trait_extends_list : '$2'.
+%% Optional trait extends clause using colon syntax
+maybe_trait_extends -> colon trait_extends_list : '$2'.
 maybe_trait_extends -> '$empty' : undefined.
 
 %% Optional default methods
@@ -675,8 +680,7 @@ expr_primary -> 'let' lower_ident equals expr 'in' expr :
         '$6',
         extract_location('$1')}.
 
-expr_primary -> 'if' expr 'then' expr 'else' expr :
-    {if_expr, '$2', '$4', '$6', extract_location('$1')}.
+%% Note: if/then/else removed - use match on Bool in library code
 
 expr_primary -> perform_expr : '$1'.
 
@@ -741,9 +745,9 @@ perform_expr -> perform upper_ident dot lower_ident lparen expr_list_opt rparen 
         '$6',
         extract_location('$1')}.
 
-%% Try-with expression: try { expr } with handlers end
-try_with_expr -> 'try' expr with handler_clauses 'end' :
-    {try_with_expr,
+%% Handle expression: handle expr { handlers }
+try_with_expr -> handle expr lbrace handler_clauses rbrace :
+    {handle_expr,
         '$2',
         '$4',
         extract_location('$1')}.

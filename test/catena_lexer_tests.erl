@@ -9,47 +9,69 @@
 %% Converts [{Type, Line}, ...] or [{Type, Line, Value}, ...] to [Type, ...]
 -spec token_types([tuple()]) -> [atom()].
 token_types(Tokens) ->
-    [Type || {Type, _Line} <- Tokens].
+    lists:map(fun
+        ({Type, _Line}) -> Type;
+        ({Type, _Line, _Value}) -> Type
+    end, Tokens).
 
 %%====================================================================
 %% Test 1.1.1.1: Keywords, Operators, and Delimiters
 %%====================================================================
 
-keywords_test() ->
-    %% Test all Catena keywords
-    {ok, Tokens} = catena_lexer:tokenize("type transform match where let in do end"),
+core_keywords_test() ->
+    %% Test 12 core Catena keywords requiring compiler support
+    {ok, Tokens} = catena_lexer:tokenize("type transform let match trait instance effect perform handle actor process module"),
     ?assertEqual([
         {type, 1},
         {transform, 1},
-        {match, 1},
-        {where, 1},
         {'let', 1},
-        {'in', 1},
-        {'do', 1},
-        {'end', 1}
+        {match, 1},
+        {trait, 1},
+        {instance, 1},
+        {effect, 1},
+        {perform, 1},
+        {handle, 1},
+        {actor, 1},
+        {process, 1},
+        {'module', 1}
     ], Tokens).
 
-all_keywords_test() ->
-    %% Test comprehensive keyword list
-    Input = "type transform match where let in do end if then else case of when "
-            "module import export exports as qualified private trait instance forall actor supervisor",
+syntax_keywords_test() ->
+    %% Test syntax support keywords
+    Input = "in end case of when as forall operation",
     {ok, Tokens} = catena_lexer:tokenize(Input),
-    Expected = [type, transform, match, where, 'let', 'in', 'do', 'end', 'if', 'then', 'else',
-                'case', 'of', 'when', 'module', 'import', 'export', exports, as, qualified,
-                private, trait, instance, forall, actor, supervisor],
+    Expected = ['in', 'end', 'case', 'of', 'when', as, forall, operation],
     ?assertEqual(Expected, token_types(Tokens)).
 
-effect_keywords_test() ->
-    %% Test effect system keywords (Task 1.1.5)
-    Input = "effect operation perform try with",
+module_keywords_test() ->
+    %% Test module system keywords
+    Input = "import export exports qualified private",
     {ok, Tokens} = catena_lexer:tokenize(Input),
-    Expected = [effect, operation, perform, 'try', with],
+    Expected = ['import', 'export', exports, qualified, private],
     ?assertEqual(Expected, token_types(Tokens)).
+
+all_keywords_test() ->
+    %% Test comprehensive keyword list (minimal core)
+    Input = "type transform let match trait instance effect perform handle actor process module "
+            "in end case of when as forall operation import export exports qualified private",
+    {ok, Tokens} = catena_lexer:tokenize(Input),
+    Expected = [type, transform, 'let', match, trait, instance, effect, perform, handle, actor, process, 'module',
+                'in', 'end', 'case', 'of', 'when', as, forall, operation, 'import', 'export', exports, qualified, private],
+    ?assertEqual(Expected, token_types(Tokens)).
+
+removed_keywords_are_identifiers_test() ->
+    %% Test that removed keywords are now recognized as identifiers
+    Input = "do if then else where extends try with supervisor",
+    {ok, Tokens} = catena_lexer:tokenize(Input),
+    %% All should be lower_ident now, not keywords
+    Types = token_types(Tokens),
+    ?assertEqual([lower_ident, lower_ident, lower_ident, lower_ident, lower_ident,
+                  lower_ident, lower_ident, lower_ident, lower_ident], Types).
 
 operators_two_char_test() ->
-    %% Test two-character operators
-    {ok, Tokens} = catena_lexer:tokenize("|> >>= -> => <> == /= <= >= || && :: <- .."),
-    Expected = [pipe_right, bind, arrow, double_arrow, concat, eq, neq, lte, gte,
+    %% Test two-character and three-character operators
+    {ok, Tokens} = catena_lexer:tokenize("|> -> => === !== == /= <= >= || && :: <- .."),
+    Expected = [pipe_right, arrow, double_arrow, setoid_eq, setoid_neq, eq, neq, lte, gte,
                 'or', 'and', cons, left_arrow, range],
     ?assertEqual(Expected, token_types(Tokens)).
 
@@ -479,37 +501,36 @@ shape_definition_test() ->
     ], Tokens).
 
 composition_operators_test() ->
-    Code = "validate |> transform >>= persist",
+    Code = "validate |> process |> persist",
     {ok, Tokens} = catena_lexer:tokenize(Code),
     ?assertMatch([
         {lower_ident, 1, "validate"},
         {pipe_right, 1},
-        {lower_ident, 1, "transform"},
-        {bind, 1},
+        {process, 1},
+        {pipe_right, 1},
         {lower_ident, 1, "persist"}
     ], Tokens).
 
 effect_syntax_test() ->
     %% Test effect declaration syntax (Task 1.1.5)
+    %% Note: try/with replaced by handle keyword
     Code = "effect FileIO\n"
            "  operation readFile\n"
            "end\n"
            "transform loadConfig = perform FileIO readFile\n"
-           "try\n"
+           "handle\n"
            "  loadConfig\n"
-           "with FileIO",
+           "end",
     {ok, Tokens} = catena_lexer:tokenize(Code),
     %% Verify effect keywords are recognized
     EffectCount = length([T || T = {effect, _} <- Tokens]),
     OperationCount = length([T || T = {operation, _} <- Tokens]),
     PerformCount = length([T || T = {perform, _} <- Tokens]),
-    TryCount = length([T || T = {'try', _} <- Tokens]),
-    WithCount = length([T || T = {with, _} <- Tokens]),
+    HandleCount = length([T || T = {handle, _} <- Tokens]),
     ?assertEqual(1, EffectCount),
     ?assertEqual(1, OperationCount),
     ?assertEqual(1, PerformCount),
-    ?assertEqual(1, TryCount),
-    ?assertEqual(1, WithCount).
+    ?assertEqual(1, HandleCount).
 
 identifiers_test() ->
     %% Test lowercase and uppercase identifiers

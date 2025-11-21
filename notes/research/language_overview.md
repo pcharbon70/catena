@@ -2,27 +2,46 @@
 
 ## Language Keywords
 
+### Core Keywords (12 keywords requiring compiler support)
+
 | Keyword | Purpose | Example |
 |---------|---------|---------|
 | **type** | Define data types | `type User = {name: Text, age: Natural}` |
 | **transform** | Define pure functions | `transform greet : User -> Text` |
-| **system** | Define modules/categories | `system Collections = {...}` |
-| **trait** | Define type classes | `trait Mapper f where ...` |
-| **instance** | Implement traits | `instance Mapper List where ...` |
-| **extends** | Trait inheritance | `trait Pipeline m extends Applicator m` |
-| **effect** | Define algebraic effects | `effect FileIO = {...}` |
+| **let** | Local bindings | `let x = 5 in x + 1` |
+| **match** | Pattern matching | `match x \| Some v -> v \| None -> 0` |
+| **trait** | Define type classes | `trait Mapper f { ... }` |
+| **instance** | Implement traits | `instance Mapper List where ... end` |
+| **effect** | Define algebraic effects | `effect FileIO { ... } end` |
 | **perform** | Use effects | `perform FileIO.read(path)` |
-| **handle...with** | Handle effects | `handle expr with FileIO.read(p) -> ...` |
+| **handle** | Handle effects | `handle expr { ... }` |
 | **actor** | Define actors | `actor Counter = {...}` |
 | **process** | Actor message handlers | `process handle : Message -> State -> ...` |
-| **adapter** | Natural transformations | `adapter listToMaybe : List ~> Maybe` |
-| **laws** | Define trait laws | `laws Pipeline m where ...` |
-| **test** | Define tests | `test "example" = ...` |
-| **property** | Property-based tests | `property "commutative" = ...` |
-| **doc** | Documentation | `doc "Description of function"` |
-| **match** | Pattern matching | `match x | Some v -> v | None -> 0` |
-| **do** | Monadic notation | `do { x <- action; return x }` |
-| **operator** | Define operators | `operator (===) = equals` |
+| **module** | Define modules | `module Collections` |
+
+### Syntax Keywords
+
+| Keyword | Purpose | Example |
+|---------|---------|---------|
+| **in** | let expression body | `let x = 5 in x + 1` |
+| **end** | Block terminator | `instance ... end`, `match ... end` |
+| **where** | Instance body | `instance Trait Type where ... end` |
+| **when** | Guards | `transform f x when x > 0 = ...` |
+| **as** | Pattern alias | `match list \| (h :: t) as whole -> ...` |
+| **forall** | Explicit polymorphism | `forall a. a -> a` |
+| **operation** | Effect operations | `operation read : String -> String` |
+
+### Removed Keywords (Library or Desugaring)
+
+The following keywords have been removed from the core language:
+
+- **do** - Desugar to `>>=` (Pipeline bind)
+- **if/then/else** - Desugar to `match` on Bool
+- **extends** - Use `:` syntax in trait definition
+- **try/with** - Replaced by `handle` keyword
+- **supervisor** - Library convention
+- **test/property** - Use `Test` module from stdlib
+- **laws** - Define in documentation or separate verification
 
 ## Introduction
 
@@ -102,7 +121,7 @@ operator (===) = equals
 operator (!==) = not_equals
 
 -- Trait hierarchies
-trait Orderable a extends Comparable a where
+trait Orderable a : Comparable a where
   compare : a -> a -> Ordering
 
   less_than : a -> a -> Bool
@@ -113,20 +132,20 @@ trait Mapper (f : Type -> Type) where
   map : (a -> b) -> f a -> f b
 
 -- Applicator trait (Applicative Functor in category theory)
-trait Applicator (f : Type -> Type) extends Mapper f where
+trait Applicator (f : Type -> Type) : Mapper f where
   pure : a -> f a
   apply : f (a -> b) -> f a -> f b
 
 -- Chainable trait (Chain/Bind in category theory)
-trait Chainable (m : Type -> Type) extends Mapper m where
+trait Chainable (m : Type -> Type) : Mapper m where
   chain : (a -> m b) -> m a -> m b
 
 -- Pipeline trait (Monad in category theory)
-trait Pipeline (m : Type -> Type) extends Applicator m, Chainable m where
+trait Pipeline (m : Type -> Type) : Applicator m, Chainable m where
   -- Combines pure and chain from parent traits
 
 -- Extractor trait (Comonad in category theory)
-trait Extractor (w : Type -> Type) extends Mapper w where
+trait Extractor (w : Type -> Type) : Mapper w where
   extract : w a -> a
   extend : (w a -> b) -> w a -> w b
 
@@ -235,7 +254,7 @@ handle loadConfig("app.toml") with
 end
 
 -- Pipeline-based effects
-trait PipelineIO (m : Type -> Type) extends Pipeline m where
+trait PipelineIO (m : Type -> Type) : Pipeline m where
   liftIO : IO a -> m a
 ```
 
@@ -579,7 +598,7 @@ graph TB
 - **Accumulators (Monoids)**: Types with identity and combination
 
 ### Type System
-- **Trait System**: General abstraction mechanism with `trait`, `instance`, `extends`
+- **Trait System**: General abstraction mechanism with `trait`, `instance`, `:` (inheritance)
 - **Higher-Kinded Types**: Type constructors with kind annotations
 - **Type Class Constraints**: Using pragmatic names (Comparable, Mapper, Pipeline)
 - **Row Polymorphism**: Extensible records and variants

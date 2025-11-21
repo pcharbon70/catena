@@ -47,41 +47,44 @@ Rules.
 \{- : {token, {comment_start, TokenLine}}.
 -\} : {token, {comment_end, TokenLine}}.
 
-%% Keywords
+%% Core Keywords (12 keywords requiring compiler support)
 type : {token, {type, TokenLine}}.
 transform : {token, {transform, TokenLine}}.
-match : {token, {match, TokenLine}}.
-where : {token, {where, TokenLine}}.
 let : {token, {'let', TokenLine}}.
+match : {token, {match, TokenLine}}.
+trait : {token, {trait, TokenLine}}.
+instance : {token, {instance, TokenLine}}.
+effect : {token, {effect, TokenLine}}.
+perform : {token, {perform, TokenLine}}.
+handle : {token, {handle, TokenLine}}.
+actor : {token, {actor, TokenLine}}.
+process : {token, {process, TokenLine}}.
+module : {token, {'module', TokenLine}}.
+
+%% Syntax keywords (grammar support)
 in : {token, {'in', TokenLine}}.
-do : {token, {'do', TokenLine}}.
 end : {token, {'end', TokenLine}}.
-if : {token, {'if', TokenLine}}.
-then : {token, {'then', TokenLine}}.
-else : {token, {'else', TokenLine}}.
+where : {token, {where, TokenLine}}.
 case : {token, {'case', TokenLine}}.
 of : {token, {'of', TokenLine}}.
 when : {token, {'when', TokenLine}}.
-module : {token, {'module', TokenLine}}.
+as : {token, {as, TokenLine}}.
+forall : {token, {forall, TokenLine}}.
+operation : {token, {operation, TokenLine}}.
+
+%% Module system keywords
 import : {token, {'import', TokenLine}}.
 export : {token, {'export', TokenLine}}.
 exports : {token, {exports, TokenLine}}.
-as : {token, {as, TokenLine}}.
 qualified : {token, {qualified, TokenLine}}.
 private : {token, {private, TokenLine}}.
-trait : {token, {trait, TokenLine}}.
-instance : {token, {instance, TokenLine}}.
-extends : {token, {extends, TokenLine}}.
-forall : {token, {forall, TokenLine}}.
-actor : {token, {actor, TokenLine}}.
-supervisor : {token, {supervisor, TokenLine}}.
 
-%% Effect system keywords (Task 1.1.5)
-effect : {token, {effect, TokenLine}}.
-operation : {token, {operation, TokenLine}}.
-perform : {token, {perform, TokenLine}}.
-try : {token, {'try', TokenLine}}.
-with : {token, {with, TokenLine}}.
+%% Removed keywords (moved to library/desugar):
+%% - do: desugar from >>= (Pipeline bind)
+%% - if/then/else: desugar to match on Bool
+%% - extends: use : syntax in trait definition
+%% - try/with: replaced by handle keyword
+%% - supervisor: library convention
 
 %% Two-character and three-character operators (must come before single-character)
 %% Ordering is critical: longer operators must come before shorter ones
