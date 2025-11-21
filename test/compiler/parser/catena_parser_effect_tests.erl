@@ -27,7 +27,7 @@
 effect_decl_empty_test() ->
     %% Test empty effect declaration
     Code = "effect FileIO end",
-    Tokens = tokenize_source(Code),
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
@@ -39,7 +39,7 @@ effect_decl_empty_test() ->
 effect_decl_empty_with_whitespace_test() ->
     %% Test empty effect declaration with internal whitespace formatting
     Code = "effect PureEffect \n\nend",
-    Tokens = tokenize_source(Code),
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
@@ -293,7 +293,7 @@ effect_decl_single_operation_no_type_test() ->
     Code = "effect Console\n"
            "  operation print\n"
            "end",
-    Tokens = tokenize_source(Code),
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
@@ -309,7 +309,7 @@ effect_decl_single_operation_with_type_test() ->
     Code = "effect FileIO\n"
            "  operation readFile : String\n"
            "end",
-    Tokens = tokenize_source(Code),
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
@@ -327,7 +327,7 @@ effect_decl_multiple_operations_test() ->
            "  operation writeFile : String\n"
            "  operation deleteFile\n"
            "end",
-    Tokens = tokenize_source(Code),
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
@@ -346,7 +346,7 @@ effect_decl_multiple_types_test() ->
            "  operation get : Unit\n"
            "  operation put : Int\n"
            "end",
-    Tokens = tokenize_source(Code),
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
@@ -365,7 +365,7 @@ effect_decl_actual_function_type_test() ->
            "  operation map : (Int->String)\n"
            "  operation process : (String->Int)\n"
            "end",
-    Tokens = tokenize_source(Code),
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
@@ -386,7 +386,7 @@ effect_decl_actual_function_type_test() ->
 perform_expr_no_args_no_parens_test() ->
     %% Test perform expression without arguments (parentheses required in current implementation)
     Code = "transform main = perform Console.print()",
-    Tokens = tokenize_source(Code),
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
@@ -402,7 +402,7 @@ perform_expr_no_args_no_parens_test() ->
 perform_expr_no_args_with_parens_test() ->
     %% Test perform expression with empty parentheses
     Code = "transform main = perform FileIO.readFile()",
-    Tokens = tokenize_source(Code),
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
@@ -418,7 +418,7 @@ perform_expr_no_args_with_parens_test() ->
 perform_expr_single_arg_test() ->
     %% Test perform expression with single argument
     Code = "transform writeLog msg = perform FileIO.writeFile(msg)",
-    Tokens = tokenize_source(Code),
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
@@ -436,7 +436,7 @@ perform_expr_single_arg_test() ->
 perform_expr_multiple_args_test() ->
     %% Test perform expression with multiple arguments
     Code = "transform copyFile src dst = perform FileIO.copy(src, dst)",
-    Tokens = tokenize_source(Code),
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
@@ -457,21 +457,20 @@ perform_expr_multiple_args_test() ->
 %%====================================================================
 
 try_with_single_handler_single_operation_test() ->
-    %% Test try-with with single handler and single operation
+    %% Test handle with single handler and single operation
     Code = "transform safe =\n"
-           "  try\n"
-           "    perform FileIO.readFile()\n"
-           "  with FileIO {\n"
-           "    readFile -> 42\n"
-           "  }\n"
-           "  end",
-    Tokens = tokenize_source(Code),
+           "  handle (perform FileIO.readFile()) then {\n"
+           "    FileIO {\n"
+           "      readFile -> 42\n"
+           "    }\n"
+           "  }",
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
             {transform_decl, safe, undefined, [
                 {transform_clause, [], undefined,
-                    {try_with_expr,
+                    {handle_expr,
                         {perform_expr, 'FileIO', readFile, [], _},
                         [
                             {handler_clause, 'FileIO', [
@@ -488,22 +487,21 @@ try_with_single_handler_single_operation_test() ->
     ).
 
 try_with_single_handler_multiple_operations_test() ->
-    %% Test try-with with single handler and multiple operations
+    %% Test handle with single handler and multiple operations
     Code = "transform safeIO =\n"
-           "  try\n"
-           "    perform FileIO.readFile()\n"
-           "  with FileIO {\n"
-           "    readFile -> 0\n"
-           "    writeFile -> 1\n"
-           "  }\n"
-           "  end",
-    Tokens = tokenize_source(Code),
+           "  handle (perform FileIO.readFile()) then {\n"
+           "    FileIO {\n"
+           "      readFile -> 0\n"
+           "      writeFile -> 1\n"
+           "    }\n"
+           "  }",
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
             {transform_decl, safeIO, undefined, [
                 {transform_clause, [], undefined,
-                    {try_with_expr,
+                    {handle_expr,
                         {perform_expr, 'FileIO', readFile, [], _},
                         [
                             {handler_clause, 'FileIO', [
@@ -523,21 +521,20 @@ try_with_single_handler_multiple_operations_test() ->
     ).
 
 try_with_operation_with_params_test() ->
-    %% Test try-with with operation that has parameters
+    %% Test handle with operation that has parameters
     Code = "transform handleWrite =\n"
-           "  try\n"
-           "    perform FileIO.writeFile()\n"
-           "  with FileIO {\n"
-           "    writeFile(path, content) -> path\n"
-           "  }\n"
-           "  end",
-    Tokens = tokenize_source(Code),
+           "  handle (perform FileIO.writeFile()) then {\n"
+           "    FileIO {\n"
+           "      writeFile(path, content) -> path\n"
+           "    }\n"
+           "  }",
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
             {transform_decl, handleWrite, undefined, [
                 {transform_clause, [], undefined,
-                    {try_with_expr,
+                    {handle_expr,
                         {perform_expr, 'FileIO', writeFile, [], _},
                         [
                             {handler_clause, 'FileIO', [
@@ -557,24 +554,23 @@ try_with_operation_with_params_test() ->
     ).
 
 try_with_multiple_handlers_test() ->
-    %% Test try-with with multiple handlers
+    %% Test handle with multiple handlers
     Code = "transform multiEffect =\n"
-           "  try\n"
-           "    perform FileIO.readFile()\n"
-           "  with FileIO {\n"
-           "    readFile -> 0\n"
-           "  }\n"
-           "  Console {\n"
-           "    print(msg) -> msg\n"
-           "  }\n"
-           "  end",
-    Tokens = tokenize_source(Code),
+           "  handle (perform FileIO.readFile()) then {\n"
+           "    FileIO {\n"
+           "      readFile -> 0\n"
+           "    }\n"
+           "    Console {\n"
+           "      print(msg) -> msg\n"
+           "    }\n"
+           "  }",
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
             {transform_decl, multiEffect, undefined, [
                 {transform_clause, [], undefined,
-                    {try_with_expr,
+                    {handle_expr,
                         {perform_expr, 'FileIO', readFile, [], _},
                         [
                             {handler_clause, 'FileIO', [
@@ -604,7 +600,7 @@ try_with_multiple_handlers_test() ->
 effect_annotation_single_effect_test() ->
     %% Test type with single effect annotation
     Code = "transform readConfig : String / {FileIO}",
-    Tokens = tokenize_source(Code),
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
@@ -621,7 +617,7 @@ effect_annotation_single_effect_test() ->
 effect_annotation_multiple_effects_test() ->
     %% Test type with multiple effect annotations
     Code = "transform interactive : String / {FileIO, Console, Network}",
-    Tokens = tokenize_source(Code),
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
@@ -640,7 +636,7 @@ effect_annotation_multiple_effects_test() ->
 %%====================================================================
 
 integration_effect_complete_program_test() ->
-    %% Test complete program with effect declaration, perform, and try-with
+    %% Test complete program with effect declaration, perform, and handle
     Code = "effect FileIO\n"
            "  operation readFile : String\n"
            "end\n"
@@ -649,13 +645,12 @@ integration_effect_complete_program_test() ->
            "  perform FileIO.readFile()\n"
            "\n"
            "transform main =\n"
-           "  try\n"
-           "    loadConfig\n"
-           "  with FileIO {\n"
-           "    readFile -> 0\n"
-           "  }\n"
-           "  end",
-    Tokens = tokenize_source(Code),
+           "  handle loadConfig then {\n"
+           "    FileIO {\n"
+           "      readFile -> 0\n"
+           "    }\n"
+           "  }",
+    {ok, Tokens} = tokenize_source(Code),
     {ok, AST} = catena_parser:parse(Tokens),
     ?assertMatch(
         {module, undefined, [], [], [
@@ -669,7 +664,7 @@ integration_effect_complete_program_test() ->
             ], _},
             {transform_decl, main, undefined, [
                 {transform_clause, [], undefined,
-                    {try_with_expr,
+                    {handle_expr,
                         {var, loadConfig, _},
                         [
                             {handler_clause, 'FileIO', [
@@ -923,21 +918,20 @@ error_incomplete_perform_expression_test() ->
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
-%% Test incomplete try-with statement
+%% Test incomplete handle statement
 error_incomplete_try_with_test() ->
-    Code = "transform bad = try",
+    Code = "transform bad = handle",
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 
 %% Test handler with invalid operation parameters
 error_handler_invalid_params_test() ->
     Code = "transform bad =\n"
-           "  try\n"
-           "    perform Effect.op()\n"
-           "  with Effect {\n"
-           "    op(123Invalid) -> 42\n"
-           "  }\n"
-           "  end",
+           "  handle (perform Effect.op()) then {\n"
+           "    Effect {\n"
+           "      op(123Invalid) -> 42\n"
+           "    }\n"
+           "  }",
     Result = parse_and_expect_error(Code),
     assert_error_has_location(Result).
 

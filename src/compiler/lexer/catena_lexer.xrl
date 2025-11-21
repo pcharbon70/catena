@@ -64,6 +64,7 @@ module : {token, {'module', TokenLine}}.
 %% Syntax keywords (grammar support)
 in : {token, {'in', TokenLine}}.
 end : {token, {'end', TokenLine}}.
+then : {token, {then, TokenLine}}.
 where : {token, {where, TokenLine}}.
 case : {token, {'case', TokenLine}}.
 of : {token, {'of', TokenLine}}.

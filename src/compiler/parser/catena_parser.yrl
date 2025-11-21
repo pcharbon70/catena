@@ -18,6 +18,7 @@ Header
 
 Nonterminals
   catena_module
+  module_header module_decl export_decl export_list export_item
   declarations declaration
   type_decl transform_decl effect_decl trait_decl instance_decl
   type_params type_params_nonempty constructors constructor constructor_fields
@@ -47,9 +48,9 @@ Nonterminals
 %%============================================================================
 
 Terminals
-  %% Core Keywords (12 keywords requiring compiler support)
+  %% Core Keywords (13 keywords requiring compiler support)
   type transform match 'let' 'in' 'end'
-  trait instance where
+  trait instance where then
   effect operation perform handle
   actor process module
 
@@ -183,8 +184,52 @@ Left     600 dot.             %% .
 %%============================================================================
 
 %% Module structure
+catena_module -> module_header declarations :
+    {module,
+        element(2, '$1'),   %% Module name
+        element(3, '$1'),   %% Exports
+        [],                 %% Imports (future)
+        '$2',               %% Declarations
+        element(4, '$1')}.  %% Location
+
 catena_module -> declarations :
     {module, undefined, [], [], '$1', {line, 1}}.
+
+%% Module header (module declaration + optional exports)
+module_header -> module_decl :
+    {module_header, element(2, '$1'), element(3, '$1'), element(4, '$1')}.
+module_header -> module_decl export_decl :
+    {module_header, element(2, '$1'), '$2', element(4, '$1')}.
+
+%% Module declaration: module Name
+module_decl -> module upper_ident :
+    {module_decl, extract_atom('$2'), [], extract_location('$1')}.
+
+%% Dotted module name: module Effect.IO
+module_decl -> module upper_ident dot upper_ident :
+    {module_decl,
+        list_to_atom(atom_to_list(extract_atom('$2')) ++ "." ++ atom_to_list(extract_atom('$4'))),
+        [],
+        extract_location('$1')}.
+
+%% Export declaration
+export_decl -> export_list :
+    '$1'.
+
+export_list -> export_item :
+    ['$1'].
+export_list -> export_item export_list :
+    ['$1' | '$2'].
+
+%% Export items
+export_item -> export trait upper_ident :
+    {export_trait, extract_atom('$3')}.
+export_item -> export type upper_ident :
+    {export_type, extract_atom('$3')}.
+export_item -> export transform lower_ident :
+    {export_transform, extract_atom('$3')}.
+export_item -> export effect upper_ident :
+    {export_effect, extract_atom('$3')}.
 
 declarations -> declaration :
     ['$1'].
@@ -745,11 +790,12 @@ perform_expr -> perform upper_ident dot lower_ident lparen expr_list_opt rparen 
         '$6',
         extract_location('$1')}.
 
-%% Handle expression: handle expr { handlers }
-try_with_expr -> handle expr lbrace handler_clauses rbrace :
+%% Handle expression: handle expr then { handlers }
+%% Using 'then' keyword to separate expr from handler block
+try_with_expr -> handle expr then lbrace handler_clauses rbrace :
     {handle_expr,
         '$2',
-        '$4',
+        '$5',
         extract_location('$1')}.
 
 %% Handler clauses: Effect { operation cases }
