@@ -7,10 +7,10 @@ export effect Error
 
 -- Error Effect declaration
 -- Parameterized by the error type e
-effect Error e {
+effect Error
   operation raise : e -> a
-  operation catch : (Unit -> a / {Error e}) -> (e -> a / {Error e}) -> a
-}
+  operation catch : (Unit -> a) -> (e -> a) -> a
+end
 
 -- Example usage:
 --

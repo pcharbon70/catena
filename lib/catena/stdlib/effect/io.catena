@@ -6,13 +6,13 @@ module Effect.IO
 export effect IO
 
 -- IO Effect declaration
-effect IO {
+effect IO
   operation print : String -> Unit
   operation println : String -> Unit
   operation readLine : Unit -> String
   operation readFile : String -> String
   operation writeFile : String -> String -> Unit
-}
+end
 
 -- Example usage:
 --

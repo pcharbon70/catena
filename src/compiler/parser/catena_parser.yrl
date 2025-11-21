@@ -24,8 +24,8 @@ Nonterminals
   type_params type_params_nonempty constructors constructor constructor_fields
   effect_operations effect_operation
   trait_extends trait_extends_list trait_constraint
-  maybe_trait_extends maybe_default_methods
-  trait_methods trait_method trait_default_methods trait_default_method
+  maybe_trait_extends
+  trait_members trait_member
   instance_type_args
   instance_constraints instance_methods instance_method
   transform_signature transform_clauses transform_clause
@@ -341,15 +341,14 @@ effect_operation -> operation lower_ident colon type_expr :
 %% Trait Declarations (Type Classes)
 %%----------------------------------------------------------------------------
 
-%% Consolidated trait declaration with optional inheritance and default methods
+%% Consolidated trait declaration with optional inheritance
 %% Uses colon syntax for inheritance: trait Orderable a : Comparable a where ... end
-trait_decl -> trait upper_ident type_params maybe_trait_extends where trait_methods maybe_default_methods 'end' :
+trait_decl -> trait upper_ident type_params maybe_trait_extends where trait_members 'end' :
     {trait_decl,
         extract_atom('$2'),
         '$3',
         '$4',
         '$6',
-        '$7',
         extract_location('$1')}.
 
 %% Error recovery for incomplete trait declarations
@@ -359,10 +358,6 @@ trait_decl -> trait error :
 %% Optional trait extends clause using colon syntax
 maybe_trait_extends -> colon trait_extends_list : '$2'.
 maybe_trait_extends -> '$empty' : undefined.
-
-%% Optional default methods
-maybe_default_methods -> trait_default_methods : '$1'.
-maybe_default_methods -> '$empty' : undefined.
 
 %% Trait extends list (e.g., "Applicative m" or "Eq a, Show a")
 trait_extends_list -> trait_constraint :
@@ -375,38 +370,32 @@ trait_extends_list -> trait_constraint comma trait_extends_list :
 trait_constraint -> type_expr_app :
     extract_trait_constraint('$1').
 
-%% Trait methods (method signatures with comma separators)
-trait_methods -> trait_method :
+%% Trait members (method signatures and default implementations)
+%% Members can be separated by commas or just newlines
+trait_members -> trait_member :
     ['$1'].
-trait_methods -> trait_method comma trait_methods :
+trait_members -> trait_member comma trait_members :
     ['$1' | '$3'].
-%% Allow optional trailing comma
-trait_methods -> trait_method comma :
+trait_members -> trait_member comma :
     ['$1'].
 
-%% Trait method signature (e.g., "fmap : (a -> b) -> f a -> f b")
-trait_method -> lower_ident colon type_expr :
-    {extract_atom('$1'), '$3'}.
+%% Trait member: either a signature or a default implementation
+%% Signature: name : type
+trait_member -> lower_ident colon type_expr :
+    {trait_sig, extract_atom('$1'), '$3', extract_location('$1')}.
+
+%% Default implementation: name params = expr
+trait_member -> lower_ident pattern_list_nonempty equals expr :
+    {trait_default, extract_atom('$1'), '$2', '$4', extract_location('$1')}.
 
 %% Trait method with type parsing error
-%% We provide better error messages for common pattern issues
-trait_method -> lower_ident colon error :
-    make_error_declaration(extract_location('$2'), 
+trait_member -> lower_ident colon error :
+    make_error_declaration(extract_location('$2'),
         "Invalid method signature. " ++
         "Common issues and solutions:\n" ++
         "  • Cannot use simple tuples as parameters: '(a, b) -> ...'\n" ++
         "  • Try: 'Pair a b -> ...' or '((a -> b), c) -> ...'\n" ++
         "  • See trait signatures documentation for examples", '$3').
-
-%% Trait default methods (optional default implementations)
-trait_default_methods -> trait_default_method :
-    ['$1'].
-trait_default_methods -> trait_default_method trait_default_methods :
-    ['$1' | '$2'].
-
-%% Trait default method implementation (e.g., "fmap f x = ...")
-trait_default_method -> transform lower_ident pattern_list equals expr :
-    {extract_atom('$2'), {lambda, '$3', '$5', extract_location('$1')}}.
 
 %%----------------------------------------------------------------------------
 %% Instance Declarations (Trait Implementations)
@@ -445,17 +434,17 @@ instance_constraints -> trait_constraint comma instance_constraints :
     ['$1' | '$3'].
 
 %% Instance methods (method implementations)
+%% Methods can be separated by commas
 instance_methods -> instance_method :
     ['$1'].
-instance_methods -> instance_method instance_methods :
-    ['$1' | '$2'].
+instance_methods -> instance_method comma instance_methods :
+    ['$1' | '$3'].
+instance_methods -> instance_method comma :
+    ['$1'].
 
 %% Instance method implementation (e.g., "fmap f = match | None -> None | Some x -> Some (f x) end")
 instance_method -> transform lower_ident pattern_list equals expr :
     {extract_atom('$2'), {lambda, '$3', '$5', extract_location('$1')}}.
-
-instance_method -> transform lower_ident pattern_list equals match match_clauses 'end' :
-    {extract_atom('$2'), {lambda, '$3', {match_expr, '$6', extract_location('$5')}, extract_location('$1')}}.
 
 %%----------------------------------------------------------------------------
 %% Transform Declarations (Function Definitions)
@@ -491,13 +480,6 @@ transform_decl -> transform lower_ident pattern_list 'when' guards equals expr :
         [{transform_clause, '$3', '$5', '$7', extract_location('$1')}],
         extract_location('$1')}.
 
-transform_decl -> transform lower_ident pattern_list equals match match_clauses 'end' :
-    {transform_decl,
-        extract_atom('$2'),
-        undefined,
-        [{transform_clause, '$3', undefined, {match_expr, '$6', extract_location('$5')}, extract_location('$1')}],
-        extract_location('$1')}.
-
 %% Error recovery for incomplete transform declarations
 transform_decl -> transform error equals expr :
     make_error_declaration(extract_location('$1'), "Invalid transform name", '$2').
@@ -526,13 +508,6 @@ transform_clause -> transform lower_ident pattern_list 'when' guards equals expr
         '$3',
         '$5',
         '$7',
-        extract_location('$1')}.
-
-transform_clause -> transform lower_ident pattern_list equals match match_clauses 'end' :
-    {transform_clause,
-        '$3',
-        undefined,
-        {match_expr, '$6', extract_location('$5')},
         extract_location('$1')}.
 
 %%----------------------------------------------------------------------------
@@ -730,6 +705,15 @@ expr_primary -> 'let' lower_ident equals expr 'in' expr :
 expr_primary -> perform_expr : '$1'.
 
 expr_primary -> try_with_expr : '$1'.
+
+%% Match expressions
+%% Pattern-only: match | pat -> expr | ... end
+expr_primary -> match match_clauses 'end' :
+    {match_expr, undefined, '$2', extract_location('$1')}.
+
+%% With scrutinee: match scrutinee of | pat -> expr | ... end
+expr_primary -> match expr 'of' match_clauses 'end' :
+    {match_expr, '$2', '$4', extract_location('$1')}.
 
 expr_primary -> lbracket rbracket :
     {list_expr, [], extract_location('$1')}.

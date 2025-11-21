@@ -1,0 +1,82 @@
+-- Catena Standard Library Prelude (Minimal)
+-- Demonstrates current parser capabilities
+
+module Prelude
+
+export trait Comparable
+export trait Combiner
+export trait Mapper
+
+-- Comparable: Types with equality testing
+trait Comparable a where
+  equals : a -> a -> Bool
+end
+
+-- Combiner: Types with associative binary operation
+trait Combiner a where
+  combine : a -> a -> a
+end
+
+-- Accumulator: Combiner with identity element
+trait Accumulator a : Combiner a where
+  empty : a
+end
+
+-- Mapper: Structure-preserving transformations (Functor)
+trait Mapper f where
+  map : (a -> b) -> f a -> f b
+end
+
+-- Applicator: Mapper with pure and apply (Applicative)
+trait Applicator f : Mapper f where
+  pure : a -> f a,
+  apply : f (a -> b) -> f a -> f b
+end
+
+-- Chainable: Sequential binding (Chain)
+trait Chainable m : Mapper m where
+  chain : (a -> m b) -> m a -> m b
+end
+
+-- Pipeline: Composable effectful computations (Monad)
+trait Pipeline m : Applicator m, Chainable m where
+  join : m (m a) -> m a
+end
+
+-- Core type definitions
+type Ordering = LT | EQ | GT
+
+type Maybe a = None | Some a
+
+type Either a b = Left a | Right b
+
+-- Instances for Maybe
+instance Mapper Maybe where
+  transform map f x = match
+    | None -> None
+    | Some(a) -> Some (f a)
+  end
+end
+
+instance Applicator Maybe where
+  transform pure x = Some x,
+
+  transform apply mf mx = match
+    | None -> None
+    | Some(f) -> map f mx
+  end
+end
+
+instance Chainable Maybe where
+  transform chain f x = match
+    | None -> None
+    | Some(a) -> f a
+  end
+end
+
+instance Pipeline Maybe where
+  transform join x = match
+    | None -> None
+    | Some(m) -> m
+  end
+end

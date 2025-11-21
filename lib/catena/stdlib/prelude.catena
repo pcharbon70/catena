@@ -31,10 +31,10 @@ export trait Foldable
 --   symmetry: x === y implies y === x
 --   transitivity: x === y and y === z implies x === z
 trait Comparable a where
-  equals : a -> a -> Bool
+  equals : a -> a -> Bool,
 
-  notEquals : a -> a -> Bool
-  notEquals x y = match equals x y
+  notEquals : a -> a -> Bool,
+  notEquals x y = match (equals x y) of
     | true -> false
     | false -> true
   end
@@ -46,28 +46,28 @@ end
 --   transitivity: x <= y and y <= z implies x <= z
 --   totality: x <= y or y <= x
 trait Orderable a : Comparable a where
-  compare : a -> a -> Ordering
+  compare : a -> a -> Ordering,
 
-  lessThan : a -> a -> Bool
-  lessThan x y = match compare x y
+  lessThan : a -> a -> Bool,
+  lessThan x y = match (compare x y) of
     | LT -> true
     | _ -> false
-  end
+  end,
 
-  lessOrEqual : a -> a -> Bool
-  lessOrEqual x y = match compare x y
+  lessOrEqual : a -> a -> Bool,
+  lessOrEqual x y = match (compare x y) of
     | GT -> false
     | _ -> true
-  end
+  end,
 
-  greaterThan : a -> a -> Bool
-  greaterThan x y = match compare x y
+  greaterThan : a -> a -> Bool,
+  greaterThan x y = match (compare x y) of
     | GT -> true
     | _ -> false
-  end
+  end,
 
-  greaterOrEqual : a -> a -> Bool
-  greaterOrEqual x y = match compare x y
+  greaterOrEqual : a -> a -> Bool,
+  greaterOrEqual x y = match (compare x y) of
     | LT -> false
     | _ -> true
   end
@@ -103,7 +103,7 @@ end
 --   homomorphism: apply (pure f) (pure x) === pure (f x)
 --   interchange: apply f (pure x) === apply (pure (fn g -> g x)) f
 trait Applicator f : Mapper f where
-  pure : a -> f a
+  pure : a -> f a,
   apply : f (a -> b) -> f a -> f b
 end
 
@@ -121,11 +121,11 @@ end
 --   associativity: chain g (chain f x) === chain (fn a -> chain g (f a)) x
 trait Pipeline m : Applicator m, Chainable m where
   -- Derived operations
-  join : m (m a) -> m a
-  join x = chain id x
+  join : m (m a) -> m a,
+  join x = chain id x,
 
-  sequence : List (m a) -> m (List a)
-  sequence xs = match xs
+  sequence : List (m a) -> m (List a),
+  sequence xs = match xs of
     | [] -> pure []
     | h :: t -> chain (fn x -> map (fn rest -> x :: rest) (sequence t)) h
   end
@@ -137,27 +137,24 @@ end
 --   right identity: extract (extend f x) === f x
 --   associativity: extend f (extend g x) === extend (fn w -> f (extend g w)) x
 trait Extractor w : Mapper w where
-  extract : w a -> a
-  extend : (w a -> b) -> w a -> w b
+  extract : w a -> a,
+  extend : (w a -> b) -> w a -> w b,
 
-  duplicate : w a -> w (w a)
+  duplicate : w a -> w (w a),
   duplicate x = extend id x
 end
 
 -- Foldable: Types that can be folded to a value
 trait Foldable t where
-  foldRight : (a -> b -> b) -> b -> t a -> b
+  foldRight : (a -> b -> b) -> b -> t a -> b,
   foldLeft : (b -> a -> b) -> b -> t a -> b
-
-  toList : t a -> List a
-  toList x = foldRight (fn a rest -> a :: rest) [] x
 end
 
 -- Traversable: Types that can be traversed with effects
 trait Traversable t : Mapper t, Foldable t where
-  traverse : Applicator f => (a -> f b) -> t a -> f (t b)
+  traverse : Applicator f => (a -> f b) -> t a -> f (t b),
 
-  sequenceA : Applicator f => t (f a) -> f (t a)
+  sequenceA : Applicator f => t (f a) -> f (t a),
   sequenceA x = traverse id x
 end
 

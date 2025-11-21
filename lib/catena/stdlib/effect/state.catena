@@ -7,11 +7,11 @@ export effect State
 
 -- State Effect declaration
 -- Parameterized by the state type s
-effect State s {
+effect State
   operation get : Unit -> s
   operation put : s -> Unit
   operation modify : (s -> s) -> Unit
-}
+end
 
 -- Example usage:
 --
