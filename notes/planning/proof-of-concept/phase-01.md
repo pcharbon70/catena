@@ -2,7 +2,7 @@
 
 ## Overview
 
-This phase establishes the foundational compiler infrastructure for Catena, transforming source code into executable BEAM bytecode. We build the lexer for tokenization, the parser for AST generation, the type inference engine based on Hindley-Milner with categorical extensions, and the **minimal viable algebraic effect system**. The goal is to create a robust compilation pipeline that can parse basic Catena syntax (`shape` for types, `flow` for morphisms, `effect` for side-effect declarations), perform type-and-effect checking with support for parametric polymorphism, and generate Core Erlang code that executes on the BEAM VM.
+This phase establishes the foundational compiler infrastructure for Catena, transforming source code into executable BEAM bytecode. We build the lexer for tokenization, the parser for AST generation, the type inference engine based on Hindley-Milner with categorical extensions, and the **minimal viable algebraic effect system**. The goal is to create a robust compilation pipeline that can parse basic Catena syntax (`type` for types, `transform` for morphisms, `effect` for side-effect declarations), perform type-and-effect checking with support for parametric polymorphism, and generate Core Erlang code that executes on the BEAM VM.
 
 By the end of this phase, we will have a working compiler that can take simple Catena programs with effects, infer their types and track their effects automatically, and produce valid `.beam` files. This establishes the technical foundation for all subsequent phases, including the effect system that makes Catena unique: category-theoretic purity meeting BEAM pragmatism through algebraic effects.
 
@@ -15,12 +15,12 @@ This phase runs for **6.5 weeks** and focuses on correctness over optimization, 
 ## 1.1 Lexer and Parser
 - [x] **Section 1.1 Complete**
 
-The lexer and parser form the front-end of the compiler, transforming raw Catena source code into structured Abstract Syntax Trees (ASTs). The lexer breaks input text into tokens (keywords, operators, identifiers, literals), while the parser organizes these tokens according to Catena grammar rules. We implement this using Erlang's leex (lexical analyzer generator) and yecc (LALR parser generator) tools, which provide mature, battle-tested parsing infrastructure. The parser must handle Catena's unique syntax including categorical terminology (`shape`, `flow`), composition operators (`|>`, `>>=`), and pattern matching constructs. Error recovery and helpful error messages are priorities from the start.
+The lexer and parser form the front-end of the compiler, transforming raw Catena source code into structured Abstract Syntax Trees (ASTs). The lexer breaks input text into tokens (keywords, operators, identifiers, literals), while the parser organizes these tokens according to Catena grammar rules. We implement this using Erlang's leex (lexical analyzer generator) and yecc (LALR parser generator) tools, which provide mature, battle-tested parsing infrastructure. The parser must handle Catena's unique syntax including categorical terminology (`type`, `transform`), composition operators (`|>`, `>>=`), and pattern matching constructs. Error recovery and helpful error messages are priorities from the start.
 
 ### 1.1.1 Token Recognition
 - [x] **Task 1.1.1 Complete**
 
-Token recognition involves defining lexical rules that classify input characters into meaningful tokens. We must identify keywords (`shape`, `flow`, `match`, `where`, `let`, `in`, `do`, `end`), operators (`|>`, `->`, `:`, `=`, `<>`, `>>=`), delimiters (`{`, `}`, `[`, `]`, `(`, `)`, `|`), literals (numbers, strings, atoms), and comments (single-line `--` and multi-line `{- -}`). The lexer must handle whitespace correctly, track line/column positions for error reporting, and distinguish between similar tokens (e.g., `->` vs `-`).
+Token recognition involves defining lexical rules that classify input characters into meaningful tokens. We must identify keywords (`type`, `transform`, `match`, `let`, `in`, `end`, `trait`, `instance`, `effect`, `perform`, `handle`), operators (`|>`, `->`, `:`, `=`, `<>`, `>>=`), delimiters (`{`, `}`, `[`, `]`, `(`, `)`, `|`), literals (numbers, strings, atoms), and comments (single-line `--` and multi-line `{- -}`). The lexer must handle whitespace correctly, track line/column positions for error reporting, and distinguish between similar tokens (e.g., `->` vs `-`).
 
 - [x] 1.1.1.1 Define token types and lexical rules for all Catena keywords, operators, and delimiters
 - [x] 1.1.1.2 Implement number literal recognition supporting integers, floats, and scientific notation
@@ -30,10 +30,10 @@ Token recognition involves defining lexical rules that classify input characters
 ### 1.1.2 Grammar Implementation
 - [x] **Task 1.1.2 Complete**
 
-The parser grammar defines the syntactic structure of Catena programs using production rules. We implement a context-free grammar that handles type declarations (`shape`), function definitions (`flow`), pattern matching expressions, let bindings, and composition operators. The grammar must be unambiguous and support operator precedence correctly (e.g., function application binds tighter than `|>`). We use LALR parsing with shift/reduce conflict resolution or PEG parsing with ordered choice.
+The parser grammar defines the syntactic structure of Catena programs using production rules. We implement a context-free grammar that handles type declarations (`type`), function definitions (`transform`), pattern matching expressions, let bindings, and composition operators. The grammar must be unambiguous and support operator precedence correctly (e.g., function application binds tighter than `|>`). We use LALR parsing with shift/reduce conflict resolution or PEG parsing with ordered choice.
 
-- [x] 1.1.2.1 Define grammar production rules for shape declarations with ADT constructors and record syntax
-- [x] 1.1.2.2 Define grammar production rules for flow definitions with type signatures and pattern clauses
+- [x] 1.1.2.1 Define grammar production rules for type declarations with ADT constructors and record syntax
+- [x] 1.1.2.2 Define grammar production rules for transform definitions with type signatures and pattern clauses
 - [x] 1.1.2.3 Define grammar production rules for expressions including composition, application, and let bindings
 - [x] 1.1.2.4 Define operator precedence and associativity tables ensuring correct parsing of complex expressions
 
@@ -44,7 +44,7 @@ The Abstract Syntax Tree (AST) is the internal representation of parsed Catena p
 
 - [x] 1.1.3.1 Define AST node structures for all expression types with source location metadata
 - [x] 1.1.3.2 Define AST node structures for pattern forms including guards, or-patterns, and nested patterns
-- [x] 1.1.3.3 Define AST node structures for declarations (shapes, flows, modules) with visibility annotations
+- [x] 1.1.3.3 Define AST node structures for declarations (types, transforms, modules) with visibility annotations
 - [x] 1.1.3.4 Implement AST construction functions that build structured trees from parse results
 
 ### 1.1.4 Error Recovery and Reporting
@@ -72,10 +72,10 @@ Support for algebraic effects syntax including effect declarations, effect opera
 
 Add trait system keywords and syntax to demonstrate Catena's category-theory-first approach through general abstraction mechanisms. Traits replace ad-hoc polymorphism with principled type classes that form the foundation of the standard library's category theory abstractions (Setoid, Functor, Monad, etc.).
 
-- [x] 1.1.6.1 Add `trait`, `instance`, `extends` keywords to lexer for trait system declarations
+- [x] 1.1.6.1 Add `trait`, `instance` keywords to lexer for trait system declarations (inheritance uses `:` syntax)
 - [x] 1.1.6.2 Add trait declaration grammar with method signatures and default implementations producing TraitDecl AST nodes (success: parse `trait Functor f where fmap : (a -> b) -> f a -> f b`)
 - [x] 1.1.6.3 Add instance declaration grammar with method implementations producing InstanceDecl AST nodes (success: parse `instance Functor Maybe where fmap f = match | None -> None | Some x -> Some (f x) end`)
-- [x] 1.1.6.4 Add trait hierarchy syntax with extends clauses for trait inheritance (success: parse `trait Monad m extends Applicative m where bind : m a -> (a -> m b) -> m b`)
+- [x] 1.1.6.4 Add trait hierarchy syntax with `:` for trait inheritance (success: parse `trait Monad m : Applicative m where bind : m a -> (a -> m b) -> m b end`)
 
 ### 1.1.7 Core Operators
 - [x] **Task 1.1.7 Complete**
@@ -303,101 +303,108 @@ End-to-end testing of the algebraic effect system from parsing through execution
 
 ---
 
-## 1.7 Category Theory Foundation
+## 1.7 Standard Library Validation
 - [ ] **Section 1.7 Complete**
 
-This section proves that basic categorical abstractions compile to BEAM and satisfy their laws. We implement the core traits that form Catena's mathematical foundation: Comparable (Setoid), Combiner/Accumulator (Semigroup/Monoid), Mapper (Functor), and Workflow (Monad). These abstractions demonstrate that Catena's category theory approach is real and executable, not just renamed concepts. We also implement the law verification system that ensures our implementations are mathematically correct.
+This section validates that Catena's standard library compiles to BEAM and executes correctly. The standard library (`lib/catena/stdlib/`) contains the category theory traits (Comparable, Combiner, Accumulator, Mapper, Pipeline), testing framework, and effect modules. These are written in Catena itself, demonstrating that the compiler can handle real-world code. We validate trait/instance resolution, higher-kinded types, law verification through the Test module, and do-notation desugaring.
 
-### 1.7.1 Trait Law Verification System
+**Architectural Note**: Per Catena's minimal-core design, category theory abstractions are library code, not compiler features. The compiler provides `trait`, `instance`, and `effect` keywords; the standard library builds all abstractions on top.
+
+### 1.7.1 Standard Library Compilation
 - [ ] **Task 1.7.1 Complete**
 
-Implement the `laws` keyword and property testing framework to verify category theory laws. This system ensures that trait instances actually satisfy the mathematical properties they claim to, making Catena's categorical foundation rigorous and verifiable.
+Validate that all standard library files parse, type-check, and compile to BEAM bytecode. This proves the compiler can handle real Catena code with traits, instances, and effects.
 
-- [ ] 1.7.1.1 Add `laws`, `property`, `forall`, `verify` keywords to lexer/parser for law declaration syntax producing LawsDecl, PropertyDecl, ForallExpr AST nodes
-- [ ] 1.7.1.2 Implement law checking framework integrating with PropEr for property-based testing with counterexample generation when laws fail
-- [ ] 1.7.1.3 Implement law verification runtime that can execute property tests and report violations with specific failing inputs
-- [ ] 1.7.1.4 Create test harness allowing `verify laws Mapper for List` to automatically check functor laws with random data generation
+- [ ] 1.7.1.1 Parse `lib/catena/stdlib/prelude.catena` successfully producing valid AST for all trait and instance declarations
+- [ ] 1.7.1.2 Type-check prelude.catena validating all trait method signatures and instance implementations
+- [ ] 1.7.1.3 Parse and type-check `lib/catena/stdlib/test.catena` for testing framework
+- [ ] 1.7.1.4 Parse and type-check effect modules (`effect/io.catena`, `effect/state.catena`, `effect/error.catena`)
+- [ ] 1.7.1.5 Generate Core Erlang and compile to .beam for all stdlib modules
 
-### 1.7.2 Comparable Trait (Setoid)
+### 1.7.2 Trait Instance Resolution
 - [ ] **Task 1.7.2 Complete**
 
-Implement first category theory abstraction - structural equality as Setoid. This demonstrates that traits work for simple type classes and establishes the pattern for more complex abstractions.
+Validate that trait instances resolve correctly during type checking. The prelude defines instances for Maybe, Either, List for various traits (Mapper, Applicator, Chainable, Pipeline, Comparable, etc.).
 
-- [ ] 1.7.2.1 Implement Comparable trait with `equals : a -> a -> Bool` method in core prelude module with proper module structure
-- [ ] 1.7.2.2 Implement `===` and `!==` operators in parser as syntactic sugar that desugars to Comparable.equals and Comparable.not_equals calls
-- [ ] 1.7.2.3 Implement Comparable instances for Natural, Text, Bool, List verifying reflexivity, symmetry, transitivity laws via property tests
-- [ ] 1.7.2.4 Add law definitions: `property "reflexivity" = forall x : a -> x === x` and verify all instances pass law checks
+- [ ] 1.7.2.1 Resolve Mapper instance for Maybe when type-checking `map f (Some x)`
+- [ ] 1.7.2.2 Resolve Mapper instance for List when type-checking `map f [1, 2, 3]`
+- [ ] 1.7.2.3 Resolve constrained instances like `Comparable a => Comparable (List a)` with nested resolution
+- [ ] 1.7.2.4 Detect and report missing instances with clear error messages
+- [ ] 1.7.2.5 Verify trait hierarchy resolution (Pipeline requires Applicator requires Mapper)
 
-### 1.7.3 Combiner and Accumulator Traits (Semigroup/Monoid)
+### 1.7.3 Higher-Kinded Type Validation
 - [ ] **Task 1.7.3 Complete**
 
-Implement algebraic structures proving composition works on BEAM. These traits demonstrate trait hierarchies (Accumulator extends Combiner) and are essential for fold operations throughout the standard library.
+Validate that higher-kinded types work correctly for traits like Mapper and Pipeline. These traits are parameterized by type constructors (`f : Type -> Type`), not simple types.
 
-- [ ] 1.7.3.1 Implement Combiner trait with `combine : a -> a -> a` method and `<>` operator in core prelude
-- [ ] 1.7.3.2 Implement Accumulator trait extending Combiner with `empty : a` identity element showing trait hierarchy works
-- [ ] 1.7.3.3 Implement instances for Text (concatenation), List (append), Natural (addition) with law verification
-- [ ] 1.7.3.4 Verify associativity law for Combiner `(x <> y) <> z === x <> (y <> z)` and identity laws for Accumulator via property testing
+- [ ] 1.7.3.1 Validate kind checking for `trait Mapper f where map : (a -> b) -> f a -> f b`
+- [ ] 1.7.3.2 Validate kind inference for instance declarations like `instance Mapper Maybe`
+- [ ] 1.7.3.3 Validate partially applied type constructors like `instance Mapper (Either e)`
+- [ ] 1.7.3.4 Report kind errors clearly when HKT constraints are violated
 
-### 1.7.4 Mapper Trait (Functor)
+### 1.7.4 Law Verification via Test Module
 - [ ] **Task 1.7.4 Complete**
 
-Implement first higher-kinded type class proving HKT works on BEAM. This is the most fundamental categorical abstraction and enables structure-preserving transformations across container types.
+Validate that the Test module can express and verify trait laws through property-based testing. Laws are library code using `Test.property`, not special syntax.
 
-- [ ] 1.7.4.1 Extend type system to support kind annotations: `f : Type -> Type` for type constructors in trait definitions
-- [ ] 1.7.4.2 Implement Mapper trait with `map : (a -> b) -> f a -> f b` and `<$>` operator showing HKT trait definitions work
-- [ ] 1.7.4.3 Implement Mapper instances for List, Maybe, Result demonstrating different container types with verified laws
-- [ ] 1.7.4.4 Verify functor laws: identity `map id === id` and composition `map (f . g) === map f . map g` via property testing
+- [ ] 1.7.4.1 Compile law verification code using `Test.property` for Mapper identity law
+- [ ] 1.7.4.2 Compile law verification code for Mapper composition law
+- [ ] 1.7.4.3 Compile law verification code for Pipeline monad laws (left/right identity, associativity)
+- [ ] 1.7.4.4 Execute law tests and verify they can detect both passing and failing properties
+- [ ] 1.7.4.5 Integrate with PropEr for random test case generation
 
-### 1.7.5 Workflow Trait (Monad)
+### 1.7.5 Do-Notation Desugaring
 - [ ] **Task 1.7.5 Complete**
 
-Implement monadic composition proving effectful computation works categorically. This demonstrates that effects integrate with category theory and enables do-notation for ergonomic effectful programming.
+Implement do-notation as syntactic sugar that desugars to `>>=` (bind) chains. This is a compiler transformation, not a keyword—the parser recognizes `do` blocks and transforms them during compilation.
 
-- [ ] 1.7.5.1 Implement Chainable trait with `chain : (a -> m b) -> m a -> m b` and Workflow trait extending StructuredMapper and Chainable
-- [ ] 1.7.5.2 Implement `>>=` operator for bind, `>>` for sequence, and `>=>` for Kleisli composition operators
-- [ ] 1.7.5.3 Implement Workflow instances for Maybe, List, Result showing different computational contexts with law verification
-- [ ] 1.7.5.4 Verify monad laws: left identity `pure a >>= f === f a`, right identity `ma >>= pure === ma`, associativity via property tests
+- [ ] 1.7.5.1 Parse do-block syntax: `do { x <- ma; y <- mb; pure (x + y) }`
+- [ ] 1.7.5.2 Desugar bind: `x <- ma; rest` becomes `ma >>= (fn x -> rest)`
+- [ ] 1.7.5.3 Desugar sequence: `ma; rest` becomes `ma >> rest`
+- [ ] 1.7.5.4 Desugar let in do: `let x = e; rest` becomes `let x = e in rest`
+- [ ] 1.7.5.5 Verify desugared code type-checks with correct Pipeline constraint inference
 
-### 1.7.6 EffectfulFlow Integration (Kleisli Arrows)
+### 1.7.6 Effect Integration with Kleisli Arrows
 - [ ] **Task 1.7.6 Complete**
 
-Prove effects integrate with category theory through Kleisli composition. This shows that effectful functions form a category and that effect tracking composes correctly through Kleisli arrows.
+Validate that effects integrate correctly with category theory through Kleisli composition. Effectful functions compose with effect set union.
 
-- [ ] 1.7.6.1 Define EffectfulFlow type alias for functions with effects: `type EffectfulFlow a b ε = a -> b / ε`
-- [ ] 1.7.6.2 Implement Kleisli composition `>=>` for effectful functions showing effect union: `(a -> b / ε) >=> (b -> c / δ) : a -> c / (ε ∪ δ)`
-- [ ] 1.7.6.3 Demonstrate that perform operations create EffectfulFlows and handlers transform them to pure Flows
-- [ ] 1.7.6.4 Verify Kleisli category laws: identity `pure >=> f === f` and associativity `(f >=> g) >=> h === f >=> (g >=> h)`
+- [ ] 1.7.6.1 Type-check Kleisli composition `>=>` with effect tracking: `(a -> b / ε₁) >=> (b -> c / ε₂) : a -> c / (ε₁ ∪ ε₂)`
+- [ ] 1.7.6.2 Validate that `perform` operations introduce effects into function signatures
+- [ ] 1.7.6.3 Validate that `handle` blocks remove effects from the effect set
+- [ ] 1.7.6.4 Compile and execute effectful Kleisli composition example
 
-### 1.7.7 do-Notation Implementation
+### 1.7.7 Operator Desugaring
 - [ ] **Task 1.7.7 Complete**
 
-Implement do-notation as syntactic sugar for monadic bind, proving that Workflow trait enables ergonomic effectful programming. This is essential for making effectful code readable.
+Validate that category theory operators desugar to trait method calls. Operators like `<$>`, `>>=`, `<>` are syntactic sugar for Mapper.map, Pipeline.chain, Combiner.combine.
 
-- [ ] 1.7.7.1 Add `do` keyword and indentation-based block syntax to parser producing DoExpr AST nodes
-- [ ] 1.7.7.2 Implement do-notation desugaring: `x <- ma; rest` becomes `bind ma (\x -> rest)` during compilation
-- [ ] 1.7.7.3 Support let bindings within do blocks for pure computations: `let x = expr` remains pure within monadic context
-- [ ] 1.7.7.4 Integrate do-notation with effect tracking ensuring effect sets propagate correctly through desugared bind chains
+- [ ] 1.7.7.1 Desugar `<$>` to `Mapper.map` calls during compilation
+- [ ] 1.7.7.2 Desugar `>>=` to `Chainable.chain` calls
+- [ ] 1.7.7.3 Desugar `<>` to `Combiner.combine` calls
+- [ ] 1.7.7.4 Desugar `===` and `!==` to `Comparable.equals` and derived `notEquals`
+- [ ] 1.7.7.5 Verify desugared operators resolve correct trait instances
 
 ### Unit Tests - Section 1.7
 - [ ] **Unit Tests 1.7 Complete**
-- [ ] Test law verification framework can detect both satisfied and violated laws with counterexamples
-- [ ] Test Comparable instances for Natural, Text, Bool, List all satisfy Setoid laws (reflexivity, symmetry, transitivity)
-- [ ] Test Combiner/Accumulator instances satisfy associativity and identity laws for Text, List, Natural
-- [ ] Test Mapper instances for List, Maybe, Result satisfy functor laws (identity, composition)
-- [ ] Test Workflow instances for List, Maybe, Result satisfy monad laws (left/right identity, associativity)
-- [ ] Test Kleisli composition correctly combines effect sets and preserves categorical laws
-- [ ] Test do-notation correctly desugars to bind chains and preserves effect tracking
-- [ ] Test that intentionally broken instances are caught by law verification with specific counterexamples
+- [ ] Test parsing of all stdlib files produces valid ASTs
+- [ ] Test type-checking of prelude.catena with all traits and instances
+- [ ] Test trait instance resolution for Mapper, Applicator, Pipeline on Maybe, List, Either
+- [ ] Test constrained instance resolution with nested constraints
+- [ ] Test higher-kinded type kind checking and inference
+- [ ] Test do-notation desugaring produces correct bind chains
+- [ ] Test operator desugaring resolves correct trait methods
+- [ ] Test effect tracking through Kleisli composition
 
 ### Integration Tests - Section 1.7
 - [ ] **Integration Tests 1.7 Complete**
-- [ ] Compile and execute program using Mapper trait: `map succ [1,2,3]` produces `[2,3,4]`
-- [ ] Compile and execute program using Workflow trait: `Some 5 >>= (\x -> Some (x + 1))` produces `Some 6`
-- [ ] Compile and execute program using do-notation with Maybe monad producing correct results
-- [ ] Compile and execute program using Kleisli composition of effectful functions with correct effect tracking
-- [ ] Run `verify laws Mapper for List` and confirm all functor laws pass
-- [ ] Run `verify laws Workflow for Maybe` and confirm all monad laws pass
-- [ ] Compile program with all category theory traits and verify it produces working BEAM bytecode
+- [ ] Compile and execute: `map (fn x -> x + 1) [1, 2, 3]` produces `[2, 3, 4]`
+- [ ] Compile and execute: `Some 5 >>= (fn x -> Some (x + 1))` produces `Some 6`
+- [ ] Compile and execute: `[1, 2] <> [3, 4]` produces `[1, 2, 3, 4]`
+- [ ] Compile and execute do-notation with Maybe producing correct result
+- [ ] Compile and execute law verification tests using Test.property
+- [ ] Compile and execute effectful Kleisli composition with correct effect handling
+- [ ] Load compiled stdlib modules and call exported functions from Erlang
 
 ---
 
@@ -408,14 +415,16 @@ Implement do-notation as syntactic sugar for monadic bind, proving that Workflow
 3. **Code Generation**: Generate valid Core Erlang that compiles to working .beam modules including process-based effect runtime
 4. **Integration**: Compile and run example programs (factorial, list processing, simple IO effects) producing correct outputs
 5. **Effect System**: Parse effect declarations, track effects through inference, and execute effectful programs via process-based handlers
-6. **Category Theory Foundation**:
-   - Implement and verify Comparable, Combiner, Accumulator, Mapper, and Workflow traits with law checking
-   - Higher-kinded types work for Mapper (Functor) and Workflow (Monad) traits
-   - do-notation correctly desugars to monadic bind with effect tracking
-   - All trait instances pass property-based law verification
-   - EffectfulFlows demonstrate Kleisli composition with effect union
+6. **Standard Library Validation**:
+   - Parse and type-check all stdlib files (prelude.catena, test.catena, effect modules)
+   - Trait instance resolution works for Mapper, Applicator, Pipeline on Maybe, List, Either
+   - Higher-kinded types work correctly for Mapper and Pipeline traits
+   - Do-notation desugars to `>>=` chains with correct type inference
+   - Operators (`<$>`, `>>=`, `<>`, `===`) desugar to trait method calls
+   - Law verification via Test.property compiles and executes
+   - Kleisli composition tracks effect set union correctly
 7. **Error Messages**: Provide helpful, localized error messages for syntax, type, effect, and trait errors
-8. **Test Coverage**: 85% test coverage with comprehensive unit and integration tests including effect system and category theory
+8. **Test Coverage**: 85% test coverage with comprehensive unit and integration tests including effect system and stdlib validation
 
 ## Provides Foundation
 
@@ -432,7 +441,8 @@ This phase establishes the infrastructure for:
 - Type-and-effect inference engine supporting Hindley-Milner with traits, row polymorphism, and monomorphic effect tracking
 - Process-based effect runtime leveraging BEAM processes for effect handler execution
 - Core Erlang code generator producing valid .beam modules with effect compilation
-- Builtin IO effect handler demonstrating effect system capabilities
-- Comprehensive test suite covering all compiler phases including effect system
+- Compiled standard library modules (prelude, test, effects) as .beam files
+- Do-notation and operator desugaring transformations
+- Comprehensive test suite covering all compiler phases including stdlib validation
 - Error reporting infrastructure with source locations and helpful messages for type and effect errors
 - Working compilation pipeline from source to executable bytecode with effect support

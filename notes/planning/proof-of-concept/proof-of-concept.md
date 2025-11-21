@@ -31,7 +31,7 @@ Each phase document includes:
 
 ## Executive Overview
 
-This plan outlines the development of Catena, a new category-theory-based functional programming language for the BEAM virtual machine. The proof-of-concept demonstrates Catena's core innovations: categorical abstractions (`shape` for types, `flow` for morphisms), **algebraic effects with handlers for principled side-effect management**, immutability by default, advanced pattern matching, **actor-effect unification** showing actors as effect handlers, and compilation to BEAM bytecode via Core Erlang.
+This plan outlines the development of Catena, a new category-theory-based functional programming language for the BEAM virtual machine. The proof-of-concept demonstrates Catena's core innovations: categorical abstractions (`type` for types, `transform` for morphisms), **algebraic effects with handlers for principled side-effect management**, immutability by default, advanced pattern matching, **actor-effect unification** showing actors as effect handlers, and compilation to BEAM bytecode via Core Erlang.
 
 **Key Innovation**: Algebraic effects provide a mathematically sound approach to side effects while integrating seamlessly with BEAM's process model. The PoC implements minimal viable effects (monomorphic tracking, IO/Process effects, process-based runtime) sufficient to demonstrate the core concepts, with Phase 6 completing the effect system for production use.
 
@@ -43,28 +43,28 @@ This plan outlines the development of Catena, a new category-theory-based functi
 
 **Core Syntax to Support**:
 ```catena
--- Basic shapes (objects in category theory)
-shape Point = { x: Float, y: Float }
-shape Maybe a = Some a | None
+-- Basic types (objects in category theory)
+type Point = { x: Float, y: Float }
+type Maybe a = Some a | None
 
--- Flows (morphisms between objects)  
-flow add : Natural -> Natural -> Natural
-flow add x y = x + y
+-- Transforms (morphisms between objects)
+transform add : Natural -> Natural -> Natural
+transform add x y = x + y
 
 -- Pattern matching as destructuring
-flow describe : Maybe Natural -> Text
-flow describe = match
+transform describe : Maybe Natural -> Text
+transform describe = match
   | Some n -> "Value: " <> show n
   | None -> "No value"
 end
 
 -- Composition operator
-flow process = 
-  validate |> transform |> persist
+transform process =
+  validate |> normalize |> persist
 ```
 
 **Token Categories**:
-- Keywords: `shape`, `flow`, `match`, `where`, `let`, `in`, `do`, `end`
+- Keywords: `type`, `transform`, `match`, `let`, `in`, `end`, `trait`, `instance`, `effect`, `perform`, `handle`
 - Operators: `|>`, `->`, `:`, `=`, `<>`, `>>=`
 - Delimiters: `{`, `}`, `[`, `]`, `(`, `)`, `|`
 - Literals: Numbers, Strings, Atoms (`:atom`)
@@ -83,19 +83,20 @@ flow process =
 **Type System Features**:
 ```catena
 -- Parametric polymorphism
-flow identity : forall a. a -> a
-flow identity x = x
+transform identity : forall a. a -> a
+transform identity x = x
 
 -- Type constraints (traits as categories)
-flow sort : forall a. Ord a => List a -> List a
+transform sort : forall a. Ord a => List a -> List a
 
 -- Row polymorphism (for extensible records)
-flow getName : forall ρ. {name: Text | ρ} -> Text
-flow getName record = record.name
+transform getName : forall ρ. {name: Text | ρ} -> Text
+transform getName record = record.name
 
 -- Higher-kinded types (functors)
-shape Functor f where
+trait Mapper f where
   map : forall a b. (a -> b) -> f a -> f b
+end
 ```
 
 **Type Representation**:
@@ -118,9 +119,9 @@ shape Functor f where
 **Translation Examples**:
 
 ```catena
--- Catena source (factorial.tps)
-flow factorial : Natural -> Natural
-flow factorial n = match n
+-- Catena source (factorial.catena)
+transform factorial : Natural -> Natural
+transform factorial n = match n
   | 0 -> 1
   | n -> n * factorial (n - 1)
 end
@@ -139,10 +140,10 @@ Compiles to Core Erlang:
     end
 ```
 
-**Shape Compilation**:
+**Type Compilation**:
 ```catena
 -- Algebraic data type
-shape Tree a = Leaf | Node a (Tree a) (Tree a)
+type Tree a = Leaf | Node a (Tree a) (Tree a)
 
 -- Compiles to tagged tuples
 % Leaf -> {leaf}
@@ -164,17 +165,17 @@ shape Tree a = Leaf | Node a (Tree a) (Tree a)
 catena> 1 + 1
 2 : Natural
 
-catena> flow double x = x * 2
+catena> transform double x = x * 2
 double : Natural -> Natural
 
 catena> :type double
 double : Natural -> Natural
 
-catena> :load examples/list.tps
+catena> :load examples/list.catena
 Module Examples.List loaded
 
 catena> :browse List
-shape List a = Nil | Cons a (List a)
+type List a = Nil | Cons a (List a)
   map : (a -> b) -> List a -> List b
   filter : (a -> Bool) -> List a -> List a
   fold : (b -> a -> b) -> b -> List a -> b
@@ -184,9 +185,9 @@ catena> :quit
 
 **Multi-line Input**:
 ```catena
-catena> flow fibonacci n = match n
+catena> transform fibonacci n = match n
      |   | 0 -> 0
-     |   | 1 -> 1  
+     |   | 1 -> 1
      |   | n -> fibonacci (n - 1) + fibonacci (n - 2)
      | end
 fibonacci : Natural -> Natural
@@ -200,54 +201,50 @@ fibonacci : Natural -> Natural
 
 ### 2.2 Standard Prelude
 
-**Core Library (prelude.tps)**:
+**Note**: The standard library is defined in `lib/catena/stdlib/` using Catena syntax. See `prelude.catena` for the full implementation.
+
+**Core Library Overview**:
 ```catena
 -- Category-theoretic foundation types
-shape Identity a = Identity a
+type Identity a = Identity a
 
-shape Compose f g a = Compose (f (g a))
+type Compose f g a = Compose (f (g a))
 
--- Basic algebraic data types  
-shape Bool = True | False
+-- Basic algebraic data types
+type Bool = True | False
 
-shape List a = Nil | Cons a (List a)
+type List a = Nil | Cons a (List a)
 
-shape Result a b = Ok a | Error b
+type Result a b = Ok a | Error b
 
-shape Maybe a = Some a | None
+type Maybe a = Some a | None
 
--- Functor trait (endofunctor in category of types)
-trait Functor f where
+-- Mapper trait (Functor - endofunctor in category of types)
+trait Mapper f where
   map : (a -> b) -> f a -> f b
-  
-  law identity : map id == id
-  law composition : map (f |> g) == map f |> map g
+end
 
--- Monad trait (monoid in category of endofunctors)
-trait Monad m where
-  return : a -> m a
-  bind : m a -> (a -> m b) -> m b
-  
-  law left_identity : bind (return a) f == f a
-  law right_identity : bind ma return == ma
-  law associativity : bind (bind ma f) g == bind ma (\x -> bind (f x) g)
+-- Pipeline trait (Monad - monoid in category of endofunctors)
+trait Pipeline m : Applicator m, Chainable m where
+  -- Combines pure and chain from parent traits
+end
 
 -- List operations
-flow map : (a -> b) -> List a -> List b
-flow map f = match
+transform map : (a -> b) -> List a -> List b
+transform map f = match
   | Nil -> Nil
   | Cons x xs -> Cons (f x) (map f xs)
 end
 
-flow filter : (a -> Bool) -> List a -> List a
-flow filter pred = match
+transform filter : (a -> Bool) -> List a -> List a
+transform filter pred = match
   | Nil -> Nil
   | Cons x xs when pred x -> Cons x (filter pred xs)
   | Cons _ xs -> filter pred xs
 end
 
-flow fold : (b -> a -> b) -> b -> List a -> b
-flow fold f acc = match
+transform fold : (b -> a -> b) -> b -> List a -> b
+transform fold f acc = match
   | Nil -> acc
   | Cons x xs -> fold f (f acc x) xs
 end
@@ -260,33 +257,33 @@ end
 **Pattern Matching Capabilities**:
 ```catena
 -- Guards with pattern bindings
-flow safeDivide : Natural -> Natural -> Result Natural Text
-flow safeDivide x y = match (x, y)
+transform safeDivide : Natural -> Natural -> Result Natural Text
+transform safeDivide x y = match (x, y)
   | (_, 0) -> Error "Division by zero"
   | (x, y) when x < y -> Ok 0
   | (x, y) -> Ok (x / y)
 end
 
 -- Or-patterns for multiple cases
-flow classifyNumber : Integer -> Text
-flow classifyNumber n = match n
+transform classifyNumber : Integer -> Text
+transform classifyNumber n = match n
   | 0 -> "zero"
-  | 1 | -1 -> "unit"  
+  | 1 | -1 -> "unit"
   | 2 | 3 | 5 | 7 | 11 -> "small prime"
   | n when n > 0 -> "positive"
   | _ -> "negative"
 end
 
 -- Nested patterns
-flow headOfHead : List (List a) -> Maybe a
-flow headOfHead = match
+transform headOfHead : List (List a) -> Maybe a
+transform headOfHead = match
   | Cons (Cons x _) _ -> Some x
   | _ -> None
 end
 
 -- As-patterns for naming
-flow duplicateHead : List a -> List a
-flow duplicateHead = match
+transform duplicateHead : List a -> List a
+transform duplicateHead = match
   | Cons x xs as list -> Cons x list
   | Nil -> Nil
 end
@@ -297,8 +294,8 @@ end
 **Decision Tree Generation**:
 ```catena
 -- Source patterns
-flow describe : (Bool, Bool) -> Text
-flow describe = match
+transform describe : (Bool, Bool) -> Text
+transform describe = match
   | (True, True) -> "both"
   | (True, False) -> "first"
   | (False, True) -> "second"
@@ -319,16 +316,16 @@ end
 
 ```catena
 -- Exhaustiveness warning
-flow incomplete : Maybe a -> Natural
-flow incomplete = match
+transform incomplete : Maybe a -> Natural
+transform incomplete = match
   | Some _ -> 1
   -- Warning: Pattern match is not exhaustive
   -- Missing: None
 end
 
 -- Redundancy warning
-flow redundant : Bool -> Natural
-flow redundant = match
+transform redundant : Bool -> Natural
+transform redundant = match
   | True -> 1
   | False -> 0
   | True -> 2  -- Warning: Redundant pattern
@@ -339,51 +336,52 @@ end
 
 ### 4.1 Module Structure
 
-**Module Definition (data/list.tps)**:
+**Module Definition (data/list.catena)**:
 ```catena
-module Data.List exports (List, map, filter, fold, append) where
+module Data.List
+
+export type List
+export transform map, filter, fold, append
 
 -- Private helper (not exported)
-private flow reverse_helper : List a -> List a -> List a
-private flow reverse_helper acc = match
+private transform reverse_helper : List a -> List a -> List a
+private transform reverse_helper acc = match
   | Nil -> acc
   | Cons x xs -> reverse_helper (Cons x acc) xs
 end
 
 -- Public exports
-shape List a = Nil | Cons a (List a)
+type List a = Nil | Cons a (List a)
 
-flow map : (a -> b) -> List a -> List b
-flow map f = match
+transform map : (a -> b) -> List a -> List b
+transform map f = match
   | Nil -> Nil
   | Cons x xs -> Cons (f x) (map f xs)
 end
 
-flow filter : (a -> Bool) -> List a -> List a  
-flow filter pred = match
+transform filter : (a -> Bool) -> List a -> List a
+transform filter pred = match
   | Nil -> Nil
   | Cons x xs when pred x -> Cons x (filter pred xs)
   | Cons _ xs -> filter pred xs
 end
 
-flow fold : (b -> a -> b) -> b -> List a -> b
-flow fold f acc = match
+transform fold : (b -> a -> b) -> b -> List a -> b
+transform fold f acc = match
   | Nil -> acc
   | Cons x xs -> fold f (f acc x) xs
 end
 
-flow append : List a -> List a -> List a
-flow append xs ys = match xs
+transform append : List a -> List a -> List a
+transform append xs ys = match xs
   | Nil -> ys
   | Cons x xs' -> Cons x (append xs' ys)
 end
-
-end -- module
 ```
 
 ### 4.2 Import System
 
-**Import Examples (main.tps)**:
+**Import Examples (main.catena)**:
 ```catena
 -- Qualified imports
 import qualified Data.List as L
@@ -394,15 +392,15 @@ import Data.List (List, map, filter)
 import Data.Maybe (Maybe(Some, None))
 
 -- Module usage
-flow process : List Natural -> Set.Set Natural
-flow process xs = 
-  xs 
+transform process : List Natural -> Set.Set Natural
+transform process xs =
+  xs
   |> L.filter (> 0)
   |> L.map (* 2)
   |> Set.fromList
 
-flow safe_head : List a -> Maybe a
-flow safe_head = match
+transform safe_head : List a -> Maybe a
+transform safe_head = match
   | Cons x _ -> Some x
   | Nil -> None
 end
@@ -420,37 +418,37 @@ Each Catena module compiles to a BEAM module:
 
 ### 5.1 Actor Definition Syntax
 
-**Counter Actor (actors/counter.tps)**:
+**Counter Actor (actors/counter.catena)**:
 ```catena
 actor Counter = {
   -- State type (immutable between messages)
-  shape State = { 
+  type State = {
     count: Natural,
-    history: List Natural 
+    history: List Natural
   }
-  
+
   -- Message protocol
-  shape Message = 
+  type Message =
     | Increment
-    | Decrement  
+    | Decrement
     | Get
     | Reset Natural
-  
+
   -- Initialization
-  flow init : () -> State
-  flow init () = { count: 0, history: [] }
-  
+  transform init : () -> State
+  transform init () = { count: 0, history: [] }
+
   -- Message handler (returns new state)
-  flow handle : Message -> State -> (State, Maybe Reply)
-  flow handle msg state = match msg
-    | Increment -> 
+  process handle : Message -> State -> (State, Maybe Reply)
+  process handle msg state = match msg
+    | Increment ->
         let new_count = state.count + 1
-        let new_state = state with { 
+        let new_state = state with {
           count: new_count,
-          history: new_count :: state.history 
+          history: new_count :: state.history
         }
         in (new_state, None)
-        
+
     | Decrement ->
         let new_count = state.count - 1
         let new_state = state with {
@@ -458,35 +456,31 @@ actor Counter = {
           history: new_count :: state.history
         }
         in (new_state, None)
-        
-    | Get -> 
+
+    | Get ->
         (state, Some state.count)
-        
+
     | Reset n ->
         ({ count: n, history: [n] }, None)
   end
 }
 
 -- Usage
-flow example_usage : Process Unit
-flow example_usage = do
-  counter <- spawn Counter.init()
-  counter ! Increment
-  counter ! Increment
-  result <- counter ? Get
-  IO.println("Count: " <> show result)
-end
+transform example_usage : Unit -> Unit / {IO, Process}
+transform example_usage () =
+  let counter = spawn Counter.init()
+  in perform IO.println("Count: " <> show (counter ? Get))
 ```
 
 ### 5.2 Supervision Trees
 
-**Supervisor Definition (supervisor.tps)**:
+**Supervisor Definition (supervisor.catena)**:
 ```catena
 supervisor AppSupervisor = {
   strategy: one_for_one
   max_restarts: 3
   max_seconds: 60
-  
+
   children: [
     worker(Counter, name: :counter1),
     worker(Counter, name: :counter2),
@@ -495,8 +489,8 @@ supervisor AppSupervisor = {
 }
 
 -- Child specification
-flow child_spec : ChildSpec
-flow child_spec = {
+transform child_spec : ChildSpec
+transform child_spec = {
   id: :my_worker,
   start: {MyWorker, :start_link, []},
   restart: :permanent,
@@ -533,41 +527,41 @@ The Catena compiler toolchain is implemented in Erlang, leveraging BEAM-native t
 
 ```
 catena/
+├── src/
+│   └── compiler/
+│       ├── lexer/
+│       │   └── catena_lexer.xrl    # Lexer specification
+│       ├── parser/
+│       │   └── catena_parser.yrl   # Parser grammar
+│       ├── types/
+│       │   ├── catena_types.erl    # Type representation
+│       │   ├── catena_infer.erl    # Type inference
+│       │   └── catena_constraint.erl # Constraint solving
+│       ├── codegen/
+│       │   └── catena_codegen.erl  # Core Erlang generation
+│       └── effects/
+│           └── catena_effect_runtime.erl # Effect runtime
 ├── lib/
-│   ├── compiler/
-│   │   ├── lexer.erl        # Tokenization
-│   │   ├── parser.erl       # AST generation
-│   │   ├── types.erl        # Type system
-│   │   ├── inference.erl    # Type inference
-│   │   ├── patterns.erl     # Pattern compilation
-│   │   ├── codegen.erl      # Core Erlang generation
-│   │   └── modules.erl      # Module system
-│   ├── runtime/
-│   │   ├── prelude.erl      # Runtime support
-│   │   ├── actors.erl       # Actor primitives
-│   │   └── supervisor.erl   # Supervision support
-│   └── repl/
-│       ├── repl.erl         # REPL loop
-│       ├── commands.erl     # REPL commands
-│       └── pretty.erl       # Pretty printing
-├── stdlib/
-│   ├── prelude.tps          # Standard library
-│   ├── data/
-│   │   ├── list.tps
-│   │   ├── set.tps
-│   │   └── map.tps
-│   └── control/
-│       ├── monad.tps
-│       └── functor.tps
+│   └── catena/
+│       └── stdlib/
+│           ├── prelude.catena      # Core traits and types
+│           ├── test.catena         # Testing framework
+│           └── effect/
+│               ├── io.catena       # IO effect
+│               ├── state.catena    # State effect
+│               └── error.catena    # Error effect
 ├── examples/
-│   ├── hello.tps
-│   ├── factorial.tps
-│   ├── fibonacci.tps
-│   └── counter.tps
+│   ├── hello.catena
+│   ├── factorial.catena
+│   ├── fibonacci.catena
+│   └── counter.catena
 ├── test/
 │   ├── compiler/
-│   ├── stdlib/
-│   └── integration/
+│   │   ├── lexer/
+│   │   ├── parser/
+│   │   ├── types/
+│   │   └── integration/
+│   └── stdlib/
 └── README.md
 ```
 
@@ -577,24 +571,24 @@ catena/
 
 **Lexer Tests**:
 ```catena
--- Input: test/lexer/operators.tps
-flow compose = f |> g >>= h
+-- Input: test/lexer/operators.catena
+transform compose = f |> g >>= h
 
 -- Expected tokens:
-FLOW, IDENT(compose), EQUALS, IDENT(f), PIPE_RIGHT, 
+TRANSFORM, IDENT(compose), EQUALS, IDENT(f), PIPE_RIGHT,
 IDENT(g), BIND, IDENT(h), EOF
 ```
 
 **Type Inference Tests**:
 ```catena
--- Input: test/types/polymorphism.tps
-flow identity x = x
-flow const x y = x
-flow compose f g x = f (g x)
+-- Input: test/types/polymorphism.catena
+transform identity x = x
+transform const x y = x
+transform compose f g x = f (g x)
 
 -- Expected types:
 -- identity : forall a. a -> a
--- const : forall a b. a -> b -> a  
+-- const : forall a b. a -> b -> a
 -- compose : forall a b c. (b -> c) -> (a -> b) -> a -> c
 ```
 
@@ -602,14 +596,14 @@ flow compose f g x = f (g x)
 
 **Full Compilation Test**:
 ```catena
--- test/integration/quicksort.tps
-flow quicksort : List Natural -> List Natural
-flow quicksort = match
+-- test/integration/quicksort.catena
+transform quicksort : List Natural -> List Natural
+transform quicksort = match
   | Nil -> Nil
   | Cons pivot xs ->
       let smaller = filter (< pivot) xs
       let greater = filter (>= pivot) xs
-      in append (quicksort smaller) 
+      in append (quicksort smaller)
                 (Cons pivot (quicksort greater))
 end
 
@@ -620,18 +614,18 @@ end
 
 ### Milestone 1 (Week 3): Basic Compilation
 ```catena
--- hello.tps
-flow main : Text
-flow main = "Hello, Catena!"
+-- hello.catena
+transform main : Text
+transform main = "Hello, Catena!"
 ```
-✓ Parses successfully  
-✓ Type checks  
-✓ Generates .beam file  
+✓ Parses successfully
+✓ Type checks
+✓ Generates .beam file
 ✓ Runs on BEAM VM
 
 ### Milestone 2 (Week 5): Working REPL
 ```catena
-catena> flow fib n = match n | 0 -> 0 | 1 -> 1 | n -> fib(n-1) + fib(n-2) end
+catena> transform fib n = match n | 0 -> 0 | 1 -> 1 | n -> fib(n-1) + fib(n-2) end
 fib : Natural -> Natural
 catena> fib 10
 55 : Natural
@@ -640,8 +634,8 @@ catena> fib 10
 ### Milestone 3 (Week 8): Pattern Matching
 ```catena
 -- Full pattern matching with guards, or-patterns
-flow classify : Natural -> Text
-flow classify n = match n
+transform classify : Natural -> Text
+transform classify n = match n
   | 0 -> "zero"
   | 1 | 2 | 3 -> "small"
   | n when n < 10 -> "single digit"
@@ -653,25 +647,28 @@ end
 ### Milestone 4 (Week 10): Module System
 ```catena
 -- Multi-file compilation
--- math/prime.tps
-module Math.Prime exports (isPrime, primes) where
-  flow isPrime : Natural -> Bool
-  flow primes : Natural -> List Natural
-end
+-- math/prime.catena
+module Math.Prime
+
+export transform isPrime, primes
+
+transform isPrime : Natural -> Bool
+transform primes : Natural -> List Natural
 ```
 
 ### Milestone 5 (Week 12): Actors
 ```catena
 -- Working actor with supervision
 actor Stack = {
-  shape State = List a
-  shape Message = Push a | Pop | Size
-  
-  flow handle msg state = match msg
+  type State = List a
+  type Message = Push a | Pop | Size
+
+  process handle msg state = match msg
     | Push x -> (x :: state, None)
     | Pop -> match state
         | Nil -> (Nil, Some (Error "Empty"))
         | Cons _ xs -> (xs, Some Ok)
+        end
     | Size -> (state, Some (length state))
   end
 }
