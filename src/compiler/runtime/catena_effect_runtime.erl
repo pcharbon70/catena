@@ -328,14 +328,55 @@ process_self() ->
 %%====================================================================
 
 %% Validate IO path for security
-%% Blocks: path traversal (..), null bytes, system paths
+%% Blocks: path traversal (..), null bytes, system paths, symlinks to restricted paths
 %% Allows: absolute paths to /tmp and user directories
 -spec validate_io_path(string()) -> {ok, string()} | {error, term()}.
 validate_io_path(Path) ->
     NormalizedPath = filename:absname(Path),
     case is_safe_io_path(Path, NormalizedPath) of
-        true -> {ok, NormalizedPath};
+        true ->
+            %% Also validate symlink target if path is a symlink
+            case resolve_symlinks(NormalizedPath, 10) of
+                {ok, ResolvedPath} ->
+                    case is_system_path(ResolvedPath) of
+                        true -> {error, {symlink_to_restricted_path, Path, ResolvedPath}};
+                        false -> {ok, NormalizedPath}
+                    end;
+                {error, Reason} ->
+                    {error, Reason}
+            end;
         false -> {error, {path_security_error, Path}}
+    end.
+
+%% Resolve symlinks to get final target path
+%% MaxDepth prevents infinite loops from circular symlinks
+-spec resolve_symlinks(string(), non_neg_integer()) -> {ok, string()} | {error, term()}.
+resolve_symlinks(_Path, 0) ->
+    {error, symlink_loop_detected};
+resolve_symlinks(Path, MaxDepth) ->
+    case file:read_link_info(Path) of
+        {ok, FileInfo} ->
+            case element(3, FileInfo) of  %% type field
+                symlink ->
+                    case file:read_link(Path) of
+                        {ok, Target} ->
+                            %% Resolve relative symlinks
+                            AbsTarget = case Target of
+                                [$/ | _] -> Target;
+                                _ -> filename:absname(Target, filename:dirname(Path))
+                            end,
+                            resolve_symlinks(AbsTarget, MaxDepth - 1);
+                        {error, Reason} ->
+                            {error, {symlink_read_error, Reason}}
+                    end;
+                _ ->
+                    {ok, Path}
+            end;
+        {error, enoent} ->
+            %% File doesn't exist yet (for writes), that's ok
+            {ok, Path};
+        {error, Reason} ->
+            {error, {file_info_error, Reason}}
     end.
 
 is_safe_io_path(OriginalPath, NormalizedPath) ->
