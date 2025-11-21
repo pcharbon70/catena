@@ -240,38 +240,37 @@ Effect debugging provides runtime introspection of effect execution. Effect trac
 
 ---
 
-## 6.5 Law Verification System
+## 6.5 Law Verification via Test Module
 - [ ] **Section 6.5 Complete**
 
-Implement automated law verification for category theory properties, demonstrating that Catena trait instances satisfy algebraic laws. This validates the category-theory-first approach by ensuring mathematical correctness through property-based testing. Laws are defined within trait declarations and verified automatically for all instances.
+Law verification uses the Test module from the standard library (`lib/catena/stdlib/test.catena`), not special compiler syntax. Laws are defined as property tests using `Test.property`, and verification uses the same property-based testing infrastructure as other tests. This keeps law verification as a library concern while the compiler focuses on type checking and effect tracking.
 
-### 6.5.1 Laws Syntax
-- [ ] **Task 6.9.1 Complete**
+### 6.5.1 Law Definition Patterns
+- [ ] **Task 6.5.1 Complete**
 
-Add `laws` keyword for grouping trait laws within trait declarations. Laws use property testing syntax with `forall` quantification and trait method constraints. Each law has a descriptive name and expresses a universal property that all instances must satisfy.
+Laws are defined as property tests in test files or alongside trait instances. The Test module provides `property` for defining universal properties with `forall` quantification. Law names follow conventions (e.g., `mapper_identity`, `mapper_composition`) for discoverability.
 
-- [ ] 6.5.1.1 Add `laws` keyword to lexer and parser for trait law grouping
-- [ ] 6.5.1.2 Implement law definition syntax within trait declarations producing LawDecl AST nodes
-- [ ] 6.5.1.3 Implement law storage associating laws with their traits in symbol table
-- [ ] 6.5.1.4 Implement law syntax validation checking laws use only trait methods and type variables
+- [ ] 6.5.1.1 Define law patterns using Test.property with forall quantification
+- [ ] 6.5.1.2 Create law test modules for core traits (Mapper, Chainable, Pipeline laws)
+- [ ] 6.5.1.3 Implement law naming conventions for consistency across trait instances
+- [ ] 6.5.1.4 Document law verification patterns in Test module documentation
 
-### 6.5.2 Law Verification
-- [ ] **Task 6.9.2 Complete**
+### 6.5.2 Law Verification Execution
+- [ ] **Task 6.5.2 Complete**
 
-Implement `verify laws Trait for Type` command that automatically tests all laws for a given trait instance. Verification uses property testing framework from Phase 2, generating random test cases and checking law properties hold. Failed verifications report counterexamples.
+Law verification runs as part of the normal test suite using Test module functions. The `Test.verify` function runs all property tests for a given trait instance. Failed verifications report counterexamples through the standard test reporting.
 
-- [ ] 6.5.2.1 Implement `verify laws` syntax and command for automatic law checking
-- [ ] 6.5.2.2 Implement law checking via property testing generating test cases from law forall clauses
-- [ ] 6.5.2.3 Implement law verification reporting showing pass/fail for each law with counterexamples on failure
-- [ ] 6.5.2.4 Verify Functor, Applicative, and Monad laws for all standard library instances (Maybe, List, Result)
+- [ ] 6.5.2.1 Implement Test.verify function for running law properties on trait instances
+- [ ] 6.5.2.2 Implement law checking via property testing with configurable test counts
+- [ ] 6.5.2.3 Implement counterexample reporting through Test module infrastructure
+- [ ] 6.5.2.4 Verify Mapper, Applicator, and Pipeline laws for all standard library instances
 
 ### Unit Tests - Section 6.5
 - [ ] **Unit Tests 6.5 Complete**
-- [ ] Test laws syntax parsing for trait declarations with multiple laws
-- [ ] Test law storage and retrieval from symbol table
-- [ ] Test verify laws command for Functor laws on List and Maybe
-- [ ] Test law verification reporting showing counterexamples for failing laws
-- [ ] Test law verification integration with property testing framework
+- [ ] Test law definition using Test.property with forall quantification
+- [ ] Test law verification for Mapper laws on List and Maybe
+- [ ] Test counterexample reporting for intentionally failing laws
+- [ ] Test law verification integration with Test module runner
 
 ---
 
@@ -333,14 +332,14 @@ Implement remaining advanced traits: Bifunctor (functors of two arguments), Exte
 ## 6.7 Advanced Testing
 - [ ] **Section 6.7 Complete**
 
-Complete the testing framework with advanced features deferred from Phase 2: test suites for organization, benchmarks for performance testing, custom generators for complex types, and test coverage reporting.
+Complete the testing framework with advanced features deferred from Phase 2. All testing features are library functions in the Test module (`lib/catena/stdlib/test.catena`), not compiler keywords. This includes test suite organization, benchmarks for performance testing, custom generators for complex types, and test coverage reporting.
 
-### 6.7.1 Test Suites
+### 6.7.1 Test Suite Organization
 - [ ] **Task 6.7.1 Complete**
 
-Implement `suite` keyword for organizing related tests into groups. Suites provide hierarchical test organization and enable running specific test groups.
+Test suites are organized using `Test.suite` function for grouping related tests. Suites provide hierarchical test organization and enable running specific test groups. This is a library pattern, not compiler syntax.
 
-- [ ] 6.7.1.1 Add `suite` keyword and nesting syntax to parser producing SuiteDecl AST nodes
+- [ ] 6.7.1.1 Implement Test.suite function for grouping related tests hierarchically
 - [ ] 6.7.1.2 Implement suite execution running all tests within suite recursively
 - [ ] 6.7.1.3 Implement suite filtering running specific suites by name or pattern
 - [ ] 6.7.1.4 Implement hierarchical suite reporting showing pass/fail counts per suite
@@ -348,10 +347,10 @@ Implement `suite` keyword for organizing related tests into groups. Suites provi
 ### 6.7.2 Benchmarks
 - [ ] **Task 6.7.2 Complete**
 
-Implement `benchmark` keyword for performance testing with baselines and requirements. Benchmarks measure execution time and memory usage, comparing implementations and enforcing performance requirements.
+Benchmarks use `Test.benchmark` function for performance testing with baselines and requirements. Benchmarks measure execution time and memory usage, comparing implementations and enforcing performance requirements.
 
-- [ ] 6.7.2.1 Add `benchmark` keyword with baseline and requirements syntax to parser
-- [ ] 6.7.2.2 Implement `measure` keyword marking code for performance measurement
+- [ ] 6.7.2.1 Implement Test.benchmark function with baseline and requirements configuration
+- [ ] 6.7.2.2 Implement Test.measure function marking code for performance measurement
 - [ ] 6.7.2.3 Implement benchmark execution measuring time and memory for each baseline
 - [ ] 6.7.2.4 Implement benchmark reporting comparing baselines and checking requirements
 
@@ -455,61 +454,61 @@ Tests using advanced features demonstrate full effect system capability. Impleme
 
 ---
 
-## 6.5 Category Theory Completion
-- [ ] **Section 6.5 Complete**
+## 6.10 Category Theory Completion
+- [ ] **Section 6.10 Complete**
 
-Complete the category theory library with advanced abstractions that were deferred from the proof-of-concept phases. This section finalizes Catena's mathematical foundation by implementing StructuredMapper (Applicative), Alternative, Foldable, Traversable, and optimizations that prove categorical abstractions have zero overhead on BEAM. We also establish CI-integrated law verification ensuring all library code maintains mathematical correctness.
+Complete the category theory library with advanced abstractions that were deferred from the proof-of-concept phases. This section finalizes Catena's mathematical foundation by implementing StructuredMapper (Applicative), Alternative, Foldable, Traversable, and optimizations that prove categorical abstractions have zero overhead on BEAM. We also establish CI-integrated law verification ensuring all library code maintains mathematical correctness. These traits are defined in `lib/catena/stdlib/prelude.catena` and validated by the compiler.
 
-### 6.5.1 Advanced Categorical Abstractions
-- [ ] **Task 6.5.1 Complete**
+### 6.10.1 Advanced Categorical Abstractions
+- [ ] **Task 6.10.1 Complete**
 
 Implement the remaining category theory abstractions that complete the functorial hierarchy. StructuredMapper (Applicative) sits between Mapper and Workflow providing parallel composition. Alternative provides choice and failure. Foldable enables collapsing structures. Traversable combines mapping with effects.
 
-- [ ] 6.5.1.1 Implement StructuredMapper (Applicative) trait with `pure : a -> f a` and `apply : f (a -> b) -> f a -> f b` with `<*>` operator
-- [ ] 6.5.1.2 Implement Alternative trait for choice/failure with `empty : f a` and `alt : f a -> f a -> f a` with `<|>` operator
-- [ ] 6.5.1.3 Implement Foldable trait with `foldMap : Accumulator m => (a -> m) -> t a -> m` for collapsing structures
-- [ ] 6.5.1.4 Implement Traversable trait with `traverse : StructuredMapper f => (a -> f b) -> t a -> f (t b)` for effectful traversal
-- [ ] 6.5.1.5 Verify all trait laws via property testing: applicative laws, alternative laws, foldable laws, traversable laws
-- [ ] 6.5.1.6 Implement instances for all standard types (List, Maybe, Result, Tree) with law verification
+- [ ] 6.10.1.1 Implement StructuredMapper (Applicative) trait with `pure : a -> f a` and `apply : f (a -> b) -> f a -> f b` with `<*>` operator
+- [ ] 6.10.1.2 Implement Alternative trait for choice/failure with `empty : f a` and `alt : f a -> f a -> f a` with `<|>` operator
+- [ ] 6.10.1.3 Implement Foldable trait with `foldMap : Accumulator m => (a -> m) -> t a -> m` for collapsing structures
+- [ ] 6.10.1.4 Implement Traversable trait with `traverse : StructuredMapper f => (a -> f b) -> t a -> f (t b)` for effectful traversal
+- [ ] 6.10.1.5 Verify all trait laws via property testing: applicative laws, alternative laws, foldable laws, traversable laws
+- [ ] 6.10.1.6 Implement instances for all standard types (List, Maybe, Result, Tree) with law verification
 
-### 6.5.2 Category Theory Optimizations
-- [ ] **Task 6.5.2 Complete**
+### 6.10.2 Category Theory Optimizations
+- [ ] **Task 6.10.2 Complete**
 
 Prove categorical abstractions have zero overhead on BEAM through compile-time optimizations. These optimizations demonstrate that mathematical abstractions don't sacrifice performance, making category theory practical for production use.
 
-- [ ] 6.5.2.1 Implement functor fusion: detect `map f . map g` patterns and rewrite to `map (f . g)` eliminating intermediate structures
-- [ ] 6.5.2.2 Implement bind inlining for known monads: inline Maybe/List/Result bind definitions at compile time
-- [ ] 6.5.2.3 Implement build/foldr fusion (deforestation) for list operations preventing intermediate list creation
-- [ ] 6.5.2.4 Implement rewrite rules system allowing library authors to specify optimization patterns
-- [ ] 6.5.2.5 Benchmark optimizations: verify <5% overhead vs hand-written Erlang for common patterns
-- [ ] 6.5.2.6 Generate optimization reports showing which rules fired during compilation for transparency
+- [ ] 6.10.2.1 Implement functor fusion: detect `map f . map g` patterns and rewrite to `map (f . g)` eliminating intermediate structures
+- [ ] 6.10.2.2 Implement bind inlining for known monads: inline Maybe/List/Result bind definitions at compile time
+- [ ] 6.10.2.3 Implement build/foldr fusion (deforestation) for list operations preventing intermediate list creation
+- [ ] 6.10.2.4 Implement rewrite rules system allowing library authors to specify optimization patterns
+- [ ] 6.10.2.5 Benchmark optimizations: verify <5% overhead vs hand-written Erlang for common patterns
+- [ ] 6.10.2.6 Generate optimization reports showing which rules fired during compilation for transparency
 
-### 6.5.3 Law Verification in CI
-- [ ] **Task 6.5.3 Complete**
+### 6.10.3 Law Verification in CI
+- [ ] **Task 6.10.3 Complete**
 
 Ensure all library code maintains categorical laws through continuous integration. This makes law verification a standard part of the development process, catching violations before they reach production.
 
-- [ ] 6.5.3.1 Integrate law verification into test suite running property tests for all trait instances
-- [ ] 6.5.3.2 Generate QuickCheck-style random data for all types using derive mechanisms for automatic generators
-- [ ] 6.5.3.3 Run exhaustive law verification on all instances with configurable test counts (100, 1000, 10000 tests)
-- [ ] 6.5.3.4 Create law violation dashboard showing which instances fail with counterexamples and statistics
-- [ ] 6.5.3.5 Implement law coverage metrics tracking which laws are tested for each trait instance
-- [ ] 6.5.3.6 Add CI pipeline stage that blocks merge if any law violations detected
+- [ ] 6.10.3.1 Integrate law verification into test suite running property tests for all trait instances
+- [ ] 6.10.3.2 Generate QuickCheck-style random data for all types using derive mechanisms for automatic generators
+- [ ] 6.10.3.3 Run exhaustive law verification on all instances with configurable test counts (100, 1000, 10000 tests)
+- [ ] 6.10.3.4 Create law violation dashboard showing which instances fail with counterexamples and statistics
+- [ ] 6.10.3.5 Implement law coverage metrics tracking which laws are tested for each trait instance
+- [ ] 6.10.3.6 Add CI pipeline stage that blocks merge if any law violations detected
 
-### 6.5.4 Advanced Type Classes
-- [ ] **Task 6.5.4 Complete**
+### 6.10.4 Advanced Type Classes
+- [ ] **Task 6.10.4 Complete**
 
-Implement advanced type classes that demonstrate Catena's full categorical power. These abstractions show that Catena can express sophisticated mathematical concepts while remaining practical.
+Implement advanced type classes that demonstrate Catena's full categorical power. These abstractions show that Catena can express sophisticated mathematical concepts while remaining practical. These are defined in stdlib and validated by the compiler.
 
-- [ ] 6.5.4.1 Implement Contravariant trait for contravariant functors with `contramap : (b -> a) -> f a -> f b`
-- [ ] 6.5.4.2 Implement Profunctor trait for profunctors with `dimap : (a -> b) -> (c -> d) -> p b c -> p a d`
-- [ ] 6.5.4.3 Implement Arrow trait extending Category with `arr : (a -> b) -> arr a b` and `first : arr a b -> arr (a,c) (b,c)`
-- [ ] 6.5.4.4 Implement Comonad trait (dual of Monad) with `extract : w a -> a` and `extend : (w a -> b) -> w a -> w b`
-- [ ] 6.5.4.5 Verify all advanced trait laws through property testing
-- [ ] 6.5.4.6 Provide practical examples showing real-world uses (not just academic exercises)
+- [ ] 6.10.4.1 Implement Contravariant trait for contravariant functors with `contramap : (b -> a) -> f a -> f b`
+- [ ] 6.10.4.2 Implement Profunctor trait for profunctors with `dimap : (a -> b) -> (c -> d) -> p b c -> p a d`
+- [ ] 6.10.4.3 Implement Arrow trait extending Category with `arr : (a -> b) -> arr a b` and `first : arr a b -> arr (a,c) (b,c)`
+- [ ] 6.10.4.4 Implement Comonad trait (dual of Monad) with `extract : w a -> a` and `extend : (w a -> b) -> w a -> w b`
+- [ ] 6.10.4.5 Verify all advanced trait laws through property testing
+- [ ] 6.10.4.6 Provide practical examples showing real-world uses (not just academic exercises)
 
-### Unit Tests - Section 6.5
-- [ ] **Unit Tests 6.5 Complete**
+### Unit Tests - Section 6.10
+- [ ] **Unit Tests 6.10 Complete**
 - [ ] Test StructuredMapper instances for List, Maybe, Result with applicative laws
 - [ ] Test Alternative instances with choice and failure semantics
 - [ ] Test Foldable operations producing correct reductions
@@ -519,8 +518,8 @@ Implement advanced type classes that demonstrate Catena's full categorical power
 - [ ] Test law verification catching intentional violations with counterexamples
 - [ ] Test advanced type classes (Contravariant, Profunctor, Arrow, Comonad) with instances
 
-### Integration Tests - Section 6.5
-- [ ] **Integration Tests 6.5 Complete**
+### Integration Tests - Section 6.10
+- [ ] **Integration Tests 6.10 Complete**
 - [ ] Compile parser combinator library using StructuredMapper and Alternative abstractions
 - [ ] Compile web framework using Foldable/Traversable for request processing
 - [ ] Benchmark optimized category theory code vs hand-written Erlang showing <5% overhead

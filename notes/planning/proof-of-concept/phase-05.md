@@ -80,57 +80,69 @@ Demonstrate that actors form a Workflow (Monad) for concurrent computation, prov
 
 ---
 
-## 5.2 Supervision Trees
+## 5.2 OTP Patterns as Library
 - [ ] **Section 5.2 Complete**
 
-Supervision trees provide fault tolerance through hierarchical process monitoring. Supervisors watch child processes and restart them on failure according to configurable strategies. We implement OTP supervision patterns using declarative syntax. Supervisors themselves are actors, creating recursive supervision hierarchies. The "let it crash" philosophy separates normal logic from error handling—processes fail fast, supervisors handle recovery.
+OTP behaviors (GenServer, Supervisor, GenStage, etc.) are implemented as **library patterns** built on the Process effect, not special compiler syntax. This demonstrates that Catena's primitives—algebraic effects, types, and pattern matching—are sufficient to express all OTP concepts. The standard library provides `lib/catena/stdlib/otp/` with type-safe implementations of common behaviors. The "let it crash" philosophy is enabled through Process effect operations for linking and monitoring.
 
-### 5.2.1 Supervisor Syntax
+### 5.2.1 Process Effect Foundation
 - [ ] **Task 5.2.1 Complete**
 
-Supervisor definitions specify restart strategy and child specifications. Syntax: `supervisor Name = { strategy: one_for_one, children: [...] }`. Strategies include one_for_one (restart only failed child), one_for_all (restart all children), and rest_for_one (restart failed child and those after it). Max_restarts and max_seconds limit restart frequency preventing crash loops.
+The Process effect exposes BEAM process primitives, serving as the foundation for all OTP patterns. This effect is defined in `lib/catena/stdlib/effect/process.catena` and provides spawn, send, receive, link, monitor, and process registration operations. All OTP behaviors build on these primitives.
 
-- [ ] 5.2.1.1 Implement supervisor declaration syntax with strategy and child list
-- [ ] 5.2.1.2 Implement restart strategy types (one_for_one, one_for_all, rest_for_one)
-- [ ] 5.2.1.3 Implement restart intensity limits (max_restarts, max_seconds) preventing loops
-- [ ] 5.2.1.4 Implement supervisor compilation to OTP supervisor behavior
+- [ ] 5.2.1.1 Define Process effect with spawn, spawn_link, self, send, receive operations
+- [ ] 5.2.1.2 Define Process effect with monitor, demonitor, link, unlink operations
+- [ ] 5.2.1.3 Define Process effect with register, whereis, trap_exit operations
+- [ ] 5.2.1.4 Implement Process effect runtime mapping operations to BEAM primitives
 
-### 5.2.2 Child Specifications
+### 5.2.2 GenServer Library Pattern
 - [ ] **Task 5.2.2 Complete**
 
-Child specifications describe supervised processes. Each child has an ID, start function, restart policy (permanent, transient, temporary), shutdown timeout, and type (worker or supervisor). We generate child specs from actor definitions automatically, with sensible defaults. Developers can customize child specs for specific requirements like graceful shutdown times.
+GenServer is implemented as a library pattern in `lib/catena/stdlib/otp/gen_server.catena`. It provides the familiar init/handle_call/handle_cast/handle_info pattern using types and the Process effect. Users define GenServer configurations as records and start them with library functions.
 
-- [ ] 5.2.2.1 Implement child specification syntax with ID, start function, and restart policy
-- [ ] 5.2.2.2 Implement automatic child spec generation from actor definitions
-- [ ] 5.2.2.3 Implement restart policy types (permanent, transient, temporary) with correct semantics
-- [ ] 5.2.2.4 Implement shutdown timeout configuration for graceful termination
+- [ ] 5.2.2.1 Define GenServer type with init, handle_call, handle_cast, handle_info callbacks
+- [ ] 5.2.2.2 Implement start/start_link transforms spawning GenServer process with receive loop
+- [ ] 5.2.2.3 Implement call transform for synchronous request-reply with timeout
+- [ ] 5.2.2.4 Implement cast transform for asynchronous fire-and-forget messaging
 
-### 5.2.3 Restart Strategies
+### 5.2.3 Supervisor Library Pattern
 - [ ] **Task 5.2.3 Complete**
 
-Different restart strategies suit different use cases. One-for-one restarts failed children independently—best for independent workers. One-for-all restarts all children when any fails—useful when children depend on each other. Rest-for-one restarts failed child and subsequent children—for when later children depend on earlier ones. We implement all strategies following OTP semantics exactly.
+Supervisor is implemented as a library pattern in `lib/catena/stdlib/otp/supervisor.catena`. It uses Process effect operations (spawn_link, monitor, trap_exit) to implement restart strategies. Supervisor configurations are regular Catena types, not special syntax.
 
-- [ ] 5.2.3.1 Implement one-for-one strategy restarting only failed children
-- [ ] 5.2.3.2 Implement one-for-all strategy restarting all children on any failure
-- [ ] 5.2.3.3 Implement rest-for-one strategy restarting failed child and all after it
-- [ ] 5.2.3.4 Implement simple-one-for-one strategy for dynamic child pools
+- [ ] 5.2.3.1 Define SupervisorConfig type with strategy, max_restarts, max_seconds, children
+- [ ] 5.2.3.2 Define ChildSpec type with id, start, restart policy, shutdown timeout
+- [ ] 5.2.3.3 Define RestartStrategy type (OneForOne, OneForAll, RestForOne)
+- [ ] 5.2.3.4 Implement start_supervisor transform using Process effect for monitoring and restart
 
-### 5.2.4 Supervision Tree Compilation
+### 5.2.4 Restart Strategy Implementation
 - [ ] **Task 5.2.4 Complete**
 
-Supervision trees compile to OTP supervisor behaviors with child specs. We generate init callbacks returning supervision strategy and child list. Child start functions spawn actors with correct arguments. The compilation ensures that supervision trees integrate seamlessly with existing OTP applications, allowing Catena supervisors to manage Erlang processes and vice versa.
+Restart strategies are implemented as pure functions that determine which children to restart when one fails. The supervisor loop uses pattern matching on exit messages and applies the appropriate strategy. This demonstrates that complex OTP logic can be expressed with Catena's base primitives.
 
-- [ ] 5.2.4.1 Implement supervisor behavior generation with init callback
-- [ ] 5.2.4.2 Implement child start function generation spawning actors correctly
-- [ ] 5.2.4.3 Implement supervision tree initialization handling application startup
-- [ ] 5.2.4.4 Implement hot code upgrade support for supervised processes
+- [ ] 5.2.4.1 Implement one_for_one strategy restarting only the failed child
+- [ ] 5.2.4.2 Implement one_for_all strategy restarting all children on any failure
+- [ ] 5.2.4.3 Implement rest_for_one strategy restarting failed child and subsequent children
+- [ ] 5.2.4.4 Implement restart intensity checking with time window tracking
+
+### 5.2.5 Additional OTP Patterns
+- [ ] **Task 5.2.5 Complete**
+
+The OTP library includes additional patterns demonstrating the expressiveness of Process effect primitives. GenStage provides demand-driven data flow, GenStateMachine provides state machine semantics, and Task provides simple async computation. All are library patterns, not compiler features.
+
+- [ ] 5.2.5.1 Implement GenStage library pattern with Producer/Consumer/ProducerConsumer modes
+- [ ] 5.2.5.2 Implement GenStateMachine library pattern with state-based event handling
+- [ ] 5.2.5.3 Implement Task library pattern for async computation with await
+- [ ] 5.2.5.4 Document OTP pattern usage with examples in each module
 
 ### Unit Tests - Section 5.2
 - [ ] **Unit Tests 5.2 Complete**
-- [ ] Test supervisor declaration and compilation to OTP supervisors
-- [ ] Test restart strategies (one-for-one, one-for-all, rest-for-one) with simulated failures
-- [ ] Test child specifications with different restart policies and shutdown timeouts
-- [ ] Test supervision tree compilation and integration with OTP application structure
+- [ ] Test Process effect operations (spawn, send, receive, monitor, link)
+- [ ] Test GenServer library pattern with call/cast/info messages
+- [ ] Test Supervisor library pattern with restart strategies and child management
+- [ ] Test restart intensity limits stopping supervisor after too many crashes
+- [ ] Test GenStage demand-driven data flow between producers and consumers
+- [ ] Test integration with native Erlang OTP processes
 
 ---
 
@@ -271,10 +283,14 @@ This phase completes the proof-of-concept by demonstrating:
 
 - Actor definition syntax with state types, message protocols, and effect signatures
 - Effectful message handlers with `(Message, State) -> (NewState, Reply) / {Process}` signature
-- Process primitives (spawn, send, call, link, monitor) as Process effect operations with type-and-effect safety
+- Process effect in `lib/catena/stdlib/effect/process.catena` with BEAM primitives
 - Actor-effect unification demonstrating actors as handlers for Process effect
-- Supervision tree syntax compiling to OTP supervisors
-- All OTP restart strategies (one-for-one, one-for-all, rest-for-one)
+- OTP patterns as library in `lib/catena/stdlib/otp/`:
+  - GenServer pattern for stateful servers
+  - Supervisor pattern with all restart strategies
+  - GenStage pattern for demand-driven data flow
+  - GenStateMachine pattern for state machines
+  - Task pattern for async computation
 - Communication patterns (request-reply, fire-and-forget, selective receive) with effect tracking
 - Process registration and name-based messaging
 - Complete actor system test suite including effect integration tests

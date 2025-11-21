@@ -472,30 +472,44 @@ transform example_usage () =
   in perform IO.println("Count: " <> show (counter ? Get))
 ```
 
-### 5.2 Supervision Trees
+### 5.2 OTP Patterns as Library
 
-**Supervisor Definition (supervisor.catena)**:
+**Supervisor as Library Pattern (using OTP.Supervisor)**:
 ```catena
-supervisor AppSupervisor = {
-  strategy: one_for_one
-  max_restarts: 3
-  max_seconds: 60
+import OTP.Supervisor (SupervisorConfig, ChildSpec, start_supervisor)
 
+-- Supervisor configuration as regular Catena type
+transform app_supervisor_config : SupervisorConfig
+transform app_supervisor_config = {
+  strategy: OneForOne,
+  max_restarts: 3,
+  max_seconds: 60,
   children: [
-    worker(Counter, name: :counter1),
-    worker(Counter, name: :counter2),
-    supervisor(SubSupervisor, [])
+    { id: :counter1, start: fun () -> spawn Counter.init (), restart: Permanent, shutdown: 5000 },
+    { id: :counter2, start: fun () -> spawn Counter.init (), restart: Permanent, shutdown: 5000 }
   ]
 }
 
--- Child specification
-transform child_spec : ChildSpec
-transform child_spec = {
-  id: :my_worker,
-  start: {MyWorker, :start_link, []},
-  restart: :permanent,
-  shutdown: 5000,
-  type: :worker
+-- Start supervisor using library function
+transform start_app : Pid / {Process}
+transform start_app = start_supervisor app_supervisor_config
+```
+
+**GenServer as Library Pattern (using OTP.GenServer)**:
+```catena
+import OTP.GenServer (GenServer, start, call, cast)
+
+transform counter_server : GenServer Natural CounterMsg Natural
+transform counter_server = {
+  init: fun () -> 0,
+  handle_call: fun msg state -> match msg
+    | Get -> (state, state)
+  end,
+  handle_cast: fun msg state -> match msg
+    | Increment -> state + 1
+    | Decrement -> state - 1
+  end,
+  handle_info: fun _ state -> state
 }
 ```
 
