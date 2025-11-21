@@ -46,6 +46,10 @@
 %% Effect handler timeout (5 seconds)
 -define(EFFECT_TIMEOUT, 5000).
 
+%% Default maximum allowed processes to prevent DoS
+%% Note: Erlang default limit is 262144, max is ~134 million
+-define(DEFAULT_MAX_PROCESS_COUNT, 50000).
+
 %%====================================================================
 %% Context Creation
 %%====================================================================
@@ -303,7 +307,14 @@ perform_process(Operation, _Args) ->
 
 %% Process operation implementations
 process_spawn(Fun) ->
-    spawn(fun() -> Fun() end).
+    %% Check process count to prevent DoS
+    MaxCount = application:get_env(catena, max_process_count, ?DEFAULT_MAX_PROCESS_COUNT),
+    case erlang:system_info(process_count) of
+        Count when Count >= MaxCount ->
+            erlang:error({process_limit_exceeded, Count, MaxCount});
+        _ ->
+            spawn(fun() -> Fun() end)
+    end.
 
 process_send(Pid, Msg) ->
     Pid ! Msg,
