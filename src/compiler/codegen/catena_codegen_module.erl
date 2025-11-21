@@ -49,32 +49,39 @@ generate_module(ModuleAST) ->
 
 -spec generate_module(module_ast(), gen_opts()) -> {ok, cerl:cerl()} | {error, term()}.
 generate_module({module, Name, _Exports, Decls, _Loc}, Opts) ->
-    State = catena_codegen_utils:new_state(),
+    try
+        State = catena_codegen_utils:new_state(),
 
-    %% Erase types from declarations
-    ErasedDecls = erase_types(Decls),
+        %% Erase types from declarations
+        ErasedDecls = erase_types(Decls),
 
-    %% Filter out erased declarations
-    ActiveDecls = [D || D <- ErasedDecls, D =/= erased],
+        %% Filter out erased declarations
+        ActiveDecls = [D || D <- ErasedDecls, D =/= erased],
 
-    %% Compile functions
-    {CoreFunctions, _State1} = compile_functions(ActiveDecls, State),
+        %% Compile functions
+        {CoreFunctions, _State1} = compile_functions(ActiveDecls, State),
 
-    %% Generate exports
-    Exports = generate_exports(ActiveDecls),
+        %% Generate exports
+        Exports = generate_exports(ActiveDecls),
 
-    %% Build module attributes
-    Attrs = generate_attributes(Opts),
+        %% Build module attributes
+        Attrs = generate_attributes(Opts),
 
-    %% Create Core Erlang module
-    CoreModule = cerl:c_module(
-        cerl:c_atom(Name),
-        Exports,
-        Attrs,
-        CoreFunctions
-    ),
+        %% Create Core Erlang module
+        CoreModule = cerl:c_module(
+            cerl:c_atom(Name),
+            Exports,
+            Attrs,
+            CoreFunctions
+        ),
 
-    {ok, CoreModule}.
+        {ok, CoreModule}
+    catch
+        error:Reason:_Stack ->
+            {error, {codegen_error, Reason}};
+        throw:Reason ->
+            {error, {codegen_error, Reason}}
+    end.
 
 %% Erase types from declarations
 erase_types(Decls) ->
