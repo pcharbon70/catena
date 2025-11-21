@@ -31,17 +31,75 @@
 | **forall** | Explicit polymorphism | `forall a. a -> a` |
 | **operation** | Effect operations | `operation read : String -> String` |
 
-### Removed Keywords (Library or Desugaring)
+### Desugaring and Library Features
 
-The following keywords have been removed from the core language:
+The following concepts are handled through desugaring or library code rather than dedicated keywords:
 
-- **do** - Desugar to `>>=` (Pipeline bind)
-- **if/then/else** - Desugar to `match` on Bool
-- **extends** - Use `:` syntax in trait definition
-- **try/with** - Replaced by `handle` keyword
-- **supervisor** - Library convention
-- **test/property** - Use `Test` module from stdlib
-- **laws** - Define in documentation or separate verification
+| Concept | Implementation |
+|---------|----------------|
+| **do notation** | Desugars to `>>=` (Pipeline bind) |
+| **if/then/else** | Desugars to `match` on `Bool` |
+| **trait inheritance** | Uses `:` syntax in trait definition |
+| **testing** | `Test` module from stdlib |
+| **property tests** | `Test.property` from stdlib |
+| **law verification** | Documentation or separate verification module |
+
+## Architectural Split: Compiler vs Standard Library
+
+Catena follows a minimal-core design philosophy where the compiler provides only essential features that require special support, while the standard library builds all abstractions on top.
+
+### Compiler Responsibilities
+
+The compiler handles features that cannot be implemented as library code:
+
+| Feature | Why Compiler Support Required |
+|---------|------------------------------|
+| **Type definitions** | Memory layout, constructor generation |
+| **Transform definitions** | Code generation, optimization |
+| **Pattern matching** | Exhaustiveness checking, compilation to decision trees |
+| **Trait/Instance** | Instance resolution, dictionary passing |
+| **Effect system** | Effect type tracking, handler installation |
+| **Actor model** | BEAM process creation, message routing |
+| **Module system** | Namespace management, import resolution |
+
+### Standard Library Responsibilities
+
+The standard library provides all abstractions built on compiler primitives:
+
+| Feature | Library Module | Built On |
+|---------|---------------|----------|
+| **Category theory traits** | `Prelude` | `trait`, `instance` |
+| **Testing framework** | `Test` | `transform`, `type` |
+| **IO operations** | `Effect.IO` | `effect`, `perform` |
+| **State management** | `Effect.State` | `effect`, `perform` |
+| **Error handling** | `Effect.Error` | `effect`, `perform` |
+| **Conditionals** | desugaring | `match` on `Bool` |
+| **Do notation** | desugaring | `>>=` (Pipeline bind) |
+
+### Benefits of This Split
+
+1. **Smaller core language** - Easier to learn, understand, and maintain
+2. **Evolvable abstractions** - Library can change without compiler updates
+3. **User-definable patterns** - Testing, validation defined the same way as user code
+4. **Consistent semantics** - Everything uses the same trait/instance mechanism
+5. **Formal simplicity** - Smaller formal semantics for verification
+
+### Example: Testing as Library
+
+Testing is implemented as regular library code using standard transforms:
+
+```catena
+import Test
+
+myTests = Test.suite "Math" [
+  Test.unit "addition" (fn () -> 1 + 1 === 2),
+  Test.verify "Accumulator identity" (fn () -> combine empty x === x)
+]
+
+myProps = [
+  Test.property "commutative" (fn x y -> x + y === y + x)
+]
+```
 
 ## Introduction
 
