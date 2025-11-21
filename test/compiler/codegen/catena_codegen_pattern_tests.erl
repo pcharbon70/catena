@@ -437,3 +437,177 @@ test_complex_pattern_compilation() ->
     ?assertEqual('Pair', cerl:atom_val(Tag)),
     ?assert(cerl:is_c_tuple(First)),
     ?assert(cerl:is_c_tuple(Second)).
+
+%%====================================================================
+%% Edge Case Tests
+%%====================================================================
+
+edge_case_pattern_test_() ->
+    [
+        ?_test(test_deeply_nested_constructors()),
+        ?_test(test_complex_cons_with_constructors()),
+        ?_test(test_cons_with_nested_tail()),
+        ?_test(test_large_tuple_pattern()),
+        ?_test(test_nested_as_patterns()),
+        ?_test(test_record_pattern()),
+        ?_test(test_record_pattern_with_complex_fields()),
+        ?_test(test_complex_guard_nesting()),
+        ?_test(test_mixed_pattern_types_in_clause())
+    ].
+
+%% Test deeply nested constructor (5 levels)
+test_deeply_nested_constructors() ->
+    State = new_state(),
+    %% Some(Some(Some(Some(Some(x)))))
+    Pattern = {pat_constructor, 'Some', [
+        {pat_constructor, 'Some', [
+            {pat_constructor, 'Some', [
+                {pat_constructor, 'Some', [
+                    {pat_constructor, 'Some', [{pat_var, x, loc()}], loc()}
+                ], loc()}
+            ], loc()}
+        ], loc()}
+    ], loc()},
+    {Core, _State1} = catena_codegen_pattern:compile_pattern(Pattern, State),
+    ?assert(cerl:is_c_tuple(Core)),
+    %% Verify all 5 levels are present
+    [Tag1, Inner1] = cerl:tuple_es(Core),
+    ?assertEqual('Some', cerl:atom_val(Tag1)),
+    ?assert(cerl:is_c_tuple(Inner1)),
+    [Tag2, Inner2] = cerl:tuple_es(Inner1),
+    ?assertEqual('Some', cerl:atom_val(Tag2)),
+    ?assert(cerl:is_c_tuple(Inner2)),
+    [Tag3, Inner3] = cerl:tuple_es(Inner2),
+    ?assertEqual('Some', cerl:atom_val(Tag3)),
+    ?assert(cerl:is_c_tuple(Inner3)),
+    [Tag4, Inner4] = cerl:tuple_es(Inner3),
+    ?assertEqual('Some', cerl:atom_val(Tag4)),
+    ?assert(cerl:is_c_tuple(Inner4)),
+    [Tag5, Var] = cerl:tuple_es(Inner4),
+    ?assertEqual('Some', cerl:atom_val(Tag5)),
+    ?assertEqual(x, cerl:var_name(Var)).
+
+%% Test cons pattern with constructor in head
+test_complex_cons_with_constructors() ->
+    State = new_state(),
+    %% [Some(x) | Rest]
+    Pattern = {pat_cons,
+        {pat_constructor, 'Some', [{pat_var, x, loc()}], loc()},
+        {pat_var, 'Rest', loc()},
+        loc()},
+    {Core, _State1} = catena_codegen_pattern:compile_pattern(Pattern, State),
+    ?assert(cerl:is_c_cons(Core)),
+    Head = cerl:cons_hd(Core),
+    Tail = cerl:cons_tl(Core),
+    ?assert(cerl:is_c_tuple(Head)),
+    ?assertEqual('Rest', cerl:var_name(Tail)).
+
+%% Test nested cons in tail
+test_cons_with_nested_tail() ->
+    State = new_state(),
+    %% [x | [y | z]]
+    Pattern = {pat_cons,
+        {pat_var, x, loc()},
+        {pat_cons, {pat_var, y, loc()}, {pat_var, z, loc()}, loc()},
+        loc()},
+    {Core, _State1} = catena_codegen_pattern:compile_pattern(Pattern, State),
+    ?assert(cerl:is_c_cons(Core)),
+    Head1 = cerl:cons_hd(Core),
+    Tail1 = cerl:cons_tl(Core),
+    ?assertEqual(x, cerl:var_name(Head1)),
+    ?assert(cerl:is_c_cons(Tail1)),
+    Head2 = cerl:cons_hd(Tail1),
+    Tail2 = cerl:cons_tl(Tail1),
+    ?assertEqual(y, cerl:var_name(Head2)),
+    ?assertEqual(z, cerl:var_name(Tail2)).
+
+%% Test large tuple pattern (8 elements)
+test_large_tuple_pattern() ->
+    State = new_state(),
+    Pattern = {pat_tuple, [
+        {pat_var, a, loc()},
+        {pat_constructor, 'Some', [{pat_var, b, loc()}], loc()},
+        {pat_cons, {pat_var, c, loc()}, {pat_var, d, loc()}, loc()},
+        {pat_constructor, 'None', [], loc()},
+        {pat_var, e, loc()},
+        {pat_literal, 42, integer, loc()},
+        {pat_literal, true, bool, loc()},
+        {pat_var, f, loc()}
+    ], loc()},
+    {Core, _State1} = catena_codegen_pattern:compile_pattern(Pattern, State),
+    ?assert(cerl:is_c_tuple(Core)),
+    ?assertEqual(8, cerl:tuple_arity(Core)),
+    %% Verify first element is variable
+    [Elem1 | _Rest] = cerl:tuple_es(Core),
+    ?assertEqual(a, cerl:var_name(Elem1)).
+
+%% Test nested as-patterns
+test_nested_as_patterns() ->
+    State = new_state(),
+    %% x as (y as Some(z))
+    Pattern = {pat_as, x,
+        {pat_as, y,
+            {pat_constructor, 'Some', [{pat_var, z, loc()}], loc()},
+            loc()},
+        loc()},
+    {Core, _State1} = catena_codegen_pattern:compile_pattern(Pattern, State),
+    ?assertEqual(alias, cerl:type(Core)),
+    %% Outer alias should have x as var
+    ?assertEqual(x, cerl:var_name(cerl:alias_var(Core))),
+    %% Inner should also be an alias
+    Inner = cerl:alias_pat(Core),
+    ?assertEqual(alias, cerl:type(Inner)),
+    ?assertEqual(y, cerl:var_name(cerl:alias_var(Inner))).
+
+%% Test record pattern
+test_record_pattern() ->
+    State = new_state(),
+    %% {name: x, value: y}
+    Pattern = {pat_record, [
+        {name, {pat_var, x, loc()}},
+        {value, {pat_var, y, loc()}}
+    ], loc()},
+    {Core, _State1} = catena_codegen_pattern:compile_pattern(Pattern, State),
+    ?assertEqual(map, cerl:type(Core)).
+
+%% Test record pattern with complex field values
+test_record_pattern_with_complex_fields() ->
+    State = new_state(),
+    %% {name: x, value: Some(n), rest: [h|t]}
+    Pattern = {pat_record, [
+        {name, {pat_var, x, loc()}},
+        {value, {pat_constructor, 'Some', [{pat_var, n, loc()}], loc()}},
+        {rest, {pat_cons, {pat_var, h, loc()}, {pat_var, t, loc()}, loc()}}
+    ], loc()},
+    {Core, _State1} = catena_codegen_pattern:compile_pattern(Pattern, State),
+    ?assertEqual(map, cerl:type(Core)).
+
+%% Test complex guard nesting with and/or
+test_complex_guard_nesting() ->
+    State = new_state(),
+    %% ((x > 0 and y < 10) or z === 5)
+    Guard = {binary_op, 'or',
+        {binary_op, 'and',
+            {binary_op, '>', {var, x, loc()}, {literal, integer, 0, loc()}, loc()},
+            {binary_op, '<', {var, y, loc()}, {literal, integer, 10, loc()}, loc()},
+            loc()},
+        {binary_op, '===', {var, z, loc()}, {literal, integer, 5, loc()}, loc()},
+        loc()},
+    {Core, _State1} = catena_codegen_pattern:compile_guard(Guard, State),
+    ?assertEqual(call, cerl:type(Core)).
+
+%% Test clause with mixed pattern types
+test_mixed_pattern_types_in_clause() ->
+    State = new_state(),
+    %% Multiple patterns of different types in one clause
+    Clause = {[
+        {pat_literal, 5, integer, loc()},
+        {pat_constructor, 'Some', [{pat_var, x, loc()}], loc()},
+        {pat_cons, {pat_var, h, loc()}, {pat_var, t, loc()}, loc()}
+    ], {var, x, loc()}},
+    {Core, _State1} = catena_codegen_pattern:compile_clauses([Clause], State, #{}),
+    ?assertEqual(1, length(Core)),
+    [C] = Core,
+    ?assertEqual(clause, cerl:type(C)),
+    %% Should have 3 patterns
+    ?assertEqual(3, length(cerl:clause_pats(C))).

@@ -413,3 +413,256 @@ test_complex_expression() ->
     {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
     %% Should be a let expression
     ?assertEqual('let', cerl:type(Core)).
+
+%%====================================================================
+%% Edge Case Tests
+%%====================================================================
+
+edge_case_expr_test_() ->
+    [
+        ?_test(test_deeply_nested_let()),
+        ?_test(test_deeply_nested_application()),
+        ?_test(test_long_pipe_chain()),
+        ?_test(test_record_access()),
+        ?_test(test_chained_record_access()),
+        ?_test(test_unary_negation()),
+        ?_test(test_unary_not()),
+        ?_test(test_complex_lambda()),
+        ?_test(test_constructor_with_complex_args()),
+        ?_test(test_perform_with_complex_args()),
+        ?_test(test_try_with_multiple_handlers()),
+        ?_test(test_nested_if_expressions()),
+        ?_test(test_mixed_list_operations()),
+        ?_test(test_deeply_nested_constructors()),
+        ?_test(test_large_number_literals())
+    ].
+
+%% Test deeply nested let bindings (5 levels)
+test_deeply_nested_let() ->
+    State = new_state(),
+    %% let a = 1 in let b = 2 in let c = 3 in let d = 4 in let e = 5 in a + b + c + d + e
+    Expr = {let_expr, [{{var, a, loc()}, {literal, integer, 1, loc()}}],
+        {let_expr, [{{var, b, loc()}, {literal, integer, 2, loc()}}],
+            {let_expr, [{{var, c, loc()}, {literal, integer, 3, loc()}}],
+                {let_expr, [{{var, d, loc()}, {literal, integer, 4, loc()}}],
+                    {let_expr, [{{var, e, loc()}, {literal, integer, 5, loc()}}],
+                        {binary_op, '+', {var, a, loc()},
+                            {binary_op, '+', {var, b, loc()},
+                                {binary_op, '+', {var, c, loc()},
+                                    {binary_op, '+', {var, d, loc()}, {var, e, loc()}, loc()},
+                                loc()},
+                            loc()},
+                        loc()},
+                    loc()},
+                loc()},
+            loc()},
+        loc()},
+    loc()},
+    {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
+    ?assertEqual('let', cerl:type(Core)),
+    %% Verify nesting
+    Body1 = cerl:let_body(Core),
+    ?assertEqual('let', cerl:type(Body1)).
+
+%% Test deeply nested function application (5 levels)
+test_deeply_nested_application() ->
+    State = new_state(),
+    %% f(g(h(i(j(x)))))
+    Expr = {app, {var, f, loc()}, [
+        {app, {var, g, loc()}, [
+            {app, {var, h, loc()}, [
+                {app, {var, i, loc()}, [
+                    {app, {var, j, loc()}, [{var, x, loc()}], loc()}
+                ], loc()}
+            ], loc()}
+        ], loc()}
+    ], loc()},
+    {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
+    ?assertEqual(apply, cerl:type(Core)),
+    %% Verify the argument is also an apply
+    [Arg1] = cerl:apply_args(Core),
+    ?assertEqual(apply, cerl:type(Arg1)),
+    [Arg2] = cerl:apply_args(Arg1),
+    ?assertEqual(apply, cerl:type(Arg2)).
+
+%% Test long pipe chain (5 operations)
+test_long_pipe_chain() ->
+    State = new_state(),
+    %% x |> a |> b |> c |> d |> e
+    Expr = {binary_op, '|>',
+        {binary_op, '|>',
+            {binary_op, '|>',
+                {binary_op, '|>',
+                    {binary_op, '|>', {var, x, loc()}, {var, a, loc()}, loc()},
+                    {var, b, loc()}, loc()},
+                {var, c, loc()}, loc()},
+            {var, d, loc()}, loc()},
+        {var, e, loc()}, loc()},
+    {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
+    %% Should become e(d(c(b(a(x)))))
+    ?assertEqual(apply, cerl:type(Core)),
+    %% Function should be e
+    Fun = cerl:apply_op(Core),
+    ?assertEqual(e, cerl:var_name(Fun)).
+
+%% Test simple record access
+test_record_access() ->
+    State = new_state(),
+    %% record.field
+    Expr = {record_access, {var, record, loc()}, field, loc()},
+    {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
+    %% Should be maps:get(field, record)
+    ?assertEqual(call, cerl:type(Core)).
+
+%% Test chained record access
+test_chained_record_access() ->
+    State = new_state(),
+    %% record.field1.field2
+    Expr = {record_access,
+        {record_access, {var, record, loc()}, field1, loc()},
+        field2, loc()},
+    {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
+    ?assertEqual(call, cerl:type(Core)),
+    %% Should be nested maps:get calls
+    [_Key, InnerCall] = cerl:call_args(Core),
+    ?assertEqual(call, cerl:type(InnerCall)).
+
+%% Test unary negation
+test_unary_negation() ->
+    State = new_state(),
+    %% -x
+    Expr = {unary_op, '-', {var, x, loc()}, loc()},
+    {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
+    ?assertEqual(call, cerl:type(Core)),
+    Name = cerl:call_name(Core),
+    ?assertEqual('-', cerl:atom_val(Name)).
+
+%% Test unary not
+test_unary_not() ->
+    State = new_state(),
+    %% not x
+    Expr = {unary_op, 'not', {var, x, loc()}, loc()},
+    {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
+    ?assertEqual(call, cerl:type(Core)),
+    Name = cerl:call_name(Core),
+    ?assertEqual('not', cerl:atom_val(Name)).
+
+%% Test complex lambda with multiple parameters
+test_complex_lambda() ->
+    State = new_state(),
+    %% \x y z -> x + y + z
+    Expr = {lambda, [{var, x, loc()}, {var, y, loc()}, {var, z, loc()}],
+        {binary_op, '+',
+            {binary_op, '+', {var, x, loc()}, {var, y, loc()}, loc()},
+            {var, z, loc()}, loc()},
+        loc()},
+    {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
+    ?assertEqual('fun', cerl:type(Core)),
+    ?assertEqual(3, cerl:fun_arity(Core)).
+
+%% Test constructor with complex arguments
+test_constructor_with_complex_args() ->
+    State = new_state(),
+    %% Data(f(x), [1,2], Some(y))
+    Expr = {constructor, 'Data', [
+        {app, {var, f, loc()}, [{var, x, loc()}], loc()},
+        {list_expr, [{literal, integer, 1, loc()}, {literal, integer, 2, loc()}], loc()},
+        {constructor, 'Some', [{var, y, loc()}], loc()}
+    ], loc()},
+    {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
+    ?assert(cerl:is_c_tuple(Core)),
+    %% Should have 4 elements (tag + 3 args)
+    ?assertEqual(4, cerl:tuple_arity(Core)).
+
+%% Test perform with complex arguments
+test_perform_with_complex_args() ->
+    State = new_state(),
+    %% perform IO.write(let x = f(y) in x)
+    Expr = {perform_expr, 'IO', write, [
+        {let_expr, [
+            {{var, x, loc()}, {app, {var, f, loc()}, [{var, y, loc()}], loc()}}
+        ], {var, x, loc()}, loc()}
+    ], loc()},
+    {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
+    ?assertEqual(call, cerl:type(Core)),
+    Module = cerl:call_module(Core),
+    ?assertEqual(catena_effect_runtime, cerl:atom_val(Module)).
+
+%% Test try-with with multiple handlers
+test_try_with_multiple_handlers() ->
+    State = new_state(),
+    %% try expr with IO { read() -> x } FileIO { write(p) -> y }
+    Expr = {try_with_expr,
+        {var, expr, loc()},
+        [
+            {handler_clause, 'IO', [
+                {operation_case, read, [], {var, x, loc()}, loc()}
+            ], loc()},
+            {handler_clause, 'FileIO', [
+                {operation_case, write, [{var, p, loc()}], {var, y, loc()}, loc()}
+            ], loc()}
+        ],
+        loc()},
+    {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
+    ?assertEqual(call, cerl:type(Core)).
+
+%% Test nested if expressions
+test_nested_if_expressions() ->
+    State = new_state(),
+    %% if (if a then b else c) then d else e
+    Expr = {if_expr,
+        {if_expr, {var, a, loc()}, {var, b, loc()}, {var, c, loc()}, loc()},
+        {var, d, loc()},
+        {var, e, loc()},
+        loc()},
+    {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
+    ?assertEqual('case', cerl:type(Core)),
+    %% Scrutinee should also be a case
+    Scrutinee = cerl:case_arg(Core),
+    ?assertEqual('case', cerl:type(Scrutinee)).
+
+%% Test mixed list operations (cons + append)
+test_mixed_list_operations() ->
+    State = new_state(),
+    %% h :: (t <> [a, b])
+    Expr = {binary_op, '::',
+        {var, h, loc()},
+        {binary_op, '<>',
+            {var, t, loc()},
+            {list_expr, [{var, a, loc()}, {var, b, loc()}], loc()},
+            loc()},
+        loc()},
+    {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
+    ?assert(cerl:is_c_cons(Core)),
+    %% Tail should be a call (for <>)
+    Tail = cerl:cons_tl(Core),
+    ?assertEqual(call, cerl:type(Tail)).
+
+%% Test deeply nested constructors
+test_deeply_nested_constructors() ->
+    State = new_state(),
+    %% Outer(Middle(Inner(Some(42))))
+    Expr = {constructor, 'Outer', [
+        {constructor, 'Middle', [
+            {constructor, 'Inner', [
+                {constructor, 'Some', [{literal, integer, 42, loc()}], loc()}
+            ], loc()}
+        ], loc()}
+    ], loc()},
+    {Core, _State1} = catena_codegen_expr:translate_expr(Expr, State),
+    ?assert(cerl:is_c_tuple(Core)),
+    [Tag, Arg] = cerl:tuple_es(Core),
+    ?assertEqual('Outer', cerl:atom_val(Tag)),
+    ?assert(cerl:is_c_tuple(Arg)).
+
+%% Test large number literals (boundary values)
+test_large_number_literals() ->
+    State = new_state(),
+    %% Large integer
+    Expr1 = {literal, integer, 9007199254740992, loc()},
+    {Core1, _} = catena_codegen_expr:translate_expr(Expr1, State),
+    ?assertEqual(9007199254740992, cerl:int_val(Core1)),
+    %% Small float
+    Expr2 = {literal, float, 1.0e-10, loc()},
+    {Core2, _} = catena_codegen_expr:translate_expr(Expr2, State),
+    ?assert(abs(cerl:float_val(Core2) - 1.0e-10) < 1.0e-20).
