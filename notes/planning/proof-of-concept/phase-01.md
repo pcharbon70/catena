@@ -102,7 +102,7 @@ Add dual notation operators for category theory abstractions, providing both rea
 ---
 
 ## 1.2 Core Type System
-- [ ] **Section 1.2 Complete**
+- [x] **Section 1.2 Complete**
 
 The type system is the heart of Catena, providing static guarantees while inferring types automatically. We implement Hindley-Milner type inference using Algorithm W, extended with support for type classes (traits), row polymorphism for extensible records, higher-kinded types for functors, and **algebraic effects tracking**. This becomes a **type-and-effect system** where function signatures include both their result type and the set of effects they may perform. The type system ensures that well-typed programs cannot go wrong while minimizing type annotations required from programmers. Type errors must be clear and localized, pointing to the exact source of type mismatches or unhandled effects.
 
@@ -172,7 +172,7 @@ Extend the type system to handle trait hierarchies, instance resolution, and tra
 - [x] 1.2.6.4 Implement coherence checking detecting overlapping instances and ensuring unique resolution (no ambiguous instances)
 
 ### Unit Tests - Section 1.2
-- [ ] **Unit Tests 1.2 Complete**
+- [x] **Unit Tests 1.2 Complete**
 - [x] Test type inference for simple expressions inferring correct types without annotations
 - [x] Test type inference for polymorphic functions with proper generalization and instantiation
 - [x] Test type checking catching type errors with clear error messages
@@ -182,12 +182,12 @@ Extend the type system to handle trait hierarchies, instance resolution, and tra
 - [x] Test coherence checking detecting overlapping instances
 - [x] Test effect tracking in type inference correctly propagating effect sets through expressions
 - [x] Test effect handler checking detecting unhandled effects and missing handler operations
-- [x] Test type error formatting with highlighting and explanations (13/14 tests passing)
+- [x] Test type error formatting with highlighting and explanations
 
 ---
 
 ## 1.3 Core Erlang Code Generation
-- [ ] **Section 1.3 Complete**
+- [x] **Section 1.3 Complete**
 
 After parsing and type checking, we generate Core Erlang code that executes on the BEAM VM. Core Erlang is a simplified functional language that serves as an intermediate representation for all BEAM languages. We translate Catena's typed AST into Core Erlang expressions, compiling shapes to tagged tuples, flows to functions, and pattern matching to case expressions. The generated code must preserve Catena semantics while leveraging BEAM optimizations.
 

@@ -61,7 +61,7 @@ test_duplicate_record_fields() ->
                  ], closed)),
 
     % Multiple duplicates
-    ?assertError({duplicate_record_fields, _},
+    ?assertMatch({error, {duplicate_record_fields, [x, y]}},
                  catena_types:trecord([
                      {x, catena_types:tcon(integer)},
                      {y, catena_types:tcon(string)},
