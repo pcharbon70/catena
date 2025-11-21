@@ -42,7 +42,7 @@ The following concepts are handled through desugaring or library code rather tha
 | **trait inheritance** | Uses `:` syntax in trait definition |
 | **testing** | `Test` module from stdlib |
 | **property tests** | `Test.property` from stdlib |
-| **law verification** | Documentation or separate verification module |
+| **law verification** | Property-based testing via `Test` module |
 
 ## Architectural Split: Compiler vs Standard Library
 
@@ -100,6 +100,45 @@ myProps = [
   Test.property "commutative" (fn x y -> x + y === y + x)
 ]
 ```
+
+### Law Verification
+
+Traits in Catena come with mathematical laws that instances must satisfy. Law verification uses property-based testing to check these invariants.
+
+```catena
+import Test
+
+-- Laws for Mapper (Functor)
+mapperLaws : Mapper f => f a -> Test.Suite
+mapperLaws x = Test.suite "Mapper Laws" [
+  Test.property "identity" (fn () ->
+    map id x === x
+  ),
+  Test.property "composition" (fn f g ->
+    map (f . g) x === (map f . map g) x
+  )
+]
+
+-- Laws for Pipeline (Monad)
+pipelineLaws : Pipeline m => m a -> Test.Suite
+pipelineLaws x = Test.suite "Pipeline Laws" [
+  Test.property "left identity" (fn f a ->
+    chain f (pure a) === f a
+  ),
+  Test.property "right identity" (fn () ->
+    chain pure x === x
+  ),
+  Test.property "associativity" (fn f g ->
+    chain g (chain f x) === chain (fn a -> chain g (f a)) x
+  )
+]
+
+-- Verify laws for a specific instance
+verifyMaybeMapper = mapperLaws (Some 42)
+verifyMaybePipeline = pipelineLaws (Some "test")
+```
+
+Laws ensure that abstractions behave consistently and enable equational reasoning about code.
 
 ## Introduction
 
