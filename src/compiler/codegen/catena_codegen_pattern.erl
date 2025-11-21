@@ -169,7 +169,7 @@ compile_pattern({pat_record, Fields, _Loc}, State) ->
 %% Fallback for unknown patterns
 compile_pattern(Unknown, State) ->
     %% Create a wildcard for unknown patterns (with warning)
-    io:format("Warning: Unknown pattern type: ~p~n", [Unknown]),
+    logger:warning("Unknown pattern type during code generation: ~p", [Unknown]),
     {cerl:c_var('_'), State}.
 
 %% Helper for record field patterns

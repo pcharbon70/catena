@@ -191,7 +191,7 @@ compile_param({pat_typed_var, Name, _Type, _Loc}, State) ->
 compile_param(Other, State) ->
     %% For complex patterns, generate fresh var
     %% (full pattern matching handled elsewhere)
-    io:format("Warning: Complex parameter pattern: ~p~n", [Other]),
+    logger:warning("Complex parameter pattern in code generation: ~p", [Other]),
     catena_codegen_utils:fresh_var(State).
 
 %%====================================================================
