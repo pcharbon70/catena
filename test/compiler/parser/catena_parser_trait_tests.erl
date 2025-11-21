@@ -12,36 +12,36 @@
 %% @doc Build tokens for a basic trait declaration with one method
 %% Before: 15+ lines of manual token construction
 %% After: 1 function call
-%% New syntax: trait Name a { method : Type }
+%% Syntax: trait Name a where method : Type end
 make_basic_trait_tokens(FeatureName, TypeParam, MethodName, FromType, ToType) ->
     [
         {trait, 1},
         {upper_ident, 1, FeatureName},
         {lower_ident, 1, TypeParam},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, MethodName},
         {colon, 2},
         {lower_ident, 2, FromType},
         {arrow, 2},
         {lower_ident, 2, ToType},
-        {rbrace, 3}
+        {'end', 3}
     ].
 
 %% @doc Build tokens for complex trait with higher-order function types
 %% Example: fmap : (a -> b) -> f a -> f b
-%% New syntax: trait Name a { method : Type }
+%% Syntax: trait Name a where method : Type end
 make_complex_trait_tokens(FeatureName, TypeParam, MethodName, TypeTokens) ->
     [
         {trait, 1},
         {upper_ident, 1, FeatureName},
         {lower_ident, 1, TypeParam},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, MethodName},
-        {colon, 2} | TypeTokens ++ [{rbrace, 3}]
+        {colon, 2} | TypeTokens ++ [{'end', 3}]
     ].
 
 %% @doc Build tokens for trait with inheritance clause
-%% New syntax: trait Name a : Parent a { method : Type }
+%% Syntax: trait Name a : Parent a where method : Type end
 make_trait_with_extends_tokens(FeatureName, TypeParam, ExtendsTrait, ExtendsTypeParam, MethodName, FromType, ToType) ->
     [
         {trait, 1},
@@ -50,13 +50,13 @@ make_trait_with_extends_tokens(FeatureName, TypeParam, ExtendsTrait, ExtendsType
         {colon, 1},
         {upper_ident, 1, ExtendsTrait},
         {lower_ident, 1, ExtendsTypeParam},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, MethodName},
         {colon, 2},
         {lower_ident, 2, FromType},
         {arrow, 2},
         {lower_ident, 2, ToType},
-        {rbrace, 3}
+        {'end', 3}
     ].
 
 %% @doc Build tokens for basic instance declaration
@@ -333,13 +333,13 @@ parse_trait_valid_multiple_methods_test() ->
         {trait, 1},
         {upper_ident, 1, "Eq"},
         {lower_ident, 1, "a"},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "eq"},
         {colon, 2},
         {lower_ident, 2, "a"},
         {arrow, 2},
         {upper_ident, 2, "Bool"},
-        {rbrace, 3}
+        {'end', 3}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
@@ -418,7 +418,7 @@ parse_combined_valid_trait_and_instance_test() ->
         {trait, 1},
         {upper_ident, 1, "Eq"},
         {lower_ident, 1, "a"},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "eq"},
         {colon, 2},
         {lower_ident, 2, "a"},
@@ -426,7 +426,7 @@ parse_combined_valid_trait_and_instance_test() ->
         {lower_ident, 2, "a"},
         {arrow, 2},
         {upper_ident, 2, "Bool"},
-        {rbrace, 3},
+        {'end', 3},
         {instance, 4},
         {upper_ident, 4, "Eq"},
         {upper_ident, 4, "Bool"},
@@ -463,7 +463,7 @@ parse_trait_valid_multiple_extends_test() ->
         {comma, 1},
         {upper_ident, 1, "Show"},
         {lower_ident, 1, "a"},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "compare"},
         {colon, 2},
         {lower_ident, 2, "a"},
@@ -471,7 +471,7 @@ parse_trait_valid_multiple_extends_test() ->
         {lower_ident, 2, "a"},
         {arrow, 2},
         {upper_ident, 2, "Ordering"},
-        {rbrace, 3}
+        {'end', 3}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
@@ -497,13 +497,13 @@ parse_trait_invalid_lowercase_name_test() ->
         {trait, 1},
         {lower_ident, 1, "functor"},  %% Invalid: should be uppercase
         {lower_ident, 1, "f"},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "fmap"},
         {colon, 2},
         {lower_ident, 2, "a"},
         {arrow, 2},
         {lower_ident, 2, "b"},
-        {rbrace, 3}
+        {'end', 3}
     ],
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).
@@ -521,7 +521,7 @@ parse_trait_invalid_missing_where_test() ->
         {lower_ident, 2, "a"},
         {arrow, 2},
         {lower_ident, 2, "b"},
-        {rbrace, 3}
+        {'end', 3}
     ],
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).
@@ -533,7 +533,7 @@ parse_trait_invalid_missing_end_test() ->
         {trait, 1},
         {upper_ident, 1, "Functor"},
         {lower_ident, 1, "f"},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "fmap"},
         {colon, 2},
         {lower_ident, 2, "a"},
@@ -551,9 +551,9 @@ parse_trait_invalid_empty_methods_test() ->
         {trait, 1},
         {upper_ident, 1, "Functor"},
         {lower_ident, 1, "f"},
-        {lbrace, 1},
+        {where, 1},
         %% No methods
-        {rbrace, 2}
+        {'end', 2}
     ],
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).
@@ -567,13 +567,13 @@ parse_trait_invalid_malformed_extends_test() ->
         {lower_ident, 1, "m"},
         {colon, 1},
         %% Missing trait constraint
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "bind"},
         {colon, 2},
         {lower_ident, 2, "a"},
         {arrow, 2},
         {lower_ident, 2, "b"},
-        {rbrace, 3}
+        {'end', 3}
     ],
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).
@@ -589,13 +589,13 @@ parse_instance_invalid_lowercase_trait_test() ->
         {instance, 1},
         {lower_ident, 1, "functor"},  %% Invalid: should be uppercase
         {upper_ident, 1, "Maybe"},
-        {lbrace, 1},
+        {where, 1},
         {transform, 2},
         {lower_ident, 2, "fmap"},
         {lower_ident, 2, "f"},
         {equals, 2},
         {lower_ident, 2, "f"},
-        {rbrace, 3}
+        {'end', 3}
     ],
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).
@@ -613,7 +613,7 @@ parse_instance_invalid_missing_where_test() ->
         {lower_ident, 2, "f"},
         {equals, 2},
         {lower_ident, 2, "f"},
-        {rbrace, 3}
+        {'end', 3}
     ],
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).
@@ -625,7 +625,7 @@ parse_instance_invalid_missing_end_test() ->
         {instance, 1},
         {upper_ident, 1, "Functor"},
         {upper_ident, 1, "Maybe"},
-        {lbrace, 1},
+        {where, 1},
         {transform, 2},
         {lower_ident, 2, "fmap"},
         {lower_ident, 2, "f"},
@@ -643,9 +643,9 @@ parse_instance_invalid_empty_methods_test() ->
         {instance, 1},
         {upper_ident, 1, "Functor"},
         {upper_ident, 1, "Maybe"},
-        {lbrace, 1},
+        {where, 1},
         %% No methods
-        {rbrace, 2}
+        {'end', 2}
     ],
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).
@@ -664,7 +664,7 @@ parse_trait_valid_default_method_test() ->
         {trait, 1},
         {upper_ident, 1, "Functor"},
         {lower_ident, 1, "f"},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "fmap"},
         {colon, 2},
         {lower_ident, 2, "a"},
@@ -676,7 +676,7 @@ parse_trait_valid_default_method_test() ->
         {equals, 3},
         {lower_ident, 3, "fmap"},
         {lower_ident, 3, "x"},
-        {rbrace, 4}
+        {'end', 4}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     ?assertMatch({module, undefined, [], [], [_], _}, Result),
@@ -701,7 +701,7 @@ parse_trait_valid_multiple_defaults_test() ->
         {trait, 1},
         {upper_ident, 1, "Monad"},
         {lower_ident, 1, "m"},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "bind"},
         {colon, 2},
         {lower_ident, 2, "a"},
@@ -719,7 +719,7 @@ parse_trait_valid_multiple_defaults_test() ->
         {equals, 4},
         {lower_ident, 4, "bind"},
         {lower_ident, 4, "x"},
-        {rbrace, 5}
+        {'end', 5}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
@@ -746,13 +746,13 @@ parse_instance_valid_constraint_test() ->
         {upper_ident, 1, "Eq"},
         {upper_ident, 1, "Maybe"},
         {lower_ident, 1, "a"},
-        {lbrace, 1},
+        {where, 1},
         {transform, 2},
         {lower_ident, 2, "eq"},
         {lower_ident, 2, "x"},
         {equals, 2},
         {lower_ident, 2, "x"},
-        {rbrace, 3}
+        {'end', 3}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [InstanceDecl], _} = Result,
@@ -788,13 +788,13 @@ parse_instance_valid_multiple_constraints_test() ->
         {upper_ident, 1, "Ord"},
         {upper_ident, 1, "Maybe"},
         {lower_ident, 1, "a"},
-        {lbrace, 1},
+        {where, 1},
         {transform, 2},
         {lower_ident, 2, "compare"},
         {lower_ident, 2, "x"},
         {equals, 2},
         {lower_ident, 2, "x"},
-        {rbrace, 3}
+        {'end', 3}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [InstanceDecl], _} = Result,
@@ -844,13 +844,13 @@ parse_instance_valid_four_type_args_test() ->
         {upper_ident, 1, "B"},
         {upper_ident, 1, "C"},
         {upper_ident, 1, "D"},
-        {lbrace, 1},
+        {where, 1},
         {transform, 2},
         {lower_ident, 2, "method"},
         {lower_ident, 2, "x"},
         {equals, 2},
         {lower_ident, 2, "x"},
-        {rbrace, 3}
+        {'end', 3}
     ],
 
     %% Now 4+ type arguments should parse successfully
@@ -887,7 +887,7 @@ parse_trait_valid_extends_and_defaults_test() ->
         {colon, 1},
         {upper_ident, 1, "Applicative"},
         {lower_ident, 1, "m"},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "bind"},
         {colon, 2},
         {lower_ident, 2, "a"},
@@ -899,7 +899,7 @@ parse_trait_valid_extends_and_defaults_test() ->
         {equals, 3},
         {lower_ident, 3, "bind"},
         {lower_ident, 3, "x"},
-        {rbrace, 4}
+        {'end', 4}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
@@ -927,7 +927,7 @@ parse_trait_valid_comma_separated_methods_test() ->
         {trait, 1},
         {upper_ident, 1, "Eq"},
         {lower_ident, 1, "a"},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "eq"},
         {colon, 2},
         {lower_ident, 2, "a"},
@@ -943,7 +943,7 @@ parse_trait_valid_comma_separated_methods_test() ->
         {lower_ident, 3, "a"},
         {arrow, 3},
         {upper_ident, 3, "Bool"},
-        {rbrace, 4}
+        {'end', 4}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
@@ -966,7 +966,7 @@ parse_trait_valid_trailing_comma_test() ->
         {trait, 1},
         {upper_ident, 1, "Ord"},
         {lower_ident, 1, "a"},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "compare"},
         {colon, 2},
         {lower_ident, 2, "a"},
@@ -991,7 +991,7 @@ parse_trait_valid_trailing_comma_test() ->
         {arrow, 4},
         {upper_ident, 4, "Bool"},
         {comma, 4},  %% Optional trailing comma
-        {rbrace, 5}
+        {'end', 5}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
@@ -1016,7 +1016,7 @@ parse_instance_valid_match_expression_test() ->
         {instance, 1},
         {upper_ident, 1, "Functor"},
         {upper_ident, 1, "Maybe"},
-        {lbrace, 1},
+        {where, 1},
         {transform, 2},
         {lower_ident, 2, "fmap"},
         {lower_ident, 2, "f"},
@@ -1036,8 +1036,8 @@ parse_instance_valid_match_expression_test() ->
         {lparen, 4},
         {lower_ident, 4, "x"},
         {rparen, 4},
-        {rbrace, 5},
-        {rbrace, 6}
+        {'end', 5},
+        {'end', 6}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [InstanceDecl], _} = Result,
@@ -1063,7 +1063,7 @@ parse_instance_valid_multiple_methods_test() ->
         {instance, 1},
         {upper_ident, 1, "Eq"},
         {upper_ident, 1, "Bool"},
-        {lbrace, 1},
+        {where, 1},
         {transform, 2},
         {lower_ident, 2, "eq"},
         {lower_ident, 2, "x"},
@@ -1074,7 +1074,7 @@ parse_instance_valid_multiple_methods_test() ->
         {lower_ident, 3, "y"},
         {equals, 3},
         {lower_ident, 3, "y"},
-        {rbrace, 4}
+        {'end', 4}
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [InstanceDecl], _} = Result,
@@ -1097,11 +1097,11 @@ parse_trait_invalid_uppercase_type_param_test() ->
         {trait, 1},
         {upper_ident, 1, "Functor"},
         {upper_ident, 1, "F"},  %% Invalid: should be lowercase
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "fmap"},
         {colon, 2},
         {lower_ident, 2, "a"},
-        {rbrace, 3}
+        {'end', 3}
     ],
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).
@@ -1115,12 +1115,12 @@ parse_trait_invalid_method_missing_colon_test() ->
         {trait, 1},
         {upper_ident, 1, "Eq"},
         {lower_ident, 1, "a"},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "eq"},
         {lower_ident, 2, "a"},  %% Missing colon here
         {arrow, 2},
         {upper_ident, 2, "Bool"},
-        {rbrace, 3}
+        {'end', 3}
     ],
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).
@@ -1134,10 +1134,10 @@ parse_trait_invalid_method_missing_type_test() ->
         {trait, 1},
         {upper_ident, 1, "Eq"},
         {lower_ident, 1, "a"},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "eq"},
         {colon, 2},
-        {rbrace, 3}  %% Missing type expression
+        {'end', 3}  %% Missing type expression
     ],
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).
@@ -1151,12 +1151,12 @@ parse_instance_invalid_method_missing_equals_test() ->
         {instance, 1},
         {upper_ident, 1, "Functor"},
         {upper_ident, 1, "Maybe"},
-        {lbrace, 1},
+        {where, 1},
         {transform, 2},
         {lower_ident, 2, "fmap"},
         {lower_ident, 2, "f"},
         {lower_ident, 2, "x"},  %% Missing equals before expression
-        {rbrace, 3}
+        {'end', 3}
     ],
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).
@@ -1170,11 +1170,11 @@ parse_trait_invalid_extends_syntax_test() ->
         {upper_ident, 1, "Monad"},
         {lower_ident, 1, "m"},
         {colon, 1},
-        {lbrace, 1},  %% Missing trait constraint
+        {where, 1},  %% Missing trait constraint
         {lower_ident, 2, "bind"},
         {colon, 2},
         {lower_ident, 2, "a"},
-        {rbrace, 3}
+        {'end', 3}
     ],
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).
@@ -1194,13 +1194,13 @@ parse_instance_invalid_malformed_constraint_test() ->
         {double_arrow, 1},
         {upper_ident, 1, "Eq"},
         {lower_ident, 1, "a"},
-        {lbrace, 1},
+        {where, 1},
         {transform, 2},
         {lower_ident, 2, "eq"},
         {lower_ident, 2, "x"},
         {equals, 2},
         {lower_ident, 2, "x"},
-        {rbrace, 3}
+        {'end', 3}
     ],
     Result = catena_parser:parse(Tokens),
     %% Should now parse successfully (changed from expecting error)
@@ -1216,7 +1216,7 @@ parse_trait_invalid_default_method_syntax_test() ->
         {trait, 1},
         {upper_ident, 1, "Eq"},
         {lower_ident, 1, "a"},
-        {lbrace, 1},
+        {where, 1},
         {lower_ident, 2, "eq"},
         {colon, 2},
         {lower_ident, 2, "a"},
@@ -1226,7 +1226,7 @@ parse_trait_invalid_default_method_syntax_test() ->
         {lower_ident, 3, "x"},
         {equals, 3},
         {lower_ident, 3, "x"},
-        {rbrace, 4}
+        {'end', 4}
     ],
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).

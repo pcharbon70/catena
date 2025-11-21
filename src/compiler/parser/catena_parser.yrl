@@ -297,8 +297,8 @@ effect_operation -> operation lower_ident colon type_expr :
 %%----------------------------------------------------------------------------
 
 %% Consolidated trait declaration with optional inheritance and default methods
-%% Uses colon syntax: trait Orderable a : Comparable a where ...
-trait_decl -> trait upper_ident type_params maybe_trait_extends lbrace trait_methods maybe_default_methods rbrace :
+%% Uses colon syntax for inheritance: trait Orderable a : Comparable a where ... end
+trait_decl -> trait upper_ident type_params maybe_trait_extends where trait_methods maybe_default_methods 'end' :
     {trait_decl,
         extract_atom('$2'),
         '$3',

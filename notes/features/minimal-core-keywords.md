@@ -60,7 +60,7 @@ Reduce to **12 core keywords** that require compiler support, and move the rest 
 | `operator` | `@operator` attribute |
 | `if`/`then`/`else` | Desugar to `match` |
 | `in` | Layout rules |
-| `where` | Use braces `{ }` |
+| `where` | Part of trait/instance syntax (kept as syntax keyword) |
 | `with` | Part of `handle` or record update syntax |
 
 ---
@@ -120,18 +120,18 @@ lib/catena/stdlib/
 
 ## Implementation Plan
 
-### Step 1: Update Lexer ⬜
-- [ ] Remove non-core keywords from lexer
-- [ ] Add `module` and `handle` keywords
-- [ ] Update token definitions
-- [ ] Test lexer changes
+### Step 1: Update Lexer ✅
+- [x] Remove non-core keywords from lexer
+- [x] Add `module` and `handle` keywords
+- [x] Update token definitions
+- [x] Test lexer changes
 
-### Step 2: Update Parser ⬜
-- [ ] Simplify trait syntax (`:` for inheritance)
-- [ ] Remove adapter rules
-- [ ] Remove test/property rules
-- [ ] Update effect handling to use `handle`
-- [ ] Add attribute support for `@doc`, `@operator`
+### Step 2: Update Parser ✅
+- [x] Simplify trait syntax (`:` for inheritance)
+- [x] Remove adapter rules
+- [x] Remove test/property rules
+- [x] Update effect handling to use `handle`
+- [ ] Add attribute support for `@doc`, `@operator` (deferred to future work)
 
 ### Step 3: Create Standard Library Structure ⬜
 - [ ] Create stdlib directory structure
@@ -144,10 +144,10 @@ lib/catena/stdlib/
 - [ ] Update keyword table
 - [ ] Update examples
 
-### Step 5: Update Tests ⬜
-- [ ] Adapt lexer tests for new keywords
-- [ ] Adapt parser tests for new syntax
-- [ ] Add stdlib tests
+### Step 5: Update Tests ✅
+- [x] Adapt lexer tests for new keywords
+- [x] Adapt parser tests for new syntax (trait/instance syntax using `where...end`)
+- [ ] Add stdlib tests (deferred until stdlib implemented)
 
 ### Step 6: Documentation ⬜
 - [ ] Write summary document
@@ -160,9 +160,13 @@ lib/catena/stdlib/
 ### What's Implemented
 - Feature branch created
 - Planning document created
+- Lexer updated with 12 core keywords
+- Parser updated with simplified trait syntax (`:` for inheritance, `where...end` for body)
+- Parser tests updated and passing (41/41 trait tests)
 
 ### What's Next
-- Update lexer to remove non-core keywords
+- Create standard library structure
+- Update language specification documentation
 
 ### How to Run
 ```bash
