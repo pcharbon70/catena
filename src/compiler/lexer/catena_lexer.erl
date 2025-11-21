@@ -12,7 +12,7 @@
 -export([format_error/1]).
 
 %% User code. This is placed here to allow extra attributes.
--file("src/compiler/lexer/catena_lexer.xrl", 138).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 138).
 
 %% Export custom functions
 -export([tokenize/1]).
@@ -554,7 +554,7 @@ tab_size() -> 8.
 %% return signal either an unrecognised character or end of current
 %% input.
 
--file("src/compiler/lexer/catena_lexer.erl", 522).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.erl", 522).
 yystate() -> 184.
 
 yystate(187, [97|Ics], Line, Col, Tlen, _, _) ->
@@ -3161,377 +3161,377 @@ yyaction(74, TokenLen, YYtcs, TokenLine, _) ->
 yyaction(_, _, _, _, _) -> error.
 
 -compile({inline,yyaction_0/0}).
--file("src/compiler/lexer/catena_lexer.xrl", 39).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 39).
 yyaction_0() ->
      skip_token .
 
 -compile({inline,yyaction_1/0}).
--file("src/compiler/lexer/catena_lexer.xrl", 42).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 42).
 yyaction_1() ->
      skip_token .
 
 -compile({inline,yyaction_2/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 45).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 45).
 yyaction_2(TokenLine) ->
      { token, { comment_start, TokenLine } } .
 
 -compile({inline,yyaction_3/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 46).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 46).
 yyaction_3(TokenLine) ->
      { token, { comment_end, TokenLine } } .
 
 -compile({inline,yyaction_4/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 49).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 49).
 yyaction_4(TokenLine) ->
      { token, { type, TokenLine } } .
 
 -compile({inline,yyaction_5/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 50).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 50).
 yyaction_5(TokenLine) ->
      { token, { transform, TokenLine } } .
 
 -compile({inline,yyaction_6/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 51).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 51).
 yyaction_6(TokenLine) ->
      { token, { match, TokenLine } } .
 
 -compile({inline,yyaction_7/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 52).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 52).
 yyaction_7(TokenLine) ->
      { token, { where, TokenLine } } .
 
 -compile({inline,yyaction_8/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 53).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 53).
 yyaction_8(TokenLine) ->
      { token, { 'let', TokenLine } } .
 
 -compile({inline,yyaction_9/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 54).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 54).
 yyaction_9(TokenLine) ->
      { token, { in, TokenLine } } .
 
 -compile({inline,yyaction_10/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 55).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 55).
 yyaction_10(TokenLine) ->
      { token, { do, TokenLine } } .
 
 -compile({inline,yyaction_11/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 56).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 56).
 yyaction_11(TokenLine) ->
      { token, { 'end', TokenLine } } .
 
 -compile({inline,yyaction_12/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 57).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 57).
 yyaction_12(TokenLine) ->
      { token, { 'if', TokenLine } } .
 
 -compile({inline,yyaction_13/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 58).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 58).
 yyaction_13(TokenLine) ->
      { token, { then, TokenLine } } .
 
 -compile({inline,yyaction_14/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 59).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 59).
 yyaction_14(TokenLine) ->
      { token, { 'else', TokenLine } } .
 
 -compile({inline,yyaction_15/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 60).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 60).
 yyaction_15(TokenLine) ->
      { token, { 'case', TokenLine } } .
 
 -compile({inline,yyaction_16/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 61).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 61).
 yyaction_16(TokenLine) ->
      { token, { 'of', TokenLine } } .
 
 -compile({inline,yyaction_17/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 62).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 62).
 yyaction_17(TokenLine) ->
      { token, { 'when', TokenLine } } .
 
 -compile({inline,yyaction_18/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 63).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 63).
 yyaction_18(TokenLine) ->
      { token, { module, TokenLine } } .
 
 -compile({inline,yyaction_19/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 64).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 64).
 yyaction_19(TokenLine) ->
      { token, { import, TokenLine } } .
 
 -compile({inline,yyaction_20/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 65).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 65).
 yyaction_20(TokenLine) ->
      { token, { export, TokenLine } } .
 
 -compile({inline,yyaction_21/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 66).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 66).
 yyaction_21(TokenLine) ->
      { token, { exports, TokenLine } } .
 
 -compile({inline,yyaction_22/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 67).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 67).
 yyaction_22(TokenLine) ->
      { token, { as, TokenLine } } .
 
 -compile({inline,yyaction_23/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 68).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 68).
 yyaction_23(TokenLine) ->
      { token, { qualified, TokenLine } } .
 
 -compile({inline,yyaction_24/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 69).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 69).
 yyaction_24(TokenLine) ->
      { token, { private, TokenLine } } .
 
 -compile({inline,yyaction_25/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 70).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 70).
 yyaction_25(TokenLine) ->
      { token, { trait, TokenLine } } .
 
 -compile({inline,yyaction_26/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 71).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 71).
 yyaction_26(TokenLine) ->
      { token, { instance, TokenLine } } .
 
 -compile({inline,yyaction_27/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 72).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 72).
 yyaction_27(TokenLine) ->
      { token, { extends, TokenLine } } .
 
 -compile({inline,yyaction_28/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 73).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 73).
 yyaction_28(TokenLine) ->
      { token, { forall, TokenLine } } .
 
 -compile({inline,yyaction_29/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 74).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 74).
 yyaction_29(TokenLine) ->
      { token, { actor, TokenLine } } .
 
 -compile({inline,yyaction_30/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 75).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 75).
 yyaction_30(TokenLine) ->
      { token, { supervisor, TokenLine } } .
 
 -compile({inline,yyaction_31/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 78).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 78).
 yyaction_31(TokenLine) ->
      { token, { effect, TokenLine } } .
 
 -compile({inline,yyaction_32/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 79).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 79).
 yyaction_32(TokenLine) ->
      { token, { operation, TokenLine } } .
 
 -compile({inline,yyaction_33/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 80).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 80).
 yyaction_33(TokenLine) ->
      { token, { perform, TokenLine } } .
 
 -compile({inline,yyaction_34/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 81).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 81).
 yyaction_34(TokenLine) ->
      { token, { 'try', TokenLine } } .
 
 -compile({inline,yyaction_35/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 82).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 82).
 yyaction_35(TokenLine) ->
      { token, { with, TokenLine } } .
 
 -compile({inline,yyaction_36/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 86).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 86).
 yyaction_36(TokenLine) ->
      { token, { pipe_right, TokenLine } } .
 
 -compile({inline,yyaction_37/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 87).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 87).
 yyaction_37(TokenLine) ->
      { token, { arrow, TokenLine } } .
 
 -compile({inline,yyaction_38/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 88).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 88).
 yyaction_38(TokenLine) ->
      { token, { double_arrow, TokenLine } } .
 
 -compile({inline,yyaction_39/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 89).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 89).
 yyaction_39(TokenLine) ->
      { token, { setoid_eq, TokenLine } } .
 
 -compile({inline,yyaction_40/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 90).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 90).
 yyaction_40(TokenLine) ->
      { token, { setoid_neq, TokenLine } } .
 
 -compile({inline,yyaction_41/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 91).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 91).
 yyaction_41(TokenLine) ->
      { token, { eq, TokenLine } } .
 
 -compile({inline,yyaction_42/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 92).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 92).
 yyaction_42(TokenLine) ->
      { token, { neq, TokenLine } } .
 
 -compile({inline,yyaction_43/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 93).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 93).
 yyaction_43(TokenLine) ->
      { token, { lte, TokenLine } } .
 
 -compile({inline,yyaction_44/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 94).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 94).
 yyaction_44(TokenLine) ->
      { token, { gte, TokenLine } } .
 
 -compile({inline,yyaction_45/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 95).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 95).
 yyaction_45(TokenLine) ->
      { token, { 'or', TokenLine } } .
 
 -compile({inline,yyaction_46/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 96).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 96).
 yyaction_46(TokenLine) ->
      { token, { 'and', TokenLine } } .
 
 -compile({inline,yyaction_47/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 97).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 97).
 yyaction_47(TokenLine) ->
      { token, { cons, TokenLine } } .
 
 -compile({inline,yyaction_48/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 98).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 98).
 yyaction_48(TokenLine) ->
      { token, { left_arrow, TokenLine } } .
 
 -compile({inline,yyaction_49/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 99).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 99).
 yyaction_49(TokenLine) ->
      { token, { range, TokenLine } } .
 
 -compile({inline,yyaction_50/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 102).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 102).
 yyaction_50(TokenLine) ->
      { token, { colon, TokenLine } } .
 
 -compile({inline,yyaction_51/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 103).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 103).
 yyaction_51(TokenLine) ->
      { token, { equals, TokenLine } } .
 
 -compile({inline,yyaction_52/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 104).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 104).
 yyaction_52(TokenLine) ->
      { token, { pipe, TokenLine } } .
 
 -compile({inline,yyaction_53/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 105).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 105).
 yyaction_53(TokenLine) ->
      { token, { lt, TokenLine } } .
 
 -compile({inline,yyaction_54/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 106).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 106).
 yyaction_54(TokenLine) ->
      { token, { gt, TokenLine } } .
 
 -compile({inline,yyaction_55/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 107).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 107).
 yyaction_55(TokenLine) ->
      { token, { plus, TokenLine } } .
 
 -compile({inline,yyaction_56/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 108).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 108).
 yyaction_56(TokenLine) ->
      { token, { minus, TokenLine } } .
 
 -compile({inline,yyaction_57/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 109).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 109).
 yyaction_57(TokenLine) ->
      { token, { star, TokenLine } } .
 
 -compile({inline,yyaction_58/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 110).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 110).
 yyaction_58(TokenLine) ->
      { token, { slash, TokenLine } } .
 
 -compile({inline,yyaction_59/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 111).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 111).
 yyaction_59(TokenLine) ->
      { token, { dot, TokenLine } } .
 
 -compile({inline,yyaction_60/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 114).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 114).
 yyaction_60(TokenLine) ->
      { token, { lbrace, TokenLine } } .
 
 -compile({inline,yyaction_61/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 115).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 115).
 yyaction_61(TokenLine) ->
      { token, { rbrace, TokenLine } } .
 
 -compile({inline,yyaction_62/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 116).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 116).
 yyaction_62(TokenLine) ->
      { token, { lbracket, TokenLine } } .
 
 -compile({inline,yyaction_63/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 117).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 117).
 yyaction_63(TokenLine) ->
      { token, { rbracket, TokenLine } } .
 
 -compile({inline,yyaction_64/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 118).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 118).
 yyaction_64(TokenLine) ->
      { token, { lparen, TokenLine } } .
 
 -compile({inline,yyaction_65/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 119).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 119).
 yyaction_65(TokenLine) ->
      { token, { rparen, TokenLine } } .
 
 -compile({inline,yyaction_66/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 120).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 120).
 yyaction_66(TokenLine) ->
      { token, { comma, TokenLine } } .
 
 -compile({inline,yyaction_67/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 121).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 121).
 yyaction_67(TokenLine) ->
      { token, { semicolon, TokenLine } } .
 
 -compile({inline,yyaction_68/1}).
--file("src/compiler/lexer/catena_lexer.xrl", 122).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 122).
 yyaction_68(TokenLine) ->
      { token, { underscore, TokenLine } } .
 
 -compile({inline,yyaction_69/2}).
--file("src/compiler/lexer/catena_lexer.xrl", 125).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 125).
 yyaction_69(TokenChars, TokenLine) ->
      { token, { float, TokenLine, parse_scientific (TokenChars) } } .
 
 -compile({inline,yyaction_70/2}).
--file("src/compiler/lexer/catena_lexer.xrl", 126).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 126).
 yyaction_70(TokenChars, TokenLine) ->
      { token, { float, TokenLine, parse_float (TokenChars) } } .
 
 -compile({inline,yyaction_71/2}).
--file("src/compiler/lexer/catena_lexer.xrl", 127).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 127).
 yyaction_71(TokenChars, TokenLine) ->
      { token, { integer, TokenLine, parse_integer (TokenChars) } } .
 
 -compile({inline,yyaction_72/2}).
--file("src/compiler/lexer/catena_lexer.xrl", 130).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 130).
 yyaction_72(TokenChars, TokenLine) ->
      validate_string_literal (TokenLine, TokenChars) .
 
 -compile({inline,yyaction_73/2}).
--file("src/compiler/lexer/catena_lexer.xrl", 133).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 133).
 yyaction_73(TokenChars, TokenLine) ->
      validate_identifier (TokenLine, TokenChars, upper_ident) .
 
 -compile({inline,yyaction_74/2}).
--file("src/compiler/lexer/catena_lexer.xrl", 134).
+-file("/home/ducky/code/catena/src/compiler/lexer/catena_lexer.xrl", 134).
 yyaction_74(TokenChars, TokenLine) ->
      validate_identifier (TokenLine, TokenChars, lower_ident) .
 -file("/home/ducky/.asdf/installs/erlang/27.3/lib/parsetools-2.6/include/leexinc.hrl", 344).
