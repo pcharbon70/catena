@@ -1,8 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% @doc Tests for Effect Runtime System (Task 1.3.5)
 %%%
-%%% Tests the process-based effect runtime including handler spawning,
-%%% perform operations, message protocol, and builtin IO effects.
+%%% Tests process-based effect handlers with explicit context passing.
 %%% @end
 %%%-------------------------------------------------------------------
 -module(catena_effect_runtime_tests).
@@ -10,92 +9,123 @@
 -include_lib("eunit/include/eunit.hrl").
 
 %%====================================================================
-%% Handler Process Spawning Tests (1.3.5.1)
+%% Context Creation Tests
+%%====================================================================
+
+context_creation_test_() ->
+    [
+        ?_test(test_empty_context()),
+        ?_test(test_new_context()),
+        ?_test(test_context_structure())
+    ].
+
+test_empty_context() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    ?assertEqual(#{}, maps:get(handlers, Ctx)),
+    ?assertEqual(undefined, maps:get(parent, Ctx)).
+
+test_new_context() ->
+    Ctx = catena_effect_runtime:new_context(),
+    ?assertEqual(#{}, maps:get(handlers, Ctx)),
+    ?assertEqual(undefined, maps:get(parent, Ctx)).
+
+test_context_structure() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    ?assert(is_map(Ctx)),
+    ?assert(maps:is_key(handlers, Ctx)),
+    ?assert(maps:is_key(parent, Ctx)).
+
+%%====================================================================
+%% Handler Spawning Tests (1.3.5.1)
 %%====================================================================
 
 handler_spawning_test_() ->
     [
-        ?_test(test_spawn_single_handler()),
-        ?_test(test_spawn_multiple_handlers()),
-        ?_test(test_handler_cleanup()),
-        ?_test(test_handler_registration()),
-        ?_test(test_nested_handlers())
+        ?_test(test_with_handlers_creates_child_context()),
+        ?_test(test_with_handlers_cleanup()),
+        ?_test(test_nested_handlers()),
+        ?_test(test_handler_shadowing()),
+        ?_test(test_parent_chain_lookup())
     ].
 
-test_spawn_single_handler() ->
-    %% Create a simple handler that doubles numbers
-    Handlers = [
-        {'Math', [
-            {double, fun(X) -> X * 2 end}
-        ]}
-    ],
-    Result = catena_effect_runtime:with_handlers(Handlers, fun() ->
-        catena_effect_runtime:perform('Math', double, [21])
+test_with_handlers_creates_child_context() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    Handler = {'TestEffect', [
+        {getValue, fun() -> 42 end}
+    ]},
+    Result = catena_effect_runtime:with_handlers(Ctx, [Handler], fun(ChildCtx) ->
+        %% Child context should have handler
+        Handlers = maps:get(handlers, ChildCtx),
+        ?assert(maps:is_key('TestEffect', Handlers)),
+        %% Child should have parent reference
+        ?assertEqual(Ctx, maps:get(parent, ChildCtx)),
+        ok
     end),
-    ?assertEqual(42, Result).
+    ?assertEqual(ok, Result).
 
-test_spawn_multiple_handlers() ->
-    %% Create multiple handlers
-    Handlers = [
-        {'Math', [
-            {add, fun(X, Y) -> X + Y end}
-        ]},
-        {'String', [
-            {concat, fun(A, B) -> <<A/binary, B/binary>> end}
-        ]}
-    ],
-    Result = catena_effect_runtime:with_handlers(Handlers, fun() ->
-        Sum = catena_effect_runtime:perform('Math', add, [10, 20]),
-        Str = catena_effect_runtime:perform('String', concat, [<<"hello">>, <<" world">>]),
-        {Sum, Str}
+test_with_handlers_cleanup() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    Handler = {'CleanupTest', [
+        {ping, fun() -> pong end}
+    ]},
+    HandlerPid = catena_effect_runtime:with_handlers(Ctx, [Handler], fun(ChildCtx) ->
+        Handlers = maps:get(handlers, ChildCtx),
+        maps:get('CleanupTest', Handlers)
     end),
-    ?assertEqual({30, <<"hello world">>}, Result).
-
-test_handler_cleanup() ->
-    %% Verify handlers are cleaned up after with_handlers returns
-    Handlers = [
-        {'Test', [
-            {noop, fun() -> ok end}
-        ]}
-    ],
-    catena_effect_runtime:with_handlers(Handlers, fun() -> ok end),
-    %% Handler should be unregistered
-    ?assertEqual(undefined, catena_effect_runtime:get_handler('Test')).
-
-test_handler_registration() ->
-    %% Test manual handler registration
-    Pid = spawn(fun() ->
-        receive stop -> ok end
-    end),
-    catena_effect_runtime:register_handler('Custom', Pid),
-    ?assertEqual(Pid, catena_effect_runtime:get_handler('Custom')),
-    catena_effect_runtime:unregister_handler('Custom'),
-    ?assertEqual(undefined, catena_effect_runtime:get_handler('Custom')),
-    Pid ! stop.
+    %% Give handler process time to terminate
+    timer:sleep(10),
+    ?assertNot(is_process_alive(HandlerPid)).
 
 test_nested_handlers() ->
-    %% Test nested handler scopes
-    OuterHandlers = [
-        {'Outer', [
-            {get, fun() -> outer end}
-        ]}
-    ],
-    InnerHandlers = [
-        {'Inner', [
-            {get, fun() -> inner end}
-        ]}
-    ],
-    Result = catena_effect_runtime:with_handlers(OuterHandlers, fun() ->
-        OuterVal = catena_effect_runtime:perform('Outer', get, []),
-        InnerResult = catena_effect_runtime:with_handlers(InnerHandlers, fun() ->
-            InnerVal = catena_effect_runtime:perform('Inner', get, []),
-            %% Can still access outer handler
-            OuterInner = catena_effect_runtime:perform('Outer', get, []),
-            {InnerVal, OuterInner}
-        end),
-        {OuterVal, InnerResult}
+    Ctx = catena_effect_runtime:empty_context(),
+    OuterHandler = {'Outer', [{getValue, fun() -> outer end}]},
+    InnerHandler = {'Inner', [{getValue, fun() -> inner end}]},
+
+    Result = catena_effect_runtime:with_handlers(Ctx, [OuterHandler], fun(Ctx1) ->
+        catena_effect_runtime:with_handlers(Ctx1, [InnerHandler], fun(Ctx2) ->
+            %% Both handlers should be accessible
+            OuterResult = catena_effect_runtime:perform(Ctx2, 'Outer', getValue, []),
+            InnerResult = catena_effect_runtime:perform(Ctx2, 'Inner', getValue, []),
+            {OuterResult, InnerResult}
+        end)
     end),
-    ?assertEqual({outer, {inner, outer}}, Result).
+    ?assertEqual({outer, inner}, Result).
+
+test_handler_shadowing() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    OuterHandler = {'ShadowEffect', [{getValue, fun() -> outer_value end}]},
+    InnerHandler = {'ShadowEffect', [{getValue, fun() -> inner_value end}]},
+
+    Result = catena_effect_runtime:with_handlers(Ctx, [OuterHandler], fun(Ctx1) ->
+        OuterResult = catena_effect_runtime:perform(Ctx1, 'ShadowEffect', getValue, []),
+
+        InnerResult = catena_effect_runtime:with_handlers(Ctx1, [InnerHandler], fun(Ctx2) ->
+            %% Inner should shadow outer
+            catena_effect_runtime:perform(Ctx2, 'ShadowEffect', getValue, [])
+        end),
+
+        %% After inner scope, outer should still work
+        AfterResult = catena_effect_runtime:perform(Ctx1, 'ShadowEffect', getValue, []),
+
+        {OuterResult, InnerResult, AfterResult}
+    end),
+    ?assertEqual({outer_value, inner_value, outer_value}, Result).
+
+test_parent_chain_lookup() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    Handler1 = {'Effect1', [{op, fun() -> effect1 end}]},
+    Handler2 = {'Effect2', [{op, fun() -> effect2 end}]},
+
+    Result = catena_effect_runtime:with_handlers(Ctx, [Handler1], fun(Ctx1) ->
+        catena_effect_runtime:with_handlers(Ctx1, [Handler2], fun(Ctx2) ->
+            %% Effect1 should be found in parent context
+            R1 = catena_effect_runtime:perform(Ctx2, 'Effect1', op, []),
+            %% Effect2 should be found in current context
+            R2 = catena_effect_runtime:perform(Ctx2, 'Effect2', op, []),
+            {R1, R2}
+        end)
+    end),
+    ?assertEqual({effect1, effect2}, Result).
 
 %%====================================================================
 %% Perform Operation Tests (1.3.5.2)
@@ -103,128 +133,110 @@ test_nested_handlers() ->
 
 perform_operation_test_() ->
     [
-        ?_test(test_perform_simple_operation()),
-        ?_test(test_perform_with_multiple_args()),
-        ?_test(test_perform_with_no_args()),
-        ?_test(test_perform_returns_complex_value()),
-        ?_test(test_perform_multiple_operations())
+        ?_test(test_perform_with_handler()),
+        ?_test(test_perform_with_args()),
+        ?_test(test_perform_multiple_operations()),
+        ?_test(test_perform_builtin_fallback()),
+        ?_test(test_perform_with_empty_context())
     ].
 
-test_perform_simple_operation() ->
-    Handlers = [
-        {'Counter', [
-            {increment, fun(X) -> X + 1 end}
-        ]}
-    ],
-    Result = catena_effect_runtime:with_handlers(Handlers, fun() ->
-        catena_effect_runtime:perform('Counter', increment, [41])
+test_perform_with_handler() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    Handler = {'Counter', [
+        {get, fun() -> 100 end}
+    ]},
+    Result = catena_effect_runtime:with_handlers(Ctx, [Handler], fun(ChildCtx) ->
+        catena_effect_runtime:perform(ChildCtx, 'Counter', get, [])
     end),
-    ?assertEqual(42, Result).
+    ?assertEqual(100, Result).
 
-test_perform_with_multiple_args() ->
-    Handlers = [
-        {'Math', [
-            {sum3, fun(A, B, C) -> A + B + C end}
-        ]}
-    ],
-    Result = catena_effect_runtime:with_handlers(Handlers, fun() ->
-        catena_effect_runtime:perform('Math', sum3, [10, 20, 30])
+test_perform_with_args() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    Handler = {'Math', [
+        {add, fun(A, B) -> A + B end},
+        {multiply, fun(A, B) -> A * B end}
+    ]},
+    Result = catena_effect_runtime:with_handlers(Ctx, [Handler], fun(ChildCtx) ->
+        Sum = catena_effect_runtime:perform(ChildCtx, 'Math', add, [5, 3]),
+        Product = catena_effect_runtime:perform(ChildCtx, 'Math', multiply, [4, 7]),
+        {Sum, Product}
     end),
-    ?assertEqual(60, Result).
-
-test_perform_with_no_args() ->
-    Handlers = [
-        {'Generator', [
-            {zero, fun() -> 0 end}
-        ]}
-    ],
-    Result = catena_effect_runtime:with_handlers(Handlers, fun() ->
-        catena_effect_runtime:perform('Generator', zero, [])
-    end),
-    ?assertEqual(0, Result).
-
-test_perform_returns_complex_value() ->
-    Handlers = [
-        {'Data', [
-            {create, fun(Name, Age) -> #{name => Name, age => Age} end}
-        ]}
-    ],
-    Result = catena_effect_runtime:with_handlers(Handlers, fun() ->
-        catena_effect_runtime:perform('Data', create, [<<"Alice">>, 30])
-    end),
-    ?assertEqual(#{name => <<"Alice">>, age => 30}, Result).
+    ?assertEqual({8, 28}, Result).
 
 test_perform_multiple_operations() ->
-    %% Same effect with multiple operations
-    Handlers = [
-        {'State', [
-            {get, fun() -> 42 end},
-            {set, fun(_V) -> ok end},
-            {modify, fun(F) -> F(42) end}
-        ]}
-    ],
-    Result = catena_effect_runtime:with_handlers(Handlers, fun() ->
-        V1 = catena_effect_runtime:perform('State', get, []),
-        catena_effect_runtime:perform('State', set, [100]),
-        V2 = catena_effect_runtime:perform('State', modify, [fun(X) -> X * 2 end]),
-        {V1, V2}
+    Ctx = catena_effect_runtime:empty_context(),
+    Handler = {'State', [
+        {init, fun() -> [] end},
+        {push, fun(X) -> {pushed, X} end},
+        {pop, fun() -> popped end}
+    ]},
+    Result = catena_effect_runtime:with_handlers(Ctx, [Handler], fun(ChildCtx) ->
+        R1 = catena_effect_runtime:perform(ChildCtx, 'State', init, []),
+        R2 = catena_effect_runtime:perform(ChildCtx, 'State', push, [42]),
+        R3 = catena_effect_runtime:perform(ChildCtx, 'State', pop, []),
+        {R1, R2, R3}
     end),
-    ?assertEqual({42, 84}, Result).
+    ?assertEqual({[], {pushed, 42}, popped}, Result).
+
+test_perform_builtin_fallback() ->
+    %% With empty context, builtin effects should still work
+    Ctx = catena_effect_runtime:empty_context(),
+    Result = catena_effect_runtime:perform(Ctx, 'Process', self, []),
+    ?assertEqual(self(), Result).
+
+test_perform_with_empty_context() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    %% Should fall through to builtin IO
+    Result = catena_effect_runtime:perform(Ctx, 'IO', print, [<<"test">>]),
+    ?assertEqual(ok, Result).
 
 %%====================================================================
-%% Effect Message Protocol Tests (1.3.5.3)
+%% Message Protocol Tests (1.3.5.3)
 %%====================================================================
 
 message_protocol_test_() ->
     [
-        ?_test(test_message_send_receive()),
-        ?_test(test_error_propagation()),
+        ?_test(test_effect_result_message()),
+        ?_test(test_effect_error_message()),
         ?_test(test_unknown_operation_error())
     ].
 
-test_message_send_receive() ->
-    %% Test that the message protocol works correctly
-    Handlers = [
-        {'Echo', [
-            {echo, fun(X) -> X end}
-        ]}
-    ],
-    Values = [42, <<"hello">>, [1,2,3], #{a => 1}],
-    Results = catena_effect_runtime:with_handlers(Handlers, fun() ->
-        [catena_effect_runtime:perform('Echo', echo, [V]) || V <- Values]
+test_effect_result_message() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    Handler = {'Proto', [
+        {echo, fun(X) -> {echoed, X} end}
+    ]},
+    Result = catena_effect_runtime:with_handlers(Ctx, [Handler], fun(ChildCtx) ->
+        catena_effect_runtime:perform(ChildCtx, 'Proto', echo, [hello])
     end),
-    ?assertEqual(Values, Results).
+    ?assertEqual({echoed, hello}, Result).
 
-test_error_propagation() ->
-    %% Test that handler errors are propagated
-    Handlers = [
-        {'Faulty', [
-            {crash, fun() -> erlang:error(intentional_crash) end}
-        ]}
-    ],
+test_effect_error_message() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    Handler = {'ErrorTest', [
+        {fail, fun() -> erlang:error(intentional_error) end}
+    ]},
     ?assertError(
-        {effect_error, 'Faulty', crash, {error, intentional_crash}},
-        catena_effect_runtime:with_handlers(Handlers, fun() ->
-            catena_effect_runtime:perform('Faulty', crash, [])
+        {effect_error, 'ErrorTest', fail, {error, intentional_error}},
+        catena_effect_runtime:with_handlers(Ctx, [Handler], fun(ChildCtx) ->
+            catena_effect_runtime:perform(ChildCtx, 'ErrorTest', fail, [])
         end)
     ).
 
 test_unknown_operation_error() ->
-    %% Test error for unknown operation
-    Handlers = [
-        {'Known', [
-            {exists, fun() -> ok end}
-        ]}
-    ],
+    Ctx = catena_effect_runtime:empty_context(),
+    Handler = {'Limited', [
+        {known, fun() -> ok end}
+    ]},
     ?assertError(
-        {effect_error, 'Known', nonexistent, {unknown_operation, nonexistent}},
-        catena_effect_runtime:with_handlers(Handlers, fun() ->
-            catena_effect_runtime:perform('Known', nonexistent, [])
+        {effect_error, 'Limited', unknown_op, {unknown_operation, unknown_op}},
+        catena_effect_runtime:with_handlers(Ctx, [Handler], fun(ChildCtx) ->
+            catena_effect_runtime:perform(ChildCtx, 'Limited', unknown_op, [])
         end)
     ).
 
 %%====================================================================
-%% Builtin IO Effect Tests (1.3.5.4)
+%% Builtin IO Tests (1.3.5.4)
 %%====================================================================
 
 builtin_io_test_() ->
@@ -233,115 +245,171 @@ builtin_io_test_() ->
         ?_test(test_io_println()),
         ?_test(test_io_read_write_file()),
         ?_test(test_io_handler_spec()),
-        ?_test(test_io_with_custom_handler())
+        ?_test(test_io_with_context())
     ].
 
 test_io_print() ->
-    %% Test that print returns ok (we can't easily capture stdout)
-    Result = catena_effect_runtime:perform('IO', print, [<<"test">>]),
+    Ctx = catena_effect_runtime:empty_context(),
+    Result = catena_effect_runtime:perform(Ctx, 'IO', print, [<<"Hello">>]),
     ?assertEqual(ok, Result).
 
 test_io_println() ->
-    %% Test that println returns ok
-    Result = catena_effect_runtime:perform('IO', println, [<<"test line">>]),
+    Ctx = catena_effect_runtime:empty_context(),
+    Result = catena_effect_runtime:perform(Ctx, 'IO', println, [<<"World">>]),
     ?assertEqual(ok, Result).
 
 test_io_read_write_file() ->
-    %% Test file read/write operations
-    TempFile = "/tmp/catena_effect_test_" ++ integer_to_list(erlang:unique_integer([positive])),
-    TestContent = <<"Hello, Effects!">>,
+    Ctx = catena_effect_runtime:empty_context(),
+    TempFile = "/tmp/catena_test_" ++ integer_to_list(erlang:unique_integer([positive])) ++ ".txt",
+    TestContent = <<"Test content for effect runtime">>,
 
     try
-        %% Write file
-        WriteResult = catena_effect_runtime:perform('IO', writeFile, [TempFile, TestContent]),
+        %% Write
+        WriteResult = catena_effect_runtime:perform(Ctx, 'IO', writeFile, [TempFile, TestContent]),
         ?assertEqual(ok, WriteResult),
 
-        %% Read file
-        ReadResult = catena_effect_runtime:perform('IO', readFile, [TempFile]),
+        %% Read
+        ReadResult = catena_effect_runtime:perform(Ctx, 'IO', readFile, [TempFile]),
         ?assertEqual(TestContent, ReadResult)
     after
-        %% Cleanup
         file:delete(TempFile)
     end.
 
 test_io_handler_spec() ->
-    %% Test the handler specification format
-    {'IO', Operations} = catena_effect_runtime:io_handler(),
-    OpNames = [Op || {Op, _Fun} <- Operations],
+    {EffectName, Operations} = catena_effect_runtime:io_handler(),
+    ?assertEqual('IO', EffectName),
+    ?assertEqual(5, length(Operations)),
+    OpNames = [Name || {Name, _Fun} <- Operations],
     ?assert(lists:member(print, OpNames)),
     ?assert(lists:member(println, OpNames)),
     ?assert(lists:member(readFile, OpNames)),
     ?assert(lists:member(writeFile, OpNames)),
     ?assert(lists:member(getLine, OpNames)).
 
-test_io_with_custom_handler() ->
-    %% Test overriding builtin IO with custom handler
-    PrintLog = self(),
-    CustomIO = [
-        {'IO', [
-            {print, fun(Text) ->
-                PrintLog ! {printed, Text},
-                ok
-            end}
-        ]}
-    ],
-    catena_effect_runtime:with_handlers(CustomIO, fun() ->
-        catena_effect_runtime:perform('IO', print, [<<"custom">>])
+test_io_with_context() ->
+    %% IO should work with custom handler that shadows builtin
+    Ctx = catena_effect_runtime:empty_context(),
+    MockIO = {'IO', [
+        {print, fun(_) -> mock_printed end}
+    ]},
+    Result = catena_effect_runtime:with_handlers(Ctx, [MockIO], fun(ChildCtx) ->
+        catena_effect_runtime:perform(ChildCtx, 'IO', print, [<<"test">>])
     end),
-    receive
-        {printed, <<"custom">>} -> ok
-    after 1000 ->
-        ?assert(false)
-    end.
+    ?assertEqual(mock_printed, Result).
 
 %%====================================================================
-%% Builtin Process Effect Tests
+%% Builtin Process Tests
 %%====================================================================
 
 builtin_process_test_() ->
     [
+        ?_test(test_process_self()),
         ?_test(test_process_spawn()),
         ?_test(test_process_send()),
-        ?_test(test_process_self()),
         ?_test(test_process_handler_spec())
     ].
 
+test_process_self() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    Result = catena_effect_runtime:perform(Ctx, 'Process', self, []),
+    ?assertEqual(self(), Result).
+
 test_process_spawn() ->
-    %% Test spawning a process
+    Ctx = catena_effect_runtime:empty_context(),
     Parent = self(),
-    Pid = catena_effect_runtime:perform('Process', spawn, [fun() ->
-        Parent ! {hello, self()}
-    end]),
+    Pid = catena_effect_runtime:perform(Ctx, 'Process', spawn, [
+        fun() -> Parent ! {spawned, self()} end
+    ]),
     ?assert(is_pid(Pid)),
     receive
-        {hello, Pid} -> ok
+        {spawned, SpawnedPid} ->
+            ?assertEqual(Pid, SpawnedPid)
     after 1000 ->
         ?assert(false)
     end.
 
 test_process_send() ->
-    %% Test sending a message
-    Target = self(),
-    Result = catena_effect_runtime:perform('Process', send, [Target, {test_msg, 42}]),
+    Ctx = catena_effect_runtime:empty_context(),
+    Result = catena_effect_runtime:perform(Ctx, 'Process', send, [self(), test_message]),
     ?assertEqual(ok, Result),
     receive
-        {test_msg, 42} -> ok
+        test_message -> ok
     after 1000 ->
         ?assert(false)
     end.
 
-test_process_self() ->
-    %% Test getting self
-    Result = catena_effect_runtime:perform('Process', self, []),
-    ?assertEqual(self(), Result).
-
 test_process_handler_spec() ->
-    %% Test the handler specification format
-    {'Process', Operations} = catena_effect_runtime:process_handler(),
-    OpNames = [Op || {Op, _Fun} <- Operations],
+    {EffectName, Operations} = catena_effect_runtime:process_handler(),
+    ?assertEqual('Process', EffectName),
+    ?assertEqual(3, length(Operations)),
+    OpNames = [Name || {Name, _Fun} <- Operations],
     ?assert(lists:member(spawn, OpNames)),
     ?assert(lists:member(send, OpNames)),
     ?assert(lists:member(self, OpNames)).
+
+%%====================================================================
+%% Cross-Process Context Tests
+%%====================================================================
+
+cross_process_test_() ->
+    [
+        ?_test(test_context_passed_to_spawned_process()),
+        ?_test(test_multiple_processes_share_context())
+    ].
+
+test_context_passed_to_spawned_process() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    Handler = {'SharedEffect', [
+        {getValue, fun() -> shared_value end}
+    ]},
+    Parent = self(),
+
+    catena_effect_runtime:with_handlers(Ctx, [Handler], fun(ChildCtx) ->
+        %% Spawn process and pass context to it
+        spawn(fun() ->
+            Result = catena_effect_runtime:perform(ChildCtx, 'SharedEffect', getValue, []),
+            Parent ! {child_result, Result}
+        end),
+
+        receive
+            {child_result, Result} ->
+                ?assertEqual(shared_value, Result)
+        after 1000 ->
+            ?assert(false)
+        end
+    end).
+
+test_multiple_processes_share_context() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    Handler = {'Counter', [
+        {get, fun() -> 42 end}
+    ]},
+    Parent = self(),
+
+    catena_effect_runtime:with_handlers(Ctx, [Handler], fun(ChildCtx) ->
+        %% Spawn multiple processes with same context
+        lists:foreach(fun(N) ->
+            spawn(fun() ->
+                Result = catena_effect_runtime:perform(ChildCtx, 'Counter', get, []),
+                Parent ! {result, N, Result}
+            end)
+        end, [1, 2, 3]),
+
+        %% Collect results
+        Results = lists:map(fun(_) ->
+            receive
+                {result, N, R} -> {N, R}
+            after 1000 ->
+                error
+            end
+        end, [1, 2, 3]),
+
+        %% All should get same value
+        ?assertEqual(3, length(Results)),
+        lists:foreach(fun({_N, R}) ->
+            ?assertEqual(42, R)
+        end, Results)
+    end).
 
 %%====================================================================
 %% Integration Tests
@@ -349,85 +417,72 @@ test_process_handler_spec() ->
 
 integration_test_() ->
     [
-        ?_test(test_complex_effect_composition()),
-        ?_test(test_effect_with_closures()),
-        ?_test(test_sequential_effects()),
-        ?_test(test_builtin_effects_in_handler_context())
+        ?_test(test_full_effect_workflow()),
+        ?_test(test_multiple_effects()),
+        ?_test(test_mock_testing_pattern()),
+        ?_test(test_effect_composition())
     ].
 
-test_complex_effect_composition() ->
-    %% Test composing multiple effects in a computation
-    Handlers = [
-        {'State', [
-            {get, fun() -> 0 end},
-            {put, fun(V) -> V end}  % Just returns the value for simplicity
-        ]},
-        {'Logger', [
-            {log, fun(Msg) -> {logged, Msg} end}
-        ]}
-    ],
-    Result = catena_effect_runtime:with_handlers(Handlers, fun() ->
-        V = catena_effect_runtime:perform('State', get, []),
-        catena_effect_runtime:perform('Logger', log, [<<"Starting">>]),
-        NewV = V + 10,
-        catena_effect_runtime:perform('State', put, [NewV]),
-        catena_effect_runtime:perform('Logger', log, [<<"Done">>]),
-        NewV
+test_full_effect_workflow() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    Logger = {'Logger', [
+        {log, fun(Msg) -> {logged, Msg} end}
+    ]},
+    Result = catena_effect_runtime:with_handlers(Ctx, [Logger], fun(ChildCtx) ->
+        catena_effect_runtime:perform(ChildCtx, 'Logger', log, [<<"Test message">>])
     end),
-    ?assertEqual(10, Result).
+    ?assertEqual({logged, <<"Test message">>}, Result).
 
-test_effect_with_closures() ->
-    %% Test that closures work correctly in effect handlers
-    Counter = 42,
-    Handlers = [
-        {'Closure', [
-            {getCounter, fun() -> Counter end},
-            {addToCounter, fun(X) -> Counter + X end}
-        ]}
-    ],
-    Result = catena_effect_runtime:with_handlers(Handlers, fun() ->
-        V1 = catena_effect_runtime:perform('Closure', getCounter, []),
-        V2 = catena_effect_runtime:perform('Closure', addToCounter, [8]),
-        {V1, V2}
+test_multiple_effects() ->
+    Ctx = catena_effect_runtime:empty_context(),
+    Logger = {'Logger', [{log, fun(M) -> {logged, M} end}]},
+    Counter = {'Counter', [{inc, fun(N) -> N + 1 end}]},
+
+    Result = catena_effect_runtime:with_handlers(Ctx, [Logger, Counter], fun(ChildCtx) ->
+        L = catena_effect_runtime:perform(ChildCtx, 'Logger', log, [test]),
+        C = catena_effect_runtime:perform(ChildCtx, 'Counter', inc, [5]),
+        {L, C}
     end),
-    ?assertEqual({42, 50}, Result).
+    ?assertEqual({{logged, test}, 6}, Result).
 
-test_sequential_effects() ->
-    %% Test sequential effect invocations
-    Handlers = [
-        {'Sequence', [
-            {step, fun(N) -> N end}
-        ]}
-    ],
-    Result = catena_effect_runtime:with_handlers(Handlers, fun() ->
-        lists:foldl(fun(N, Acc) ->
-            V = catena_effect_runtime:perform('Sequence', step, [N]),
-            [V | Acc]
-        end, [], [1, 2, 3, 4, 5])
+test_mock_testing_pattern() ->
+    %% Demonstrate easy mocking with explicit context
+    Ctx = catena_effect_runtime:empty_context(),
+
+    %% Production handler
+    ProductionIO = {'IO', [
+        {readFile, fun(Path) -> {ok, <<"real:", Path/binary>>} end}
+    ]},
+
+    %% Mock handler for testing
+    MockIO = {'IO', [
+        {readFile, fun(_Path) -> {ok, <<"mock data">>} end}
+    ]},
+
+    %% Test with mock
+    MockResult = catena_effect_runtime:with_handlers(Ctx, [MockIO], fun(MockCtx) ->
+        catena_effect_runtime:perform(MockCtx, 'IO', readFile, [<<"test.txt">>])
     end),
-    ?assertEqual([5, 4, 3, 2, 1], Result).
+    ?assertEqual({ok, <<"mock data">>}, MockResult),
 
-test_builtin_effects_in_handler_context() ->
-    %% Test that builtin effects work alongside custom handlers
-    TempFile = "/tmp/catena_builtin_test_" ++ integer_to_list(erlang:unique_integer([positive])),
-    CustomHandlers = [
-        {'Custom', [
-            {transform, fun(X) -> X * 2 end}
-        ]}
-    ],
-    try
-        Result = catena_effect_runtime:with_handlers(CustomHandlers, fun() ->
-            %% Use custom handler
-            V = catena_effect_runtime:perform('Custom', transform, [21]),
-            %% Use builtin IO
-            catena_effect_runtime:perform('IO', writeFile, [TempFile, integer_to_binary(V)]),
-            Content = catena_effect_runtime:perform('IO', readFile, [TempFile]),
-            {V, Content}
-        end),
-        ?assertEqual({42, <<"42">>}, Result)
-    after
-        file:delete(TempFile)
-    end.
+    %% Production with real handler
+    ProdResult = catena_effect_runtime:with_handlers(Ctx, [ProductionIO], fun(ProdCtx) ->
+        catena_effect_runtime:perform(ProdCtx, 'IO', readFile, [<<"config.json">>])
+    end),
+    ?assertEqual({ok, <<"real:config.json">>}, ProdResult).
+
+test_effect_composition() ->
+    Ctx = catena_effect_runtime:empty_context(),
+
+    %% Chain of effects
+    Reader = {'Reader', [{ask, fun() -> config_value end}]},
+    Writer = {'Writer', [{tell, fun(V) -> {written, V} end}]},
+
+    Result = catena_effect_runtime:with_handlers(Ctx, [Reader, Writer], fun(ChildCtx) ->
+        Value = catena_effect_runtime:perform(ChildCtx, 'Reader', ask, []),
+        catena_effect_runtime:perform(ChildCtx, 'Writer', tell, [Value])
+    end),
+    ?assertEqual({written, config_value}, Result).
 
 %%====================================================================
 %% Error Handling Tests
@@ -443,68 +498,80 @@ error_handling_test_() ->
     ].
 
 test_no_handler_error() ->
-    %% Test error when no handler is registered
+    Ctx = catena_effect_runtime:empty_context(),
     ?assertError(
-        {no_handler_for_effect, 'Unregistered', someOp},
-        catena_effect_runtime:perform('Unregistered', someOp, [])
+        {no_handler_for_effect, 'NonExistent', someOp},
+        catena_effect_runtime:perform(Ctx, 'NonExistent', someOp, [])
     ).
 
 test_handler_exception() ->
-    %% Test that handler exceptions are properly wrapped
-    Handlers = [
-        {'Throws', [
-            {throwError, fun() -> throw(my_error) end}
-        ]}
-    ],
+    Ctx = catena_effect_runtime:empty_context(),
+    Handler = {'Faulty', [
+        {crash, fun() -> throw(intentional_crash) end}
+    ]},
     ?assertError(
-        {effect_error, 'Throws', throwError, {throw, my_error}},
-        catena_effect_runtime:with_handlers(Handlers, fun() ->
-            catena_effect_runtime:perform('Throws', throwError, [])
+        {effect_error, 'Faulty', crash, {throw, intentional_crash}},
+        catena_effect_runtime:with_handlers(Ctx, [Handler], fun(ChildCtx) ->
+            catena_effect_runtime:perform(ChildCtx, 'Faulty', crash, [])
         end)
     ).
 
 test_io_file_not_found() ->
-    %% Test IO error for non-existent file
+    Ctx = catena_effect_runtime:empty_context(),
     ?assertError(
         {io_error, readFile, enoent},
-        catena_effect_runtime:perform('IO', readFile, ["/nonexistent/path/file.txt"])
+        catena_effect_runtime:perform(Ctx, 'IO', readFile, ["/tmp/nonexistent_file_12345.txt"])
     ).
 
 test_io_path_traversal() ->
+    Ctx = catena_effect_runtime:empty_context(),
     %% Test that path traversal attacks are blocked
     ?assertError(
         {io_error, readFile, {path_security_error, _}},
-        catena_effect_runtime:perform('IO', readFile, ["../../../etc/passwd"])
+        catena_effect_runtime:perform(Ctx, 'IO', readFile, ["../../../etc/passwd"])
     ),
     ?assertError(
         {io_error, writeFile, {path_security_error, _}},
-        catena_effect_runtime:perform('IO', writeFile, ["../../../tmp/evil", <<"data">>])
+        catena_effect_runtime:perform(Ctx, 'IO', writeFile, ["../../../tmp/evil", <<"data">>])
     ).
 
 test_io_system_path() ->
+    Ctx = catena_effect_runtime:empty_context(),
     %% Test that system paths are blocked
     ?assertError(
         {io_error, readFile, {path_security_error, _}},
-        catena_effect_runtime:perform('IO', readFile, ["/etc/passwd"])
+        catena_effect_runtime:perform(Ctx, 'IO', readFile, ["/etc/passwd"])
     ),
     ?assertError(
         {io_error, writeFile, {path_security_error, _}},
-        catena_effect_runtime:perform('IO', writeFile, ["/etc/evil", <<"data">>])
+        catena_effect_runtime:perform(Ctx, 'IO', writeFile, ["/etc/evil", <<"data">>])
     ).
 
 %%====================================================================
-%% Utility Conversion Tests
+%% Utility Tests
 %%====================================================================
 
 utility_test_() ->
     [
+        ?_test(test_handler_spec_format()),
         ?_test(test_io_string_conversion())
     ].
 
+test_handler_spec_format() ->
+    %% Both io_handler and process_handler should return {Atom, List}
+    {IOName, IOOps} = catena_effect_runtime:io_handler(),
+    ?assert(is_atom(IOName)),
+    ?assert(is_list(IOOps)),
+
+    {ProcName, ProcOps} = catena_effect_runtime:process_handler(),
+    ?assert(is_atom(ProcName)),
+    ?assert(is_list(ProcOps)).
+
 test_io_string_conversion() ->
+    Ctx = catena_effect_runtime:empty_context(),
     %% Test that various types can be printed
-    ?assertEqual(ok, catena_effect_runtime:perform('IO', print, [<<"binary">>])),
-    ?assertEqual(ok, catena_effect_runtime:perform('IO', print, ["list"])),
-    ?assertEqual(ok, catena_effect_runtime:perform('IO', print, [atom])),
-    ?assertEqual(ok, catena_effect_runtime:perform('IO', print, [42])),
-    ?assertEqual(ok, catena_effect_runtime:perform('IO', print, [3.14])).
+    ?assertEqual(ok, catena_effect_runtime:perform(Ctx, 'IO', print, [<<"binary">>])),
+    ?assertEqual(ok, catena_effect_runtime:perform(Ctx, 'IO', print, ["list"])),
+    ?assertEqual(ok, catena_effect_runtime:perform(Ctx, 'IO', print, [atom])),
+    ?assertEqual(ok, catena_effect_runtime:perform(Ctx, 'IO', print, [42])),
+    ?assertEqual(ok, catena_effect_runtime:perform(Ctx, 'IO', print, [3.14])).

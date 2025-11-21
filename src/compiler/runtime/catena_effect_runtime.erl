@@ -6,6 +6,9 @@
 %%% process that receives perform messages, executes handler operations,
 %%% and sends results back.
 %%%
+%%% Uses explicit context passing instead of process dictionary for
+%%% better composability across processes and proper nesting support.
+%%%
 %%% This module handles:
 %%% - Handler process spawning (1.3.5.1)
 %%% - Perform operation execution (1.3.5.2)
@@ -16,41 +19,62 @@
 -module(catena_effect_runtime).
 
 -export([
-    %% Main API
-    perform/3,
-    with_handlers/2,
+    %% Context creation
+    empty_context/0,
+    new_context/0,
 
-    %% Handler management
-    register_handler/2,
-    unregister_handler/1,
-    get_handler/1,
+    %% Main API
+    perform/4,
+    with_handlers/3,
 
     %% Builtin effects
     io_handler/0,
     process_handler/0
 ]).
 
+%%====================================================================
+%% Type Definitions
+%%====================================================================
+
+-type effect_context() :: #{
+    handlers := #{atom() => pid()},
+    parent := effect_context() | undefined
+}.
+
+-export_type([effect_context/0]).
+
 %% Effect handler timeout (5 seconds)
 -define(EFFECT_TIMEOUT, 5000).
 
-%% Process dictionary key for effect handlers
--define(HANDLER_KEY(Effect), {catena_effect_handler, Effect}).
+%%====================================================================
+%% Context Creation
+%%====================================================================
+
+%% @doc Create an empty effect context
+-spec empty_context() -> effect_context().
+empty_context() ->
+    #{handlers => #{}, parent => undefined}.
+
+%% @doc Create a new effect context (alias for empty_context)
+-spec new_context() -> effect_context().
+new_context() ->
+    empty_context().
 
 %%====================================================================
 %% Main API (1.3.5.1, 1.3.5.2)
 %%====================================================================
 
-%% @doc Perform an effect operation
+%% @doc Perform an effect operation with explicit context
 %%
-%% Sends a perform message to the registered handler for the given
-%% effect and waits for the result.
+%% Looks up handler in context (walking parent chain if needed),
+%% sends a perform message and waits for the result.
 %%
 %% Message protocol (1.3.5.3):
 %%   Send: {perform, Effect, Operation, Args, ReplyPid}
 %%   Recv: {effect_result, Value}
--spec perform(atom(), atom(), list()) -> term().
-perform(Effect, Operation, Args) ->
-    case get_handler(Effect) of
+-spec perform(effect_context(), atom(), atom(), list()) -> term().
+perform(Ctx, Effect, Operation, Args) ->
+    case get_handler(Ctx, Effect) of
         undefined ->
             %% No handler registered - try builtin effects
             perform_builtin(Effect, Operation, Args);
@@ -70,66 +94,67 @@ perform(Effect, Operation, Args) ->
 
 %% @doc Execute body with effect handlers
 %%
-%% Spawns handler processes for each effect, registers them,
-%% executes the body, and cleans up handler processes.
--spec with_handlers(list(), fun(() -> term())) -> term().
-with_handlers(HandlerSpecs, BodyFun) ->
-    %% Spawn handler processes
-    HandlerPids = spawn_handlers(HandlerSpecs),
+%% Spawns handler processes for each effect, creates a child context
+%% with the new handlers, executes the body, and cleans up handler processes.
+-spec with_handlers(effect_context(), list(), fun((effect_context()) -> T)) -> T.
+with_handlers(Ctx, HandlerSpecs, BodyFun) ->
+    %% Spawn handler processes and collect their PIDs
+    {HandlerPids, NewHandlers} = spawn_handlers(HandlerSpecs),
+
+    %% Create child context with new handlers merged in
+    ChildCtx = #{
+        handlers => maps:merge(maps:get(handlers, Ctx), NewHandlers),
+        parent => Ctx
+    },
 
     try
-        %% Execute body
-        BodyFun()
+        %% Execute body with child context
+        BodyFun(ChildCtx)
     after
         %% Cleanup handler processes
         cleanup_handlers(HandlerPids)
     end.
 
 %%====================================================================
-%% Handler Management (1.3.5.1)
+%% Handler Lookup
 %%====================================================================
 
-%% @doc Register a handler process for an effect
--spec register_handler(atom(), pid()) -> ok.
-register_handler(Effect, Pid) ->
-    put(?HANDLER_KEY(Effect), Pid),
-    ok.
-
-%% @doc Unregister a handler for an effect
--spec unregister_handler(atom()) -> ok.
-unregister_handler(Effect) ->
-    erase(?HANDLER_KEY(Effect)),
-    ok.
-
-%% @doc Get the handler process for an effect
--spec get_handler(atom()) -> pid() | undefined.
-get_handler(Effect) ->
-    get(?HANDLER_KEY(Effect)).
+%% @doc Get handler for effect, walking parent chain if needed
+-spec get_handler(effect_context(), atom()) -> pid() | undefined.
+get_handler(Ctx, Effect) ->
+    Handlers = maps:get(handlers, Ctx),
+    case maps:get(Effect, Handlers, undefined) of
+        undefined ->
+            %% Not in current context, check parent
+            case maps:get(parent, Ctx) of
+                undefined -> undefined;
+                ParentCtx -> get_handler(ParentCtx, Effect)
+            end;
+        HandlerPid ->
+            HandlerPid
+    end.
 
 %%====================================================================
 %% Handler Spawning (1.3.5.1)
 %%====================================================================
 
 %% Spawn handler processes from handler specifications
+%% Returns {ListOfPids, MapOfEffectToPid}
+-spec spawn_handlers(list()) -> {list({atom(), pid()}), #{atom() => pid()}}.
 spawn_handlers(HandlerSpecs) ->
-    lists:map(
-        fun({Effect, Operations}) ->
-            spawn_handler(Effect, Operations)
+    lists:foldl(
+        fun({Effect, Operations}, {PidList, PidMap}) ->
+            Pid = spawn_link(fun() ->
+                handler_loop(Effect, Operations)
+            end),
+            {[{Effect, Pid} | PidList], maps:put(Effect, Pid, PidMap)}
         end,
+        {[], #{}},
         HandlerSpecs
     ).
 
-%% Spawn a single handler process
-spawn_handler(Effect, Operations) ->
-    CallerPid = self(),
-    Pid = spawn_link(fun() ->
-        handler_loop(Effect, Operations, CallerPid)
-    end),
-    register_handler(Effect, Pid),
-    {Effect, Pid}.
-
 %% Handler process loop
-handler_loop(Effect, Operations, _CallerPid) ->
+handler_loop(Effect, Operations) ->
     receive
         {perform, Effect, Operation, Args, ReplyPid} ->
             %% Find operation handler
@@ -146,20 +171,19 @@ handler_loop(Effect, Operations, _CallerPid) ->
                 false ->
                     ReplyPid ! {effect_error, {unknown_operation, Operation}}
             end,
-            handler_loop(Effect, Operations, _CallerPid);
+            handler_loop(Effect, Operations);
 
         stop ->
             ok;
 
         _Other ->
-            handler_loop(Effect, Operations, _CallerPid)
+            handler_loop(Effect, Operations)
     end.
 
 %% Cleanup handler processes
 cleanup_handlers(HandlerPids) ->
     lists:foreach(
-        fun({Effect, Pid}) ->
-            unregister_handler(Effect),
+        fun({_Effect, Pid}) ->
             Pid ! stop
         end,
         HandlerPids

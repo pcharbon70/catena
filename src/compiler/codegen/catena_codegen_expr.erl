@@ -399,18 +399,18 @@ translate_tuple({tuple_expr, Elements, _Loc}, State) ->
 %% @doc Translate perform expression to process-based message passing
 %%
 %% perform Effect.operation(args) becomes:
-%% 1. Get handler process for Effect from process dictionary
-%% 2. Send message {perform, Effect, operation, [args], self()}
-%% 3. Receive result
+%% catena_effect_runtime:perform(Ctx, Effect, Operation, Args)
+%% where Ctx is the current effect context (passed through __catena_ctx__)
 translate_perform({perform_expr, Effect, Operation, Args, _Loc}, State) ->
     {CoreArgs, State1} = translate_exprs(Args, State),
 
-    %% Build the effect invocation
-    %% This creates: effect_runtime:perform(Effect, Operation, Args)
+    %% Build the effect invocation with explicit context
+    %% This creates: effect_runtime:perform(__catena_ctx__, Effect, Operation, Args)
     PerformCall = cerl:c_call(
         cerl:c_atom(catena_effect_runtime),
         cerl:c_atom(perform),
         [
+            cerl:c_var('__catena_ctx__'),
             cerl:c_atom(Effect),
             cerl:c_atom(Operation),
             build_list(CoreArgs)
@@ -421,9 +421,8 @@ translate_perform({perform_expr, Effect, Operation, Args, _Loc}, State) ->
 %% @doc Translate try/with expression to process-based handler
 %%
 %% try body with handlers becomes:
-%% 1. Spawn handler processes for each effect
-%% 2. Execute body with handler routing
-%% 3. Cleanup handler processes
+%% catena_effect_runtime:with_handlers(Ctx, HandlerSpecs, fun(NewCtx) -> Body end)
+%% where Ctx is the current effect context and NewCtx is the child context
 translate_try_with({try_with_expr, Body, Handlers, _Loc}, State) ->
     {CoreBody, State1} = translate_expr(Body, State),
 
@@ -431,12 +430,13 @@ translate_try_with({try_with_expr, Body, Handlers, _Loc}, State) ->
     {HandlerSpecs, State2} = translate_handlers(Handlers, State1),
 
     %% Wrap body with handler setup/teardown
-    %% This creates: effect_runtime:with_handlers(HandlerSpecs, fun() -> Body end)
-    BodyFun = cerl:c_fun([], CoreBody),
+    %% This creates: effect_runtime:with_handlers(__catena_ctx__, HandlerSpecs, fun(__catena_ctx__) -> Body end)
+    %% Note: The body function receives the new context and shadows __catena_ctx__
+    BodyFun = cerl:c_fun([cerl:c_var('__catena_ctx__')], CoreBody),
     WithHandlers = cerl:c_call(
         cerl:c_atom(catena_effect_runtime),
         cerl:c_atom(with_handlers),
-        [HandlerSpecs, BodyFun]
+        [cerl:c_var('__catena_ctx__'), HandlerSpecs, BodyFun]
     ),
     {WithHandlers, State2}.
 
