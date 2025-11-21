@@ -161,6 +161,7 @@ spawn_handlers(HandlerSpecs) ->
     ).
 
 %% Handler process loop
+-spec handler_loop(atom(), [{atom(), fun()}]) -> ok.
 handler_loop(Effect, Operations) ->
     receive
         {perform, Effect, Operation, Args, ReplyPid} ->
@@ -188,6 +189,7 @@ handler_loop(Effect, Operations) ->
     end.
 
 %% Cleanup handler processes
+-spec cleanup_handlers([{atom(), pid()}]) -> ok.
 cleanup_handlers(HandlerPids) ->
     lists:foreach(
         fun({_Effect, Pid}) ->
@@ -201,6 +203,7 @@ cleanup_handlers(HandlerPids) ->
 %%====================================================================
 
 %% Perform builtin effect operations
+-spec perform_builtin(atom(), atom(), list()) -> term().
 perform_builtin('IO', Operation, Args) ->
     perform_io(Operation, Args);
 perform_builtin('Process', Operation, Args) ->
@@ -224,6 +227,7 @@ io_handler() ->
     ]}.
 
 %% Perform IO operations directly (for builtin handler)
+-spec perform_io(atom(), list()) -> term().
 perform_io(print, [Text]) ->
     io_print(Text);
 perform_io(println, [Text]) ->
@@ -238,14 +242,17 @@ perform_io(Operation, _Args) ->
     erlang:error({unknown_io_operation, Operation}).
 
 %% IO operation implementations
+-spec io_print(term()) -> ok.
 io_print(Text) ->
     io:format("~s", [to_string(Text)]),
     ok.
 
+-spec io_println(term()) -> ok.
 io_println(Text) ->
     io:format("~s~n", [to_string(Text)]),
     ok.
 
+-spec io_read_file(term()) -> binary().
 io_read_file(Path) ->
     PathStr = path_to_string(Path),
     case validate_io_path(PathStr) of
@@ -273,6 +280,7 @@ io_read_file(Path) ->
             erlang:error({io_error, readFile, Reason})
     end.
 
+-spec io_write_file(term(), term()) -> ok.
 io_write_file(Path, Content) ->
     PathStr = path_to_string(Path),
     case validate_io_path(PathStr) of
@@ -287,6 +295,7 @@ io_write_file(Path, Content) ->
             erlang:error({io_error, writeFile, Reason})
     end.
 
+-spec io_get_line() -> binary().
 io_get_line() ->
     case io:get_line("") of
         eof ->
@@ -312,6 +321,7 @@ process_handler() ->
     ]}.
 
 %% Perform Process operations directly (for builtin handler)
+-spec perform_process(atom(), list()) -> term().
 perform_process(spawn, [Fun]) ->
     process_spawn(Fun);
 perform_process(send, [Pid, Msg]) ->
@@ -322,6 +332,7 @@ perform_process(Operation, _Args) ->
     erlang:error({unknown_process_operation, Operation}).
 
 %% Process operation implementations
+-spec process_spawn(fun(() -> term())) -> pid().
 process_spawn(Fun) ->
     %% Check process count to prevent DoS
     MaxCount = application:get_env(catena, max_process_count, ?DEFAULT_MAX_PROCESS_COUNT),
@@ -332,10 +343,12 @@ process_spawn(Fun) ->
             spawn(fun() -> Fun() end)
     end.
 
+-spec process_send(pid(), term()) -> ok.
 process_send(Pid, Msg) ->
     Pid ! Msg,
     ok.
 
+-spec process_self() -> pid().
 process_self() ->
     self().
 
@@ -395,20 +408,24 @@ resolve_symlinks(Path, MaxDepth) ->
             {error, {file_info_error, Reason}}
     end.
 
+-spec is_safe_io_path(string(), string()) -> boolean().
 is_safe_io_path(OriginalPath, NormalizedPath) ->
     not has_path_traversal(OriginalPath) andalso
     not has_null_bytes(OriginalPath) andalso
     not is_system_path(NormalizedPath).
 
 %% Check for path traversal sequences
+-spec has_path_traversal(string()) -> boolean().
 has_path_traversal(Path) ->
     string:find(Path, "..") =/= nomatch.
 
 %% Check for null bytes (used to obfuscate paths)
+-spec has_null_bytes(string()) -> boolean().
 has_null_bytes(Path) ->
     lists:member(0, Path).
 
 %% Check if path is a protected system directory
+-spec is_system_path(string()) -> boolean().
 is_system_path(Path) ->
     SystemPaths = ["/etc", "/sys", "/proc", "/dev", "/root", "/boot", "/var/log"],
     lists:any(fun(Prefix) ->
@@ -416,6 +433,7 @@ is_system_path(Path) ->
     end, SystemPaths).
 
 %% Convert various types to string/binary for IO
+-spec to_string(term()) -> binary().
 to_string(Bin) when is_binary(Bin) -> Bin;
 to_string(List) when is_list(List) -> list_to_binary(List);
 to_string(Atom) when is_atom(Atom) -> atom_to_binary(Atom, utf8);
@@ -424,6 +442,7 @@ to_string(Float) when is_float(Float) -> float_to_binary(Float);
 to_string(Other) -> list_to_binary(io_lib:format("~p", [Other])).
 
 %% Convert path to string (list) for validation
+-spec path_to_string(term()) -> string().
 path_to_string(Bin) when is_binary(Bin) -> binary_to_list(Bin);
 path_to_string(List) when is_list(List) -> List;
 path_to_string(Atom) when is_atom(Atom) -> atom_to_list(Atom).
