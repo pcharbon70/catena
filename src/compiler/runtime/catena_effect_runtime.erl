@@ -50,6 +50,9 @@
 %% Note: Erlang default limit is 262144, max is ~134 million
 -define(DEFAULT_MAX_PROCESS_COUNT, 50000).
 
+%% Default maximum file size for readFile (10 MB)
+-define(DEFAULT_MAX_FILE_SIZE, 10485760).
+
 %%====================================================================
 %% Context Creation
 %%====================================================================
@@ -247,9 +250,22 @@ io_read_file(Path) ->
     PathStr = path_to_string(Path),
     case validate_io_path(PathStr) of
         {ok, ValidPath} ->
-            case file:read_file(ValidPath) of
-                {ok, Content} ->
-                    Content;
+            %% Check file size before reading
+            MaxSize = application:get_env(catena, max_file_size, ?DEFAULT_MAX_FILE_SIZE),
+            case file:read_file_info(ValidPath) of
+                {ok, FileInfo} ->
+                    FileSize = element(2, FileInfo),  %% size field
+                    case FileSize > MaxSize of
+                        true ->
+                            erlang:error({io_error, readFile, {file_too_large, FileSize, MaxSize}});
+                        false ->
+                            case file:read_file(ValidPath) of
+                                {ok, Content} ->
+                                    Content;
+                                {error, Reason} ->
+                                    erlang:error({io_error, readFile, Reason})
+                            end
+                    end;
                 {error, Reason} ->
                     erlang:error({io_error, readFile, Reason})
             end;
