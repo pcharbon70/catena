@@ -87,7 +87,7 @@ module_with_types_test() ->
 
 prelude_parses_test() ->
     %% Just verify prelude parses through semantic analysis
-    Path = "/home/ducky/code/catena/lib/catena/stdlib/prelude.catena",
+    Path = "/home/ducky/code/catena/lib/catena/stdlib/prelude.cat",
     {ok, Binary} = file:read_file(Path),
     Source = binary_to_list(Binary),
     {ok, Tokens, _} = catena_lexer:string(Source),
@@ -97,7 +97,7 @@ prelude_parses_test() ->
 
 prelude_env_build_test() ->
     %% Try to build type environment from prelude
-    Path = "/home/ducky/code/catena/lib/catena/stdlib/prelude.catena",
+    Path = "/home/ducky/code/catena/lib/catena/stdlib/prelude.cat",
     {ok, Binary} = file:read_file(Path),
     Source = binary_to_list(Binary),
     {ok, Tokens, _} = catena_lexer:string(Source),
@@ -129,7 +129,7 @@ prelude_env_build_test() ->
 
 prelude_compile_test() ->
     %% Full compilation - will likely fail initially
-    Path = "/home/ducky/code/catena/lib/catena/stdlib/prelude.catena",
+    Path = "/home/ducky/code/catena/lib/catena/stdlib/prelude.cat",
     Result = catena_compile:compile_file(Path),
     case Result of
         {ok, {typed_module, Name, TypedDecls, _Env}} ->

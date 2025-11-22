@@ -644,14 +644,14 @@ None |> transform @MaybeToList             -- []
 ```
 std/
   category/
-    functor.catena      -- Functor trait and instances
-    applicative.catena  -- Applicative trait and instances
-    monad.catena        -- Monad trait and instances
+    functor.cat      -- Functor trait and instances
+    applicative.cat  -- Applicative trait and instances
+    monad.cat        -- Monad trait and instances
   data/
-    list.catena         -- List type and instances
-    option.catena       -- Option type and instances
-    result.catena       -- Result type and instances
-  prelude.catena        -- Auto-imported basics
+    list.cat         -- List type and instances
+    option.cat       -- Option type and instances
+    result.cat       -- Result type and instances
+  prelude.cat        -- Auto-imported basics
 ```
 
 ---

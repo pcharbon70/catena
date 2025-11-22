@@ -104,7 +104,7 @@ generate_temp_filename(Suffix) ->
     Pid = pid_to_list(self()),
     Ref = ref_to_list(make_ref()),
     CleanRef = lists:filter(fun(C) -> C =/= $< andalso C =/= $> end, Ref),
-    "/tmp/catena_test_" ++ Suffix ++ "_" ++ Pid ++ "_" ++ CleanRef ++ ".catena".
+    "/tmp/catena_test_" ++ Suffix ++ "_" ++ Pid ++ "_" ++ CleanRef ++ ".cat".
 ```
 
 **Features:**
@@ -266,7 +266,7 @@ end).
 
 **Collision prevention:**
 ```erlang
-"/tmp/catena_test_test_<0.123.0>_#Ref<0.1234567.0>.catena"
+"/tmp/catena_test_test_<0.123.0>_#Ref<0.1234567.0>.cat"
 ```
 
 **Features:**
@@ -323,7 +323,7 @@ Net change:                                         +89 lines, -40 duplicates
 **Before:**
 ```erlang
 parse_file_test() ->
-    TestFile = "/tmp/catena_test_example.catena",
+    TestFile = "/tmp/catena_test_example.cat",
     file:write_file(TestFile, "shape Foo = Bar\n"),
 
     Result = catena_parser_wrapper:parse_file(TestFile),
@@ -335,7 +335,7 @@ parse_file_test() ->
 **After:**
 ```erlang
 parse_file_test() ->
-    TestFile = "/tmp/catena_test_example.catena",
+    TestFile = "/tmp/catena_test_example.cat",
     test_helpers:create_test_file(TestFile, "shape Foo = Bar\n"),
 
     Result = catena_parser_wrapper:parse_file(TestFile),
@@ -359,7 +359,7 @@ parse_file_test() ->
 **Custom filenames:**
 ```erlang
 test_helpers:with_temp_file("unicode", "shape λ → ∀\n", fun(File) ->
-    % File: /tmp/catena_test_unicode_<0.123.0>_#Ref<...>.catena
+    % File: /tmp/catena_test_unicode_<0.123.0>_#Ref<...>.cat
     Result = parse_file(File),
     ?assertMatch({ok, _}, Result)
 end).

@@ -81,9 +81,9 @@ Reduce to **12 core keywords** that require compiler support, and move the rest 
    - Update effect handling syntax
 
 3. **New: `lib/catena/stdlib/`**
-   - `prelude.catena` - Core traits (Comparable, Mapper, Pipeline, etc.)
-   - `test.catena` - Testing framework
-   - `doc.catena` - Documentation utilities
+   - `prelude.cat` - Core traits (Comparable, Mapper, Pipeline, etc.)
+   - `test.cat` - Testing framework
+   - `doc.cat` - Documentation utilities
 
 4. **`notes/research/language_overview.md`**
    - Update keyword table
@@ -93,16 +93,16 @@ Reduce to **12 core keywords** that require compiler support, and move the rest 
 
 ```
 lib/catena/stdlib/
-├── prelude.catena      # Core traits and types
-├── test.catena         # Testing framework
+├── prelude.cat      # Core traits and types
+├── test.cat         # Testing framework
 ├── effect/
-│   ├── io.catena       # IO effect
-│   ├── state.catena    # State effect
-│   └── error.catena    # Error effect
+│   ├── io.cat       # IO effect
+│   ├── state.cat    # State effect
+│   └── error.cat    # Error effect
 └── data/
-    ├── maybe.catena    # Maybe type
-    ├── either.catena   # Either type
-    └── list.catena     # List type
+    ├── maybe.cat    # Maybe type
+    ├── either.cat   # Either type
+    └── list.cat     # List type
 ```
 
 ---
@@ -135,8 +135,8 @@ lib/catena/stdlib/
 
 ### Step 3: Create Standard Library Structure ✅
 - [x] Create stdlib directory structure
-- [x] Write prelude.catena with core traits (updated to use `where...end` syntax)
-- [x] Write test.catena with testing framework
+- [x] Write prelude.cat with core traits (updated to use `where...end` syntax)
+- [x] Write test.cat with testing framework
 - [x] Write effect modules (io, state, error)
 
 ### Step 4: Update Language Specification ✅

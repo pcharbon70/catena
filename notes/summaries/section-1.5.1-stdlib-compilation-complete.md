@@ -2,7 +2,7 @@
 
 ## Summary
 
-Successfully implemented comprehensive parser support for the Catena standard library (prelude.catena and test.catena). This involved adding multiple language features and syntax support to enable parsing of category theory abstractions and testing framework.
+Successfully implemented comprehensive parser support for the Catena standard library (prelude.cat and test.cat). This involved adding multiple language features and syntax support to enable parsing of category theory abstractions and testing framework.
 
 ## Features Implemented
 
@@ -59,17 +59,17 @@ Successfully implemented comprehensive parser support for the Catena standard li
 - Added operators: `++`
 
 ### Standard Library Files Updated
-- `lib/catena/stdlib/prelude.catena`: Updated all match expressions to use `of` keyword, added commas between instance methods, converted record field assignments from `=` to `:`
-- `lib/catena/stdlib/test.catena`: Similar updates plus removal of type signatures from implemented transforms
+- `lib/catena/stdlib/prelude.cat`: Updated all match expressions to use `of` keyword, added commas between instance methods, converted record field assignments from `=` to `:`
+- `lib/catena/stdlib/test.cat`: Similar updates plus removal of type signatures from implemented transforms
 
 ## Test Results
 
-### prelude.catena
+### prelude.cat
 - Successfully parses module `Prelude`
 - Contains: 12 traits, 4 types, 15 instances
 - All category theory abstractions (Comparable, Orderable, Combiner, Accumulator, Mapper, Applicator, Chainable, Pipeline, Extractor, Foldable, Traversable)
 
-### test.catena
+### test.cat
 - Successfully parses module `Test`
 - Contains: TestResult, Test, Property, Suite, Benchmark types
 - Transform functions: unit, assert, assertEqual, assertMatch, verify, suite, run, benchmark

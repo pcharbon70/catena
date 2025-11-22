@@ -2,7 +2,7 @@
 
 ## Summary
 
-Successfully implemented a compilation pipeline that type-checks the Catena standard library (prelude.catena). This connects the lexer, parser, semantic analysis, and type inference into a complete workflow.
+Successfully implemented a compilation pipeline that type-checks the Catena standard library (prelude.cat). This connects the lexer, parser, semantic analysis, and type inference into a complete workflow.
 
 ## Implementation
 
@@ -62,7 +62,7 @@ TypedMethods format: `[{MethodName, InferredType, OriginalLambda}, ...]`
 
 ### Prelude Compilation
 
-Successfully type-checks `prelude.catena`:
+Successfully type-checks `prelude.cat`:
 - **Module**: `Prelude`
 - **Total declarations**: 32
 - **Typed instances**: 17 of 17
@@ -112,7 +112,7 @@ Location: `test/compiler/catena_compile_tests.erl`
 ```erlang
 %% Compile a file
 {ok, {typed_module, Name, Decls, Env}} =
-    catena_compile:compile_file("path/to/file.catena").
+    catena_compile:compile_file("path/to/file.cat").
 
 %% Compile a string
 {ok, TypedModule} = catena_compile:compile_string(Source).

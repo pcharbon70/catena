@@ -188,16 +188,16 @@ check_coverage_empty_constraints_test() ->
 
 format_overlap_error_test() ->
     I1 = catena_instance:make_instance('Eq', [{tvar, 1}],
-                                     {file, "test.catena", 10, 5}),
+                                     {file, "test.cat", 10, 5}),
     I2 = catena_instance:make_instance('Eq', [{tcon, integer}],
-                                     {file, "test.catena", 20, 5}),
+                                     {file, "test.cat", 20, 5}),
 
     ErrorMsg = catena_coherence:format_overlap_error(I1, I2),
 
     % Check that error message contains key information
     ?assert(string:str(ErrorMsg, "Overlapping instances") > 0),
     ?assert(string:str(ErrorMsg, "Eq") > 0),
-    ?assert(string:str(ErrorMsg, "test.catena") > 0).
+    ?assert(string:str(ErrorMsg, "test.cat") > 0).
 
 format_coverage_error_test() ->
     ErrorMsg = catena_coherence:format_coverage_error('Functor',

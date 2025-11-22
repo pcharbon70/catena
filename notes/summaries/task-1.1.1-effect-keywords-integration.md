@@ -132,7 +132,7 @@ effect FileIO
 end
 
 flow loadConfig =
-  perform FileIO readFile "config.catena"
+  perform FileIO readFile "config.cat"
 
 flow main =
   try

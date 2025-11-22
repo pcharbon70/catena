@@ -216,7 +216,7 @@ resolve_no_effects_test() ->
 %%%===================================================================
 
 format_missing_operation_error_test() ->
-    Error = {missing_operation, 'FileIO', read, {file, "test.catena", 10, 5}},
+    Error = {missing_operation, 'FileIO', read, {file, "test.cat", 10, 5}},
     Msg = catena_handler_verify:format_handler_error(Error),
 
     ?assert(string:str(Msg, "Missing handler") > 0),

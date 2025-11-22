@@ -41,7 +41,7 @@ From the code review:
 **Scenario 1: Context line explosion**
 ```erlang
 % Attacker requests massive context
-catena_error:read_source_context("malicious.catena", 1, 1000000000)
+catena_error:read_source_context("malicious.cat", 1, 1000000000)
 % Would try to read 1 billion lines into memory
 ```
 
@@ -173,7 +173,7 @@ add_related(#error{related = Related} = Err, RelatedErrs)
 **Test 1: Exceeding MAX_CONTEXT_LINES**
 ```erlang
 read_source_context_exceeds_max_test() ->
-    TestFile = "/tmp/catena_test_large_context.catena",
+    TestFile = "/tmp/catena_test_large_context.cat",
     test_helpers:create_test_file(TestFile, "shape Foo = Bar\n"),
 
     % Try to read 101 context lines (MAX_CONTEXT_LINES = 100)
@@ -186,7 +186,7 @@ read_source_context_exceeds_max_test() ->
 **Test 2: Negative context lines**
 ```erlang
 read_source_context_negative_test() ->
-    TestFile = "/tmp/catena_test_negative_context.catena",
+    TestFile = "/tmp/catena_test_negative_context.cat",
     test_helpers:create_test_file(TestFile, "shape Foo = Bar\n"),
 
     % Try to read negative context lines
@@ -199,7 +199,7 @@ read_source_context_negative_test() ->
 **Test 3: Exactly at MAX_CONTEXT_LINES (boundary)**
 ```erlang
 read_source_context_at_max_test() ->
-    TestFile = "/tmp/catena_test_max_context.catena",
+    TestFile = "/tmp/catena_test_max_context.cat",
     test_helpers:create_test_file(TestFile, "shape Foo = Bar\n"),
 
     % Read exactly 100 context lines (should be allowed)
@@ -212,12 +212,12 @@ read_source_context_at_max_test() ->
 **Test 4: Batch related errors exceeding limit**
 ```erlang
 add_related_exceeds_max_test() ->
-    BaseErr = catena_error:new_error('E001_test', "Base error", {1, 1}, "test.catena"),
+    BaseErr = catena_error:new_error('E001_test', "Base error", {1, 1}, "test.cat"),
 
     % Create 15 related errors (MAX_RELATED_DEPTH = 10)
     RelatedErrs = [
-        catena_error:new_note('N001_test', "Related 1", {2, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 2", {3, 1}, "test.catena"),
+        catena_error:new_note('N001_test', "Related 1", {2, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 2", {3, 1}, "test.cat"),
         % ... (15 total)
     ],
 
@@ -232,11 +232,11 @@ add_related_exceeds_max_test() ->
 **Test 5: Incremental related errors exceeding limit**
 ```erlang
 add_related_one_at_a_time_test() ->
-    BaseErr = catena_error:new_error('E001_test', "Base error", {1, 1}, "test.catena"),
+    BaseErr = catena_error:new_error('E001_test', "Base error", {1, 1}, "test.cat"),
 
     % Add 12 related errors one at a time
-    Err1 = catena_error:add_related(BaseErr, catena_error:new_note('N001_test', "R1", {2, 1}, "test.catena")),
-    Err2 = catena_error:add_related(Err1, catena_error:new_note('N001_test', "R2", {3, 1}, "test.catena")),
+    Err1 = catena_error:add_related(BaseErr, catena_error:new_note('N001_test', "R1", {2, 1}, "test.cat")),
+    Err2 = catena_error:add_related(Err1, catena_error:new_note('N001_test', "R2", {3, 1}, "test.cat")),
     % ... (12 total additions)
 
     % Verify only 10 were added (11th and 12th dropped)
@@ -272,14 +272,14 @@ Total:                     140/140 ✅
 **Before:** Unbounded memory allocation
 ```erlang
 % Attacker could request 1 billion context lines
-catena_error:read_source_context("evil.catena", 1, 1000000000)
+catena_error:read_source_context("evil.cat", 1, 1000000000)
 % Would allocate ~1 billion * ~100 bytes = ~100 GB memory
 ```
 
 **After:** Bounded allocation
 ```erlang
 % Same request returns error immediately
-catena_error:read_source_context("evil.catena", 1, 1000000000)
+catena_error:read_source_context("evil.cat", 1, 1000000000)
 % Result: {error, {context_too_large, 1000000000, 100}}
 % Memory used: ~0 bytes (fails fast)
 ```

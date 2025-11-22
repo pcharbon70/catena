@@ -315,10 +315,10 @@ This section validates that Catena's standard library compiles to BEAM and execu
 
 Validate that all standard library files parse, type-check, and compile to BEAM bytecode. This proves the compiler can handle real Catena code with traits, instances, and effects.
 
-- [ ] 1.5.1.1 Parse `lib/catena/stdlib/prelude.catena` successfully producing valid AST for all trait and instance declarations
-- [ ] 1.5.1.2 Type-check prelude.catena validating all trait method signatures and instance implementations
-- [ ] 1.5.1.3 Parse and type-check `lib/catena/stdlib/test.catena` for testing framework
-- [ ] 1.5.1.4 Parse and type-check effect modules (`effect/io.catena`, `effect/state.catena`, `effect/error.catena`)
+- [ ] 1.5.1.1 Parse `lib/catena/stdlib/prelude.cat` successfully producing valid AST for all trait and instance declarations
+- [ ] 1.5.1.2 Type-check prelude.cat validating all trait method signatures and instance implementations
+- [ ] 1.5.1.3 Parse and type-check `lib/catena/stdlib/test.cat` for testing framework
+- [ ] 1.5.1.4 Parse and type-check effect modules (`effect/io.cat`, `effect/state.cat`, `effect/error.cat`)
 - [ ] 1.5.1.5 Generate Core Erlang and compile to .beam for all stdlib modules
 
 ### 1.5.2 Trait Instance Resolution
@@ -388,7 +388,7 @@ Validate that category theory operators desugar to trait method calls. Operators
 ### Unit Tests - Section 1.5
 - [ ] **Unit Tests 1.5 Complete**
 - [ ] Test parsing of all stdlib files produces valid ASTs
-- [ ] Test type-checking of prelude.catena with all traits and instances
+- [ ] Test type-checking of prelude.cat with all traits and instances
 - [ ] Test trait instance resolution for Mapper, Applicator, Pipeline on Maybe, List, Either
 - [ ] Test constrained instance resolution with nested constraints
 - [ ] Test higher-kinded type kind checking and inference
@@ -416,7 +416,7 @@ Validate that category theory operators desugar to trait method calls. Operators
 4. **Integration**: Compile and run example programs (factorial, list processing, simple IO effects) producing correct outputs
 5. **Effect System**: Parse effect declarations, track effects through inference, and execute effectful programs via process-based handlers
 6. **Standard Library Validation**:
-   - Parse and type-check all stdlib files (prelude.catena, test.catena, effect modules)
+   - Parse and type-check all stdlib files (prelude.cat, test.cat, effect modules)
    - Trait instance resolution works for Mapper, Applicator, Pipeline on Maybe, List, Either
    - Higher-kinded types work correctly for Mapper and Pipeline traits
    - Do-notation desugars to `>>=` chains with correct type inference

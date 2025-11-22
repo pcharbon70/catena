@@ -157,11 +157,11 @@ catena/
         └── lexer/
             ├── catena_lexer_test.erl   # EUnit tests for lexer
             └── fixtures/               # Test input files
-                ├── keywords.catena
-                ├── operators.catena
-                ├── numbers.catena
-                ├── strings.catena
-                └── comments.catena
+                ├── keywords.cat
+                ├── operators.cat
+                ├── numbers.cat
+                ├── strings.cat
+                └── comments.cat
 ```
 
 ### Token Type Definitions
@@ -795,7 +795,7 @@ This task is complete when:
 - Create `tokens.hrl` header file with all token type definitions
 - Create initial `catena_lexer.xrl` file with basic structure
 - Set up build configuration for leex in rebar3 or makefile
-- Create test fixtures directory with sample `.catena` files
+- Create test fixtures directory with sample `.cat` files
 
 **Deliverables**:
 - Empty but structured project
@@ -816,7 +816,7 @@ This task is complete when:
 **Deliverables**:
 - Working lexer for keywords, operators, delimiters, identifiers
 - 15+ unit tests covering all cases
-- Test fixture: `fixtures/keywords_operators.catena`
+- Test fixture: `fixtures/keywords_operators.cat`
 
 ### Step 3: Implement Subtask 1.1.1.2 - Number Literals (0.5 days)
 
@@ -830,7 +830,7 @@ This task is complete when:
 **Deliverables**:
 - Number recognition working for all formats
 - 10+ unit tests
-- Test fixture: `fixtures/numbers.catena`
+- Test fixture: `fixtures/numbers.cat`
 
 ### Step 4: Implement Subtask 1.1.1.3 - String Literals (1 day)
 
@@ -846,7 +846,7 @@ This task is complete when:
 **Deliverables**:
 - String recognition with full escape support
 - 15+ unit tests
-- Test fixture: `fixtures/strings.catena`
+- Test fixture: `fixtures/strings.cat`
 
 ### Step 5: Implement Subtask 1.1.1.4 - Comments (1 day)
 
@@ -862,7 +862,7 @@ This task is complete when:
 **Deliverables**:
 - Comment recognition with nesting support
 - 10+ unit tests
-- Test fixture: `fixtures/comments.catena`
+- Test fixture: `fixtures/comments.cat`
 
 ### Step 6: Integration Testing and Documentation (0.5 days)
 

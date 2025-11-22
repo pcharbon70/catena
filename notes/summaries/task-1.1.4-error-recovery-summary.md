@@ -272,7 +272,7 @@ auto_detect_color_support() ->
 **Example Output** (with colors disabled):
 ```
 error[E200_syntax_error]: Unexpected token: '}'
-  --> test.catena:5:10
+  --> test.cat:5:10
    |
  4 | shape Foo = Bar
  5 | shape Baz = }

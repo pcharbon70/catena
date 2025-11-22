@@ -119,7 +119,7 @@ end
 **Translation Examples**:
 
 ```catena
--- Catena source (factorial.catena)
+-- Catena source (factorial.cat)
 transform factorial : Natural -> Natural
 transform factorial n = match n
   | 0 -> 1
@@ -171,7 +171,7 @@ double : Natural -> Natural
 catena> :type double
 double : Natural -> Natural
 
-catena> :load examples/list.catena
+catena> :load examples/list.cat
 Module Examples.List loaded
 
 catena> :browse List
@@ -201,7 +201,7 @@ fibonacci : Natural -> Natural
 
 ### 2.2 Standard Prelude
 
-**Note**: The standard library is defined in `lib/catena/stdlib/` using Catena syntax. See `prelude.catena` for the full implementation.
+**Note**: The standard library is defined in `lib/catena/stdlib/` using Catena syntax. See `prelude.cat` for the full implementation.
 
 **Core Library Overview**:
 ```catena
@@ -336,7 +336,7 @@ end
 
 ### 4.1 Module Structure
 
-**Module Definition (data/list.catena)**:
+**Module Definition (data/list.cat)**:
 ```catena
 module Data.List
 
@@ -381,7 +381,7 @@ end
 
 ### 4.2 Import System
 
-**Import Examples (main.catena)**:
+**Import Examples (main.cat)**:
 ```catena
 -- Qualified imports
 import qualified Data.List as L
@@ -418,7 +418,7 @@ Each Catena module compiles to a BEAM module:
 
 ### 5.1 Actor Definition Syntax
 
-**Counter Actor (actors/counter.catena)**:
+**Counter Actor (actors/counter.cat)**:
 ```catena
 actor Counter = {
   -- State type (immutable between messages)
@@ -558,17 +558,17 @@ catena/
 ├── lib/
 │   └── catena/
 │       └── stdlib/
-│           ├── prelude.catena      # Core traits and types
-│           ├── test.catena         # Testing framework
+│           ├── prelude.cat      # Core traits and types
+│           ├── test.cat         # Testing framework
 │           └── effect/
-│               ├── io.catena       # IO effect
-│               ├── state.catena    # State effect
-│               └── error.catena    # Error effect
+│               ├── io.cat       # IO effect
+│               ├── state.cat    # State effect
+│               └── error.cat    # Error effect
 ├── examples/
-│   ├── hello.catena
-│   ├── factorial.catena
-│   ├── fibonacci.catena
-│   └── counter.catena
+│   ├── hello.cat
+│   ├── factorial.cat
+│   ├── fibonacci.cat
+│   └── counter.cat
 ├── test/
 │   ├── compiler/
 │   │   ├── lexer/
@@ -585,7 +585,7 @@ catena/
 
 **Lexer Tests**:
 ```catena
--- Input: test/lexer/operators.catena
+-- Input: test/lexer/operators.cat
 transform compose = f |> g >>= h
 
 -- Expected tokens:
@@ -595,7 +595,7 @@ IDENT(g), BIND, IDENT(h), EOF
 
 **Type Inference Tests**:
 ```catena
--- Input: test/types/polymorphism.catena
+-- Input: test/types/polymorphism.cat
 transform identity x = x
 transform const x y = x
 transform compose f g x = f (g x)
@@ -610,7 +610,7 @@ transform compose f g x = f (g x)
 
 **Full Compilation Test**:
 ```catena
--- test/integration/quicksort.catena
+-- test/integration/quicksort.cat
 transform quicksort : List Natural -> List Natural
 transform quicksort = match
   | Nil -> Nil
@@ -628,7 +628,7 @@ end
 
 ### Milestone 1 (Week 3): Basic Compilation
 ```catena
--- hello.catena
+-- hello.cat
 transform main : Text
 transform main = "Hello, Catena!"
 ```
@@ -661,7 +661,7 @@ end
 ### Milestone 4 (Week 10): Module System
 ```catena
 -- Multi-file compilation
--- math/prime.catena
+-- math/prime.cat
 module Math.Prime
 
 export transform isPrime, primes

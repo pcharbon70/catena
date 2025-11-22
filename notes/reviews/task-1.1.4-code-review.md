@@ -96,7 +96,7 @@ Success Criteria: "Can report at least 3-5 errors in one compilation pass"
 
 **Attack Vector**:
 ```catena
--- malicious.catena
+-- malicious.cat
 shape Evil = Constructor\e[0m\e[32m✓ All tests passed!\e[0m\e[31m
 ```
 
@@ -334,7 +334,7 @@ validate_source_path(Path) ->
 
     % Check file extension
     case filename:extension(AbsPath) of
-        ".catena" ->
+        ".cat" ->
             % Optional: Add directory allowlist
             % case is_within_allowed_dirs(AbsPath) of
             %     true -> {ok, AbsPath};
@@ -460,7 +460,7 @@ with_temp_file(Content, Fun) ->
 generate_temp_filename() ->
     Pid = pid_to_list(self()),
     Timestamp = integer_to_list(erlang:system_time()),
-    "/tmp/catena_test_" ++ Pid ++ "_" ++ Timestamp ++ ".catena".
+    "/tmp/catena_test_" ++ Pid ++ "_" ++ Timestamp ++ ".cat".
 
 create_test_file(Filename, Content) ->
     ok = file:write_file(Filename, Content).
@@ -548,7 +548,7 @@ format_error_basic_test_() ->
      fun setup_no_color/0,
      fun cleanup_color_mode/1,
      fun(_) ->
-         Err = catena_error:new_error('E001', "Error", {5, 10}, "test.catena"),
+         Err = catena_error:new_error('E001', "Error", {5, 10}, "test.cat"),
          Result = lists:flatten(catena_error_formatter:format_error(Err)),
          ?assert(string:find(Result, "error[E001]") /= nomatch)
      end}.

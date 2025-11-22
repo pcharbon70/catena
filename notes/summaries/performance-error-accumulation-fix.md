@@ -346,11 +346,11 @@ Using cons for accumulation and reversing at the end is idiomatic Erlang:
 ### Manual Testing
 ```bash
 # Create file with many errors
-for i in {1..100}; do echo "shape" >> /tmp/test.catena; done
+for i in {1..100}; do echo "shape" >> /tmp/test.cat; done
 
 # Time the parsing
 erl -pa ebin -noshell -eval '
-  {Time, Result} = timer:tc(catena_parser_wrapper, parse_file, ["/tmp/test.catena"]),
+  {Time, Result} = timer:tc(catena_parser_wrapper, parse_file, ["/tmp/test.cat"]),
   {error, Errors} = Result,
   io:format("Parsed ~p errors in ~p μs~n", [length(Errors), Time])
 ' -s init stop

@@ -22,7 +22,7 @@ Refactored all file-based tests to use EUnit test fixtures with the existing `te
 **Pattern repeated 26+ times:**
 ```erlang
 some_test() ->
-    TestFile = "/tmp/catena_test_something.catena",
+    TestFile = "/tmp/catena_test_something.cat",
     test_helpers:create_test_file(TestFile, "content"),
 
     Result = some_function(TestFile),
@@ -56,7 +56,7 @@ Use the existing `test_helpers:with_temp_file/2` helper to:
 **Before** (manual file management):
 ```erlang
 parse_file_valid_simple_test() ->
-    TestFile = "/tmp/catena_test_valid_simple.catena",
+    TestFile = "/tmp/catena_test_valid_simple.cat",
     Content = "shape Bool = True | False\n",
     test_helpers:create_test_file(TestFile, Content),
 
@@ -125,7 +125,7 @@ Converted 7 file-based tests:
 **Total boilerplate across 26 tests:**
 ```erlang
 % Repeated 26 times:
-TestFile = "/tmp/catena_test_something.catena",
+TestFile = "/tmp/catena_test_something.cat",
 Content = "...",
 test_helpers:create_test_file(TestFile, Content),
 
@@ -188,7 +188,7 @@ end).
 Before (9 lines):
 ```erlang
 parse_file_empty_test() ->
-    TestFile = "/tmp/catena_test_empty.catena",
+    TestFile = "/tmp/catena_test_empty.cat",
     test_helpers:create_test_file(TestFile, ""),
     Result = catena_parser_wrapper:parse_file(TestFile),
     test_helpers:delete_test_file(TestFile),
@@ -216,7 +216,7 @@ parse_file_empty_test() ->
 ```erlang
 test() ->
     % File management (infrastructure)
-    TestFile = "/tmp/catena_test.catena",
+    TestFile = "/tmp/catena_test.cat",
     create_test_file(TestFile, "content"),
 
     % Actual test (behavior)
@@ -346,7 +346,7 @@ with_temp_file(Content, Fun) ->
 Before:
 ```erlang
 parse_file_valid_simple_test() ->
-    TestFile = "/tmp/catena_test_valid_simple.catena",
+    TestFile = "/tmp/catena_test_valid_simple.cat",
     Content = "shape Bool = True | False\n",
     test_helpers:create_test_file(TestFile, Content),
     Result = catena_parser_wrapper:parse_file(TestFile),
@@ -369,7 +369,7 @@ parse_file_valid_simple_test() ->
 Before:
 ```erlang
 multi_error_recovery_multiple_bad_shapes_test() ->
-    TestFile = "/tmp/catena_multi_error_test.catena",
+    TestFile = "/tmp/catena_multi_error_test.cat",
     Content = "shape\nshape Foo = Bar\nshape\nshape Baz = Qux\n",
     test_helpers:create_test_file(TestFile, Content),
     Result = catena_parser_wrapper:parse_file(TestFile),
@@ -414,7 +414,7 @@ multi_error_recovery_multiple_bad_shapes_test() ->
 Before:
 ```erlang
 parse_file_invalid_utf8_test() ->
-    TestFile = "/tmp/catena_test_parse_invalid_utf8.catena",
+    TestFile = "/tmp/catena_test_parse_invalid_utf8.cat",
     InvalidUtf8 = <<16#80, 16#81, 16#82>>,
     test_helpers:create_test_file(TestFile, InvalidUtf8),
     Result = catena_parser_wrapper:parse_file(TestFile),

@@ -16,7 +16,7 @@
 
 trait_constraint_test() ->
     % Create a simple trait constraint
-    Loc = {file, "test.catena", 10, 5},
+    Loc = {file, "test.cat", 10, 5},
     T1 = {tvar, 1},
     Constraint = catena_constraint:trait_constraint('Functor', [T1], Loc),
 

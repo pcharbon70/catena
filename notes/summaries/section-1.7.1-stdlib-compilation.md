@@ -41,10 +41,10 @@ This session focused on implementing Section 1.7.1 of Phase 1: Standard Library 
 
 ### Files Successfully Parsed
 
-- `lib/catena/stdlib/prelude_minimal.catena` - Core traits and Maybe instances
-- `lib/catena/stdlib/effect/io.catena` - IO effect with print/readFile/writeFile
-- `lib/catena/stdlib/effect/state.catena` - State effect with get/put
-- `lib/catena/stdlib/effect/error.catena` - Error effect with throw/catch
+- `lib/catena/stdlib/prelude_minimal.cat` - Core traits and Maybe instances
+- `lib/catena/stdlib/effect/io.cat` - IO effect with print/readFile/writeFile
+- `lib/catena/stdlib/effect/state.cat` - State effect with get/put
+- `lib/catena/stdlib/effect/error.cat` - Error effect with throw/catch
 
 ### Grammar Changes
 
@@ -57,7 +57,7 @@ Modified `src/compiler/parser/catena_parser.yrl`:
 
 ## Remaining Parser Gaps
 
-The full `prelude.catena` cannot be parsed yet due to:
+The full `prelude.cat` cannot be parsed yet due to:
 
 1. **Cons Patterns** - `h :: t` not supported as patterns
 2. **List Literal Patterns** - `[]` not supported as patterns
@@ -67,14 +67,14 @@ The full `prelude.catena` cannot be parsed yet due to:
 ## Files Created/Modified
 
 ### Created
-- `lib/catena/stdlib/prelude_minimal.catena` - Simplified prelude for current parser
+- `lib/catena/stdlib/prelude_minimal.cat` - Simplified prelude for current parser
 - `notes/summaries/section-1.7.1-stdlib-compilation.md` - This summary
 
 ### Modified
 - `src/compiler/parser/catena_parser.yrl` - Grammar improvements
 - `src/compiler/lexer/catena_lexer.xrl` - Added `then` keyword (previous session)
-- `lib/catena/stdlib/prelude.catena` - Updated syntax for match expressions
-- `lib/catena/stdlib/effect/*.catena` - Using `end` syntax (previous session)
+- `lib/catena/stdlib/prelude.cat` - Updated syntax for match expressions
+- `lib/catena/stdlib/effect/*.cat` - Using `end` syntax (previous session)
 
 ## Test Results
 

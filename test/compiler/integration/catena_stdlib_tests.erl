@@ -29,18 +29,18 @@ stdlib_dir() ->
 stdlib_files_exist_test() ->
     BaseDir = stdlib_dir(),
     Files = [
-        "prelude.catena",
-        "test.catena",
-        "effect/io.catena",
-        "effect/state.catena",
-        "effect/error.catena"
+        "prelude.cat",
+        "test.cat",
+        "effect/io.cat",
+        "effect/state.cat",
+        "effect/error.cat"
     ],
     lists:foreach(fun(File) ->
         Path = filename:join(BaseDir, File),
         ?assert(filelib:is_file(Path), {file_not_found, Path})
     end, Files).
 
-%% Test parsing prelude.catena - basic structure
+%% Test parsing prelude.cat - basic structure
 parse_prelude_module_test() ->
     %% Parser requires at least one declaration after module
     Source = "module Prelude\ntype X = Y\n",
@@ -209,7 +209,7 @@ parse_multiple_constraints_test() ->
 
 %% Test parsing the IO effect file
 parse_io_effect_file_test() ->
-    Path = filename:join([stdlib_dir(), "effect", "io.catena"]),
+    Path = filename:join([stdlib_dir(), "effect", "io.cat"]),
     {ok, Content} = file:read_file(Path),
     Source = binary_to_list(Content),
     case catena_lexer:string(Source) of
@@ -217,20 +217,20 @@ parse_io_effect_file_test() ->
             case catena_parser:parse(Tokens) of
                 {ok, {module, 'Effect.IO', _, _, _, _}} -> ok;
                 {ok, Other} ->
-                    io:format("~nUnexpected AST for io.catena:~n~p~n", [Other]),
+                    io:format("~nUnexpected AST for io.cat:~n~p~n", [Other]),
                     ?assert(false, {unexpected_ast, Other});
                 {error, Reason} ->
-                    io:format("~nParse error for io.catena:~n~p~n", [Reason]),
+                    io:format("~nParse error for io.cat:~n~p~n", [Reason]),
                     ?assert(false, {parse_failed, Reason})
             end;
         {error, LexError, _} ->
-            io:format("~nLex error for io.catena:~n~p~n", [LexError]),
+            io:format("~nLex error for io.cat:~n~p~n", [LexError]),
             ?assert(false, {lex_failed, LexError})
     end.
 
 %% Test parsing the State effect file
 parse_state_effect_file_test() ->
-    Path = filename:join([stdlib_dir(), "effect", "state.catena"]),
+    Path = filename:join([stdlib_dir(), "effect", "state.cat"]),
     {ok, Content} = file:read_file(Path),
     Source = binary_to_list(Content),
     case catena_lexer:string(Source) of
@@ -238,20 +238,20 @@ parse_state_effect_file_test() ->
             case catena_parser:parse(Tokens) of
                 {ok, {module, 'Effect.State', _, _, _, _}} -> ok;
                 {ok, Other} ->
-                    io:format("~nUnexpected AST for state.catena:~n~p~n", [Other]),
+                    io:format("~nUnexpected AST for state.cat:~n~p~n", [Other]),
                     ?assert(false, {unexpected_ast, Other});
                 {error, Reason} ->
-                    io:format("~nParse error for state.catena:~n~p~n", [Reason]),
+                    io:format("~nParse error for state.cat:~n~p~n", [Reason]),
                     ?assert(false, {parse_failed, Reason})
             end;
         {error, LexError, _} ->
-            io:format("~nLex error for state.catena:~n~p~n", [LexError]),
+            io:format("~nLex error for state.cat:~n~p~n", [LexError]),
             ?assert(false, {lex_failed, LexError})
     end.
 
 %% Test parsing the Error effect file
 parse_error_effect_file_test() ->
-    Path = filename:join([stdlib_dir(), "effect", "error.catena"]),
+    Path = filename:join([stdlib_dir(), "effect", "error.cat"]),
     {ok, Content} = file:read_file(Path),
     Source = binary_to_list(Content),
     case catena_lexer:string(Source) of
@@ -259,14 +259,14 @@ parse_error_effect_file_test() ->
             case catena_parser:parse(Tokens) of
                 {ok, {module, 'Effect.Error', _, _, _, _}} -> ok;
                 {ok, Other} ->
-                    io:format("~nUnexpected AST for error.catena:~n~p~n", [Other]),
+                    io:format("~nUnexpected AST for error.cat:~n~p~n", [Other]),
                     ?assert(false, {unexpected_ast, Other});
                 {error, Reason} ->
-                    io:format("~nParse error for error.catena:~n~p~n", [Reason]),
+                    io:format("~nParse error for error.cat:~n~p~n", [Reason]),
                     ?assert(false, {parse_failed, Reason})
             end;
         {error, LexError, _} ->
-            io:format("~nLex error for error.catena:~n~p~n", [LexError]),
+            io:format("~nLex error for error.cat:~n~p~n", [LexError]),
             ?assert(false, {lex_failed, LexError})
     end.
 

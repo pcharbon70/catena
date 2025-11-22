@@ -123,7 +123,7 @@ format_type_mismatch(Expected, Actual, #{expr => MyExpression})
 % Better - with expression context and file position
 Context = #{
   expr => MyExpression,
-  file => "my_file.catena",
+  file => "my_file.cat",
   line => 42,
   column => 15
 },

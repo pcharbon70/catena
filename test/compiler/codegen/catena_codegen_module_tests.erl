@@ -59,7 +59,7 @@ test_build_module_info() ->
     ?assertEqual(1, maps:get(public_count, Info)).
 
 test_generate_attributes() ->
-    Opts = #{file => "test.catena", version => "1.0.0"},
+    Opts = #{file => "test.cat", version => "1.0.0"},
     Attrs = catena_codegen_module:generate_attributes(Opts),
     ?assert(length(Attrs) >= 1),
     %% Check file attribute present
@@ -250,7 +250,7 @@ integration_test_() ->
 test_full_module_compilation() ->
     Module = multi_function_module(),
     {ok, CoreModule} = catena_codegen_module:generate_module(Module, #{
-        file => "math.catena",
+        file => "math.cat",
         version => "1.0.0"
     }),
     %% Verify module structure

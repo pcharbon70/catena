@@ -46,7 +46,7 @@ Industry-standard compilers (Rust, Elm, TypeScript) show us that excellent error
 
 ```
 error: expected `end` but found end of file
-  --> example.catena:5:10
+  --> example.cat:5:10
    |
  3 | flow factorial n = match n
  4 |   | 0 -> 1
@@ -341,7 +341,7 @@ add_suggestion_test() ->
 ```erlang
 % Create test file
 setup() ->
-    TestFile = "/tmp/test.catena",
+    TestFile = "/tmp/test.cat",
     Content = "line 1\nline 2\nline 3\nline 4\nline 5\n",
     file:write_file(TestFile, Content),
     TestFile.
@@ -394,7 +394,7 @@ dim(Text) -> ["\e[2m", Text, "\e[0m"].
 **Error Message Template**:
 ```
 error[E001]: expected `end` but found end of file
-  --> example.catena:5:10
+  --> example.cat:5:10
    |
  3 | flow factorial n = match n
  4 |   | 0 -> 1
@@ -638,7 +638,7 @@ missing_end_suggestion_test() ->
 
 **Files**:
 - `test/compiler/integration/error_reporting_integration_tests.erl` (NEW, ~600 lines)
-- `test/fixtures/error_*.catena` (NEW, multiple test files)
+- `test/fixtures/error_*.cat` (NEW, multiple test files)
 
 **Test Scenarios**:
 

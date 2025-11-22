@@ -359,10 +359,10 @@ catena/
         └── parser/
             ├── catena_parser_test.erl  # EUnit tests
             └── fixtures/               # Test input files
-                ├── shapes.catena
-                ├── flows.catena
-                ├── expressions.catena
-                └── patterns.catena
+                ├── shapes.cat
+                ├── flows.cat
+                ├── expressions.cat
+                └── patterns.cat
 ```
 
 ### AST Node Design

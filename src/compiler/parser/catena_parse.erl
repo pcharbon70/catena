@@ -45,7 +45,7 @@
 %%% {ok, AST} = catena_parse:parse("shape Maybe a = Some a | None"),
 %%%
 %%% %% Parse from file
-%%% {ok, AST} = catena_parse:parse_file("example.catena"),
+%%% {ok, AST} = catena_parse:parse_file("example.cat"),
 %%%
 %%% %% Handle errors
 %%% case catena_parse:parse(BadInput) of
@@ -196,14 +196,14 @@ parse_with_timeout(Tokens, MaxTime, StartTime) ->
 %% @example
 %% ```
 %% %% Success case
-%% {ok, AST} = parse_file("examples/maybe.catena").
+%% {ok, AST} = parse_file("examples/maybe.cat").
 %%%
 %% %% File not found
-%% {error, {file_error, "missing.catena", enoent}} =
-%%     parse_file("missing.catena").
+%% {error, {file_error, "missing.cat", enoent}} =
+%%     parse_file("missing.cat").
 %%%
 %% %% Parse error in file
-%% {error, {parse_error, _, _}} = parse_file("invalid.catena").
+%% {error, {parse_error, _, _}} = parse_file("invalid.cat").
 %% '''
 -spec parse_file(string()) -> {ok, term()} | {error, term()}.
 parse_file(Filename) ->

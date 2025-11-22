@@ -561,14 +561,14 @@ This library establishes the infrastructure for:
 ## Key Outputs
 
 - **8 library files** in `lib/catena/stdlib/category/`:
-  - `core.catena` - Trait aliases and re-exports
-  - `functor.catena` - Functor hierarchy
-  - `applicative.catena` - Applicative and Alternative
-  - `monad.catena` - Monad and transformers
-  - `comonad.catena` - Comonad instances
-  - `arrow.catena` - Category and Arrow
-  - `foldable.catena` - Foldable and Traversable
-  - `operators.catena` - All operators
+  - `core.cat` - Trait aliases and re-exports
+  - `functor.cat` - Functor hierarchy
+  - `applicative.cat` - Applicative and Alternative
+  - `monad.cat` - Monad and transformers
+  - `comonad.cat` - Comonad instances
+  - `arrow.cat` - Category and Arrow
+  - `foldable.cat` - Foldable and Traversable
+  - `operators.cat` - All operators
 - **Comprehensive operator suite** with 30+ operators
 - **Law documentation** for all abstractions
 - **Property-based test templates** for verifying new instances

@@ -75,7 +75,7 @@ generate_temp_filename(Suffix) ->
     Ref = ref_to_list(make_ref()),
     % Clean up the ref string (remove < > characters)
     CleanRef = lists:filter(fun(C) -> C =/= $< andalso C =/= $> end, Ref),
-    "/tmp/catena_test_" ++ Suffix ++ "_" ++ Pid ++ "_" ++ CleanRef ++ ".catena".
+    "/tmp/catena_test_" ++ Suffix ++ "_" ++ Pid ++ "_" ++ CleanRef ++ ".cat".
 
 %% @doc Create a test file with given content
 %% Writes content to a file, failing if the write fails.

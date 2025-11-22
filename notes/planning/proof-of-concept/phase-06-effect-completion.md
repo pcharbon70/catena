@@ -243,7 +243,7 @@ Effect debugging provides runtime introspection of effect execution. Effect trac
 ## 6.5 Law Verification via Test Module
 - [ ] **Section 6.5 Complete**
 
-Law verification uses the Test module from the standard library (`lib/catena/stdlib/test.catena`), not special compiler syntax. Laws are defined as property tests using `Test.property`, and verification uses the same property-based testing infrastructure as other tests. This keeps law verification as a library concern while the compiler focuses on type checking and effect tracking.
+Law verification uses the Test module from the standard library (`lib/catena/stdlib/test.cat`), not special compiler syntax. Laws are defined as property tests using `Test.property`, and verification uses the same property-based testing infrastructure as other tests. This keeps law verification as a library concern while the compiler focuses on type checking and effect tracking.
 
 ### 6.5.1 Law Definition Patterns
 - [ ] **Task 6.5.1 Complete**
@@ -332,7 +332,7 @@ Implement remaining advanced traits: Bifunctor (functors of two arguments), Exte
 ## 6.7 Advanced Testing
 - [ ] **Section 6.7 Complete**
 
-Complete the testing framework with advanced features deferred from Phase 2. All testing features are library functions in the Test module (`lib/catena/stdlib/test.catena`), not compiler keywords. This includes test suite organization, benchmarks for performance testing, custom generators for complex types, and test coverage reporting.
+Complete the testing framework with advanced features deferred from Phase 2. All testing features are library functions in the Test module (`lib/catena/stdlib/test.cat`), not compiler keywords. This includes test suite organization, benchmarks for performance testing, custom generators for complex types, and test coverage reporting.
 
 ### 6.7.1 Test Suite Organization
 - [ ] **Task 6.7.1 Complete**
@@ -457,7 +457,7 @@ Tests using advanced features demonstrate full effect system capability. Impleme
 ## 6.10 Category Theory Completion
 - [ ] **Section 6.10 Complete**
 
-Complete the category theory library with advanced abstractions that were deferred from the proof-of-concept phases. This section finalizes Catena's mathematical foundation by implementing StructuredMapper (Applicative), Alternative, Foldable, Traversable, and optimizations that prove categorical abstractions have zero overhead on BEAM. We also establish CI-integrated law verification ensuring all library code maintains mathematical correctness. These traits are defined in `lib/catena/stdlib/prelude.catena` and validated by the compiler.
+Complete the category theory library with advanced abstractions that were deferred from the proof-of-concept phases. This section finalizes Catena's mathematical foundation by implementing StructuredMapper (Applicative), Alternative, Foldable, Traversable, and optimizations that prove categorical abstractions have zero overhead on BEAM. We also establish CI-integrated law verification ensuring all library code maintains mathematical correctness. These traits are defined in `lib/catena/stdlib/prelude.cat` and validated by the compiler.
 
 ### 6.10.1 Advanced Categorical Abstractions
 - [ ] **Task 6.10.1 Complete**

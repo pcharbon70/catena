@@ -104,7 +104,7 @@ Verbosity = terse      % "Expected integer, got string"
 % Rich context (recommended)
 #{
   expr => Expression,
-  file => "filename.catena",
+  file => "filename.cat",
   line => 42,
   column => 15,
   function => "my_function"

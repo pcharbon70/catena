@@ -7,11 +7,11 @@
 %%====================================================================
 
 new_error_test() ->
-    Err = catena_error:new_error('E001', "Syntax error", {5, 10}, "test.catena"),
+    Err = catena_error:new_error('E001', "Syntax error", {5, 10}, "test.cat"),
     ?assertEqual(error, Err#error.severity),
     ?assertEqual('E001', Err#error.code),
     ?assertEqual("Syntax error", Err#error.message),
-    ?assertEqual("test.catena", Err#error.file),
+    ?assertEqual("test.cat", Err#error.file),
     ?assertEqual(5, Err#error.line),
     ?assertEqual(10, Err#error.column),
     ?assertEqual(undefined, Err#error.source_line),
@@ -25,17 +25,17 @@ new_error_no_file_test() ->
     ?assertEqual(undefined, Err#error.file).
 
 new_error_no_column_test() ->
-    Err = catena_error:new_error('E002', "Error", {10, undefined}, "test.catena"),
+    Err = catena_error:new_error('E002', "Error", {10, undefined}, "test.cat"),
     ?assertEqual(undefined, Err#error.column).
 
 new_warning_test() ->
-    Warn = catena_error:new_warning('W001', "Unused variable", {3, 5}, "test.catena"),
+    Warn = catena_error:new_warning('W001', "Unused variable", {3, 5}, "test.cat"),
     ?assertEqual(warning, Warn#error.severity),
     ?assertEqual('W001', Warn#error.code),
     ?assertEqual("Unused variable", Warn#error.message).
 
 new_note_test() ->
-    Note = catena_error:new_note('N001', "Consider refactoring", {7, 1}, "test.catena"),
+    Note = catena_error:new_note('N001', "Consider refactoring", {7, 1}, "test.cat"),
     ?assertEqual(note, Note#error.severity),
     ?assertEqual('N001', Note#error.code).
 
@@ -162,7 +162,7 @@ get_warnings_mixed_test() ->
 
 read_source_context_test() ->
     % Create temporary test file
-    TestFile = "/tmp/catena_test_source.catena",
+    TestFile = "/tmp/catena_test_source.cat",
     Content = "line 1\nline 2\nline 3\nline 4\nline 5\n",
     ok = file:write_file(TestFile, Content),
 
@@ -176,7 +176,7 @@ read_source_context_test() ->
     test_helpers:delete_test_file(TestFile).
 
 read_source_context_first_line_test() ->
-    TestFile = "/tmp/catena_test_first.catena",
+    TestFile = "/tmp/catena_test_first.cat",
     Content = "line 1\nline 2\nline 3\n",
     ok = file:write_file(TestFile, Content),
 
@@ -188,7 +188,7 @@ read_source_context_first_line_test() ->
     test_helpers:delete_test_file(TestFile).
 
 read_source_context_last_line_test() ->
-    TestFile = "/tmp/catena_test_last.catena",
+    TestFile = "/tmp/catena_test_last.cat",
     Content = "line 1\nline 2\nline 3\n",
     ok = file:write_file(TestFile, Content),
 
@@ -200,7 +200,7 @@ read_source_context_last_line_test() ->
     test_helpers:delete_test_file(TestFile).
 
 read_source_context_zero_context_test() ->
-    TestFile = "/tmp/catena_test_zero.catena",
+    TestFile = "/tmp/catena_test_zero.cat",
     Content = "line 1\nline 2\nline 3\n",
     ok = file:write_file(TestFile, Content),
 
@@ -212,10 +212,10 @@ read_source_context_zero_context_test() ->
     test_helpers:delete_test_file(TestFile).
 
 read_source_context_file_not_found_test() ->
-    {error, {file_read_error, enoent}} = catena_error:read_source_context("/tmp/catena_nonexistent_file.catena", 1, 1).
+    {error, {file_read_error, enoent}} = catena_error:read_source_context("/tmp/catena_nonexistent_file.cat", 1, 1).
 
 read_source_context_line_out_of_bounds_test() ->
-    TestFile = "/tmp/catena_test_bounds.catena",
+    TestFile = "/tmp/catena_test_bounds.cat",
     Content = "line 1\nline 2\n",
     ok = file:write_file(TestFile, Content),
 
@@ -272,13 +272,13 @@ extract_context_single_line_file_test() ->
 validate_path_safe_relative_test() ->
     % Safe relative path within workspace
     {ok, Cwd} = file:get_cwd(),
-    TestFile = filename:join(Cwd, "test.catena"),
+    TestFile = filename:join(Cwd, "test.cat"),
     ?assertMatch({ok, _}, catena_error:validate_source_path(TestFile)).
 
 validate_path_safe_subdir_test() ->
     % Safe path in subdirectory
     {ok, Cwd} = file:get_cwd(),
-    TestFile = filename:join([Cwd, "src", "test.catena"]),
+    TestFile = filename:join([Cwd, "src", "test.cat"]),
     ?assertMatch({ok, _}, catena_error:validate_source_path(TestFile)).
 
 %% Path traversal attacks
@@ -326,7 +326,7 @@ validate_path_rejects_var_log_test() ->
 %% Null byte injection
 validate_path_rejects_null_byte_test() ->
     % Reject path with null byte (path obfuscation)
-    PathWithNull = "test.catena" ++ [0] ++ "/etc/passwd",
+    PathWithNull = "test.cat" ++ [0] ++ "/etc/passwd",
     ?assertEqual({error, path_traversal_attack},
                  catena_error:validate_source_path(PathWithNull)).
 
@@ -429,25 +429,25 @@ read_source_context_at_max_test() ->
 
 % Test that adding related errors beyond MAX_RELATED_DEPTH is silently dropped
 add_related_exceeds_max_test() ->
-    BaseErr = catena_error:new_error('E001_test', "Base error", {1, 1}, "test.catena"),
+    BaseErr = catena_error:new_error('E001_test', "Base error", {1, 1}, "test.cat"),
 
     % Create 15 related errors (MAX_RELATED_DEPTH = 10)
     RelatedErrs = [
-        catena_error:new_note('N001_test', "Related 1", {2, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 2", {3, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 3", {4, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 4", {5, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 5", {6, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 6", {7, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 7", {8, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 8", {9, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 9", {10, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 10", {11, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 11", {12, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 12", {13, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 13", {14, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 14", {15, 1}, "test.catena"),
-        catena_error:new_note('N001_test', "Related 15", {16, 1}, "test.catena")
+        catena_error:new_note('N001_test', "Related 1", {2, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 2", {3, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 3", {4, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 4", {5, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 5", {6, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 6", {7, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 7", {8, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 8", {9, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 9", {10, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 10", {11, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 11", {12, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 12", {13, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 13", {14, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 14", {15, 1}, "test.cat"),
+        catena_error:new_note('N001_test', "Related 15", {16, 1}, "test.cat")
     ],
 
     % Add all 15 at once (should cap at 10)
@@ -459,22 +459,22 @@ add_related_exceeds_max_test() ->
 
 % Test that adding single related errors one at a time respects limit
 add_related_one_at_a_time_test() ->
-    BaseErr = catena_error:new_error('E001_test', "Base error", {1, 1}, "test.catena"),
+    BaseErr = catena_error:new_error('E001_test', "Base error", {1, 1}, "test.cat"),
 
     % Add 12 related errors one at a time
-    Err1 = catena_error:add_related(BaseErr, catena_error:new_note('N001_test', "R1", {2, 1}, "test.catena")),
-    Err2 = catena_error:add_related(Err1, catena_error:new_note('N001_test', "R2", {3, 1}, "test.catena")),
-    Err3 = catena_error:add_related(Err2, catena_error:new_note('N001_test', "R3", {4, 1}, "test.catena")),
-    Err4 = catena_error:add_related(Err3, catena_error:new_note('N001_test', "R4", {5, 1}, "test.catena")),
-    Err5 = catena_error:add_related(Err4, catena_error:new_note('N001_test', "R5", {6, 1}, "test.catena")),
-    Err6 = catena_error:add_related(Err5, catena_error:new_note('N001_test', "R6", {7, 1}, "test.catena")),
-    Err7 = catena_error:add_related(Err6, catena_error:new_note('N001_test', "R7", {8, 1}, "test.catena")),
-    Err8 = catena_error:add_related(Err7, catena_error:new_note('N001_test', "R8", {9, 1}, "test.catena")),
-    Err9 = catena_error:add_related(Err8, catena_error:new_note('N001_test', "R9", {10, 1}, "test.catena")),
-    Err10 = catena_error:add_related(Err9, catena_error:new_note('N001_test', "R10", {11, 1}, "test.catena")),
+    Err1 = catena_error:add_related(BaseErr, catena_error:new_note('N001_test', "R1", {2, 1}, "test.cat")),
+    Err2 = catena_error:add_related(Err1, catena_error:new_note('N001_test', "R2", {3, 1}, "test.cat")),
+    Err3 = catena_error:add_related(Err2, catena_error:new_note('N001_test', "R3", {4, 1}, "test.cat")),
+    Err4 = catena_error:add_related(Err3, catena_error:new_note('N001_test', "R4", {5, 1}, "test.cat")),
+    Err5 = catena_error:add_related(Err4, catena_error:new_note('N001_test', "R5", {6, 1}, "test.cat")),
+    Err6 = catena_error:add_related(Err5, catena_error:new_note('N001_test', "R6", {7, 1}, "test.cat")),
+    Err7 = catena_error:add_related(Err6, catena_error:new_note('N001_test', "R7", {8, 1}, "test.cat")),
+    Err8 = catena_error:add_related(Err7, catena_error:new_note('N001_test', "R8", {9, 1}, "test.cat")),
+    Err9 = catena_error:add_related(Err8, catena_error:new_note('N001_test', "R9", {10, 1}, "test.cat")),
+    Err10 = catena_error:add_related(Err9, catena_error:new_note('N001_test', "R10", {11, 1}, "test.cat")),
     % These should be silently dropped
-    Err11 = catena_error:add_related(Err10, catena_error:new_note('N001_test', "R11", {12, 1}, "test.catena")),
-    Err12 = catena_error:add_related(Err11, catena_error:new_note('N001_test', "R12", {13, 1}, "test.catena")),
+    Err11 = catena_error:add_related(Err10, catena_error:new_note('N001_test', "R11", {12, 1}, "test.cat")),
+    Err12 = catena_error:add_related(Err11, catena_error:new_note('N001_test', "R12", {13, 1}, "test.cat")),
 
     % Verify only 10 were added
     #error{related = Related} = Err12,

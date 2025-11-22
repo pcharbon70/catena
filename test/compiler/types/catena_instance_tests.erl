@@ -15,7 +15,7 @@
 %%%===================================================================
 
 make_instance_test() ->
-    Loc = {file, "test.catena", 10, 5},
+    Loc = {file, "test.cat", 10, 5},
     ListType = {tcon, list},
     Instance = catena_instance:make_instance('Functor', [ListType], Loc),
 

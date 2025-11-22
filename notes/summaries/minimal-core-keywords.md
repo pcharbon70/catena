@@ -49,7 +49,7 @@ This feature reduces the Catena language from 26+ keywords to a minimal core of 
 
 Created `lib/catena/stdlib/` with:
 
-1. **`prelude.catena`** - Core traits and types:
+1. **`prelude.cat`** - Core traits and types:
    - Comparable (Setoid)
    - Orderable (Ord)
    - Combiner (Semigroup)
@@ -63,7 +63,7 @@ Created `lib/catena/stdlib/` with:
    - Core types: Ordering, Maybe, Either, Result
    - Instances for Maybe, Either, List
 
-2. **`test.catena`** - Testing framework:
+2. **`test.cat`** - Testing framework:
    - `unit` - Unit tests
    - `property` - Property-based tests
    - `assert`, `assertEqual`, `assertMatch`
@@ -71,14 +71,14 @@ Created `lib/catena/stdlib/` with:
    - `suite` - Test organization
    - `benchmark` - Performance testing
 
-3. **`effect/io.catena`** - IO effect:
+3. **`effect/io.cat`** - IO effect:
    - `print`, `println`, `readLine`
    - `readFile`, `writeFile`
 
-4. **`effect/state.catena`** - State effect:
+4. **`effect/state.cat`** - State effect:
    - `get`, `put`, `modify`
 
-5. **`effect/error.catena`** - Error effect:
+5. **`effect/error.cat`** - Error effect:
    - `raise`, `catch`
 
 ### Language Specification Updates
@@ -111,11 +111,11 @@ Updated `notes/research/language_overview.md`:
 - `test/compiler/parser/catena_parser_trait_tests.erl`
 - `notes/research/language_overview.md`
 - `notes/features/minimal-core-keywords.md` (planning)
-- `lib/catena/stdlib/prelude.catena` (new)
-- `lib/catena/stdlib/test.catena` (new)
-- `lib/catena/stdlib/effect/io.catena` (new)
-- `lib/catena/stdlib/effect/state.catena` (new)
-- `lib/catena/stdlib/effect/error.catena` (new)
+- `lib/catena/stdlib/prelude.cat` (new)
+- `lib/catena/stdlib/test.cat` (new)
+- `lib/catena/stdlib/effect/io.cat` (new)
+- `lib/catena/stdlib/effect/state.cat` (new)
+- `lib/catena/stdlib/effect/error.cat` (new)
 
 ## Branch
 

@@ -193,7 +193,7 @@ Output: "Error: Injected Red text"  % ✅ ANSI codes stripped
 
 #### Scenario 1: Hiding Compilation Errors
 ```catena
--- Malicious file: hack.catena
+-- Malicious file: hack.cat
 shape Evil = \e[2J\e[HCompilation succeeded!
 ```
 **Before Fix**: Would clear screen and show fake success message
@@ -276,9 +276,9 @@ This fix provides **one layer** of security. Additional protections should inclu
 ### Manual Testing
 ```bash
 # Test malicious input
-echo 'shape Foo = \e[31mRed\e[0m' > /tmp/test.catena
+echo 'shape Foo = \e[31mRed\e[0m' > /tmp/test.cat
 erl -pa ebin -noshell -eval '
-  {error, [Err]} = catena_parser_wrapper:parse_file("/tmp/test.catena"),
+  {error, [Err]} = catena_parser_wrapper:parse_file("/tmp/test.cat"),
   io:format("~s", [catena_error_formatter:format_error(Err)])
 ' -s init stop
 ```

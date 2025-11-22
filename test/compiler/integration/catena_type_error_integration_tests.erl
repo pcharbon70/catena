@@ -53,7 +53,7 @@ test_simple_type_mismatch_flow() ->
     Context = #{
         expr => {binop, '+', {lit, 1}, {lit, "hello"}},
         location => {line, 42, column, 15},
-        file => "example.catena"
+        file => "example.cat"
     },
 
     %% Step 3: Format the error
@@ -123,7 +123,7 @@ test_error_with_location() ->
     Context = #{
         expr => {var, "x"},
         location => {line, 25, column, 10},
-        file => "src/main.catena",
+        file => "src/main.cat",
         function => "calculate",
         module => main
     },
@@ -198,7 +198,7 @@ compile_and_format(Code) ->
         {error, TypeErr} ->
             Context = #{
                 source_code => Code,
-                file => "test.catena"
+                file => "test.cat"
             },
             {error, catena_type_error_formatter:format_error(TypeErr, Context)};
         {ok, Type} ->

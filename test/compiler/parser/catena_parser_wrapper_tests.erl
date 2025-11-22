@@ -7,7 +7,7 @@
 %%====================================================================
 
 parse_file_nonexistent_test() ->
-    Result = catena_parser_wrapper:parse_file("/nonexistent/file.catena"),
+    Result = catena_parser_wrapper:parse_file("/nonexistent/file.cat"),
     ?assertMatch({error, [#error{code = 'E000_file_error'}]}, Result).
 
 parse_file_valid_simple_test() ->
@@ -335,10 +335,10 @@ parse_tokens_with_file_specified_file_test() ->
         {type, 1},
         {'=', 1}
     ],
-    Result = catena_parser_wrapper:parse_tokens_with_file(Tokens, "test.catena", undefined),
+    Result = catena_parser_wrapper:parse_tokens_with_file(Tokens, "test.cat", undefined),
     case Result of
         {error, [Err]} ->
-            ?assertEqual("test.catena", Err#error.file);
+            ?assertEqual("test.cat", Err#error.file);
         {ok, _} ->
             ok
     end.

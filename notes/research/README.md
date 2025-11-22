@@ -62,7 +62,7 @@ Documentation as a mandatory, first-class language construct with runtime intros
 **File**: `1.05-packages/1.05-packages.md`
 
 Integration with the Erlang/Elixir ecosystem through Hex.pm and HexDocs. Includes:
-- Package.catena configuration file
+- Package.cat configuration file
 - Package management CLI (deps add, get, update, tree)
 - Publishing to Hex.pm with validation
 - HexDocs-compatible documentation generation

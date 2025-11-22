@@ -16,7 +16,7 @@ delete_test_file(Filename) ->
 
 % Compile source string (via temp file)
 compile_source(Source) ->
-    TestFile = "/tmp/catena_integration_test.catena",
+    TestFile = "/tmp/catena_integration_test.cat",
     create_test_file(TestFile, Source),
     Result = catena_parser_wrapper:parse_file(TestFile),
     delete_test_file(TestFile),
@@ -255,7 +255,7 @@ very_long_line_test() ->
 %%====================================================================
 
 parse_file_integration_test() ->
-    TestFile = "/tmp/catena_file_integration_test.catena",
+    TestFile = "/tmp/catena_file_integration_test.cat",
     Content = "type Bool = True | False\n",
     create_test_file(TestFile, Content),
 
@@ -277,7 +277,7 @@ parse_file_integration_test() ->
     end.
 
 parse_nonexistent_file_test() ->
-    Result = catena_parser_wrapper:parse_file("/nonexistent/file.catena"),
+    Result = catena_parser_wrapper:parse_file("/nonexistent/file.cat"),
 
     ?assertMatch({error, [#error{code = 'E000_file_error'}]}, Result),
 

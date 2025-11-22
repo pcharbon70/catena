@@ -58,7 +58,7 @@
 -type constraint() ::
     {trait, trait_name(), [catena_types:ty()], loc()}.
     % {trait, TraitName, TypeArgs, Location}
-    % Example: {trait, 'Functor', [{tvar, 1}], {file, "test.catena", 10, 5}}
+    % Example: {trait, 'Functor', [{tvar, 1}], {file, "test.cat", 10, 5}}
 
 %% Constraint set: Collection of constraints
 -type constraint_set() :: [constraint()].

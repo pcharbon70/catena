@@ -88,7 +88,7 @@ OTP behaviors (GenServer, Supervisor, GenStage, etc.) are implemented as **libra
 ### 5.2.1 Process Effect Foundation
 - [ ] **Task 5.2.1 Complete**
 
-The Process effect exposes BEAM process primitives, serving as the foundation for all OTP patterns. This effect is defined in `lib/catena/stdlib/effect/process.catena` and provides spawn, send, receive, link, monitor, and process registration operations. All OTP behaviors build on these primitives.
+The Process effect exposes BEAM process primitives, serving as the foundation for all OTP patterns. This effect is defined in `lib/catena/stdlib/effect/process.cat` and provides spawn, send, receive, link, monitor, and process registration operations. All OTP behaviors build on these primitives.
 
 - [ ] 5.2.1.1 Define Process effect with spawn, spawn_link, self, send, receive operations
 - [ ] 5.2.1.2 Define Process effect with monitor, demonitor, link, unlink operations
@@ -98,7 +98,7 @@ The Process effect exposes BEAM process primitives, serving as the foundation fo
 ### 5.2.2 GenServer Library Pattern
 - [ ] **Task 5.2.2 Complete**
 
-GenServer is implemented as a library pattern in `lib/catena/stdlib/otp/gen_server.catena`. It provides the familiar init/handle_call/handle_cast/handle_info pattern using types and the Process effect. Users define GenServer configurations as records and start them with library functions.
+GenServer is implemented as a library pattern in `lib/catena/stdlib/otp/gen_server.cat`. It provides the familiar init/handle_call/handle_cast/handle_info pattern using types and the Process effect. Users define GenServer configurations as records and start them with library functions.
 
 - [ ] 5.2.2.1 Define GenServer type with init, handle_call, handle_cast, handle_info callbacks
 - [ ] 5.2.2.2 Implement start/start_link transforms spawning GenServer process with receive loop
@@ -108,7 +108,7 @@ GenServer is implemented as a library pattern in `lib/catena/stdlib/otp/gen_serv
 ### 5.2.3 Supervisor Library Pattern
 - [ ] **Task 5.2.3 Complete**
 
-Supervisor is implemented as a library pattern in `lib/catena/stdlib/otp/supervisor.catena`. It uses Process effect operations (spawn_link, monitor, trap_exit) to implement restart strategies. Supervisor configurations are regular Catena types, not special syntax.
+Supervisor is implemented as a library pattern in `lib/catena/stdlib/otp/supervisor.cat`. It uses Process effect operations (spawn_link, monitor, trap_exit) to implement restart strategies. Supervisor configurations are regular Catena types, not special syntax.
 
 - [ ] 5.2.3.1 Define SupervisorConfig type with strategy, max_restarts, max_seconds, children
 - [ ] 5.2.3.2 Define ChildSpec type with id, start, restart policy, shutdown timeout
@@ -283,7 +283,7 @@ This phase completes the proof-of-concept by demonstrating:
 
 - Actor definition syntax with state types, message protocols, and effect signatures
 - Effectful message handlers with `(Message, State) -> (NewState, Reply) / {Process}` signature
-- Process effect in `lib/catena/stdlib/effect/process.catena` with BEAM primitives
+- Process effect in `lib/catena/stdlib/effect/process.cat` with BEAM primitives
 - Actor-effect unification demonstrating actors as handlers for Process effect
 - OTP patterns as library in `lib/catena/stdlib/otp/`:
   - GenServer pattern for stateful servers

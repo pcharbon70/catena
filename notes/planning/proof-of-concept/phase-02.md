@@ -49,7 +49,7 @@ Results must display clearly and readably. We format values according to their t
 ### 2.1.4 History and Completion
 - [ ] **Task 2.1.4 Complete**
 
-Command history allows users to recall previous inputs using up/down arrows. We persist history across sessions in a `.catena_history` file. Tab completion suggests keywords, defined functions, and module names based on the current input prefix. Completion context-awareness helps users discover available functions without memorizing everything.
+Command history allows users to recall previous inputs using up/down arrows. We persist history across sessions in a `.cat_history` file. Tab completion suggests keywords, defined functions, and module names based on the current input prefix. Completion context-awareness helps users discover available functions without memorizing everything.
 
 - [ ] 2.1.4.1 Implement command history with up/down arrow navigation through previous inputs
 - [ ] 2.1.4.2 Implement history persistence saving history to disk and loading on REPL startup

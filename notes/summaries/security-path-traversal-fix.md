@@ -27,7 +27,7 @@ read_source_context(File, Line, ContextLines) ->
 **Attack vectors:**
 1. **Path traversal**: `../../../../etc/passwd` - Access system files
 2. **System directory access**: `/etc/shadow`, `/proc/self/environ` - Read sensitive data
-3. **Null byte injection**: `test.catena\0/etc/passwd` - Path obfuscation
+3. **Null byte injection**: `test.cat\0/etc/passwd` - Path obfuscation
 4. **Workspace escape**: `../../../outside/secrets.txt` - Read files outside project
 
 ### Why This Matters
@@ -209,7 +209,7 @@ read_source_context(File, Line, ContextLines) ->
    - `validate_path_rejects_var_log_test` - `/var/log/syslog`
 
 4. **Null byte injection** (1 test):
-   - `validate_path_rejects_null_byte_test` - `test.catena\0/etc/passwd`
+   - `validate_path_rejects_null_byte_test` - `test.cat\0/etc/passwd`
 
 5. **Integration tests** (3 tests):
    - `read_source_context_blocks_traversal_test` - Blocks `/etc/passwd`
@@ -274,7 +274,7 @@ Total:                     51/51 ✅ (100% pass rate)
 ### Test Adjustments
 
 One existing test required adjustment for compatibility:
-- `read_source_context_file_not_found_test` - Changed from `/nonexistent/file.catena` to `/tmp/catena_nonexistent_file.catena` to use allowed test directory
+- `read_source_context_file_not_found_test` - Changed from `/nonexistent/file.cat` to `/tmp/catena_nonexistent_file.cat` to use allowed test directory
 
 ## Files Modified
 
@@ -311,7 +311,7 @@ Total:                                              +167 lines, ~1 line
 "./../../etc/passwd" → "/etc/passwd" (normalized, then blocked)
 
 % Multiple slashes
-"src////test.catena" → "src/test.catena" (normalized, validated)
+"src////test.cat" → "src/test.cat" (normalized, validated)
 
 % Trailing slashes
 "src/compiler/" → "src/compiler" (normalized, validated)
@@ -321,16 +321,16 @@ Total:                                              +167 lines, ~1 line
 
 ```erlang
 % At workspace root
-"test.catena" → Allowed (within workspace)
+"test.cat" → Allowed (within workspace)
 
 % In subdirectory
-"src/compiler/test.catena" → Allowed (within workspace)
+"src/compiler/test.cat" → Allowed (within workspace)
 
 % Outside workspace
-"../../outside/test.catena" → Blocked (contains ..)
+"../../outside/test.cat" → Blocked (contains ..)
 
 % Absolute outside workspace
-"/home/other/test.catena" → Blocked (not within workspace)
+"/home/other/test.cat" → Blocked (not within workspace)
 ```
 
 ### System Path Edge Cases
@@ -350,10 +350,10 @@ Total:                                              +167 lines, ~1 line
 
 ```erlang
 % Test files allowed
-"/tmp/test.catena" → Allowed (testing exception)
+"/tmp/test.cat" → Allowed (testing exception)
 
 % Test subdirectories
-"/tmp/subdir/test.catena" → Allowed (testing exception)
+"/tmp/subdir/test.cat" → Allowed (testing exception)
 ```
 
 ## Code Review Resolution
@@ -406,12 +406,12 @@ catena_error:validate_source_path("/etc/passwd")
 % Result: {error, path_traversal_attack} ✅
 
 % Test 3: Null byte injection
-catena_error:validate_source_path("test.catena" ++ [0] ++ "/etc/passwd")
+catena_error:validate_source_path("test.cat" ++ [0] ++ "/etc/passwd")
 % Result: {error, path_traversal_attack} ✅
 
 % Test 4: Safe path
-catena_error:validate_source_path("src/test.catena")
-% Result: {ok, "src/test.catena"} ✅
+catena_error:validate_source_path("src/test.cat")
+% Result: {ok, "src/test.cat"} ✅
 ```
 
 ## Performance Impact
@@ -478,7 +478,7 @@ catena_error:validate_source_path("src/test.catena")
 
 1. **File size limits**: Prevent reading huge files
 2. **Rate limiting**: Prevent DoS via repeated reads
-3. **Allowed extensions**: Whitelist `.catena` and related extensions
+3. **Allowed extensions**: Whitelist `.cat` and related extensions
 4. **Canonical path comparison**: Additional normalization checks
 
 ### Monitoring

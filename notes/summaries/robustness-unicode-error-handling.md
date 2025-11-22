@@ -338,13 +338,13 @@ This fix addresses **Concern #7** from the code review:
 
 **Invalid UTF-8 file:**
 ```
-Error [E000_file_error] at test.catena:1
+Error [E000_file_error] at test.cat:1
 File contains invalid UTF-8 encoding
 ```
 
 **Incomplete UTF-8 file:**
 ```
-Error [E000_file_error] at test.catena:1
+Error [E000_file_error] at test.cat:1
 File contains incomplete UTF-8 encoding at end
 ```
 
@@ -390,7 +390,7 @@ File contains incomplete UTF-8 encoding at end
 ### Attack Prevention
 
 **Malicious binary files:**
-- Attacker uploads binary file as `.catena` source
+- Attacker uploads binary file as `.cat` source
 - Before: Crashes compiler
 - After: Returns clear error, compilation continues
 
@@ -439,11 +439,11 @@ File contains incomplete UTF-8 encoding at end
 
 ```bash
 # Create invalid UTF-8 file
-echo -ne '\x80\x81\x82' > /tmp/invalid.catena
+echo -ne '\x80\x81\x82' > /tmp/invalid.cat
 
 # Test error handling
 erl -pa ebin -noshell -eval '
-  {error, [Err]} = catena_parser_wrapper:parse_file("/tmp/invalid.catena"),
+  {error, [Err]} = catena_parser_wrapper:parse_file("/tmp/invalid.cat"),
   io:format("Error: ~s~n", [Err#error.message])
 ' -s init stop
 

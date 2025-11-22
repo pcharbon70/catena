@@ -656,7 +656,7 @@ rebar3 eunit --module=catena_parser_effect_tests
 
 ### 7.2 Manual Verification
 
-Create test file `examples/effects_showcase.catena`:
+Create test file `examples/effects_showcase.cat`:
 ```catena
 % Showcase all effect syntax
 effect FileIO
@@ -700,7 +700,7 @@ Parse this file:
 ```bash
 cd /home/ducky/code/catena
 erl -pa _build/default/lib/*/ebin
-1> {ok, Tokens} = catena_lexer:tokenize(file:read_file("examples/effects_showcase.catena")).
+1> {ok, Tokens} = catena_lexer:tokenize(file:read_file("examples/effects_showcase.cat")).
 2> {ok, AST} = catena_parser:parse(Tokens).
 3> % Should succeed without errors
 ```

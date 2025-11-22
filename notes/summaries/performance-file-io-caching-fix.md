@@ -186,7 +186,7 @@ add_source_context(#error{file = File, line = Line} = Err, File, SourceLines) wh
 
 **Before Fix:**
 ```
-parse_file("test.catena") with 10 errors:
+parse_file("test.cat") with 10 errors:
   - Read file (error 1):  10ms
   - Read file (error 2):  10ms
   - Read file (error 3):  10ms
@@ -197,7 +197,7 @@ parse_file("test.catena") with 10 errors:
 
 **After Fix:**
 ```
-parse_file("test.catena") with 10 errors:
+parse_file("test.cat") with 10 errors:
   - Read file (initial):  10ms
   - Use cache (error 1):  0ms
   - Use cache (error 2):  0ms
@@ -245,8 +245,8 @@ parse_file("test.catena") with 10 errors:
 ```bash
 # Test parsing file with multiple errors
 erl -pa ebin -noshell -eval '
-  file:write_file("/tmp/test.catena", "shape\nshape Foo = Bar\nshape\nflow\nshape Baz = Qux\n"),
-  {Time, {error, Errors}} = timer:tc(catena_parser_wrapper, parse_file, ["/tmp/test.catena"]),
+  file:write_file("/tmp/test.cat", "shape\nshape Foo = Bar\nshape\nflow\nshape Baz = Qux\n"),
+  {Time, {error, Errors}} = timer:tc(catena_parser_wrapper, parse_file, ["/tmp/test.cat"]),
   io:format("Parsed ~p errors in ~p μs (~.2f μs per error)~n",
             [length(Errors), Time, Time/length(Errors)])
 ' -s init stop
@@ -400,7 +400,7 @@ add_source_context(Err, File, undefined) →
 ### Manual Testing
 ```bash
 # Create file with multiple errors
-cat > /tmp/test.catena << 'EOF'
+cat > /tmp/test.cat << 'EOF'
 shape
 shape Foo = Bar
 shape
@@ -409,7 +409,7 @@ EOF
 
 # Parse and time it
 erl -pa ebin -noshell -eval '
-  {Time, Result} = timer:tc(catena_parser_wrapper, parse_file, ["/tmp/test.catena"]),
+  {Time, Result} = timer:tc(catena_parser_wrapper, parse_file, ["/tmp/test.cat"]),
   {error, Errors} = Result,
   io:format("Parsed ~p errors in ~p μs~n", [length(Errors), Time])
 ' -s init stop
@@ -426,17 +426,17 @@ erl -pa ebin -noshell -eval 'eunit:test(catena_parser_wrapper_tests, [verbose])'
 ### Strace Verification (Linux)
 ```bash
 # Before fix: Multiple open/read/close for same file
-strace -e open,read,close erl ... 2>&1 | grep test.catena
-  open("test.catena", ...) = 3
+strace -e open,read,close erl ... 2>&1 | grep test.cat
+  open("test.cat", ...) = 3
   read(3, ...) = ...
   close(3) = 0
-  open("test.catena", ...) = 3  ← DUPLICATE!
+  open("test.cat", ...) = 3  ← DUPLICATE!
   read(3, ...) = ...
   close(3) = 0
 
 # After fix: Single open/read/close
-strace -e open,read,close erl ... 2>&1 | grep test.catena
-  open("test.catena", ...) = 3
+strace -e open,read,close erl ... 2>&1 | grep test.cat
+  open("test.cat", ...) = 3
   read(3, ...) = ...
   close(3) = 0
   # No more opens!
