@@ -2,7 +2,6 @@
 -- Standard input/output operations as algebraic effects
 
 module Effect.IO
-
 export effect IO
 
 -- IO Effect declaration

@@ -2,7 +2,6 @@
 -- Mutable state as an algebraic effect
 
 module Effect.State
-
 export effect State
 
 -- State Effect declaration

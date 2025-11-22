@@ -59,7 +59,7 @@ erase_decl({transform_typed, Name, _TypeSig, Params, Body, Loc}) ->
     ErasedBody = erase_expr(Body),
     {transform, Name, ErasedParams, ErasedBody, Loc};
 
-erase_decl({type_decl, _Name, _TypeVars, _Constructors, _Loc}) ->
+erase_decl({type_decl, _Name, _TypeVars, _Constructors, _Derives, _Loc}) ->
     %% Type declarations are completely erased
     erased;
 
@@ -67,11 +67,15 @@ erase_decl({trait_decl, _Name, _TypeVar, _Supertraits, _Methods, _Loc}) ->
     %% Trait declarations are erased (methods become regular functions)
     erased;
 
-erase_decl({instance_decl, TraitName, TypeArgs, Methods, Loc}) ->
+erase_decl({instance_decl, TraitName, TypeArgs, _Constraints, Methods, Loc}) ->
     %% Instance declarations become dictionary definitions
     DictName = instance_dict_name(TraitName, TypeArgs),
     DictValue = build_instance_dict(Methods),
     {transform, DictName, [], DictValue, Loc};
+
+erase_decl({effect_decl, _Name, _Operations, _Loc}) ->
+    %% Effect declarations are metadata, erased at runtime
+    erased;
 
 erase_decl(Other) ->
     Other.

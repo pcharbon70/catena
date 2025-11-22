@@ -5,12 +5,10 @@
 -- Tests are first-class values that can be composed and organized.
 
 module Test
-
 export type Test
 export type Property
 export type TestResult
 export type Suite
-
 export transform unit
 export transform property
 export transform assert

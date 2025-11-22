@@ -271,6 +271,77 @@ parse_error_effect_file_test() ->
     end.
 
 %% =============================================================================
+%% Section 1.5.1 - Standard Library Type-Checking
+%% =============================================================================
+
+%% Test type-checking prelude.cat
+typecheck_prelude_test() ->
+    Path = filename:join([stdlib_dir(), "prelude.cat"]),
+    case catena_compile:compile_file(Path) of
+        {ok, {typed_module, 'Prelude', Decls, _Env}} ->
+            %% Verify we get all 32 declarations
+            ?assertEqual(32, length(Decls)),
+            ok;
+        {error, Reason} ->
+            io:format("~nPrelude type-check error: ~p~n", [Reason]),
+            ?assert(false, {prelude_typecheck_failed, Reason})
+    end.
+
+%% Test type-checking effect/io.cat
+typecheck_io_effect_test() ->
+    Path = filename:join([stdlib_dir(), "effect", "io.cat"]),
+    case catena_compile:compile_file(Path) of
+        {ok, {typed_module, 'Effect.IO', Decls, _Env}} ->
+            %% IO effect has 1 effect declaration
+            ?assertEqual(1, length(Decls)),
+            ok;
+        {error, Reason} ->
+            io:format("~nIO effect type-check error: ~p~n", [Reason]),
+            ?assert(false, {io_typecheck_failed, Reason})
+    end.
+
+%% Test type-checking effect/state.cat
+typecheck_state_effect_test() ->
+    Path = filename:join([stdlib_dir(), "effect", "state.cat"]),
+    case catena_compile:compile_file(Path) of
+        {ok, {typed_module, 'Effect.State', Decls, _Env}} ->
+            ?assertEqual(1, length(Decls)),
+            ok;
+        {error, Reason} ->
+            io:format("~nState effect type-check error: ~p~n", [Reason]),
+            ?assert(false, {state_typecheck_failed, Reason})
+    end.
+
+%% Test type-checking effect/error.cat
+typecheck_error_effect_test() ->
+    Path = filename:join([stdlib_dir(), "effect", "error.cat"]),
+    case catena_compile:compile_file(Path) of
+        {ok, {typed_module, 'Effect.Error', Decls, _Env}} ->
+            ?assertEqual(1, length(Decls)),
+            ok;
+        {error, Reason} ->
+            io:format("~nError effect type-check error: ~p~n", [Reason]),
+            ?assert(false, {error_typecheck_failed, Reason})
+    end.
+
+%% Test parsing test.cat (type-checking has known limitations with record construction)
+parse_test_module_test() ->
+    Path = filename:join([stdlib_dir(), "test.cat"]),
+    {ok, Content} = file:read_file(Path),
+    Source = binary_to_list(Content),
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    case catena_parser:parse(Tokens) of
+        {ok, {module, 'Test', Exports, _, Decls, _}} ->
+            %% Verify exports and declarations
+            ?assertEqual(13, length(Exports)),
+            ?assertEqual(13, length(Decls)),
+            ok;
+        {error, Reason} ->
+            io:format("~nTest module parse error: ~p~n", [Reason]),
+            ?assert(false, {test_parse_failed, Reason})
+    end.
+
+%% =============================================================================
 %% Section 1.7.2 - Trait Instance Resolution (placeholder)
 %% These tests require type inference implementation to be complete
 %% =============================================================================
