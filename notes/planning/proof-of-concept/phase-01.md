@@ -255,49 +255,49 @@ The effect runtime implements process-based effect handlers leveraging BEAM's li
 ---
 
 ## 1.4 Integration Tests
-- [ ] **Section 1.4 Complete**
+- [x] **Section 1.4 Complete**
 
 Integration tests validate the entire compilation pipeline from source to executable bytecode. We test realistic Catena programs that exercise multiple compiler phases together, ensuring that the lexer, parser, type checker, and code generator work cohesively. These tests catch interaction bugs that unit tests miss and validate that generated BEAM modules execute correctly.
 
 ### 1.4.1 End-to-End Compilation
-- [ ] **Task 1.4.1 Complete**
+- [x] **Task 1.4.1 Complete**
 
 End-to-end tests compile complete Catena programs and verify they produce correct results. We test examples like factorial, fibonacci, list operations, and simple recursive functions. Each test compiles the source, loads the generated .beam module, calls exported functions, and checks outputs against expected values.
 
-- [ ] 1.4.1.1 Test compilation and execution of simple arithmetic expressions returning correct results
-- [ ] 1.4.1.2 Test compilation and execution of recursive functions (factorial, fibonacci) with correct outputs
-- [ ] 1.4.1.3 Test compilation and execution of polymorphic functions with different type instantiations
-- [ ] 1.4.1.4 Test compilation and execution of pattern matching code with multiple clauses and guards
+- [x] 1.4.1.1 Test compilation and execution of simple arithmetic expressions returning correct results
+- [x] 1.4.1.2 Test compilation and execution of recursive functions (factorial, fibonacci) with correct outputs
+- [x] 1.4.1.3 Test compilation and execution of polymorphic functions with different type instantiations
+- [x] 1.4.1.4 Test compilation and execution of pattern matching code with multiple clauses and guards
 
 ### 1.4.2 BEAM Bytecode Validation
-- [ ] **Task 1.4.2 Complete**
+- [x] **Task 1.4.2 Complete**
 
 We validate that generated .beam files are well-formed and meet BEAM VM requirements. This includes checking module exports match declarations, function arities are correct, and bytecode passes BEAM validation. We use tools like `beam_lib` to inspect generated modules and verify metadata.
 
-- [ ] 1.4.2.1 Verify generated .beam files load without errors using Erlang's code loader
-- [ ] 1.4.2.2 Verify module exports match source declarations with correct function names and arities
-- [ ] 1.4.2.3 Verify function calls use correct module-qualified names and argument counts
-- [ ] 1.4.2.4 Verify pattern matching compiles to efficient BEAM select_val instructions where applicable
+- [x] 1.4.2.1 Verify generated .beam files load without errors using Erlang's code loader
+- [x] 1.4.2.2 Verify module exports match source declarations with correct function names and arities
+- [x] 1.4.2.3 Verify function calls use correct module-qualified names and argument counts
+- [x] 1.4.2.4 Verify pattern matching compiles to efficient BEAM select_val instructions where applicable
 
 ### 1.4.3 Error Handling Pipeline
-- [ ] **Task 1.4.3 Complete**
+- [x] **Task 1.4.3 Complete**
 
 We test that errors at each compiler stage are caught and reported appropriately. Syntax errors produce helpful parser messages, type errors show clear type mismatches, and code generation errors indicate internal compiler issues. Error messages include source locations and suggestions for fixes.
 
-- [ ] 1.4.3.1 Test syntax error reporting with multiple intentional syntax errors showing clear messages
-- [ ] 1.4.3.2 Test type error reporting with type mismatches showing expected and actual types
-- [ ] 1.4.3.3 Test exhaustiveness warnings for non-exhaustive pattern matches
-- [ ] 1.4.3.4 Test error recovery allowing compiler to report multiple errors in single pass
+- [x] 1.4.3.1 Test syntax error reporting with multiple intentional syntax errors showing clear messages
+- [x] 1.4.3.2 Test type error reporting with type mismatches showing expected and actual types
+- [x] 1.4.3.3 Test exhaustiveness warnings for non-exhaustive pattern matches
+- [x] 1.4.3.4 Test error recovery allowing compiler to report multiple errors in single pass
 
 ### 1.4.4 Effect System Integration
-- [ ] **Task 1.4.4 Complete**
+- [x] **Task 1.4.4 Complete**
 
 End-to-end testing of the algebraic effect system from parsing through execution. We validate that effect declarations, perform operations, and try/with handlers work cohesively, that effect tracking catches unhandled effects at compile time, and that the process-based runtime correctly executes effectful programs.
 
-- [ ] 1.4.4.1 Test compilation and execution of simple effectful programs using IO effect (file read/write operations) producing correct results
-- [ ] 1.4.4.2 Test effect type checking catching unhandled effects with clear error messages pointing to perform sites
-- [ ] 1.4.4.3 Test handler exhaustiveness checking detecting missing operation handlers and reporting them clearly
-- [ ] 1.4.4.4 Test process-based effect runtime spawning handlers, routing messages, and returning results correctly without process leaks
+- [x] 1.4.4.1 Test compilation and execution of simple effectful programs using IO effect (file read/write operations) producing correct results
+- [x] 1.4.4.2 Test effect type checking catching unhandled effects with clear error messages pointing to perform sites
+- [x] 1.4.4.3 Test handler exhaustiveness checking detecting missing operation handlers and reporting them clearly
+- [x] 1.4.4.4 Test process-based effect runtime spawning handlers, routing messages, and returning results correctly without process leaks
 
 ---
 
