@@ -77,15 +77,15 @@ Add trait system keywords and syntax to demonstrate Catena's category-theory-fir
 - [x] 1.1.6.3 Add instance declaration grammar with method implementations producing InstanceDecl AST nodes (success: parse `instance Functor Maybe where fmap f = match | None -> None | Some x -> Some (f x) end`)
 - [x] 1.1.6.4 Add trait hierarchy syntax with `:` for trait inheritance (success: parse `trait Monad m : Applicative m where bind : m a -> (a -> m b) -> m b end`)
 
-### 1.1.7 Core Operators
-- [x] **Task 1.1.7 Complete**
+### 1.1.5 Core Operators
+- [x] **Task 1.1.5 Complete**
 
 Add dual notation operators for category theory abstractions, providing both readable keyword versions and concise symbolic operators. This makes Catena accessible to beginners (using keywords like `equals`, `append`, `bind`) while enabling experts to write terse, mathematical code (using `===`, `<>`, `>>=`).
 
-- [x] 1.1.7.1 Add equality operators `===` and `!==` to lexer for Setoid trait (type class equality)
-- [x] 1.1.7.2 Add composition operators: `<>` (Semigroup append), `<$>` (Functor map), `<*>` (Applicative apply)
-- [x] 1.1.7.3 Add monadic operators: `>>=` (bind), `>>` (sequence), `=<<` (flipped bind), `>=>` (Kleisli left-to-right), `<=<` (Kleisli right-to-left)
-- [x] 1.1.7.4 Define operator precedence and associativity tables ensuring correct parsing (infixl 1 for >>=, infixl 4 for <$> and <*>, infixl 6 for <>)
+- [x] 1.1.5.1 Add equality operators `===` and `!==` to lexer for Setoid trait (type class equality)
+- [x] 1.1.5.2 Add composition operators: `<>` (Semigroup append), `<$>` (Functor map), `<*>` (Applicative apply)
+- [x] 1.1.5.3 Add monadic operators: `>>=` (bind), `>>` (sequence), `=<<` (flipped bind), `>=>` (Kleisli left-to-right), `<=<` (Kleisli right-to-left)
+- [x] 1.1.5.4 Define operator precedence and associativity tables ensuring correct parsing (infixl 1 for >>=, infixl 4 for <$> and <*>, infixl 6 for <>)
 
 ### Unit Tests - Section 1.1
 - [x] **Unit Tests 1.1 Complete**
@@ -303,90 +303,90 @@ End-to-end testing of the algebraic effect system from parsing through execution
 
 ---
 
-## 1.7 Standard Library Validation
-- [ ] **Section 1.7 Complete**
+## 1.5 Standard Library Validation
+- [ ] **Section 1.5 Complete**
 
 This section validates that Catena's standard library compiles to BEAM and executes correctly. The standard library (`lib/catena/stdlib/`) contains the category theory traits (Comparable, Combiner, Accumulator, Mapper, Pipeline), testing framework, and effect modules. These are written in Catena itself, demonstrating that the compiler can handle real-world code. We validate trait/instance resolution, higher-kinded types, law verification through the Test module, and do-notation desugaring.
 
 **Architectural Note**: Per Catena's minimal-core design, category theory abstractions are library code, not compiler features. The compiler provides `trait`, `instance`, and `effect` keywords; the standard library builds all abstractions on top.
 
-### 1.7.1 Standard Library Compilation
-- [ ] **Task 1.7.1 Complete**
+### 1.5.1 Standard Library Compilation
+- [ ] **Task 1.5.1 Complete**
 
 Validate that all standard library files parse, type-check, and compile to BEAM bytecode. This proves the compiler can handle real Catena code with traits, instances, and effects.
 
-- [ ] 1.7.1.1 Parse `lib/catena/stdlib/prelude.catena` successfully producing valid AST for all trait and instance declarations
-- [ ] 1.7.1.2 Type-check prelude.catena validating all trait method signatures and instance implementations
-- [ ] 1.7.1.3 Parse and type-check `lib/catena/stdlib/test.catena` for testing framework
-- [ ] 1.7.1.4 Parse and type-check effect modules (`effect/io.catena`, `effect/state.catena`, `effect/error.catena`)
-- [ ] 1.7.1.5 Generate Core Erlang and compile to .beam for all stdlib modules
+- [ ] 1.5.1.1 Parse `lib/catena/stdlib/prelude.catena` successfully producing valid AST for all trait and instance declarations
+- [ ] 1.5.1.2 Type-check prelude.catena validating all trait method signatures and instance implementations
+- [ ] 1.5.1.3 Parse and type-check `lib/catena/stdlib/test.catena` for testing framework
+- [ ] 1.5.1.4 Parse and type-check effect modules (`effect/io.catena`, `effect/state.catena`, `effect/error.catena`)
+- [ ] 1.5.1.5 Generate Core Erlang and compile to .beam for all stdlib modules
 
-### 1.7.2 Trait Instance Resolution
-- [ ] **Task 1.7.2 Complete**
+### 1.5.2 Trait Instance Resolution
+- [ ] **Task 1.5.2 Complete**
 
 Validate that trait instances resolve correctly during type checking. The prelude defines instances for Maybe, Either, List for various traits (Mapper, Applicator, Chainable, Pipeline, Comparable, etc.).
 
-- [ ] 1.7.2.1 Resolve Mapper instance for Maybe when type-checking `map f (Some x)`
-- [ ] 1.7.2.2 Resolve Mapper instance for List when type-checking `map f [1, 2, 3]`
-- [ ] 1.7.2.3 Resolve constrained instances like `Comparable a => Comparable (List a)` with nested resolution
-- [ ] 1.7.2.4 Detect and report missing instances with clear error messages
-- [ ] 1.7.2.5 Verify trait hierarchy resolution (Pipeline requires Applicator requires Mapper)
+- [ ] 1.5.2.1 Resolve Mapper instance for Maybe when type-checking `map f (Some x)`
+- [ ] 1.5.2.2 Resolve Mapper instance for List when type-checking `map f [1, 2, 3]`
+- [ ] 1.5.2.3 Resolve constrained instances like `Comparable a => Comparable (List a)` with nested resolution
+- [ ] 1.5.2.4 Detect and report missing instances with clear error messages
+- [ ] 1.5.2.5 Verify trait hierarchy resolution (Pipeline requires Applicator requires Mapper)
 
-### 1.7.3 Higher-Kinded Type Validation
-- [ ] **Task 1.7.3 Complete**
+### 1.5.3 Higher-Kinded Type Validation
+- [ ] **Task 1.5.3 Complete**
 
 Validate that higher-kinded types work correctly for traits like Mapper and Pipeline. These traits are parameterized by type constructors (`f : Type -> Type`), not simple types.
 
-- [ ] 1.7.3.1 Validate kind checking for `trait Mapper f where map : (a -> b) -> f a -> f b`
-- [ ] 1.7.3.2 Validate kind inference for instance declarations like `instance Mapper Maybe`
-- [ ] 1.7.3.3 Validate partially applied type constructors like `instance Mapper (Either e)`
-- [ ] 1.7.3.4 Report kind errors clearly when HKT constraints are violated
+- [ ] 1.5.3.1 Validate kind checking for `trait Mapper f where map : (a -> b) -> f a -> f b`
+- [ ] 1.5.3.2 Validate kind inference for instance declarations like `instance Mapper Maybe`
+- [ ] 1.5.3.3 Validate partially applied type constructors like `instance Mapper (Either e)`
+- [ ] 1.5.3.4 Report kind errors clearly when HKT constraints are violated
 
-### 1.7.4 Law Verification via Test Module
-- [ ] **Task 1.7.4 Complete**
+### 1.5.4 Law Verification via Test Module
+- [ ] **Task 1.5.4 Complete**
 
 Validate that the Test module can express and verify trait laws through property-based testing. Laws are library code using `Test.property`, not special syntax.
 
-- [ ] 1.7.4.1 Compile law verification code using `Test.property` for Mapper identity law
-- [ ] 1.7.4.2 Compile law verification code for Mapper composition law
-- [ ] 1.7.4.3 Compile law verification code for Pipeline monad laws (left/right identity, associativity)
-- [ ] 1.7.4.4 Execute law tests and verify they can detect both passing and failing properties
-- [ ] 1.7.4.5 Integrate with PropEr for random test case generation
+- [ ] 1.5.4.1 Compile law verification code using `Test.property` for Mapper identity law
+- [ ] 1.5.4.2 Compile law verification code for Mapper composition law
+- [ ] 1.5.4.3 Compile law verification code for Pipeline monad laws (left/right identity, associativity)
+- [ ] 1.5.4.4 Execute law tests and verify they can detect both passing and failing properties
+- [ ] 1.5.4.5 Integrate with PropEr for random test case generation
 
-### 1.7.5 Do-Notation Desugaring
-- [ ] **Task 1.7.5 Complete**
+### 1.5.5 Do-Notation Desugaring
+- [ ] **Task 1.5.5 Complete**
 
 Implement do-notation as syntactic sugar that desugars to `>>=` (bind) chains. This is a compiler transformation, not a keyword—the parser recognizes `do` blocks and transforms them during compilation.
 
-- [ ] 1.7.5.1 Parse do-block syntax: `do { x <- ma; y <- mb; pure (x + y) }`
-- [ ] 1.7.5.2 Desugar bind: `x <- ma; rest` becomes `ma >>= (fn x -> rest)`
-- [ ] 1.7.5.3 Desugar sequence: `ma; rest` becomes `ma >> rest`
-- [ ] 1.7.5.4 Desugar let in do: `let x = e; rest` becomes `let x = e in rest`
-- [ ] 1.7.5.5 Verify desugared code type-checks with correct Pipeline constraint inference
+- [ ] 1.5.5.1 Parse do-block syntax: `do { x <- ma; y <- mb; pure (x + y) }`
+- [ ] 1.5.5.2 Desugar bind: `x <- ma; rest` becomes `ma >>= (fn x -> rest)`
+- [ ] 1.5.5.3 Desugar sequence: `ma; rest` becomes `ma >> rest`
+- [ ] 1.5.5.4 Desugar let in do: `let x = e; rest` becomes `let x = e in rest`
+- [ ] 1.5.5.5 Verify desugared code type-checks with correct Pipeline constraint inference
 
-### 1.7.6 Effect Integration with Kleisli Arrows
-- [ ] **Task 1.7.6 Complete**
+### 1.5.6 Effect Integration with Kleisli Arrows
+- [ ] **Task 1.5.6 Complete**
 
 Validate that effects integrate correctly with category theory through Kleisli composition. Effectful functions compose with effect set union.
 
-- [ ] 1.7.6.1 Type-check Kleisli composition `>=>` with effect tracking: `(a -> b / ε₁) >=> (b -> c / ε₂) : a -> c / (ε₁ ∪ ε₂)`
-- [ ] 1.7.6.2 Validate that `perform` operations introduce effects into function signatures
-- [ ] 1.7.6.3 Validate that `handle` blocks remove effects from the effect set
-- [ ] 1.7.6.4 Compile and execute effectful Kleisli composition example
+- [ ] 1.5.6.1 Type-check Kleisli composition `>=>` with effect tracking: `(a -> b / ε₁) >=> (b -> c / ε₂) : a -> c / (ε₁ ∪ ε₂)`
+- [ ] 1.5.6.2 Validate that `perform` operations introduce effects into function signatures
+- [ ] 1.5.6.3 Validate that `handle` blocks remove effects from the effect set
+- [ ] 1.5.6.4 Compile and execute effectful Kleisli composition example
 
-### 1.7.7 Operator Desugaring
-- [ ] **Task 1.7.7 Complete**
+### 1.5.7 Operator Desugaring
+- [ ] **Task 1.5.7 Complete**
 
 Validate that category theory operators desugar to trait method calls. Operators like `<$>`, `>>=`, `<>` are syntactic sugar for Mapper.map, Pipeline.chain, Combiner.combine.
 
-- [ ] 1.7.7.1 Desugar `<$>` to `Mapper.map` calls during compilation
-- [ ] 1.7.7.2 Desugar `>>=` to `Chainable.chain` calls
-- [ ] 1.7.7.3 Desugar `<>` to `Combiner.combine` calls
-- [ ] 1.7.7.4 Desugar `===` and `!==` to `Comparable.equals` and derived `notEquals`
-- [ ] 1.7.7.5 Verify desugared operators resolve correct trait instances
+- [ ] 1.5.7.1 Desugar `<$>` to `Mapper.map` calls during compilation
+- [ ] 1.5.7.2 Desugar `>>=` to `Chainable.chain` calls
+- [ ] 1.5.7.3 Desugar `<>` to `Combiner.combine` calls
+- [ ] 1.5.7.4 Desugar `===` and `!==` to `Comparable.equals` and derived `notEquals`
+- [ ] 1.5.7.5 Verify desugared operators resolve correct trait instances
 
-### Unit Tests - Section 1.7
-- [ ] **Unit Tests 1.7 Complete**
+### Unit Tests - Section 1.5
+- [ ] **Unit Tests 1.5 Complete**
 - [ ] Test parsing of all stdlib files produces valid ASTs
 - [ ] Test type-checking of prelude.catena with all traits and instances
 - [ ] Test trait instance resolution for Mapper, Applicator, Pipeline on Maybe, List, Either
@@ -396,8 +396,8 @@ Validate that category theory operators desugar to trait method calls. Operators
 - [ ] Test operator desugaring resolves correct trait methods
 - [ ] Test effect tracking through Kleisli composition
 
-### Integration Tests - Section 1.7
-- [ ] **Integration Tests 1.7 Complete**
+### Integration Tests - Section 1.5
+- [ ] **Integration Tests 1.5 Complete**
 - [ ] Compile and execute: `map (fn x -> x + 1) [1, 2, 3]` produces `[2, 3, 4]`
 - [ ] Compile and execute: `Some 5 >>= (fn x -> Some (x + 1))` produces `Some 6`
 - [ ] Compile and execute: `[1, 2] <> [3, 4]` produces `[1, 2, 3, 4]`
