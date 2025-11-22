@@ -65,6 +65,7 @@ module : {token, {'module', TokenLine}}.
 in : {token, {'in', TokenLine}}.
 end : {token, {'end', TokenLine}}.
 then : {token, {then, TokenLine}}.
+fn : {token, {fn, TokenLine}}.
 where : {token, {where, TokenLine}}.
 case : {token, {'case', TokenLine}}.
 of : {token, {'of', TokenLine}}.
@@ -110,6 +111,7 @@ private : {token, {private, TokenLine}}.
 \| : {token, {pipe, TokenLine}}.
 < : {token, {lt, TokenLine}}.
 > : {token, {gt, TokenLine}}.
+\+\+ : {token, {plus_plus, TokenLine}}.
 \+ : {token, {plus, TokenLine}}.
 - : {token, {minus, TokenLine}}.
 \* : {token, {star, TokenLine}}.

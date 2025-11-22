@@ -169,23 +169,23 @@ type Result a e = Ok a | Err e
 
 -- Instances for Maybe
 instance Mapper Maybe where
-  transform map f x = match x
+  transform map f x = match x of
     | None -> None
     | Some a -> Some (f a)
   end
 end
 
 instance Applicator Maybe where
-  transform pure x = Some x
+  transform pure x = Some x,
 
-  transform apply mf mx = match mf
+  transform apply mf mx = match mf of
     | None -> None
     | Some f -> map f mx
   end
 end
 
 instance Chainable Maybe where
-  transform chain f x = match x
+  transform chain f x = match x of
     | None -> None
     | Some a -> f a
   end
@@ -195,32 +195,32 @@ instance Pipeline Maybe where
 end
 
 instance Comparable a => Comparable (Maybe a) where
-  transform equals x y = match x, y
-    | None, None -> true
-    | Some a, Some b -> equals a b
-    | _, _ -> false
+  transform equals x y = match (x, y) of
+    | (None, None) -> true
+    | (Some a, Some b) -> equals a b
+    | (_, _) -> false
   end
 end
 
 -- Instances for Either
 instance Mapper (Either e) where
-  transform map f x = match x
+  transform map f x = match x of
     | Left e -> Left e
     | Right a -> Right (f a)
   end
 end
 
 instance Applicator (Either e) where
-  transform pure x = Right x
+  transform pure x = Right x,
 
-  transform apply ef ex = match ef
+  transform apply ef ex = match ef of
     | Left e -> Left e
     | Right f -> map f ex
   end
 end
 
 instance Chainable (Either e) where
-  transform chain f x = match x
+  transform chain f x = match x of
     | Left e -> Left e
     | Right a -> f a
   end
@@ -231,23 +231,23 @@ end
 
 -- Instances for List
 instance Mapper List where
-  transform map f xs = match xs
+  transform map f xs = match xs of
     | [] -> []
     | h :: t -> f h :: map f t
   end
 end
 
 instance Applicator List where
-  transform pure x = [x]
+  transform pure x = [x],
 
-  transform apply fs xs = match fs
+  transform apply fs xs = match fs of
     | [] -> []
     | f :: rest -> map f xs ++ apply rest xs
   end
 end
 
 instance Chainable List where
-  transform chain f xs = match xs
+  transform chain f xs = match xs of
     | [] -> []
     | h :: t -> f h ++ chain f t
   end
@@ -257,22 +257,22 @@ instance Pipeline List where
 end
 
 instance Foldable List where
-  transform foldRight f z xs = match xs
+  transform foldRight f z xs = match xs of
     | [] -> z
     | h :: t -> f h (foldRight f z t)
-  end
+  end,
 
-  transform foldLeft f z xs = match xs
+  transform foldLeft f z xs = match xs of
     | [] -> z
     | h :: t -> foldLeft f (f z h) t
   end
 end
 
 instance Comparable a => Comparable (List a) where
-  transform equals xs ys = match xs, ys
-    | [], [] -> true
-    | h1 :: t1, h2 :: t2 -> equals h1 h2 && equals t1 t2
-    | _, _ -> false
+  transform equals xs ys = match (xs, ys) of
+    | ([], []) -> true
+    | (h1 :: t1, h2 :: t2) -> equals h1 h2 && equals t1 t2
+    | (_, _) -> false
   end
 end
 

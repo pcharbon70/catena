@@ -22,10 +22,7 @@ export transform run
 export transform benchmark
 
 -- Test result types
-type TestResult =
-  | Passed
-  | Failed String
-  | Skipped String
+type TestResult = Passed | Failed String | Skipped String
 
 type Test = Test {
   name : String,
@@ -43,64 +40,57 @@ type Suite = Suite {
 }
 
 -- Create a unit test
-transform unit : String -> (Unit -> Bool) -> Test
+-- Note: Type signatures and implementations must be combined due to parser limitation
 transform unit name testFn = Test {
-  name = name,
-  run = fn () -> match testFn ()
+  name: name,
+  run: fn u -> match (testFn u) of
     | true -> Passed
     | false -> Failed "Assertion failed"
   end
 }
 
 -- Create a property-based test
-transform property : String -> (a -> Bool) -> Property
-transform property name prop = Property {
-  name = name,
-  check = fn numTests ->
-    -- Property testing would generate random values
-    -- For now, return passed (actual implementation needs generators)
-    Passed
-}
+-- Property tests need generators (not yet implemented)
+-- transform property : String -> (a -> Bool) -> Property
+-- transform property name prop = Property {
+--   name: name,
+--   check: fn numTests -> Passed
+-- }
 
 -- Basic assertions
-transform assert : Bool -> TestResult
-transform assert cond = match cond
+transform assert cond = match cond of
   | true -> Passed
   | false -> Failed "Assertion failed"
 end
 
-transform assertEqual : Comparable a => a -> a -> TestResult
-transform assertEqual expected actual = match equals expected actual
+transform assertEqual expected actual = match (equals expected actual) of
   | true -> Passed
   | false -> Failed "Values not equal"
 end
 
-transform assertMatch : (a -> Bool) -> a -> TestResult
-transform assertMatch pred value = match pred value
+transform assertMatch pred value = match (pred value) of
   | true -> Passed
   | false -> Failed "Pattern match failed"
 end
 
 -- Verify that a type satisfies trait laws
-transform verify : String -> (Unit -> Bool) -> Test
 transform verify lawName check = Test {
-  name = lawName,
-  run = fn () -> match check ()
+  name: lawName,
+  run: fn u -> match (check u) of
     | true -> Passed
     | false -> Failed "Law verification failed"
   end
 }
 
 -- Create a test suite
-transform suite : String -> List Test -> Suite
 transform suite name tests = Suite {
-  name = name,
-  tests = tests
+  name: name,
+  tests: tests
 }
 
 -- Run a test and get result
-transform run : Test -> TestResult
-transform run test = test.run ()
+-- Note: () syntax not yet supported, using placeholder
+transform run test = test.run unit
 
 -- Benchmark type and function
 type Benchmark = Benchmark {
@@ -109,11 +99,10 @@ type Benchmark = Benchmark {
   run : Unit -> Unit
 }
 
-transform benchmark : String -> Natural -> (Unit -> Unit) -> Benchmark
-transform benchmark name iterations fn = Benchmark {
-  name = name,
-  iterations = iterations,
-  run = fn
+transform benchmark name iterations benchFn = Benchmark {
+  name: name,
+  iterations: iterations,
+  run: benchFn
 }
 
 -- Example usage:

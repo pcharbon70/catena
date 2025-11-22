@@ -16,11 +16,13 @@
     delete_test_file/1,
     generate_temp_filename/0,
     generate_temp_filename/1,
-    
+
     % Parser testing utilities
     tokenize_source/1,
     parse_and_expect_error/1,
     parse_and_expect_success/1,
+    parse_and_get_declarations/1,
+    get_declarations/1,
     assert_error_has_location/1,
     assert_parse_error/1,
     create_nested_expression/2,
@@ -128,6 +130,21 @@ parse_and_expect_success(Source) ->
         {error, LexError} ->
             ?assert(false, io_lib:format("Lexer error: ~p", [LexError]))
     end.
+
+%% @doc Parse source and return just the declarations list
+%% Handles both old list format and new module tuple format for backward compatibility.
+-spec parse_and_get_declarations(string()) -> list().
+parse_and_get_declarations(Source) ->
+    AST = parse_and_expect_success(Source),
+    get_declarations(AST).
+
+%% @doc Extract declarations from AST
+%% Works with both module tuple format and legacy list format.
+-spec get_declarations(term()) -> list().
+get_declarations({module, _Name, _Exports, _Imports, Declarations, _Loc}) ->
+    Declarations;
+get_declarations(Declarations) when is_list(Declarations) ->
+    Declarations.
 
 %% @doc Assert that error has a line number for accurate error reporting
 %% Validates that error information includes location data for IDE integration.

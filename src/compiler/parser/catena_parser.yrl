@@ -30,7 +30,7 @@ Nonterminals
   instance_constraints instance_methods instance_method
   transform_signature transform_clauses transform_clause
   match_clauses match_clause
-  pattern_list pattern_list_nonempty pattern pattern_list_comma tuple_pattern_list
+  pattern_list pattern_list_nonempty pattern pattern_primary pattern_list_comma tuple_pattern_list
   guards guard
   expr expr_primary expr_app expr_list expr_list_opt tuple_expr_list
   record_fields record_field
@@ -55,7 +55,7 @@ Terminals
   actor process module
 
   %% Syntax Keywords (supplementary keywords)
-  'case' 'of' 'when' as forall
+  'case' 'of' 'when' as forall fn
 
   %% Module Keywords
   import export exports qualified private
@@ -65,7 +65,7 @@ Terminals
   setoid_eq setoid_neq eq neq lte gte lt gt
   'or' 'and' cons left_arrow range
   colon equals pipe
-  plus minus star slash dot
+  plus minus star slash dot plus_plus
 
   %% Delimiters
   lbrace rbrace lbracket rbracket lparen rparen
@@ -93,11 +93,16 @@ Right    100 arrow.           %% Type-level function arrow (right-assoc)
 
 Right    160 pipe_right.      %% |> pipe operator
 
+%% Logical operators (low precedence)
+Right    200 'or'.            %% ||
+Right    250 'and'.           %% &&
+
 %% Equality operators (non-associative)
 Nonassoc 300 eq neq setoid_eq setoid_neq.  %% == /= === !==
 Nonassoc 310 lt gt lte gte.   %% < > <= >=
 
 %% Arithmetic operators
+Right    350 plus_plus.       %% ++ list concatenation
 Left     400 plus minus.      %% + -
 Left     500 star slash.      %% * /
 
@@ -384,6 +389,10 @@ trait_members -> trait_member comma :
 trait_member -> lower_ident colon type_expr :
     {trait_sig, extract_atom('$1'), '$3', extract_location('$1')}.
 
+%% Constrained signature: name : Constraint a => type
+trait_member -> lower_ident colon type_expr_app double_arrow type_expr :
+    {trait_sig, extract_atom('$1'), {constrained_type, [extract_trait_constraint('$3')], '$5'}, extract_location('$1')}.
+
 %% Default implementation: name params = expr
 trait_member -> lower_ident pattern_list_nonempty equals expr :
     {trait_default, extract_atom('$1'), '$2', '$4', extract_location('$1')}.
@@ -417,6 +426,24 @@ instance_decl -> instance upper_ident instance_type_args where instance_methods 
         '$3',
         undefined,
         '$5',
+        extract_location('$1')}.
+
+%% Instance with empty body (no methods to override)
+instance_decl -> instance upper_ident instance_type_args where 'end' :
+    {instance_decl,
+        extract_atom('$2'),
+        '$3',
+        undefined,
+        [],
+        extract_location('$1')}.
+
+%% Instance with constraints and empty body
+instance_decl -> instance instance_constraints double_arrow upper_ident instance_type_args where 'end' :
+    {instance_decl,
+        extract_atom('$4'),
+        '$5',
+        '$2',
+        [],
         extract_location('$1')}.
 
 %% Error recovery for incomplete instance declarations
@@ -490,6 +517,10 @@ transform_decl -> transform error :
 
 transform_signature -> transform lower_ident colon type_expr :
     {transform_sig, extract_atom('$2'), '$4', extract_location('$1')}.
+
+%% Constrained transform signature: transform foo : Constraint a => type
+transform_signature -> transform lower_ident colon type_expr_app double_arrow type_expr :
+    {transform_sig, extract_atom('$2'), {constrained_type, [extract_trait_constraint('$4')], '$6'}, extract_location('$1')}.
 
 transform_clauses -> transform_clause :
     ['$1'].
@@ -567,6 +598,38 @@ pattern -> upper_ident :
 pattern -> upper_ident lparen pattern_list rparen :
     {pat_constructor, extract_atom('$1'), '$3', extract_location('$1')}.
 
+%% Constructor pattern with juxtaposition (Haskell-style): Some x
+pattern -> upper_ident pattern_primary :
+    {pat_constructor, extract_atom('$1'), ['$2'], extract_location('$1')}.
+
+%% Constructor pattern with multiple arguments: Triple a b c
+pattern -> upper_ident pattern_primary pattern_primary :
+    {pat_constructor, extract_atom('$1'), ['$2', '$3'], extract_location('$1')}.
+
+%% Primary patterns (atomic, unambiguous)
+pattern_primary -> lower_ident :
+    {pat_var, extract_atom('$1'), extract_location('$1')}.
+
+pattern_primary -> underscore :
+    {pat_wildcard, extract_location('$1')}.
+
+pattern_primary -> integer :
+    {pat_literal, extract_value('$1'), integer, extract_location('$1')}.
+
+pattern_primary -> float :
+    {pat_literal, extract_value('$1'), float, extract_location('$1')}.
+
+pattern_primary -> string :
+    {pat_literal, extract_value('$1'), string, extract_location('$1')}.
+
+pattern_primary -> lparen pattern rparen : '$2'.
+
+pattern_primary -> lbracket rbracket :
+    {pat_list, [], extract_location('$1')}.
+
+pattern_primary -> lbracket pattern_list rbracket :
+    {pat_list, '$2', extract_location('$1')}.
+
 pattern -> integer :
     {pat_literal, extract_value('$1'), integer, extract_location('$1')}.
 
@@ -590,6 +653,10 @@ pattern -> lbrace rbrace :
 
 pattern -> lbrace record_pattern_fields rbrace :
     {pat_record, '$2', extract_location('$1')}.
+
+%% Cons pattern (h :: t)
+pattern -> pattern cons pattern :
+    {pat_cons, '$1', '$3', extract_location('$2')}.
 
 %% Tuple pattern lists (comma-separated patterns)
 tuple_pattern_list -> pattern comma pattern :
@@ -662,6 +729,21 @@ expr -> expr lte expr :
 expr -> expr gte expr :
     {binary_op, gte, '$1', '$3', extract_location('$2')}.
 
+%% Logical operators
+expr -> expr 'and' expr :
+    {binary_op, 'and', '$1', '$3', extract_location('$2')}.
+
+expr -> expr 'or' expr :
+    {binary_op, 'or', '$1', '$3', extract_location('$2')}.
+
+%% List concatenation operator (right-associative)
+expr -> expr plus_plus expr :
+    {binary_op, plus_plus, '$1', '$3', extract_location('$2')}.
+
+%% List cons operator (right-associative)
+expr -> expr cons expr :
+    {cons_expr, '$1', '$3', extract_location('$2')}.
+
 expr -> expr_app : '$1'.
 
 %% Function application (left-associative, juxtaposition)
@@ -699,6 +781,10 @@ expr_primary -> 'let' lower_ident equals expr 'in' expr :
         [{pat_var, extract_atom('$2'), extract_location('$2')}, '$4'],
         '$6',
         extract_location('$1')}.
+
+%% Lambda expressions: fn param -> body
+expr_primary -> fn lower_ident arrow expr :
+    {lambda, [{pat_var, extract_atom('$2'), extract_location('$2')}], '$4', extract_location('$1')}.
 
 %% Note: if/then/else removed - use match on Bool in library code
 
