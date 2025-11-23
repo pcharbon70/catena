@@ -99,8 +99,13 @@ build_kind_env(Declarations) ->
             case Decl of
                 {type_decl, Name, TypeVars, _Constructors, _Derives, _Loc} ->
                     Arity = length(TypeVars),
-                    Kind = kind_from_arity(Arity),
-                    add_type_kind(Name, Kind, Env);
+                    case kind_from_arity(Arity) of
+                        {error, _} = _Err ->
+                            %% Skip types with excessive arity
+                            Env;
+                        Kind ->
+                            add_type_kind(Name, Kind, Env)
+                    end;
                 _ ->
                     Env
             end
@@ -127,6 +132,11 @@ builtin_kinds() ->
     }.
 
 %% @doc Create kind from arity
+%% Maximum arity to prevent DoS via stack overflow
+-define(MAX_KIND_ARITY, 100).
+
+kind_from_arity(N) when N > ?MAX_KIND_ARITY ->
+    {error, {kind_arity_exceeded, N, ?MAX_KIND_ARITY}};
 kind_from_arity(0) -> star();
 kind_from_arity(N) when N > 0 ->
     arrow(star(), kind_from_arity(N - 1)).
@@ -237,6 +247,11 @@ infer_type_kind(_, _Env) ->
     {ok, star()}.
 
 %% @doc Apply kind to arguments
+%% Maximum applications to prevent DoS
+-define(MAX_KIND_APPLICATIONS, 100).
+
+apply_kind(_Kind, N, Loc) when N > ?MAX_KIND_APPLICATIONS ->
+    {error, {kind_applications_exceeded, N, ?MAX_KIND_APPLICATIONS, Loc}};
 apply_kind(Kind, 0, _Loc) ->
     {ok, Kind};
 apply_kind({arrow, _K1, K2}, N, Loc) when N > 0 ->

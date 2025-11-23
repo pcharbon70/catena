@@ -109,17 +109,24 @@ desugar_match_clause({match_clause, Pattern, Guards, Body, Loc}) ->
 %%
 -spec desugar_do_expr(term()) -> term().
 desugar_do_expr({do_expr, Stmts, Loc}) ->
-    desugar_stmts(Stmts, Loc).
+    desugar_stmts(Stmts, Loc, 0).
 
-%% @doc Desugar a list of do statements
-desugar_stmts([{do_return, Expr, _}], _Loc) ->
+%% Maximum nesting depth to prevent DoS via deeply nested do-blocks
+-define(MAX_DO_DEPTH, 1000).
+
+%% @doc Desugar a list of do statements with depth tracking
+desugar_stmts(_, Loc, Depth) when Depth > ?MAX_DO_DEPTH ->
+    %% Return error marker for excessive nesting
+    {error, {do_nesting_exceeded, Depth, Loc}};
+
+desugar_stmts([{do_return, Expr, _}], _Loc, _Depth) ->
     %% Final expression - just return it (possibly desugared)
     desugar_expr(Expr);
 
-desugar_stmts([{do_bind, Var, MonadExpr, StmtLoc} | Rest], Loc) ->
+desugar_stmts([{do_bind, Var, MonadExpr, StmtLoc} | Rest], Loc, Depth) ->
     %% x <- ma; rest
     %% becomes: chain (fn x -> rest) ma
-    RestDesugared = desugar_stmts(Rest, Loc),
+    RestDesugared = desugar_stmts(Rest, Loc, Depth + 1),
     Lambda = {lambda,
         [{pat_var, Var, StmtLoc}],
         RestDesugared,
@@ -129,10 +136,10 @@ desugar_stmts([{do_bind, Var, MonadExpr, StmtLoc} | Rest], Loc) ->
         [Lambda, desugar_expr(MonadExpr)],
         StmtLoc};
 
-desugar_stmts([{do_action, Expr, StmtLoc} | Rest], Loc) ->
+desugar_stmts([{do_action, Expr, StmtLoc} | Rest], Loc, Depth) ->
     %% ma; rest
     %% becomes: chain (fn _ -> rest) ma
-    RestDesugared = desugar_stmts(Rest, Loc),
+    RestDesugared = desugar_stmts(Rest, Loc, Depth + 1),
     Lambda = {lambda,
         [{pat_wildcard, StmtLoc}],
         RestDesugared,
@@ -142,10 +149,10 @@ desugar_stmts([{do_action, Expr, StmtLoc} | Rest], Loc) ->
         [Lambda, desugar_expr(Expr)],
         StmtLoc};
 
-desugar_stmts([{do_let, Var, Expr, StmtLoc} | Rest], Loc) ->
+desugar_stmts([{do_let, Var, Expr, StmtLoc} | Rest], Loc, Depth) ->
     %% let x = e; rest
     %% becomes: let x = e in rest
-    RestDesugared = desugar_stmts(Rest, Loc),
+    RestDesugared = desugar_stmts(Rest, Loc, Depth + 1),
     {let_expr,
         [{pat_var, Var, StmtLoc}, desugar_expr(Expr)],
         RestDesugared,
