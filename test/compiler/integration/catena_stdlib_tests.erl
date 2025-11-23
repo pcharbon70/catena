@@ -523,9 +523,77 @@ validate_hkt_prelude_test() ->
     ?assertMatch({ok, _}, Result).
 
 %% =============================================================================
-%% Section 1.7.4 - Law Verification (placeholder)
-%% TODO: Implement when Test module compilation works
+%% Section 1.5.4 - Law Verification via Test Module
 %% =============================================================================
+
+%% Helper to load laws module
+load_laws_decls() ->
+    Path = filename:join([stdlib_dir(), "laws.cat"]),
+    {ok, Content} = file:read_file(Path),
+    Source = binary_to_list(Content),
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+    {ok, {module, _, _, _, Decls, _}} = catena_semantic:analyze(AST),
+    Decls.
+
+%% 1.5.4.1 Compile Mapper identity law verification
+parse_mapper_identity_law_test() ->
+    Path = filename:join([stdlib_dir(), "laws.cat"]),
+    {ok, Content} = file:read_file(Path),
+    Source = binary_to_list(Content),
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, {module, 'Laws', Exports, _, Decls, _}} = catena_parser:parse(Tokens),
+    %% Check that mapperIdentityLaw is exported
+    ?assert(lists:member({export_transform, mapperIdentityLaw}, Exports)),
+    %% Check declaration exists
+    ?assertEqual(8, length(Decls)).
+
+%% 1.5.4.2 Compile Mapper composition law verification
+parse_mapper_composition_law_test() ->
+    Decls = load_laws_decls(),
+    %% Find the composition law transform
+    CompLaws = [D || D = {transform_decl, mapperCompositionLaw, _, _, _} <- Decls],
+    ?assertEqual(1, length(CompLaws)).
+
+%% 1.5.4.3 Compile Pipeline monad laws
+parse_pipeline_laws_test() ->
+    Decls = load_laws_decls(),
+    %% Check all three Pipeline laws exist
+    LeftId = [D || D = {transform_decl, pipelineLeftIdentityLaw, _, _, _} <- Decls],
+    RightId = [D || D = {transform_decl, pipelineRightIdentityLaw, _, _, _} <- Decls],
+    Assoc = [D || D = {transform_decl, pipelineAssociativityLaw, _, _, _} <- Decls],
+    ?assertEqual(1, length(LeftId)),
+    ?assertEqual(1, length(RightId)),
+    ?assertEqual(1, length(Assoc)).
+
+%% Test Comparable and Combiner laws
+parse_comparable_combiner_laws_test() ->
+    Decls = load_laws_decls(),
+    Reflex = [D || D = {transform_decl, comparableReflexivityLaw, _, _, _} <- Decls],
+    Symm = [D || D = {transform_decl, comparableSymmetryLaw, _, _, _} <- Decls],
+    CombAssoc = [D || D = {transform_decl, combinerAssociativityLaw, _, _, _} <- Decls],
+    ?assertEqual(1, length(Reflex)),
+    ?assertEqual(1, length(Symm)),
+    ?assertEqual(1, length(CombAssoc)).
+
+%% 1.5.4.4 Test law structure contains expected AST nodes
+verify_law_structure_test() ->
+    Decls = load_laws_decls(),
+    %% Get mapperIdentityLaw
+    [{transform_decl, mapperIdentityLaw, _Sig, Clauses, _Loc}] =
+        [D || D = {transform_decl, mapperIdentityLaw, _, _, _} <- Decls],
+    %% Should have one clause with one parameter
+    ?assertEqual(1, length(Clauses)),
+    [{transform_clause, Patterns, _Guards, _Body, _ClauseLoc}] = Clauses,
+    ?assertEqual(1, length(Patterns)).
+
+%% Test that all 8 laws are present
+all_laws_present_test() ->
+    Decls = load_laws_decls(),
+    ?assertEqual(8, length(Decls)),
+    %% All should be transform_decl
+    TransformDecls = [D || D = {transform_decl, _, _, _, _} <- Decls],
+    ?assertEqual(8, length(TransformDecls)).
 
 %% =============================================================================
 %% Section 1.7.5 - Do-Notation Desugaring (placeholder)

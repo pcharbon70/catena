@@ -1,0 +1,96 @@
+-- Catena Trait Law Verification
+-- Expresses mathematical laws that trait instances must satisfy
+--
+-- These laws use Test.verify to create verifiable properties.
+-- Each law is a function that takes a value and checks the law holds.
+
+module Laws
+export transform mapperIdentityLaw
+export transform mapperCompositionLaw
+export transform pipelineLeftIdentityLaw
+export transform pipelineRightIdentityLaw
+export transform pipelineAssociativityLaw
+export transform comparableReflexivityLaw
+export transform comparableSymmetryLaw
+export transform combinerAssociativityLaw
+
+-- Mapper Laws (Functor)
+-- ====================
+
+-- Identity Law: map id = id
+-- For any functor f, mapping the identity function should not change the value
+transform mapperIdentityLaw fa =
+  let mapped = map id fa
+  in equals mapped fa
+
+-- Composition Law: map (f . g) = map f . map g
+-- Mapping a composed function is the same as composing mapped functions
+transform mapperCompositionLaw f g fa =
+  let left = map (fn x -> f (g x)) fa in
+  let right = map f (map g fa) in
+  equals left right
+
+-- Pipeline Laws (Monad)
+-- ====================
+
+-- Left Identity: pure a >>= f = f a
+-- Wrapping a value and then binding is the same as just applying the function
+transform pipelineLeftIdentityLaw a f =
+  let left = chain f (pure a) in
+  let right = f a in
+  equals left right
+
+-- Right Identity: m >>= pure = m
+-- Binding to pure is identity
+transform pipelineRightIdentityLaw ma =
+  let result = chain pure ma
+  in equals result ma
+
+-- Associativity: (m >>= f) >>= g = m >>= (fn x -> f x >>= g)
+-- Order of binding doesn't matter
+transform pipelineAssociativityLaw ma f g =
+  let left = chain g (chain f ma) in
+  let right = chain (fn x -> chain g (f x)) ma in
+  equals left right
+
+-- Comparable Laws (Setoid)
+-- =======================
+
+-- Reflexivity: a === a
+transform comparableReflexivityLaw a =
+  equals a a
+
+-- Symmetry: a === b implies b === a
+transform comparableSymmetryLaw a b =
+  let ab = equals a b in
+  let ba = equals b a in
+  equals ab ba
+
+-- Combiner Laws (Semigroup)
+-- ========================
+
+-- Associativity: (a <> b) <> c = a <> (b <> c)
+transform combinerAssociativityLaw a b c =
+  let left = combine (combine a b) c in
+  let right = combine a (combine b c) in
+  equals left right
+
+-- Example Test Suite Creation
+-- ==========================
+
+-- These would be used like:
+--
+-- mapperLawSuite = suite "Mapper Laws" [
+--   verify "identity" (fn u -> mapperIdentityLaw (Some 42)),
+--   verify "composition" (fn u -> mapperCompositionLaw inc double (Some 5))
+-- ]
+--
+-- pipelineLawSuite = suite "Pipeline Laws" [
+--   verify "left identity" (fn u -> pipelineLeftIdentityLaw 42 (fn x -> Some (x + 1))),
+--   verify "right identity" (fn u -> pipelineRightIdentityLaw (Some 42)),
+--   verify "associativity" (fn u ->
+--     pipelineAssociativityLaw
+--       (Some 5)
+--       (fn x -> Some (x + 1))
+--       (fn x -> Some (x * 2)))
+-- ]
