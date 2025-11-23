@@ -438,9 +438,89 @@ resolve_mapper_either_test() ->
     ?assertMatch({ok, {instance, 'Mapper', [{tapp, {tcon, 'Either'}, _}], _}, _}, Result).
 
 %% =============================================================================
-%% Section 1.7.3 - Higher-Kinded Type Validation (placeholder)
-%% TODO: Implement when HKT support is complete
+%% Section 1.5.3 - Higher-Kinded Type Validation
 %% =============================================================================
+
+%% Helper to load prelude declarations
+load_prelude_decls() ->
+    Path = filename:join([stdlib_dir(), "prelude.cat"]),
+    {ok, Content} = file:read_file(Path),
+    Source = binary_to_list(Content),
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+    {ok, {module, _, _, _, Decls, _}} = catena_semantic:analyze(AST),
+    Decls.
+
+%% 1.5.3.1 Validate kind checking for Mapper trait
+kind_check_mapper_trait_test() ->
+    Decls = load_prelude_decls(),
+    [Mapper] = [D || D = {trait_decl, 'Mapper', _, _, _, _} <- Decls],
+    {ok, Kinds} = catena_kind:check_trait_kind(Mapper),
+    %% Mapper's f parameter should have kind Type -> Type
+    ?assertEqual([{f, {arrow, star, star}}], Kinds).
+
+%% Test kind checking for Pipeline trait (also HKT)
+kind_check_pipeline_trait_test() ->
+    Decls = load_prelude_decls(),
+    [Pipeline] = [D || D = {trait_decl, 'Pipeline', _, _, _, _} <- Decls],
+    {ok, Kinds} = catena_kind:check_trait_kind(Pipeline),
+    %% Pipeline's m parameter should have kind Type -> Type
+    ?assertEqual([{m, {arrow, star, star}}], Kinds).
+
+%% Test kind checking for Comparable trait (not HKT)
+kind_check_comparable_trait_test() ->
+    Decls = load_prelude_decls(),
+    [Comparable] = [D || D = {trait_decl, 'Comparable', _, _, _, _} <- Decls],
+    {ok, Kinds} = catena_kind:check_trait_kind(Comparable),
+    %% Comparable's a parameter should have kind Type
+    ?assertEqual([{a, star}], Kinds).
+
+%% 1.5.3.2 Validate kind inference for instance declarations
+kind_infer_maybe_instance_test() ->
+    Decls = load_prelude_decls(),
+    Env = catena_kind:build_kind_env(Decls),
+    %% Maybe : Type -> Type
+    MaybeType = {type_con, 'Maybe', {location, 0, 0}},
+    {ok, Kind} = catena_kind:infer_type_kind(MaybeType, Env),
+    ?assertEqual({arrow, star, star}, Kind).
+
+%% 1.5.3.3 Validate partially applied type constructors
+kind_infer_either_partial_test() ->
+    Decls = load_prelude_decls(),
+    Env = catena_kind:build_kind_env(Decls),
+    %% Either : Type -> Type -> Type
+    %% Either String : Type -> Type
+    EitherString = {type_app, {type_con, 'Either', {location, 0, 0}},
+                    [{type_con, 'String', {location, 0, 0}}], {location, 0, 0}},
+    {ok, Kind} = catena_kind:infer_type_kind(EitherString, Env),
+    ?assertEqual({arrow, star, star}, Kind).
+
+%% Test fully applied type
+kind_infer_maybe_int_test() ->
+    Decls = load_prelude_decls(),
+    Env = catena_kind:build_kind_env(Decls),
+    %% Maybe Int : Type
+    MaybeInt = {type_app, {type_con, 'Maybe', {location, 0, 0}},
+                [{type_con, 'Int', {location, 0, 0}}], {location, 0, 0}},
+    {ok, Kind} = catena_kind:infer_type_kind(MaybeInt, Env),
+    ?assertEqual(star, Kind).
+
+%% 1.5.3.4 Report kind errors
+kind_error_over_applied_test() ->
+    Decls = load_prelude_decls(),
+    Env = catena_kind:build_kind_env(Decls),
+    %% Int Int - can't apply Int (kind Type) to Int
+    BadType = {type_app, {type_con, 'Int', {location, 1, 1}},
+               [{type_con, 'Int', {location, 1, 1}}], {location, 1, 1}},
+    Result = catena_kind:infer_type_kind(BadType, Env),
+    ?assertMatch({error, {over_applied, star, 1, _}}, Result).
+
+%% Test HKT validation passes for all prelude instances
+validate_hkt_prelude_test() ->
+    Decls = load_prelude_decls(),
+    Env = catena_kind:build_kind_env(Decls),
+    Result = catena_kind:validate_hkt(Decls, Env),
+    ?assertMatch({ok, _}, Result).
 
 %% =============================================================================
 %% Section 1.7.4 - Law Verification (placeholder)
