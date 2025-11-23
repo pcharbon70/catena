@@ -64,8 +64,8 @@ parse_trait_declaration_test() ->
 %% Test parsing trait with default implementation
 parse_trait_default_impl_test() ->
     Source = "trait Comparable a where\n"
-             "  equals : a -> a -> Bool\n"
-             "  notEquals : a -> a -> Bool\n"
+             "  equals : a -> a -> Bool,\n"
+             "  notEquals : a -> a -> Bool,\n"
              "  notEquals x y = not (equals x y)\n"
              "end\n",
     {ok, Tokens, _} = catena_lexer:string(Source),
@@ -76,9 +76,9 @@ parse_trait_default_impl_test() ->
             ?assert(false)
     end.
 
-%% Test parsing trait hierarchy with : syntax
+%% Test parsing trait hierarchy with extend syntax
 parse_trait_hierarchy_test() ->
-    Source = "trait Orderable a : Comparable a where\n"
+    Source = "trait Orderable a extend Comparable a where\n"
              "  compare : a -> a -> Ordering\n"
              "end\n",
     {ok, Tokens, _} = catena_lexer:string(Source),

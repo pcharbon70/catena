@@ -132,6 +132,7 @@ constrain : {token, {constrain, TokenLine}}.
 \) : {token, {rparen, TokenLine}}.
 , : {token, {comma, TokenLine}}.
 ; : {token, {semicolon, TokenLine}}.
+& : {token, {ampersand, TokenLine}}.
 _ : {token, {underscore, TokenLine}}.
 
 %% Numeric literals (scientific notation must come first)

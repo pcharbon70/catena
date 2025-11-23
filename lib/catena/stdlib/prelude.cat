@@ -45,7 +45,7 @@ end
 --   antisymmetry: x <= y and y <= x implies x === y
 --   transitivity: x <= y and y <= z implies x <= z
 --   totality: x <= y or y <= x
-trait Orderable a : Comparable a where
+trait Orderable a extend Comparable a where
   compare : a -> a -> Ordering,
 
   lessThan : a -> a -> Bool,
@@ -84,7 +84,7 @@ end
 -- Laws:
 --   left identity: combine empty x === x
 --   right identity: combine x empty === x
-trait Accumulator a : Combiner a where
+trait Accumulator a extend Combiner a where
   empty : a
 end
 
@@ -102,7 +102,7 @@ end
 --   composition: apply (apply (apply (pure compose) f) g) x === apply f (apply g x)
 --   homomorphism: apply (pure f) (pure x) === pure (f x)
 --   interchange: apply f (pure x) === apply (pure (fn g -> g x)) f
-trait Applicator f : Mapper f where
+trait Applicator f extend Mapper f where
   pure : a -> f a,
   apply : f (a -> b) -> f a -> f b
 end
@@ -110,7 +110,7 @@ end
 -- Chainable: Sequential binding (Chain)
 -- Laws:
 --   associativity: chain g (chain f x) === chain (fn a -> chain g (f a)) x
-trait Chainable m : Mapper m where
+trait Chainable m extend Mapper m where
   chain : (a -> m b) -> m a -> m b
 end
 
@@ -119,7 +119,7 @@ end
 --   left identity: chain f (pure x) === f x
 --   right identity: chain pure x === x
 --   associativity: chain g (chain f x) === chain (fn a -> chain g (f a)) x
-trait Pipeline m : Applicator m, Chainable m where
+trait Pipeline m extend Applicator m, Chainable m where
   -- Derived operations
   join : m (m a) -> m a,
   join x = chain id x,
@@ -133,15 +133,15 @@ end
 
 -- Extractor: Extract values from context (Comonad)
 -- Laws:
---   left identity: extend extract x === x
---   right identity: extract (extend f x) === f x
---   associativity: extend f (extend g x) === extend (fn w -> f (extend g w)) x
-trait Extractor w : Mapper w where
+--   left identity: coflatMap extract x === x
+--   right identity: extract (coflatMap f x) === f x
+--   associativity: coflatMap f (coflatMap g x) === coflatMap (fn w -> f (coflatMap g w)) x
+trait Extractor w extend Mapper w where
   extract : w a -> a,
-  extend : (w a -> b) -> w a -> w b,
+  coflatMap : (w a -> b) -> w a -> w b,
 
   duplicate : w a -> w (w a),
-  duplicate x = extend id x
+  duplicate x = coflatMap id x
 end
 
 -- Foldable: Types that can be folded to a value
@@ -151,10 +151,10 @@ trait Foldable t where
 end
 
 -- Traversable: Types that can be traversed with effects
-trait Traversable t : Mapper t, Foldable t where
-  traverse : Applicator f => (a -> f b) -> t a -> f (t b),
+trait Traversable t extend Mapper t, Foldable t where
+  traverse : (a -> f b) -> t a -> f (t b) constrain Applicator f,
 
-  sequenceA : Applicator f => t (f a) -> f (t a),
+  sequenceA : t (f a) -> f (t a) constrain Applicator f,
   sequenceA x = traverse id x
 end
 

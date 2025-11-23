@@ -45,20 +45,25 @@ transform readAndSort : List a -> List a / {IO} constrain Ord a
 
 ### Multiple Constraints
 
-Multiple constraints are comma-separated:
+Multiple constraints are separated with `&` (ampersand):
 ```catena
-transform compare : a -> a -> Ordering constrain Eq a, Show a
+transform compare : a -> a -> Ordering constrain Eq a & Show a
 ```
+
+Note: Ampersand is used instead of comma to avoid ambiguity with trait member separators.
 
 ## Implementation Details
 
 ### Lexer Changes
 
-Added two new keywords in `src/compiler/lexer/catena_lexer.xrl`:
+Added keywords and tokens in `src/compiler/lexer/catena_lexer.xrl`:
 ```erlang
 %% Trait system keywords
 extend : {token, {extend, TokenLine}}.
 constrain : {token, {constrain, TokenLine}}.
+
+%% Constraint separator
+& : {token, {ampersand, TokenLine}}.
 ```
 
 ### Parser Changes
@@ -67,6 +72,9 @@ constrain : {token, {constrain, TokenLine}}.
    ```erlang
    %% Trait system keywords
    extend constrain
+
+   %% Delimiters
+   ampersand
    ```
 
 2. **Updated trait extends syntax** from `:` to `extend`:
@@ -82,7 +90,7 @@ constrain : {token, {constrain, TokenLine}}.
 
    type_constraints -> trait_constraint :
        ['$1'].
-   type_constraints -> trait_constraint comma type_constraints :
+   type_constraints -> trait_constraint ampersand type_constraints :
        ['$1' | '$3'].
    ```
 
@@ -110,7 +118,7 @@ All new tests pass.
 
 ## Parser Conflicts
 
-Shift/reduce conflicts increased from 17 to 37 due to the new `constrain` production. These resolve correctly via shift (parser continues building the constrained type when it sees `constrain`).
+Shift/reduce conflicts increased from 17 to 36 due to the new `constrain` production. These resolve correctly via shift (parser continues building the constrained type when it sees `constrain`). Using `ampersand` instead of `comma` for multiple constraints reduced conflicts by 1.
 
 ## Design Rationale
 

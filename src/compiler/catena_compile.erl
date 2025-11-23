@@ -49,18 +49,25 @@ compile_string(Source) ->
 %% @doc Type check a module AST.
 -spec type_check(term()) -> {ok, term()} | {error, term()}.
 type_check({module, Name, _Exports, _Imports, Declarations, _Location}) ->
-    %% Build initial type environment from declarations
-    case build_type_env(Declarations) of
-        {ok, Env} ->
-            %% Type check all declarations
-            case type_check_declarations(Declarations, Env) of
-                {ok, TypedDecls} ->
-                    {ok, {typed_module, Name, TypedDecls, Env}};
+    %% Build kind environment and validate HKT usage
+    KindEnv = catena_kind:build_kind_env(Declarations),
+    case catena_kind:validate_hkt(Declarations, KindEnv) of
+        {ok, _} ->
+            %% Build initial type environment from declarations
+            case build_type_env(Declarations) of
+                {ok, Env} ->
+                    %% Type check all declarations
+                    case type_check_declarations(Declarations, Env) of
+                        {ok, TypedDecls} ->
+                            {ok, {typed_module, Name, TypedDecls, Env}};
+                        {error, _} = Error ->
+                            Error
+                    end;
                 {error, _} = Error ->
                     Error
             end;
-        {error, _} = Error ->
-            Error
+        {error, KindErrors} ->
+            {error, {kind_errors, KindErrors}}
     end.
 
 %% @doc Build type environment from declarations.

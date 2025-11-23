@@ -5,6 +5,7 @@
 %% - Group transform signatures with their implementation clauses
 %% - Validate that clause names match signature names
 %% - Detect duplicate definitions
+%% - Desugar do-notation to explicit bind chains
 %% - Prepare the AST for type inference
 %%
 %% @end
@@ -17,12 +18,20 @@
 analyze({module, Name, Exports, Imports, Declarations, Location}) ->
     case analyze_declarations(Declarations) of
         {ok, AnalyzedDecls} ->
-            {ok, {module, Name, Exports, Imports, AnalyzedDecls, Location}};
+            %% Desugar do-notation after grouping transforms
+            DesugaredDecls = catena_desugar:desugar(AnalyzedDecls),
+            {ok, {module, Name, Exports, Imports, DesugaredDecls, Location}};
         {error, _} = Error ->
             Error
     end;
 analyze(Declarations) when is_list(Declarations) ->
-    analyze_declarations(Declarations).
+    case analyze_declarations(Declarations) of
+        {ok, AnalyzedDecls} ->
+            %% Desugar do-notation
+            {ok, catena_desugar:desugar(AnalyzedDecls)};
+        {error, _} = Error ->
+            Error
+    end.
 
 %% @doc Alias for analyze/1 for clarity when working with modules.
 -spec analyze_module(term()) -> {ok, term()} | {error, term()}.

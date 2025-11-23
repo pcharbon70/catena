@@ -74,7 +74,7 @@ Terminals
 
   %% Delimiters
   lbrace rbrace lbracket rbracket lparen rparen
-  comma semicolon underscore
+  comma semicolon underscore ampersand
 
   %% Literals and identifiers
   integer float string
@@ -956,10 +956,10 @@ type_expr -> type_expr constrain type_constraints :
 
 type_expr -> type_expr_app : '$1'.
 
-%% Type constraints (comma-separated list of trait constraints)
+%% Type constraints (ampersand-separated list of trait constraints)
 type_constraints -> trait_constraint :
     ['$1'].
-type_constraints -> trait_constraint comma type_constraints :
+type_constraints -> trait_constraint ampersand type_constraints :
     ['$1' | '$3'].
 
 

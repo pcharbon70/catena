@@ -1214,7 +1214,7 @@ parse_transform_valid_constrain_test() ->
 
 %% Test transform with multiple constraints
 parse_transform_valid_multiple_constrain_test() ->
-    %% transform compare : a -> a -> Ordering constrain Eq a, Show a
+    %% transform compare : a -> a -> Ordering constrain Eq a & Show a
     Tokens = [
         {transform, 1},
         {lower_ident, 1, "compare"},
@@ -1227,7 +1227,7 @@ parse_transform_valid_multiple_constrain_test() ->
         {constrain, 1},
         {upper_ident, 1, "Eq"},
         {lower_ident, 1, "a"},
-        {comma, 1},
+        {ampersand, 1},
         {upper_ident, 1, "Show"},
         {lower_ident, 1, "a"}
     ],
