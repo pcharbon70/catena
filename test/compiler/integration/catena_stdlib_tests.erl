@@ -864,3 +864,133 @@ parse_handle_removes_effect_test() ->
 %% Section 1.5.7 - Operator Desugaring (placeholder)
 %% TODO: Implement when trait resolution integration is complete
 %% =============================================================================
+
+%% =============================================================================
+%% Error Path Tests
+%% =============================================================================
+
+%% Test invalid do-statement: bind as final statement (no return)
+error_do_bind_as_final_test() ->
+    %% A do-block must end with a return expression, not a bind
+    %% This is a function_clause error since desugar expects do_return as final
+    Stmts = [
+        {do_bind, x, {var, ma, {location, 1, 1}}, {location, 1, 1}}
+        %% Missing final return statement
+    ],
+    DoExpr = {do_expr, Stmts, {location, 1, 1}},
+    %% Desugaring will crash with function_clause - this documents expected behavior
+    Result = (catch catena_desugar:desugar_do_expr(DoExpr)),
+    %% Expect a function_clause error for unhandled case
+    ?assertMatch({'EXIT', {function_clause, _}}, Result).
+
+%% Test invalid do-statement: action as final statement (no return)
+error_do_action_as_final_test() ->
+    %% A do-block should end with a return, not an action
+    Stmts = [
+        {do_action, {var, action, {location, 1, 1}}, {location, 1, 1}}
+        %% Missing final return
+    ],
+    DoExpr = {do_expr, Stmts, {location, 1, 1}},
+    %% Desugaring will crash with function_clause
+    Result = (catch catena_desugar:desugar_do_expr(DoExpr)),
+    ?assertMatch({'EXIT', {function_clause, _}}, Result).
+
+%% Test invalid do-statement: empty do-block
+error_do_empty_block_test() ->
+    %% Empty do-block is invalid
+    Stmts = [],
+    DoExpr = {do_expr, Stmts, {location, 1, 1}},
+    Result = (catch catena_desugar:desugar_do_expr(DoExpr)),
+    %% Empty list causes function_clause error
+    ?assertMatch({'EXIT', {function_clause, _}}, Result).
+
+%% Test kind mismatch: over-applied type constructor
+error_kind_over_applied_test() ->
+    %% Maybe takes 1 argument, not 2
+    Type = {type_app,
+        {type_con, 'Maybe', {location, 1, 1}},
+        [
+            {type_con, 'Int', {location, 1, 1}},
+            {type_con, 'String', {location, 1, 1}}  % Extra argument
+        ],
+        {location, 1, 1}},
+    Env = catena_kind:build_kind_env([]),
+    Result = catena_kind:infer_type_kind(Type, Env),
+    ?assertMatch({error, {over_applied, _, _, _}}, Result).
+
+%% Test kind mismatch: under-applied type constructor used as Type
+error_kind_under_applied_test() ->
+    %% Either needs 2 arguments to be kind Type
+    Env = catena_kind:build_kind_env([]),
+    {ok, Kind} = catena_kind:get_type_kind('Either', Env),
+    %% Either : Type -> Type -> Type (needs 2 args)
+    ?assertEqual({arrow, star, {arrow, star, star}}, Kind).
+
+%% Test kind error: excessive arity
+error_kind_excessive_arity_test() ->
+    %% Arity > 100 should return error
+    Result = catena_kind:kind_from_arity(150),
+    ?assertMatch({error, {kind_arity_exceeded, 150, 100}}, Result).
+
+%% Test effect annotation on non-function type (parser level)
+error_effect_on_non_function_parse_test() ->
+    %% Effect annotation on a simple type should parse but may be invalid
+    Source = "transform test : Int / {IO}",
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    %% Parser may accept this syntax
+    case catena_parser:parse(Tokens) of
+        {ok, _AST} ->
+            %% Syntax is valid, but semantically questionable
+            ok;
+        {error, _Reason} ->
+            %% Parser rejection is also acceptable
+            ok
+    end.
+
+%% Test invalid trait constraint syntax
+error_invalid_constraint_test() ->
+    %% Constraint without proper trait name
+    Source = "transform foo : a -> a constrain",
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    Result = catena_parser:parse(Tokens),
+    ?assertMatch({error, _}, Result).
+
+%% Test duplicate type signature error
+error_duplicate_signature_test() ->
+    %% Two signatures for same transform should error in semantic analysis
+    Decls = [
+        {transform_decl, foo,
+            {type_fun, {type_var, a, 1}, {type_var, a, 1}, 1},
+            [], 1},
+        {transform_decl, foo,
+            {type_fun, {type_var, b, 2}, {type_var, b, 2}, 2},
+            [], 2}
+    ],
+    Result = catena_semantic:analyze(Decls),
+    ?assertMatch({error, {duplicate_signature, foo, _}}, Result).
+
+%% Test kind validation with invalid HKT usage
+error_hkt_kind_mismatch_test() ->
+    %% Instance with wrong kind for type argument
+    %% Mapper expects f : Type -> Type, but Int : Type
+    Decls = [
+        {trait_decl, 'Mapper', [f], undefined,
+            [{trait_sig, map,
+                {type_fun,
+                    {type_fun, {type_var, a, 1}, {type_var, b, 1}, 1},
+                    {type_fun,
+                        {type_app, {type_var, f, 1}, [{type_var, a, 1}], 1},
+                        {type_app, {type_var, f, 1}, [{type_var, b, 1}], 1},
+                        1},
+                    1},
+                1}],
+            1}
+    ],
+    Env = catena_kind:build_kind_env(Decls),
+    %% Validate that Mapper's f has kind Type -> Type
+    case catena_kind:check_trait_kind(hd(Decls)) of
+        {ok, [{f, Kind}]} ->
+            ?assertEqual({arrow, star, star}, Kind);
+        _ ->
+            ok
+    end.

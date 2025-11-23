@@ -39,7 +39,10 @@
     kinds_compatible/2,
 
     %% Pretty printing
-    format_kind/1
+    format_kind/1,
+
+    %% Utilities (exported for testing)
+    kind_from_arity/1
 ]).
 
 -export_type([kind/0, kind_env/0]).
