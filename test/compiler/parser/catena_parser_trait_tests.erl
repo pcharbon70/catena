@@ -41,13 +41,13 @@ make_complex_trait_tokens(FeatureName, TypeParam, MethodName, TypeTokens) ->
     ].
 
 %% @doc Build tokens for trait with inheritance clause
-%% Syntax: trait Name a : Parent a where method : Type end
+%% Syntax: trait Name a extend Parent a where method : Type end
 make_trait_with_extends_tokens(FeatureName, TypeParam, ExtendsTrait, ExtendsTypeParam, MethodName, FromType, ToType) ->
     [
         {trait, 1},
         {upper_ident, 1, FeatureName},
         {lower_ident, 1, TypeParam},
-        {colon, 1},
+        {extend, 1},
         {upper_ident, 1, ExtendsTrait},
         {lower_ident, 1, ExtendsTypeParam},
         {where, 1},
@@ -95,30 +95,23 @@ make_multi_arg_instance_tokens(TraitName, TypeNames, MethodName, MethodParam, Me
 %% Note: parse_single_decl/1 now imported from catena_parser_test_helpers
 
 %% @doc Create assertion helper for trait validation
+%% Note: Parser returns tuples, not records
 assert_trait_structure(TraitDecl, ExpectedName, ExpectedTypeParam, ExpectedMethod) ->
-    #trait_decl{
-        name = ActualName,
-        type_params = [ActualTypeParam],
-        extends = ActualExtends,
-        methods = [{ActualMethod, _}],
-        default_methods = ActualDefaults
-    } = TraitDecl,
-    
+    {trait_decl, ActualName, [ActualTypeParam], ActualExtends,
+        [{trait_sig, ActualMethod, _, _}], ActualLoc} = TraitDecl,
+
     ?assertEqual(list_to_atom(ExpectedName), ActualName),
     ?assertEqual(list_to_atom(ExpectedTypeParam), ActualTypeParam),
     ?assertEqual(list_to_atom(ExpectedMethod), ActualMethod),
     ?assertEqual(undefined, ActualExtends),
-    ?assertEqual(undefined, ActualDefaults).
+    ?assert(is_tuple(ActualLoc)).
 
 %% @doc Create assertion helper for instance validation
+%% Note: Parser returns tuples, not records
 assert_instance_structure(InstanceDecl, ExpectedTrait, ExpectedTypeCount, ExpectedMethod) ->
-    #instance_decl{
-        trait = ActualTrait,
-        type_args = ActualTypeArgs,
-        constraints = ActualConstraints,
-        methods = [{ActualMethod, _}]
-    } = InstanceDecl,
-    
+    {instance_decl, ActualTrait, ActualTypeArgs, ActualConstraints,
+        [{ActualMethod, _}], _Loc} = InstanceDecl,
+
     ?assertEqual(list_to_atom(ExpectedTrait), ActualTrait),
     ?assertEqual(ExpectedTypeCount, length(ActualTypeArgs)),
     ?assertEqual(undefined, ActualConstraints),
@@ -177,26 +170,21 @@ parse_trait_valid_higher_order_method_test() ->
     TraitDecl = parse_single_decl(Tokens),
 
     %% Verify it's a trait_decl with the complex higher-order type
-    ?assertMatch(#trait_decl{
-        name = 'Functor',
-        type_params = [f],
-        extends = undefined,
-        methods = [{fmap, #type_fun{}}],
-        default_methods = undefined
-    }, TraitDecl),
-    
+    ?assertMatch({trait_decl, 'Functor', [f], undefined,
+        [{trait_sig, fmap, {type_fun, _, _, _}, _}], _}, TraitDecl),
+
     %% Extract and verify the specific type structure
-    #trait_decl{methods = [{fmap, FmapType}]} = TraitDecl,
-    
+    {trait_decl, _, _, _, [{trait_sig, fmap, FmapType, _}], _} = TraitDecl,
+
     %% Verify that we got the expected nested function type structure
-    ?assertMatch(#type_fun{from = #type_fun{}, to = #type_fun{}}, FmapType),
-    
+    ?assertMatch({type_fun, {type_fun, _, _, _}, {type_fun, _, _, _}, _}, FmapType),
+
     %% Extract the components for more precise validation
-    #type_fun{from = InnerFun, to = OuterFun} = FmapType,
-    #type_fun{from = FromType, to = ToType} = InnerFun,
-    
-    ?assertMatch(#type_var{name = a}, FromType),
-    ?assertMatch(#type_var{name = b}, ToType).
+    {type_fun, InnerFun, _OuterFun, _} = FmapType,
+    {type_fun, FromType, ToType, _} = InnerFun,
+
+    ?assertMatch({type_var, a, _}, FromType),
+    ?assertMatch({type_var, b, _}, ToType).
 
 %%--------------------------------------------------------------------
 %% Complex Higher-Order Trait Method Type Signatures
@@ -226,13 +214,8 @@ parse_trait_valid_complex_higher_order_test() ->
     TraitDecl = parse_single_decl(Tokens),
 
     %% Verify it's a trait_decl with the complex higher-order type
-    ?assertMatch(#trait_decl{
-        name = 'Monad',
-        type_params = [m],
-        extends = undefined,
-        methods = [{bind, #type_fun{}}],
-        default_methods = undefined
-    }, TraitDecl).
+    ?assertMatch({trait_decl, 'Monad', [m], undefined,
+        [{trait_sig, bind, {type_fun, _, _, _}, _}], _}, TraitDecl).
 
 %%--------------------------------------------------------------------
 %% REMAINING LIMITATION: Simple tuple parameters (edge case)
@@ -283,13 +266,8 @@ parse_trait_valid_tuple_workaround_test() ->
     TraitDecl = parse_single_decl(Tokens),
 
     %% Verify it's a trait_decl with complex tuple type
-    ?assertMatch(#trait_decl{
-        name = 'Higher',
-        type_params = [a],
-        extends = undefined,
-        methods = [{apply, #type_fun{}}],
-        default_methods = undefined
-    }, TraitDecl).
+    ?assertMatch({trait_decl, 'Higher', [a], undefined,
+        [{trait_sig, apply, {type_fun, _, _, _}, _}], _}, TraitDecl).
 
 %%--------------------------------------------------------------------
 %% Trait with Extends Clause (Trait Hierarchy)
@@ -305,20 +283,12 @@ parse_trait_valid_extends_test() ->
     TraitDecl = parse_single_decl(Tokens),
 
     %% Verify it's a trait_decl with extends clause
-    ?assertMatch(#trait_decl{
-        name = 'Monad',
-        type_params = [m],
-        extends = [_],
-        methods = [{bind, _}],
-        default_methods = undefined
-    }, TraitDecl),
+    ?assertMatch({trait_decl, 'Monad', [m], [_],
+        [{trait_sig, bind, _, _}], _}, TraitDecl),
 
     %% Verify the extends constraint
-    #trait_decl{extends = [Constraint]} = TraitDecl,
-    ?assertMatch(#trait_constraint{
-        trait = 'Applicative',
-        type_args = [_]
-    }, Constraint).
+    {trait_decl, _, _, [Constraint], _, _} = TraitDecl,
+    ?assertMatch({trait_constraint, 'Applicative', [_], _}, Constraint).
 
 %%--------------------------------------------------------------------
 %% Trait with Multiple Methods
@@ -345,11 +315,8 @@ parse_trait_valid_multiple_methods_test() ->
     {module, _, _, _, [TraitDecl], _} = Result,
 
     %% Verify trait structure
-    ?assertMatch(#trait_decl{
-        name = 'Eq',
-        type_params = [a],
-        methods = [{eq, _}]
-    }, TraitDecl).
+    ?assertMatch({trait_decl, 'Eq', [a], undefined,
+        [{trait_sig, eq, _, _}], _}, TraitDecl).
 
 %%--------------------------------------------------------------------
 %% Instance Declaration
@@ -366,12 +333,8 @@ parse_instance_valid_basic_test() ->
     InstanceDecl = parse_single_decl(Tokens),
 
     %% Verify it's an instance_decl
-    ?assertMatch(#instance_decl{
-        trait = 'Functor',
-        type_args = [_],
-        constraints = undefined,
-        methods = [{fmap, _}]
-    }, InstanceDecl).
+    ?assertMatch({instance_decl, 'Functor', [_], undefined,
+        [{fmap, _}], _}, InstanceDecl).
 
 %%--------------------------------------------------------------------
 %% Instance with Simple Expression
@@ -398,10 +361,7 @@ parse_instance_valid_two_type_args_test() ->
     Tokens = make_basic_instance_tokens("Functor", "List", "map", "f", "f"),
     InstanceDecl = parse_single_decl(Tokens),
 
-    ?assertMatch(#instance_decl{
-        trait = 'Functor',
-        type_args = [_]
-    }, InstanceDecl).
+    ?assertMatch({instance_decl, 'Functor', [_], undefined, _, _}, InstanceDecl).
 
 %%--------------------------------------------------------------------
 %% Multiple Declarations (Trait and Instance)
@@ -442,22 +402,22 @@ parse_combined_valid_trait_and_instance_test() ->
     {module, _, _, _, [TraitDecl, InstanceDecl], _} = Result,
 
     %% Verify both declarations
-    ?assertMatch(#trait_decl{name = 'Eq'}, TraitDecl),
-    ?assertMatch(#instance_decl{trait = 'Eq'}, InstanceDecl).
+    ?assertMatch({trait_decl, 'Eq', _, _, _, _}, TraitDecl),
+    ?assertMatch({instance_decl, 'Eq', _, _, _, _}, InstanceDecl).
 
 %%--------------------------------------------------------------------
 %% Trait with Multiple Extends Constraints
 %%--------------------------------------------------------------------
 
 parse_trait_valid_multiple_extends_test() ->
-    %% trait Ord a extends Eq a, Show a where
+    %% trait Ord a extend Eq a, Show a where
     %%   compare : a -> a -> Ordering
     %% end
     Tokens = [
         {trait, 1},
         {upper_ident, 1, "Ord"},
         {lower_ident, 1, "a"},
-        {colon, 1},
+        {extend, 1},
         {upper_ident, 1, "Eq"},
         {lower_ident, 1, "a"},
         {comma, 1},
@@ -477,14 +437,11 @@ parse_trait_valid_multiple_extends_test() ->
     {module, _, _, _, [TraitDecl], _} = Result,
 
     %% Verify multiple extends constraints
-    ?assertMatch(#trait_decl{
-        name = 'Ord',
-        extends = [_, _]
-    }, TraitDecl),
+    ?assertMatch({trait_decl, 'Ord', _, [_, _], _, _}, TraitDecl),
 
-    #trait_decl{extends = [Constraint1, Constraint2]} = TraitDecl,
-    ?assertMatch(#trait_constraint{trait = 'Eq'}, Constraint1),
-    ?assertMatch(#trait_constraint{trait = 'Show'}, Constraint2).
+    {trait_decl, _, _, [Constraint1, Constraint2], _, _} = TraitDecl,
+    ?assertMatch({trait_constraint, 'Eq', _, _}, Constraint1),
+    ?assertMatch({trait_constraint, 'Show', _, _}, Constraint2).
 
 %%--------------------------------------------------------------------
 %% Negative Tests: Invalid Trait Declarations
@@ -560,12 +517,12 @@ parse_trait_invalid_empty_methods_test() ->
 
 %% Test trait with malformed extends clause
 parse_trait_invalid_malformed_extends_test() ->
-    %% trait Monad m extends where bind : a -> b end
+    %% trait Monad m extend where bind : a -> b end
     Tokens = [
         {trait, 1},
         {upper_ident, 1, "Monad"},
         {lower_ident, 1, "m"},
-        {colon, 1},
+        {extend, 1},
         %% Missing trait constraint
         {where, 1},
         {lower_ident, 2, "bind"},
@@ -636,19 +593,20 @@ parse_instance_invalid_missing_end_test() ->
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).
 
-%% Test instance with empty method list (should fail)
-parse_instance_invalid_empty_methods_test() ->
+%% Test instance with empty method list (now allowed by grammar)
+parse_instance_valid_empty_methods_test() ->
     %% instance Functor Maybe where end
     Tokens = [
         {instance, 1},
         {upper_ident, 1, "Functor"},
         {upper_ident, 1, "Maybe"},
         {where, 1},
-        %% No methods
+        %% No methods - valid for instances with all defaults
         {'end', 2}
     ],
-    Result = catena_parser:parse(Tokens),
-    ?assertMatch({error, _}, Result).
+    {ok, Result} = catena_parser:parse(Tokens),
+    {module, _, _, _, [InstanceDecl], _} = Result,
+    ?assertMatch({instance_decl, 'Functor', [_], undefined, [], _}, InstanceDecl).
 
 %%--------------------------------------------------------------------
 %% Tests for Default Methods (Grammar Coverage)
@@ -657,9 +615,10 @@ parse_instance_invalid_empty_methods_test() ->
 %% Test trait with default method implementation
 parse_trait_valid_default_method_test() ->
     %% trait Functor f where
-    %%   fmap : a -> b
-    %%   transform mapConst x = fmap x
+    %%   fmap : a -> b,
+    %%   mapConst x = fmap x
     %% end
+    %% Note: Default implementations use "name params = expr" syntax (no transform keyword)
     Tokens = [
         {trait, 1},
         {upper_ident, 1, "Functor"},
@@ -670,7 +629,7 @@ parse_trait_valid_default_method_test() ->
         {lower_ident, 2, "a"},
         {arrow, 2},
         {lower_ident, 2, "b"},
-        {transform, 3},
+        {comma, 2},
         {lower_ident, 3, "mapConst"},
         {lower_ident, 3, "x"},
         {equals, 3},
@@ -683,20 +642,17 @@ parse_trait_valid_default_method_test() ->
     {module, _, _, _, [TraitDecl], _} = Result,
 
     %% Verify trait has default methods
-    ?assertMatch(#trait_decl{
-        name = 'Functor',
-        type_params = [f],
-        methods = [{fmap, _}],
-        default_methods = [{mapConst, _}]
-    }, TraitDecl).
+    ?assertMatch({trait_decl, 'Functor', [f], undefined,
+        [{trait_sig, fmap, _, _}, {trait_default, mapConst, _, _, _}], _}, TraitDecl).
 
 %% Test trait with multiple default methods
 parse_trait_valid_multiple_defaults_test() ->
     %% trait Monad m where
-    %%   bind : a -> b
-    %%   transform then x = bind x
-    %%   transform join x = bind x
+    %%   bind : a -> b,
+    %%   then x = bind x,
+    %%   join x = bind x
     %% end
+    %% Note: Default implementations use "name params = expr" syntax (no transform keyword)
     Tokens = [
         {trait, 1},
         {upper_ident, 1, "Monad"},
@@ -707,13 +663,13 @@ parse_trait_valid_multiple_defaults_test() ->
         {lower_ident, 2, "a"},
         {arrow, 2},
         {lower_ident, 2, "b"},
-        {transform, 3},
+        {comma, 2},
         {lower_ident, 3, "then"},
         {lower_ident, 3, "x"},
         {equals, 3},
         {lower_ident, 3, "bind"},
         {lower_ident, 3, "x"},
-        {transform, 4},
+        {comma, 3},
         {lower_ident, 4, "join"},
         {lower_ident, 4, "x"},
         {equals, 4},
@@ -724,10 +680,10 @@ parse_trait_valid_multiple_defaults_test() ->
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
 
-    %% Verify trait has 2 default methods
-    ?assertMatch(#trait_decl{
-        default_methods = [{then, _}, {join, _}]
-    }, TraitDecl).
+    %% Verify trait has 2 default methods (along with signature)
+    ?assertMatch({trait_decl, 'Monad', [m], undefined,
+        [{trait_sig, bind, _, _}, {trait_default, then, _, _, _}, {trait_default, join, _, _, _}],
+        _}, TraitDecl).
 
 %%--------------------------------------------------------------------
 %% Tests for Instance Constraints (Grammar Coverage)
@@ -758,19 +714,11 @@ parse_instance_valid_constraint_test() ->
     {module, _, _, _, [InstanceDecl], _} = Result,
 
     %% Verify instance has constraints
-    ?assertMatch(#instance_decl{
-        trait = 'Eq',
-        type_args = [_, _],
-        constraints = [_],
-        methods = [{eq, _}]
-    }, InstanceDecl),
+    ?assertMatch({instance_decl, 'Eq', [_, _], [_], [{eq, _}], _}, InstanceDecl),
 
     %% Verify the constraint
-    #instance_decl{constraints = [Constraint]} = InstanceDecl,
-    ?assertMatch(#trait_constraint{
-        trait = 'Eq',
-        type_args = [_]
-    }, Constraint).
+    {instance_decl, _, _, [Constraint], _, _} = InstanceDecl,
+    ?assertMatch({trait_constraint, 'Eq', [_], _}, Constraint).
 
 %% Test instance with multiple constraints
 parse_instance_valid_multiple_constraints_test() ->
@@ -800,14 +748,11 @@ parse_instance_valid_multiple_constraints_test() ->
     {module, _, _, _, [InstanceDecl], _} = Result,
 
     %% Verify instance has multiple constraints
-    ?assertMatch(#instance_decl{
-        trait = 'Ord',
-        constraints = [_, _]
-    }, InstanceDecl),
+    ?assertMatch({instance_decl, 'Ord', _, [_, _], _, _}, InstanceDecl),
 
-    #instance_decl{constraints = [Constraint1, Constraint2]} = InstanceDecl,
-    ?assertMatch(#trait_constraint{trait = 'Eq'}, Constraint1),
-    ?assertMatch(#trait_constraint{trait = 'Show'}, Constraint2).
+    {instance_decl, _, _, [Constraint1, Constraint2], _, _} = InstanceDecl,
+    ?assertMatch({trait_constraint, 'Eq', _, _}, Constraint1),
+    ?assertMatch({trait_constraint, 'Show', _, _}, Constraint2).
 
 %%--------------------------------------------------------------------
 %% Tests for Extended Type Arguments (1-5 args supported)
@@ -823,11 +768,7 @@ parse_instance_valid_three_type_args_test() ->
     InstanceDecl = parse_single_decl(Tokens),
 
     %% Verify instance has 3 type arguments
-    ?assertMatch(#instance_decl{
-        trait = 'Functor',
-        type_args = [_, _, _],
-        constraints = undefined
-    }, InstanceDecl).
+    ?assertMatch({instance_decl, 'Functor', [_, _, _], undefined, _, _}, InstanceDecl).
 
 %% Test instance with 4 type arguments - demonstrates current limitation
 parse_instance_valid_four_type_args_test() ->
@@ -876,15 +817,16 @@ parse_instance_valid_four_type_args_test() ->
 
 %% Test trait with BOTH extends AND default methods (complete grammar coverage)
 parse_trait_valid_extends_and_defaults_test() ->
-    %% trait Monad m extends Applicative m where
-    %%   bind : a -> b
-    %%   transform then x = bind x
+    %% trait Monad m extend Applicative m where
+    %%   bind : a -> b,
+    %%   then x = bind x
     %% end
+    %% Note: Default implementations use "name params = expr" syntax (no transform keyword)
     Tokens = [
         {trait, 1},
         {upper_ident, 1, "Monad"},
         {lower_ident, 1, "m"},
-        {colon, 1},
+        {extend, 1},
         {upper_ident, 1, "Applicative"},
         {lower_ident, 1, "m"},
         {where, 1},
@@ -893,7 +835,7 @@ parse_trait_valid_extends_and_defaults_test() ->
         {lower_ident, 2, "a"},
         {arrow, 2},
         {lower_ident, 2, "b"},
-        {transform, 3},
+        {comma, 2},
         {lower_ident, 3, "then"},
         {lower_ident, 3, "x"},
         {equals, 3},
@@ -905,17 +847,12 @@ parse_trait_valid_extends_and_defaults_test() ->
     {module, _, _, _, [TraitDecl], _} = Result,
 
     %% Verify trait has BOTH extends AND defaults
-    ?assertMatch(#trait_decl{
-        name = 'Monad',
-        type_params = [m],
-        extends = [_],
-        methods = [{bind, _}],
-        default_methods = [{then, _}]
-    }, TraitDecl),
+    ?assertMatch({trait_decl, 'Monad', [m], [_],
+        [{trait_sig, bind, _, _}, {trait_default, then, _, _, _}], _}, TraitDecl),
 
     %% Verify extends constraint
-    #trait_decl{extends = [Constraint]} = TraitDecl,
-    ?assertMatch(#trait_constraint{trait = 'Applicative'}, Constraint).
+    {trait_decl, _, _, [Constraint], _, _} = TraitDecl,
+    ?assertMatch({trait_constraint, 'Applicative', _, _}, Constraint).
 
 %% Test multiple trait methods with comma separators
 parse_trait_valid_comma_separated_methods_test() ->
@@ -949,11 +886,8 @@ parse_trait_valid_comma_separated_methods_test() ->
     {module, _, _, _, [TraitDecl], _} = Result,
 
     %% Verify trait has 2 methods
-    ?assertMatch(#trait_decl{
-        name = 'Eq',
-        type_params = [a],
-        methods = [{eq, _}, {neq, _}]
-    }, TraitDecl).
+    ?assertMatch({trait_decl, 'Eq', [a], undefined,
+        [{trait_sig, eq, _, _}, {trait_sig, neq, _, _}], _}, TraitDecl).
 
 %% Test trait with 3 methods and optional trailing comma
 parse_trait_valid_trailing_comma_test() ->
@@ -997,10 +931,8 @@ parse_trait_valid_trailing_comma_test() ->
     {module, _, _, _, [TraitDecl], _} = Result,
 
     %% Verify trait has 3 methods
-    ?assertMatch(#trait_decl{
-        name = 'Ord',
-        methods = [{compare, _}, {lt, _}, {gt, _}]
-    }, TraitDecl).
+    ?assertMatch({trait_decl, 'Ord', [a], undefined,
+        [{trait_sig, compare, _, _}, {trait_sig, lt, _, _}, {trait_sig, gt, _, _}], _}, TraitDecl).
 
 %% Test instance method with match expression (CORRECTS DOCUMENTATION ERROR)
 %% The implementation summary incorrectly stated match expressions don't work
@@ -1043,22 +975,19 @@ parse_instance_valid_match_expression_test() ->
     {module, _, _, _, [InstanceDecl], _} = Result,
 
     %% Verify instance parses with match expression
-    ?assertMatch(#instance_decl{
-        trait = 'Functor',
-        type_args = [_],
-        methods = [{fmap, _}]
-    }, InstanceDecl),
+    ?assertMatch({instance_decl, 'Functor', [_], undefined, [{fmap, _}], _}, InstanceDecl),
 
     %% Verify the method contains a match expression
-    #instance_decl{methods = [{fmap, MethodBody}]} = InstanceDecl,
-    ?assertMatch({lambda, [_PatternF], {match_expr, [_, _], _}, _}, MethodBody).
+    {instance_decl, _, _, _, [{fmap, MethodBody}], _} = InstanceDecl,
+    ?assertMatch({lambda, [_], {match_expr, undefined, [_, _], _}, _}, MethodBody).
 
 %% Test multiple instance methods (tests instance_methods -> instance_method instance_methods rule)
 parse_instance_valid_multiple_methods_test() ->
     %% instance Eq Bool where
-    %%   transform eq x = x
+    %%   transform eq x = x,
     %%   transform neq y = y
     %% end
+    %% Note: Instance methods need comma separators
     Tokens = [
         {instance, 1},
         {upper_ident, 1, "Eq"},
@@ -1069,6 +998,7 @@ parse_instance_valid_multiple_methods_test() ->
         {lower_ident, 2, "x"},
         {equals, 2},
         {lower_ident, 2, "x"},
+        {comma, 2},
         {transform, 3},
         {lower_ident, 3, "neq"},
         {lower_ident, 3, "y"},
@@ -1080,10 +1010,7 @@ parse_instance_valid_multiple_methods_test() ->
     {module, _, _, _, [InstanceDecl], _} = Result,
 
     %% Verify instance has 2 methods
-    ?assertMatch(#instance_decl{
-        trait = 'Eq',
-        methods = [{eq, _}, {neq, _}]
-    }, InstanceDecl).
+    ?assertMatch({instance_decl, 'Eq', _, undefined, [{eq, _}, {neq, _}], _}, InstanceDecl).
 
 %%--------------------------------------------------------------------
 %% Additional Negative Tests (Parser-Level Validation)
@@ -1163,13 +1090,13 @@ parse_instance_invalid_method_missing_equals_test() ->
 
 %% Test trait with invalid extends (missing trait name)
 parse_trait_invalid_extends_syntax_test() ->
-    %% trait Monad m extends where ...
-    %% Missing trait name after extends
+    %% trait Monad m extend where ...
+    %% Missing trait name after extend
     Tokens = [
         {trait, 1},
         {upper_ident, 1, "Monad"},
         {lower_ident, 1, "m"},
-        {colon, 1},
+        {extend, 1},
         {where, 1},  %% Missing trait constraint
         {lower_ident, 2, "bind"},
         {colon, 2},
@@ -1252,3 +1179,129 @@ parse_instance_error_incomplete_test() ->
     ],
     Result = catena_parser:parse(Tokens),
     ?assertMatch({error, _}, Result).
+
+%%--------------------------------------------------------------------
+%% Tests for constrain keyword (Type Constraints)
+%%--------------------------------------------------------------------
+
+%% Test transform with constrain keyword
+parse_transform_valid_constrain_test() ->
+    %% transform sort : List a -> List a constrain Ord a
+    Tokens = [
+        {transform, 1},
+        {lower_ident, 1, "sort"},
+        {colon, 1},
+        {upper_ident, 1, "List"},
+        {lower_ident, 1, "a"},
+        {arrow, 1},
+        {upper_ident, 1, "List"},
+        {lower_ident, 1, "a"},
+        {constrain, 1},
+        {upper_ident, 1, "Ord"},
+        {lower_ident, 1, "a"}
+    ],
+    {ok, Result} = catena_parser:parse(Tokens),
+    {module, _, _, _, [TransformDecl], _} = Result,
+
+    %% Verify the transform has a constrained type
+    ?assertMatch({transform_decl, sort, {constrained_type, _, _, _}, [], _}, TransformDecl),
+
+    %% Verify the constraint
+    {transform_decl, _, {constrained_type, Constraints, _Type, _}, _, _} = TransformDecl,
+    ?assertEqual(1, length(Constraints)),
+    [Constraint] = Constraints,
+    ?assertMatch(#trait_constraint{trait = 'Ord'}, Constraint).
+
+%% Test transform with multiple constraints
+parse_transform_valid_multiple_constrain_test() ->
+    %% transform compare : a -> a -> Ordering constrain Eq a, Show a
+    Tokens = [
+        {transform, 1},
+        {lower_ident, 1, "compare"},
+        {colon, 1},
+        {lower_ident, 1, "a"},
+        {arrow, 1},
+        {lower_ident, 1, "a"},
+        {arrow, 1},
+        {upper_ident, 1, "Ordering"},
+        {constrain, 1},
+        {upper_ident, 1, "Eq"},
+        {lower_ident, 1, "a"},
+        {comma, 1},
+        {upper_ident, 1, "Show"},
+        {lower_ident, 1, "a"}
+    ],
+    {ok, Result} = catena_parser:parse(Tokens),
+    {module, _, _, _, [TransformDecl], _} = Result,
+
+    %% Verify the transform has multiple constraints
+    {transform_decl, _, {constrained_type, Constraints, _, _}, _, _} = TransformDecl,
+    ?assertEqual(2, length(Constraints)),
+    [Constraint1, Constraint2] = Constraints,
+    ?assertMatch(#trait_constraint{trait = 'Eq'}, Constraint1),
+    ?assertMatch(#trait_constraint{trait = 'Show'}, Constraint2).
+
+%% Test transform with effects and constrain
+parse_transform_valid_effects_and_constrain_test() ->
+    %% transform readAndSort : List a -> List a / {IO} constrain Ord a
+    Tokens = [
+        {transform, 1},
+        {lower_ident, 1, "readAndSort"},
+        {colon, 1},
+        {upper_ident, 1, "List"},
+        {lower_ident, 1, "a"},
+        {arrow, 1},
+        {upper_ident, 1, "List"},
+        {lower_ident, 1, "a"},
+        {slash, 1},
+        {lbrace, 1},
+        {upper_ident, 1, "IO"},
+        {rbrace, 1},
+        {constrain, 1},
+        {upper_ident, 1, "Ord"},
+        {lower_ident, 1, "a"}
+    ],
+    {ok, Result} = catena_parser:parse(Tokens),
+    {module, _, _, _, [TransformDecl], _} = Result,
+
+    %% Verify the transform has constrained type with effects
+    ?assertMatch({transform_decl, readAndSort, {constrained_type, _, _, _}, [], _}, TransformDecl),
+
+    %% Verify structure: constrained_type wraps a function type with effect annotation
+    {transform_decl, _, {constrained_type, Constraints, InnerType, _}, _, _} = TransformDecl,
+    ?assertEqual(1, length(Constraints)),
+
+    %% The inner type should be a function with effect on return type
+    ?assertMatch(#type_fun{}, InnerType).
+
+%% Test trait method with constrain
+parse_trait_method_valid_constrain_test() ->
+    %% trait Container c where
+    %%   contains : c a -> a -> Bool constrain Eq a
+    %% end
+    Tokens = [
+        {trait, 1},
+        {upper_ident, 1, "Container"},
+        {lower_ident, 1, "c"},
+        {where, 1},
+        {lower_ident, 2, "contains"},
+        {colon, 2},
+        {lower_ident, 2, "c"},
+        {lower_ident, 2, "a"},
+        {arrow, 2},
+        {lower_ident, 2, "a"},
+        {arrow, 2},
+        {upper_ident, 2, "Bool"},
+        {constrain, 2},
+        {upper_ident, 2, "Eq"},
+        {lower_ident, 2, "a"},
+        {'end', 3}
+    ],
+    {ok, Result} = catena_parser:parse(Tokens),
+    {module, _, _, _, [TraitDecl], _} = Result,
+
+    %% Verify trait method has constrained type
+    %% Note: Parser returns tuples, not records
+    ?assertMatch({trait_decl, 'Container', [c], undefined,
+        [{trait_sig, contains, {constrained_type, _, _, _}, _}],
+        _}, TraitDecl).

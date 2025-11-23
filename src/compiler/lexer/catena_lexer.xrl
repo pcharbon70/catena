@@ -84,9 +84,12 @@ private : {token, {private, TokenLine}}.
 %% Do-notation for monadic composition
 do : {token, {'do', TokenLine}}.
 
+%% Trait system keywords
+extend : {token, {extend, TokenLine}}.
+constrain : {token, {constrain, TokenLine}}.
+
 %% Removed keywords (moved to library/desugar):
 %% - if/then/else: desugar to match on Bool
-%% - extends: use : syntax in trait definition
 %% - try/with: replaced by handle keyword
 %% - supervisor: library convention
 

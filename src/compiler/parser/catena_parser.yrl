@@ -41,6 +41,7 @@ Nonterminals
   effect_list effect_list_nonempty
   type_expr type_expr_primary type_expr_app type_expr_primary_list
   type_list type_expr_list type_record_fields type_record_field
+  type_constraints
   do_expr do_statements do_statement
   .
 
@@ -57,6 +58,9 @@ Terminals
 
   %% Syntax Keywords (supplementary keywords)
   'case' 'of' 'when' as forall fn
+
+  %% Trait system keywords
+  extend constrain
 
   %% Module Keywords
   import export exports qualified private
@@ -348,7 +352,7 @@ effect_operation -> operation lower_ident colon type_expr :
 %%----------------------------------------------------------------------------
 
 %% Consolidated trait declaration with optional inheritance
-%% Uses colon syntax for inheritance: trait Orderable a : Comparable a where ... end
+%% Uses extend keyword for inheritance: trait Orderable a extend Comparable a where ... end
 trait_decl -> trait upper_ident type_params maybe_trait_extends where trait_members 'end' :
     {trait_decl,
         extract_atom('$2'),
@@ -361,8 +365,8 @@ trait_decl -> trait upper_ident type_params maybe_trait_extends where trait_memb
 trait_decl -> trait error :
     make_error_declaration(extract_location('$1'), "Incomplete trait declaration", '$2').
 
-%% Optional trait extends clause using colon syntax
-maybe_trait_extends -> colon trait_extends_list : '$2'.
+%% Optional trait extends clause using extend keyword
+maybe_trait_extends -> extend trait_extends_list : '$2'.
 maybe_trait_extends -> '$empty' : undefined.
 
 %% Trait extends list (e.g., "Applicative m" or "Eq a, Show a")
@@ -387,12 +391,9 @@ trait_members -> trait_member comma :
 
 %% Trait member: either a signature or a default implementation
 %% Signature: name : type
+%% With constraint: name : type constrain Constraint
 trait_member -> lower_ident colon type_expr :
     {trait_sig, extract_atom('$1'), '$3', extract_location('$1')}.
-
-%% Constrained signature: name : Constraint a => type
-trait_member -> lower_ident colon type_expr_app double_arrow type_expr :
-    {trait_sig, extract_atom('$1'), {constrained_type, [extract_trait_constraint('$3')], '$5'}, extract_location('$1')}.
 
 %% Default implementation: name params = expr
 trait_member -> lower_ident pattern_list_nonempty equals expr :
@@ -516,12 +517,10 @@ transform_decl -> transform lower_ident pattern_list error :
 transform_decl -> transform error :
     make_error_declaration(extract_location('$1'), "Incomplete transform declaration", '$2').
 
+%% Transform signature: transform name : type
+%% With constraint: transform name : type constrain Constraint
 transform_signature -> transform lower_ident colon type_expr :
     {transform_sig, extract_atom('$2'), '$4', extract_location('$1')}.
-
-%% Constrained transform signature: transform foo : Constraint a => type
-transform_signature -> transform lower_ident colon type_expr_app double_arrow type_expr :
-    {transform_sig, extract_atom('$2'), {constrained_type, [extract_trait_constraint('$4')], '$6'}, extract_location('$1')}.
 
 transform_clauses -> transform_clause :
     ['$1'].
@@ -951,7 +950,17 @@ type_expr -> type_expr_app slash lbrace rbrace :
 type_expr -> type_expr_app slash lbrace effect_list_nonempty rbrace :
     {type_effect, '$1', '$4', extract_location('$2')}.
 
+%% Constrained type: Type constrain Constraint1, Constraint2
+type_expr -> type_expr constrain type_constraints :
+    {constrained_type, '$3', '$1', extract_location('$2')}.
+
 type_expr -> type_expr_app : '$1'.
+
+%% Type constraints (comma-separated list of trait constraints)
+type_constraints -> trait_constraint :
+    ['$1'].
+type_constraints -> trait_constraint comma type_constraints :
+    ['$1' | '$3'].
 
 
 
