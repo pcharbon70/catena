@@ -81,8 +81,10 @@ exports : {token, {exports, TokenLine}}.
 qualified : {token, {qualified, TokenLine}}.
 private : {token, {private, TokenLine}}.
 
+%% Do-notation for monadic composition
+do : {token, {'do', TokenLine}}.
+
 %% Removed keywords (moved to library/desugar):
-%% - do: desugar from >>= (Pipeline bind)
 %% - if/then/else: desugar to match on Bool
 %% - extends: use : syntax in trait definition
 %% - try/with: replaced by handle keyword

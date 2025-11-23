@@ -596,12 +596,120 @@ all_laws_present_test() ->
     ?assertEqual(8, length(TransformDecls)).
 
 %% =============================================================================
-%% Section 1.7.5 - Do-Notation Desugaring (placeholder)
-%% TODO: Implement when do-notation is added to parser
+%% Section 1.5.5 - Do-Notation Desugaring
 %% =============================================================================
 
+%% 1.5.5.1 Test parsing do-block syntax
+parse_do_block_test() ->
+    Source = "transform test x = do { y <- x; pure y }\n",
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    case catena_parser:parse(Tokens) of
+        {ok, {module, _, _, _, Decls, _}} ->
+            [{transform_decl, test, _, Clauses, _}] = Decls,
+            [{transform_clause, _, _, Body, _}] = Clauses,
+            %% Body should be a do_expr
+            ?assertMatch({do_expr, _, _}, Body);
+        {error, Reason} ->
+            io:format("Parse error: ~p~n", [Reason]),
+            ?assert(false)
+    end.
+
+%% 1.5.5.2 Test parsing bind in do-block
+parse_do_bind_test() ->
+    Source = "transform test x = do { a <- x; b <- a; pure b }\n",
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    case catena_parser:parse(Tokens) of
+        {ok, {module, _, _, _, Decls, _}} ->
+            [{transform_decl, test, _, Clauses, _}] = Decls,
+            [{transform_clause, _, _, {do_expr, Stmts, _}, _}] = Clauses,
+            %% Should have 3 statements: bind, bind, return
+            ?assertEqual(3, length(Stmts)),
+            [{do_bind, a, _, _}, {do_bind, b, _, _}, {do_return, _, _}] = Stmts;
+        {error, Reason} ->
+            io:format("Parse error: ~p~n", [Reason]),
+            ?assert(false)
+    end.
+
+%% 1.5.5.3 Test parsing let in do-block
+parse_do_let_test() ->
+    Source = "transform test x = do { let y = 42; pure y }\n",
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    case catena_parser:parse(Tokens) of
+        {ok, {module, _, _, _, Decls, _}} ->
+            [{transform_decl, test, _, Clauses, _}] = Decls,
+            [{transform_clause, _, _, {do_expr, Stmts, _}, _}] = Clauses,
+            %% Should have 2 statements: let, return
+            ?assertEqual(2, length(Stmts)),
+            [{do_let, y, _, _}, {do_return, _, _}] = Stmts;
+        {error, Reason} ->
+            io:format("Parse error: ~p~n", [Reason]),
+            ?assert(false)
+    end.
+
+%% 1.5.5.4 Test parsing action in do-block (sequence without binding)
+parse_do_action_test() ->
+    Source = "transform test x = do { print x; pure 42 }\n",
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    case catena_parser:parse(Tokens) of
+        {ok, {module, _, _, _, Decls, _}} ->
+            [{transform_decl, test, _, Clauses, _}] = Decls,
+            [{transform_clause, _, _, {do_expr, Stmts, _}, _}] = Clauses,
+            %% Should have 2 statements: action, return
+            ?assertEqual(2, length(Stmts)),
+            [{do_action, _, _}, {do_return, _, _}] = Stmts;
+        {error, Reason} ->
+            io:format("Parse error: ~p~n", [Reason]),
+            ?assert(false)
+    end.
+
+%% 1.5.5.5 Test desugaring bind to chain
+desugar_bind_test() ->
+    Source = "transform test x = do { y <- x; pure y }\n",
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+    %% Desugar
+    Desugared = catena_desugar:desugar(AST),
+    %% Extract the desugared body
+    {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,
+    [{transform_clause, _, _, Body, _}] = Clauses,
+    %% Should be: chain (fn y -> pure y) x
+    ?assertMatch({app, {var, chain, _}, [_, _], _}, Body).
+
+%% 1.5.5.6 Test desugaring let to let_expr
+desugar_let_test() ->
+    Source = "transform test u = do { let x = 42; pure x }\n",
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+    Desugared = catena_desugar:desugar(AST),
+    {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,
+    [{transform_clause, _, _, Body, _}] = Clauses,
+    %% Should be: let x = 42 in pure x
+    ?assertMatch({let_expr, _, _, _}, Body).
+
+%% 1.5.5.7 Test desugaring action (sequence)
+desugar_action_test() ->
+    Source = "transform test x = do { print x; pure 42 }\n",
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+    Desugared = catena_desugar:desugar(AST),
+    {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,
+    [{transform_clause, _, _, Body, _}] = Clauses,
+    %% Should be: chain (fn _ -> pure 42) (print x)
+    ?assertMatch({app, {var, chain, _}, [{lambda, [{pat_wildcard, _}], _, _}, _], _}, Body).
+
+%% 1.5.5.8 Test complex do-block with multiple binds
+desugar_complex_do_test() ->
+    Source = "transform test x = do { a <- x; b <- f a; c <- g b; pure (a, b, c) }\n",
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+    Desugared = catena_desugar:desugar(AST),
+    {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,
+    [{transform_clause, _, _, Body, _}] = Clauses,
+    %% Should be nested chain calls
+    ?assertMatch({app, {var, chain, _}, _, _}, Body).
+
 %% =============================================================================
-%% Section 1.7.6 - Effect Integration (placeholder)
+%% Section 1.5.6 - Effect Integration (placeholder)
 %% TODO: Implement when effect polymorphism is complete
 %% =============================================================================
 

@@ -41,6 +41,7 @@ Nonterminals
   effect_list effect_list_nonempty
   type_expr type_expr_primary type_expr_app type_expr_primary_list
   type_list type_expr_list type_record_fields type_record_field
+  do_expr do_statements do_statement
   .
 
 %%============================================================================
@@ -48,11 +49,11 @@ Nonterminals
 %%============================================================================
 
 Terminals
-  %% Core Keywords (13 keywords requiring compiler support)
+  %% Core Keywords (14 keywords requiring compiler support)
   type transform match 'let' 'in' 'end'
   trait instance where then
   effect operation perform handle
-  actor process module
+  actor process module 'do'
 
   %% Syntax Keywords (supplementary keywords)
   'case' 'of' 'when' as forall fn
@@ -792,6 +793,8 @@ expr_primary -> perform_expr : '$1'.
 
 expr_primary -> try_with_expr : '$1'.
 
+expr_primary -> do_expr : '$1'.
+
 %% Match expressions
 %% Pattern-only: match | pat -> expr | ... end
 expr_primary -> match match_clauses 'end' :
@@ -846,6 +849,37 @@ literal -> float :
 
 literal -> string :
     {literal, extract_value('$1'), string, extract_location('$1')}.
+
+%%----------------------------------------------------------------------------
+%% Do-Notation (Monadic Composition)
+%%----------------------------------------------------------------------------
+
+%% Do block: do { stmt; stmt; expr }
+do_expr -> 'do' lbrace do_statements rbrace :
+    {do_expr, '$3', extract_location('$1')}.
+
+%% Do statements (semicolon-separated)
+do_statements -> expr :
+    [{do_return, '$1', extract_location('$1')}].
+do_statements -> do_statement semicolon do_statements :
+    ['$1' | '$3'].
+
+%% Do statement types:
+%% - Bind: x <- ma
+%% - Let: let x = e
+%% - Action: expr (for effects without binding)
+
+%% Bind statement: x <- ma
+do_statement -> lower_ident left_arrow expr :
+    {do_bind, extract_atom('$1'), '$3', extract_location('$1')}.
+
+%% Let statement in do: let x = e
+do_statement -> 'let' lower_ident equals expr :
+    {do_let, extract_atom('$2'), '$4', extract_location('$1')}.
+
+%% Action statement: just an expression (for effects that don't return useful values)
+do_statement -> expr :
+    {do_action, '$1', extract_location('$1')}.
 
 %%----------------------------------------------------------------------------
 %% Effect Expressions
