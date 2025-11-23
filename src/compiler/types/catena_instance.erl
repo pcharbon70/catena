@@ -20,7 +20,8 @@
     make_instance/3,
     empty_instance_db/0,
     add_instance/2,
-    get_instances/2
+    get_instances/2,
+    build_instance_db/1
 ]).
 
 %% Instance resolution
@@ -116,6 +117,43 @@ add_instance({instance, TraitName, _TypeArgs, _Loc} = Instance, DB) ->
     [instance()].
 get_instances(TraitName, DB) ->
     maps:get(TraitName, DB, []).
+
+%% @doc Build instance database from AST declarations
+%%
+%% Extracts instance_decl nodes from declarations and builds
+%% an instance database for resolution.
+%%
+-spec build_instance_db([term()]) -> instance_db().
+build_instance_db(Declarations) ->
+    lists:foldl(
+        fun(Decl, DB) ->
+            case Decl of
+                {instance_decl, TraitName, TypeArgs, _Constraints, _Methods, Loc} ->
+                    %% Convert AST type args to internal type representation
+                    InternalTypes = [ast_type_to_internal(T) || T <- TypeArgs],
+                    Instance = make_instance(TraitName, InternalTypes, Loc),
+                    add_instance(Instance, DB);
+                _ ->
+                    DB
+            end
+        end,
+        empty_instance_db(),
+        Declarations
+    ).
+
+%% @doc Convert AST type to internal type representation
+ast_type_to_internal({type_con, Name, _Loc}) ->
+    {tcon, Name};
+ast_type_to_internal({type_var, Name, _Loc}) ->
+    %% Convert atom name to integer ID using hash
+    %% This ensures consistent IDs for the same variable names
+    {tvar, erlang:phash2(Name, 1000000)};
+ast_type_to_internal({type_app, Con, Args, _Loc}) ->
+    InternalArgs = [ast_type_to_internal(A) || A <- Args],
+    {tapp, ast_type_to_internal(Con), InternalArgs};
+ast_type_to_internal(Other) ->
+    %% Fallback for unknown type forms
+    Other.
 
 %%%===================================================================
 %%% Instance Resolution

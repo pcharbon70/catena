@@ -342,15 +342,100 @@ parse_test_module_test() ->
     end.
 
 %% =============================================================================
-%% Section 1.7.2 - Trait Instance Resolution (placeholder)
-%% These tests require type inference implementation to be complete
+%% Section 1.5.2 - Trait Instance Resolution
 %% =============================================================================
 
-%% Test resolving Mapper instance for Maybe
-%% TODO: Implement when type inference integration is complete
+%% Helper to load prelude and build instance database
+load_prelude_instances() ->
+    Path = filename:join([stdlib_dir(), "prelude.cat"]),
+    {ok, Content} = file:read_file(Path),
+    Source = binary_to_list(Content),
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+    {ok, {module, _, _, _, Decls, _}} = catena_semantic:analyze(AST),
+    catena_instance:build_instance_db(Decls).
 
-%% Test resolving constrained instance
-%% TODO: Implement when constraint solving integration is complete
+%% 1.5.2.1 Resolve Mapper instance for Maybe
+resolve_mapper_maybe_test() ->
+    DB = load_prelude_instances(),
+    MaybeType = {tcon, 'Maybe'},
+    Constraint = catena_constraint:trait_constraint('Mapper', [MaybeType]),
+    Result = catena_instance:resolve_constraint(Constraint, DB),
+    ?assertMatch({ok, {instance, 'Mapper', [{tcon, 'Maybe'}], _}, _}, Result).
+
+%% 1.5.2.2 Resolve Mapper instance for List
+resolve_mapper_list_test() ->
+    DB = load_prelude_instances(),
+    ListType = {tcon, 'List'},
+    Constraint = catena_constraint:trait_constraint('Mapper', [ListType]),
+    Result = catena_instance:resolve_constraint(Constraint, DB),
+    ?assertMatch({ok, {instance, 'Mapper', [{tcon, 'List'}], _}, _}, Result).
+
+%% 1.5.2.3 Resolve constrained instances (Comparable for Maybe a, List a)
+%% Note: Comparable instances in prelude are parameterized: Comparable (Maybe a), Comparable (List a)
+resolve_comparable_maybe_a_test() ->
+    DB = load_prelude_instances(),
+    %% Comparable instance for Maybe Int (unifies with Maybe a)
+    MaybeInt = {tapp, {tcon, 'Maybe'}, [{tcon, 'Int'}]},
+    Constraint = catena_constraint:trait_constraint('Comparable', [MaybeInt]),
+    Result = catena_instance:resolve_constraint(Constraint, DB),
+    ?assertMatch({ok, {instance, 'Comparable', [{tapp, {tcon, 'Maybe'}, _}], _}, _}, Result).
+
+resolve_comparable_list_a_test() ->
+    DB = load_prelude_instances(),
+    %% Comparable instance for List Int (unifies with List a)
+    ListInt = {tapp, {tcon, 'List'}, [{tcon, 'Int'}]},
+    Constraint = catena_constraint:trait_constraint('Comparable', [ListInt]),
+    Result = catena_instance:resolve_constraint(Constraint, DB),
+    ?assertMatch({ok, {instance, 'Comparable', [{tapp, {tcon, 'List'}, _}], _}, _}, Result).
+
+%% 1.5.2.4 Detect and report missing instances
+resolve_missing_instance_test() ->
+    DB = load_prelude_instances(),
+    %% Int doesn't have a Mapper instance
+    IntType = {tcon, 'Int'},
+    Constraint = catena_constraint:trait_constraint('Mapper', [IntType]),
+    Result = catena_instance:resolve_constraint(Constraint, DB),
+    ?assertEqual({error, no_instance}, Result).
+
+%% 1.5.2.5 Verify trait hierarchy (Pipeline, Applicator, Chainable for Maybe)
+resolve_pipeline_maybe_test() ->
+    DB = load_prelude_instances(),
+    MaybeType = {tcon, 'Maybe'},
+    Constraint = catena_constraint:trait_constraint('Pipeline', [MaybeType]),
+    Result = catena_instance:resolve_constraint(Constraint, DB),
+    ?assertMatch({ok, {instance, 'Pipeline', [{tcon, 'Maybe'}], _}, _}, Result).
+
+resolve_applicator_maybe_test() ->
+    DB = load_prelude_instances(),
+    MaybeType = {tcon, 'Maybe'},
+    Constraint = catena_constraint:trait_constraint('Applicator', [MaybeType]),
+    Result = catena_instance:resolve_constraint(Constraint, DB),
+    ?assertMatch({ok, {instance, 'Applicator', [{tcon, 'Maybe'}], _}, _}, Result).
+
+resolve_chainable_maybe_test() ->
+    DB = load_prelude_instances(),
+    MaybeType = {tcon, 'Maybe'},
+    Constraint = catena_constraint:trait_constraint('Chainable', [MaybeType]),
+    Result = catena_instance:resolve_constraint(Constraint, DB),
+    ?assertMatch({ok, {instance, 'Chainable', [{tcon, 'Maybe'}], _}, _}, Result).
+
+%% Test multiple traits for List
+resolve_pipeline_list_test() ->
+    DB = load_prelude_instances(),
+    ListType = {tcon, 'List'},
+    Constraint = catena_constraint:trait_constraint('Pipeline', [ListType]),
+    Result = catena_instance:resolve_constraint(Constraint, DB),
+    ?assertMatch({ok, {instance, 'Pipeline', [{tcon, 'List'}], _}, _}, Result).
+
+%% Test Either instances (Mapper for Either e)
+resolve_mapper_either_test() ->
+    DB = load_prelude_instances(),
+    %% Either String (partially applied - unifies with Either e)
+    EitherString = {tapp, {tcon, 'Either'}, [{tcon, 'String'}]},
+    Constraint = catena_constraint:trait_constraint('Mapper', [EitherString]),
+    Result = catena_instance:resolve_constraint(Constraint, DB),
+    ?assertMatch({ok, {instance, 'Mapper', [{tapp, {tcon, 'Either'}, _}], _}, _}, Result).
 
 %% =============================================================================
 %% Section 1.7.3 - Higher-Kinded Type Validation (placeholder)
