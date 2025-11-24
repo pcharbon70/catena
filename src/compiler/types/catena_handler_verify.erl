@@ -170,7 +170,7 @@ check_operation_types({handler_case, EffectName, OpName, Params, _Body, Loc},
     catena_types:effect_set().
 resolve_handled_effects({effect_set, Effects}, HandledEffects) ->
     Remaining = Effects -- HandledEffects,
-    {effect_set, lists:sort(Remaining)}.
+    {effect_set, lists:usort(Remaining)}.
 
 %%%===================================================================
 %%% Error Formatting

@@ -33,6 +33,7 @@
 -export([
     empty_effects/0,
     singleton_effect/1,
+    effect_set/1,
     union_effects/2,
     normalize_effects/1,
     is_pure/1,
@@ -450,6 +451,33 @@ empty_effects() ->
 -spec singleton_effect(atom()) -> effect_set().
 singleton_effect(Effect) when is_atom(Effect) ->
     {effect_set, [Effect]}.
+
+%% @doc Create an effect set from a list of effects.
+%%
+%% Constructs a normalized (sorted, deduplicated) effect set from a list
+%% of effect atoms. This is the recommended way to create effect sets with
+%% multiple effects, as it ensures canonical form.
+%%
+%% @param Effects List of effect atoms
+%% @returns A normalized effect set
+%%
+%% @see empty_effects/0
+%% @see singleton_effect/1
+%% @see normalize_effects/1
+%%
+%% @example
+%% ```
+%% %% Create effect set with multiple effects
+%% Effects = catena_types:effect_set([io, state, error]).
+%% %% → {effect_set, [error, io, state]}
+%%
+%% %% Handles duplicates automatically
+%% E = catena_types:effect_set([io, io, state]).
+%% %% → {effect_set, [io, state]}
+%% '''
+-spec effect_set([atom()]) -> effect_set().
+effect_set(Effects) when is_list(Effects) ->
+    normalize_effects(Effects).
 
 %% @doc Compute the union of two effect sets.
 %%
