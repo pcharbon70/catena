@@ -1,0 +1,24 @@
+-- The simplest Catena program: identity function
+-- This is the "Hello World" of functional programming
+
+transform id x = x
+
+-- A few more simple examples
+
+-- Constant function: always returns the first argument
+transform const x y = x
+
+-- Function application
+transform apply f x = f x
+
+-- Function composition
+transform compose f g x = f (g x)
+
+-- Simple data type
+type Maybe a = None | Some a
+
+-- Wrap a value in Some
+transform just x = Some x
+
+-- Return None
+transform nothing = None
