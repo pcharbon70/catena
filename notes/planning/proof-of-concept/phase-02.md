@@ -46,6 +46,32 @@ Results must display clearly and readably. We format values according to their t
 - [ ] 2.1.3.4 Implement output truncation for large values with expansion on request
 - [ ] 2.1.3.5 Implement effect set pretty-printing displaying effect annotations in type signatures as `/ {Effect1, Effect2}` with empty set `/ {}` elided for pure functions
 
+#### 2.1.3.6 (OPTIONAL) Synthesized Location Markers
+
+**Status**: Optional enhancement for improved error message quality
+
+Synthesized location markers distinguish user-written code from compiler-generated code in error messages. When desugaring transforms (e.g., do-notation to bind chains), generated AST nodes would carry markers indicating they are synthesized.
+
+**Benefits**:
+- Error messages can show the original user code, not the generated bind chain
+- Better IDE integration—debuggers can skip over generated code
+- Distinguishes user errors from potential compiler bugs
+- Enables "show expansion" features for debugging desugared code
+
+**Costs**:
+- All location-handling code must be updated to handle synthesized markers
+- Error formatter complexity increases significantly
+- Larger AST nodes consume more memory
+- Must define propagation rules (when markers persist vs. reset)
+- Testing effort to ensure error messages are actually improved
+
+**Implementation Scope**:
+Would touch: location types, lexer, parser, all semantic passes (desugar, kind, semantic), type inference, error formatter, pretty printer.
+
+**Recommendation**: Defer to later phase unless error message quality becomes a significant pain point. The current approach (using statement location for all synthesized nodes) is acceptable for proof-of-concept.
+
+- [ ] 2.1.3.6 (OPTIONAL) Implement synthesized location markers for compiler-generated AST nodes
+
 ### 2.1.4 History and Completion
 - [ ] **Task 2.1.4 Complete**
 
