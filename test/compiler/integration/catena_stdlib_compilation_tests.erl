@@ -1,25 +1,10 @@
-%% @doc Standard Library Validation Tests
-%% Tests for Section 1.7 of Phase 1.
-%% Validates that Catena's standard library compiles to BEAM.
+%% @doc Standard Library Compilation Tests
+%% Tests for Sections 1.5.1-1.5.3 of Phase 1.
+%% Covers parsing, type-checking, instance resolution, and HKT validation.
 
--module(catena_stdlib_tests).
+-module(catena_stdlib_compilation_tests).
 
 -include_lib("eunit/include/eunit.hrl").
-
-%% =============================================================================
-%% Test Configuration
-%% =============================================================================
-
-%% Use project root relative path
-stdlib_dir() ->
-    %% Get the test file directory and navigate to stdlib
-    case os:getenv("CATENA_ROOT") of
-        false ->
-            %% Default to project structure
-            "/home/ducky/code/catena/lib/catena/stdlib";
-        Root ->
-            filename:join([Root, "lib", "catena", "stdlib"])
-    end.
 
 %% =============================================================================
 %% Section 1.7.1 - Standard Library Compilation
@@ -27,7 +12,7 @@ stdlib_dir() ->
 
 %% Test that all stdlib files can be located
 stdlib_files_exist_test() ->
-    BaseDir = stdlib_dir(),
+    BaseDir = catena_test_helpers:stdlib_dir(),
     Files = [
         "prelude.cat",
         "test.cat",
@@ -209,7 +194,7 @@ parse_multiple_constraints_test() ->
 
 %% Test parsing the IO effect file
 parse_io_effect_file_test() ->
-    Path = filename:join([stdlib_dir(), "effect", "io.cat"]),
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "effect", "io.cat"]),
     {ok, Content} = file:read_file(Path),
     Source = binary_to_list(Content),
     case catena_lexer:string(Source) of
@@ -230,7 +215,7 @@ parse_io_effect_file_test() ->
 
 %% Test parsing the State effect file
 parse_state_effect_file_test() ->
-    Path = filename:join([stdlib_dir(), "effect", "state.cat"]),
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "effect", "state.cat"]),
     {ok, Content} = file:read_file(Path),
     Source = binary_to_list(Content),
     case catena_lexer:string(Source) of
@@ -251,7 +236,7 @@ parse_state_effect_file_test() ->
 
 %% Test parsing the Error effect file
 parse_error_effect_file_test() ->
-    Path = filename:join([stdlib_dir(), "effect", "error.cat"]),
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "effect", "error.cat"]),
     {ok, Content} = file:read_file(Path),
     Source = binary_to_list(Content),
     case catena_lexer:string(Source) of
@@ -276,7 +261,7 @@ parse_error_effect_file_test() ->
 
 %% Test type-checking prelude.cat
 typecheck_prelude_test() ->
-    Path = filename:join([stdlib_dir(), "prelude.cat"]),
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "prelude.cat"]),
     case catena_compile:compile_file(Path) of
         {ok, {typed_module, 'Prelude', Decls, _Env}} ->
             %% Verify we get all 32 declarations
@@ -289,7 +274,7 @@ typecheck_prelude_test() ->
 
 %% Test type-checking effect/io.cat
 typecheck_io_effect_test() ->
-    Path = filename:join([stdlib_dir(), "effect", "io.cat"]),
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "effect", "io.cat"]),
     case catena_compile:compile_file(Path) of
         {ok, {typed_module, 'Effect.IO', Decls, _Env}} ->
             %% IO effect has 1 effect declaration
@@ -302,7 +287,7 @@ typecheck_io_effect_test() ->
 
 %% Test type-checking effect/state.cat
 typecheck_state_effect_test() ->
-    Path = filename:join([stdlib_dir(), "effect", "state.cat"]),
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "effect", "state.cat"]),
     case catena_compile:compile_file(Path) of
         {ok, {typed_module, 'Effect.State', Decls, _Env}} ->
             ?assertEqual(1, length(Decls)),
@@ -314,7 +299,7 @@ typecheck_state_effect_test() ->
 
 %% Test type-checking effect/error.cat
 typecheck_error_effect_test() ->
-    Path = filename:join([stdlib_dir(), "effect", "error.cat"]),
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "effect", "error.cat"]),
     case catena_compile:compile_file(Path) of
         {ok, {typed_module, 'Effect.Error', Decls, _Env}} ->
             ?assertEqual(1, length(Decls)),
@@ -326,7 +311,7 @@ typecheck_error_effect_test() ->
 
 %% Test parsing test.cat (type-checking has known limitations with record construction)
 parse_test_module_test() ->
-    Path = filename:join([stdlib_dir(), "test.cat"]),
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "test.cat"]),
     {ok, Content} = file:read_file(Path),
     Source = binary_to_list(Content),
     {ok, Tokens, _} = catena_lexer:string(Source),
@@ -345,19 +330,9 @@ parse_test_module_test() ->
 %% Section 1.5.2 - Trait Instance Resolution
 %% =============================================================================
 
-%% Helper to load prelude and build instance database
-load_prelude_instances() ->
-    Path = filename:join([stdlib_dir(), "prelude.cat"]),
-    {ok, Content} = file:read_file(Path),
-    Source = binary_to_list(Content),
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    {ok, AST} = catena_parser:parse(Tokens),
-    {ok, {module, _, _, _, Decls, _}} = catena_semantic:analyze(AST),
-    catena_instance:build_instance_db(Decls).
-
 %% 1.5.2.1 Resolve Mapper instance for Maybe
 resolve_mapper_maybe_test() ->
-    DB = load_prelude_instances(),
+    DB = catena_test_helpers:load_prelude_instances(),
     MaybeType = {tcon, 'Maybe'},
     Constraint = catena_constraint:trait_constraint('Mapper', [MaybeType]),
     Result = catena_instance:resolve_constraint(Constraint, DB),
@@ -365,7 +340,7 @@ resolve_mapper_maybe_test() ->
 
 %% 1.5.2.2 Resolve Mapper instance for List
 resolve_mapper_list_test() ->
-    DB = load_prelude_instances(),
+    DB = catena_test_helpers:load_prelude_instances(),
     ListType = {tcon, 'List'},
     Constraint = catena_constraint:trait_constraint('Mapper', [ListType]),
     Result = catena_instance:resolve_constraint(Constraint, DB),
@@ -374,7 +349,7 @@ resolve_mapper_list_test() ->
 %% 1.5.2.3 Resolve constrained instances (Comparable for Maybe a, List a)
 %% Note: Comparable instances in prelude are parameterized: Comparable (Maybe a), Comparable (List a)
 resolve_comparable_maybe_a_test() ->
-    DB = load_prelude_instances(),
+    DB = catena_test_helpers:load_prelude_instances(),
     %% Comparable instance for Maybe Int (unifies with Maybe a)
     MaybeInt = {tapp, {tcon, 'Maybe'}, [{tcon, 'Int'}]},
     Constraint = catena_constraint:trait_constraint('Comparable', [MaybeInt]),
@@ -382,7 +357,7 @@ resolve_comparable_maybe_a_test() ->
     ?assertMatch({ok, {instance, 'Comparable', [{tapp, {tcon, 'Maybe'}, _}], _}, _}, Result).
 
 resolve_comparable_list_a_test() ->
-    DB = load_prelude_instances(),
+    DB = catena_test_helpers:load_prelude_instances(),
     %% Comparable instance for List Int (unifies with List a)
     ListInt = {tapp, {tcon, 'List'}, [{tcon, 'Int'}]},
     Constraint = catena_constraint:trait_constraint('Comparable', [ListInt]),
@@ -391,7 +366,7 @@ resolve_comparable_list_a_test() ->
 
 %% 1.5.2.4 Detect and report missing instances
 resolve_missing_instance_test() ->
-    DB = load_prelude_instances(),
+    DB = catena_test_helpers:load_prelude_instances(),
     %% Int doesn't have a Mapper instance
     IntType = {tcon, 'Int'},
     Constraint = catena_constraint:trait_constraint('Mapper', [IntType]),
@@ -400,21 +375,21 @@ resolve_missing_instance_test() ->
 
 %% 1.5.2.5 Verify trait hierarchy (Pipeline, Applicator, Chainable for Maybe)
 resolve_pipeline_maybe_test() ->
-    DB = load_prelude_instances(),
+    DB = catena_test_helpers:load_prelude_instances(),
     MaybeType = {tcon, 'Maybe'},
     Constraint = catena_constraint:trait_constraint('Pipeline', [MaybeType]),
     Result = catena_instance:resolve_constraint(Constraint, DB),
     ?assertMatch({ok, {instance, 'Pipeline', [{tcon, 'Maybe'}], _}, _}, Result).
 
 resolve_applicator_maybe_test() ->
-    DB = load_prelude_instances(),
+    DB = catena_test_helpers:load_prelude_instances(),
     MaybeType = {tcon, 'Maybe'},
     Constraint = catena_constraint:trait_constraint('Applicator', [MaybeType]),
     Result = catena_instance:resolve_constraint(Constraint, DB),
     ?assertMatch({ok, {instance, 'Applicator', [{tcon, 'Maybe'}], _}, _}, Result).
 
 resolve_chainable_maybe_test() ->
-    DB = load_prelude_instances(),
+    DB = catena_test_helpers:load_prelude_instances(),
     MaybeType = {tcon, 'Maybe'},
     Constraint = catena_constraint:trait_constraint('Chainable', [MaybeType]),
     Result = catena_instance:resolve_constraint(Constraint, DB),
@@ -422,7 +397,7 @@ resolve_chainable_maybe_test() ->
 
 %% Test multiple traits for List
 resolve_pipeline_list_test() ->
-    DB = load_prelude_instances(),
+    DB = catena_test_helpers:load_prelude_instances(),
     ListType = {tcon, 'List'},
     Constraint = catena_constraint:trait_constraint('Pipeline', [ListType]),
     Result = catena_instance:resolve_constraint(Constraint, DB),
@@ -430,7 +405,7 @@ resolve_pipeline_list_test() ->
 
 %% Test Either instances (Mapper for Either e)
 resolve_mapper_either_test() ->
-    DB = load_prelude_instances(),
+    DB = catena_test_helpers:load_prelude_instances(),
     %% Either String (partially applied - unifies with Either e)
     EitherString = {tapp, {tcon, 'Either'}, [{tcon, 'String'}]},
     Constraint = catena_constraint:trait_constraint('Mapper', [EitherString]),
@@ -441,19 +416,9 @@ resolve_mapper_either_test() ->
 %% Section 1.5.3 - Higher-Kinded Type Validation
 %% =============================================================================
 
-%% Helper to load prelude declarations
-load_prelude_decls() ->
-    Path = filename:join([stdlib_dir(), "prelude.cat"]),
-    {ok, Content} = file:read_file(Path),
-    Source = binary_to_list(Content),
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    {ok, AST} = catena_parser:parse(Tokens),
-    {ok, {module, _, _, _, Decls, _}} = catena_semantic:analyze(AST),
-    Decls.
-
 %% 1.5.3.1 Validate kind checking for Mapper trait
 kind_check_mapper_trait_test() ->
-    Decls = load_prelude_decls(),
+    Decls = catena_test_helpers:load_prelude_decls(),
     [Mapper] = [D || D = {trait_decl, 'Mapper', _, _, _, _} <- Decls],
     {ok, Kinds} = catena_kind:check_trait_kind(Mapper),
     %% Mapper's f parameter should have kind Type -> Type
@@ -461,7 +426,7 @@ kind_check_mapper_trait_test() ->
 
 %% Test kind checking for Pipeline trait (also HKT)
 kind_check_pipeline_trait_test() ->
-    Decls = load_prelude_decls(),
+    Decls = catena_test_helpers:load_prelude_decls(),
     [Pipeline] = [D || D = {trait_decl, 'Pipeline', _, _, _, _} <- Decls],
     {ok, Kinds} = catena_kind:check_trait_kind(Pipeline),
     %% Pipeline's m parameter should have kind Type -> Type
@@ -469,7 +434,7 @@ kind_check_pipeline_trait_test() ->
 
 %% Test kind checking for Comparable trait (not HKT)
 kind_check_comparable_trait_test() ->
-    Decls = load_prelude_decls(),
+    Decls = catena_test_helpers:load_prelude_decls(),
     [Comparable] = [D || D = {trait_decl, 'Comparable', _, _, _, _} <- Decls],
     {ok, Kinds} = catena_kind:check_trait_kind(Comparable),
     %% Comparable's a parameter should have kind Type
@@ -477,7 +442,7 @@ kind_check_comparable_trait_test() ->
 
 %% 1.5.3.2 Validate kind inference for instance declarations
 kind_infer_maybe_instance_test() ->
-    Decls = load_prelude_decls(),
+    Decls = catena_test_helpers:load_prelude_decls(),
     Env = catena_kind:build_kind_env(Decls),
     %% Maybe : Type -> Type
     MaybeType = {type_con, 'Maybe', {location, 0, 0}},
@@ -486,7 +451,7 @@ kind_infer_maybe_instance_test() ->
 
 %% 1.5.3.3 Validate partially applied type constructors
 kind_infer_either_partial_test() ->
-    Decls = load_prelude_decls(),
+    Decls = catena_test_helpers:load_prelude_decls(),
     Env = catena_kind:build_kind_env(Decls),
     %% Either : Type -> Type -> Type
     %% Either String : Type -> Type
@@ -497,7 +462,7 @@ kind_infer_either_partial_test() ->
 
 %% Test fully applied type
 kind_infer_maybe_int_test() ->
-    Decls = load_prelude_decls(),
+    Decls = catena_test_helpers:load_prelude_decls(),
     Env = catena_kind:build_kind_env(Decls),
     %% Maybe Int : Type
     MaybeInt = {type_app, {type_con, 'Maybe', {location, 0, 0}},
@@ -507,7 +472,7 @@ kind_infer_maybe_int_test() ->
 
 %% 1.5.3.4 Report kind errors
 kind_error_over_applied_test() ->
-    Decls = load_prelude_decls(),
+    Decls = catena_test_helpers:load_prelude_decls(),
     Env = catena_kind:build_kind_env(Decls),
     %% Int Int - can't apply Int (kind Type) to Int
     BadType = {type_app, {type_con, 'Int', {location, 1, 1}},
@@ -517,392 +482,14 @@ kind_error_over_applied_test() ->
 
 %% Test HKT validation passes for all prelude instances
 validate_hkt_prelude_test() ->
-    Decls = load_prelude_decls(),
+    Decls = catena_test_helpers:load_prelude_decls(),
     Env = catena_kind:build_kind_env(Decls),
     Result = catena_kind:validate_hkt(Decls, Env),
     ?assertMatch({ok, _}, Result).
 
 %% =============================================================================
-%% Section 1.5.4 - Law Verification via Test Module
-%% =============================================================================
-
-%% Helper to load laws module
-load_laws_decls() ->
-    Path = filename:join([stdlib_dir(), "laws.cat"]),
-    {ok, Content} = file:read_file(Path),
-    Source = binary_to_list(Content),
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    {ok, AST} = catena_parser:parse(Tokens),
-    {ok, {module, _, _, _, Decls, _}} = catena_semantic:analyze(AST),
-    Decls.
-
-%% 1.5.4.1 Compile Mapper identity law verification
-parse_mapper_identity_law_test() ->
-    Path = filename:join([stdlib_dir(), "laws.cat"]),
-    {ok, Content} = file:read_file(Path),
-    Source = binary_to_list(Content),
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    {ok, {module, 'Laws', Exports, _, Decls, _}} = catena_parser:parse(Tokens),
-    %% Check that mapperIdentityLaw is exported
-    ?assert(lists:member({export_transform, mapperIdentityLaw}, Exports)),
-    %% Check declaration exists
-    ?assertEqual(8, length(Decls)).
-
-%% 1.5.4.2 Compile Mapper composition law verification
-parse_mapper_composition_law_test() ->
-    Decls = load_laws_decls(),
-    %% Find the composition law transform
-    CompLaws = [D || D = {transform_decl, mapperCompositionLaw, _, _, _} <- Decls],
-    ?assertEqual(1, length(CompLaws)).
-
-%% 1.5.4.3 Compile Pipeline monad laws
-parse_pipeline_laws_test() ->
-    Decls = load_laws_decls(),
-    %% Check all three Pipeline laws exist
-    LeftId = [D || D = {transform_decl, pipelineLeftIdentityLaw, _, _, _} <- Decls],
-    RightId = [D || D = {transform_decl, pipelineRightIdentityLaw, _, _, _} <- Decls],
-    Assoc = [D || D = {transform_decl, pipelineAssociativityLaw, _, _, _} <- Decls],
-    ?assertEqual(1, length(LeftId)),
-    ?assertEqual(1, length(RightId)),
-    ?assertEqual(1, length(Assoc)).
-
-%% Test Comparable and Combiner laws
-parse_comparable_combiner_laws_test() ->
-    Decls = load_laws_decls(),
-    Reflex = [D || D = {transform_decl, comparableReflexivityLaw, _, _, _} <- Decls],
-    Symm = [D || D = {transform_decl, comparableSymmetryLaw, _, _, _} <- Decls],
-    CombAssoc = [D || D = {transform_decl, combinerAssociativityLaw, _, _, _} <- Decls],
-    ?assertEqual(1, length(Reflex)),
-    ?assertEqual(1, length(Symm)),
-    ?assertEqual(1, length(CombAssoc)).
-
-%% 1.5.4.4 Test law structure contains expected AST nodes
-verify_law_structure_test() ->
-    Decls = load_laws_decls(),
-    %% Get mapperIdentityLaw
-    [{transform_decl, mapperIdentityLaw, _Sig, Clauses, _Loc}] =
-        [D || D = {transform_decl, mapperIdentityLaw, _, _, _} <- Decls],
-    %% Should have one clause with one parameter
-    ?assertEqual(1, length(Clauses)),
-    [{transform_clause, Patterns, _Guards, _Body, _ClauseLoc}] = Clauses,
-    ?assertEqual(1, length(Patterns)).
-
-%% Test that all 8 laws are present
-all_laws_present_test() ->
-    Decls = load_laws_decls(),
-    ?assertEqual(8, length(Decls)),
-    %% All should be transform_decl
-    TransformDecls = [D || D = {transform_decl, _, _, _, _} <- Decls],
-    ?assertEqual(8, length(TransformDecls)).
-
-%% =============================================================================
-%% Section 1.5.5 - Do-Notation Desugaring
-%% =============================================================================
-
-%% 1.5.5.1 Test parsing do-block syntax
-parse_do_block_test() ->
-    Source = "transform test x = do { y <- x; pure y }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    case catena_parser:parse(Tokens) of
-        {ok, {module, _, _, _, Decls, _}} ->
-            [{transform_decl, test, _, Clauses, _}] = Decls,
-            [{transform_clause, _, _, Body, _}] = Clauses,
-            %% Body should be a do_expr
-            ?assertMatch({do_expr, _, _}, Body);
-        {error, Reason} ->
-            io:format("Parse error: ~p~n", [Reason]),
-            ?assert(false)
-    end.
-
-%% 1.5.5.2 Test parsing bind in do-block
-parse_do_bind_test() ->
-    Source = "transform test x = do { a <- x; b <- a; pure b }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    case catena_parser:parse(Tokens) of
-        {ok, {module, _, _, _, Decls, _}} ->
-            [{transform_decl, test, _, Clauses, _}] = Decls,
-            [{transform_clause, _, _, {do_expr, Stmts, _}, _}] = Clauses,
-            %% Should have 3 statements: bind, bind, return
-            ?assertEqual(3, length(Stmts)),
-            [{do_bind, a, _, _}, {do_bind, b, _, _}, {do_return, _, _}] = Stmts;
-        {error, Reason} ->
-            io:format("Parse error: ~p~n", [Reason]),
-            ?assert(false)
-    end.
-
-%% 1.5.5.3 Test parsing let in do-block
-parse_do_let_test() ->
-    Source = "transform test x = do { let y = 42; pure y }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    case catena_parser:parse(Tokens) of
-        {ok, {module, _, _, _, Decls, _}} ->
-            [{transform_decl, test, _, Clauses, _}] = Decls,
-            [{transform_clause, _, _, {do_expr, Stmts, _}, _}] = Clauses,
-            %% Should have 2 statements: let, return
-            ?assertEqual(2, length(Stmts)),
-            [{do_let, y, _, _}, {do_return, _, _}] = Stmts;
-        {error, Reason} ->
-            io:format("Parse error: ~p~n", [Reason]),
-            ?assert(false)
-    end.
-
-%% 1.5.5.4 Test parsing action in do-block (sequence without binding)
-parse_do_action_test() ->
-    Source = "transform test x = do { print x; pure 42 }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    case catena_parser:parse(Tokens) of
-        {ok, {module, _, _, _, Decls, _}} ->
-            [{transform_decl, test, _, Clauses, _}] = Decls,
-            [{transform_clause, _, _, {do_expr, Stmts, _}, _}] = Clauses,
-            %% Should have 2 statements: action, return
-            ?assertEqual(2, length(Stmts)),
-            [{do_action, _, _}, {do_return, _, _}] = Stmts;
-        {error, Reason} ->
-            io:format("Parse error: ~p~n", [Reason]),
-            ?assert(false)
-    end.
-
-%% 1.5.5.5 Test desugaring bind to chain
-desugar_bind_test() ->
-    Source = "transform test x = do { y <- x; pure y }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    {ok, AST} = catena_parser:parse(Tokens),
-    %% Desugar
-    Desugared = catena_desugar:desugar(AST),
-    %% Extract the desugared body
-    {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,
-    [{transform_clause, _, _, Body, _}] = Clauses,
-    %% Should be: chain (fn y -> pure y) x
-    ?assertMatch({app, {var, chain, _}, [_, _], _}, Body).
-
-%% 1.5.5.6 Test desugaring let to let_expr
-desugar_let_test() ->
-    Source = "transform test u = do { let x = 42; pure x }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    {ok, AST} = catena_parser:parse(Tokens),
-    Desugared = catena_desugar:desugar(AST),
-    {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,
-    [{transform_clause, _, _, Body, _}] = Clauses,
-    %% Should be: let x = 42 in pure x
-    ?assertMatch({let_expr, _, _, _}, Body).
-
-%% 1.5.5.7 Test desugaring action (sequence)
-desugar_action_test() ->
-    Source = "transform test x = do { print x; pure 42 }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    {ok, AST} = catena_parser:parse(Tokens),
-    Desugared = catena_desugar:desugar(AST),
-    {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,
-    [{transform_clause, _, _, Body, _}] = Clauses,
-    %% Should be: chain (fn _ -> pure 42) (print x)
-    ?assertMatch({app, {var, chain, _}, [{lambda, [{pat_wildcard, _}], _, _}, _], _}, Body).
-
-%% 1.5.5.8 Test complex do-block with multiple binds
-desugar_complex_do_test() ->
-    Source = "transform test x = do { a <- x; b <- f a; c <- g b; pure (a, b, c) }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    {ok, AST} = catena_parser:parse(Tokens),
-    Desugared = catena_desugar:desugar(AST),
-    {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,
-    [{transform_clause, _, _, Body, _}] = Clauses,
-    %% Should be nested chain calls
-    ?assertMatch({app, {var, chain, _}, _, _}, Body).
-
-%% =============================================================================
-%% Section 1.5.6 - Effect Integration with Kleisli Arrows
-%% =============================================================================
-
-%% 1.5.6.1 Test effect set union for Kleisli-style composition
-effect_union_for_composition_test() ->
-    %% When composing effectful functions, effects should union
-    %% (a -> b / ε₁) composed with (b -> c / ε₂) has effects ε₁ ∪ ε₂
-    E1 = catena_infer_effect:from_list(['IO']),
-    E2 = catena_infer_effect:from_list(['State']),
-
-    Combined = catena_infer_effect:union(E1, E2),
-
-    %% Combined should have both effects
-    ?assertEqual({effect_set, ['IO', 'State']}, Combined),
-    ?assertNot(catena_infer_effect:is_pure(Combined)).
-
-%% 1.5.6.2 Test that function types carry effects correctly
-function_type_with_effects_test() ->
-    %% Create a function type: Int -> String / {IO}
-    IntType = {tcon, 'Int'},
-    StringType = {tcon, 'String'},
-    IoEffects = catena_types:singleton_effect('IO'),
-
-    FuncType = catena_types:tfun(IntType, StringType, IoEffects),
-
-    %% Extract effects from function type
-    {ok, Effects} = catena_types:extract_function_effects(FuncType),
-    ?assertEqual({effect_set, ['IO']}, Effects).
-
-%% 1.5.6.3 Test pure function type has empty effects
-pure_function_type_test() ->
-    %% Create a pure function type: Int -> Int / {}
-    IntType = {tcon, 'Int'},
-    PureEffects = catena_types:empty_effects(),
-
-    FuncType = catena_types:tfun(IntType, IntType, PureEffects),
-
-    {ok, Effects} = catena_types:extract_function_effects(FuncType),
-    ?assert(catena_types:is_pure(Effects)).
-
-%% 1.5.6.4 Test effect subsumption for handler matching
-effect_subsumption_for_handlers_test() ->
-    %% A handler with more effects can handle a subset
-    %% Handler with {IO, State} can handle computation with just {IO}
-    HandlerEffects = catena_infer_effect:from_list(['IO', 'State']),
-    ComputationEffects = catena_infer_effect:from_list(['IO']),
-
-    ?assert(catena_infer_effect:subsumes(HandlerEffects, ComputationEffects)).
-
-%% 1.5.6.5 Test effect removal after handling
-effect_removal_after_handling_test() ->
-    %% When a handler handles an effect, it's removed from the set
-    %% Original: {IO, State}, Handle IO -> Remaining: {State}
-    Original = catena_infer_effect:from_list(['IO', 'State']),
-    Handled = catena_infer_effect:from_list(['IO']),
-
-    %% Simulate effect removal (remaining = original - handled)
-    {effect_set, OrigList} = Original,
-    {effect_set, HandledList} = Handled,
-    RemainingList = lists:filter(fun(E) -> not lists:member(E, HandledList) end, OrigList),
-    Remaining = catena_infer_effect:from_list(RemainingList),
-
-    ?assertEqual({effect_set, ['State']}, Remaining).
-
-%% 1.5.6.6 Test Kleisli composition effect propagation
-kleisli_composition_effects_test() ->
-    %% For f : a -> m b / {IO} and g : b -> m c / {State}
-    %% f >=> g : a -> m c / {IO, State}
-    IoEffects = catena_types:singleton_effect('IO'),
-    StateEffects = catena_types:singleton_effect('State'),
-
-    %% Create function types
-    TypeA = {tcon, 'Int'},
-    TypeB = {tcon, 'String'},
-    TypeC = {tcon, 'Bool'},
-    MonadB = {tapp, {tcon, 'Maybe'}, [TypeB]},
-    MonadC = {tapp, {tcon, 'Maybe'}, [TypeC]},
-
-    FuncF = catena_types:tfun(TypeA, MonadB, IoEffects),
-    FuncG = catena_types:tfun(TypeB, MonadC, StateEffects),
-
-    %% Extract and combine effects
-    {ok, EffectsF} = catena_types:extract_function_effects(FuncF),
-    {ok, EffectsG} = catena_types:extract_function_effects(FuncG),
-    ComposedEffects = catena_types:union_effects(EffectsF, EffectsG),
-
-    %% Composed effects should have both IO and State
-    ?assertEqual({effect_set, ['IO', 'State']}, ComposedEffects).
-
-%% 1.5.6.7 Test parse effect annotation on function type
-parse_effect_annotation_test() ->
-    Source = "transform readAndProcess : String -> String / {IO}\n"
-             "transform readAndProcess path = path\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    case catena_parser:parse(Tokens) of
-        {ok, {module, _, _, _, Decls, _}} ->
-            [{transform_decl, readAndProcess, TypeSig, _, _}] = Decls,
-            %% Type signature is function type with effect annotation on return
-            %% String -> String / {IO} parses as String -> (String / {IO})
-            ?assertMatch({type_fun, _, {type_effect, _, ['IO'], _}, _}, TypeSig);
-        {error, Reason} ->
-            io:format("Parse error: ~p~n", [Reason]),
-            ?assert(false)
-    end.
-
-%% 1.5.6.8 Test parse empty effect annotation (pure)
-parse_empty_effect_annotation_test() ->
-    Source = "transform pureFunc : Int -> Int / {}\n"
-             "transform pureFunc x = x\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    case catena_parser:parse(Tokens) of
-        {ok, {module, _, _, _, Decls, _}} ->
-            [{transform_decl, pureFunc, TypeSig, _, _}] = Decls,
-            %% Type signature is function type with empty effect annotation on return
-            %% Int -> Int / {} parses as Int -> (Int / {})
-            ?assertMatch({type_fun, _, {type_effect, _, [], _}, _}, TypeSig);
-        {error, Reason} ->
-            io:format("Parse error: ~p~n", [Reason]),
-            ?assert(false)
-    end.
-
-%% 1.5.6.9 Test parse perform expression
-parse_perform_introduces_effect_test() ->
-    Source = "transform readFile path = perform IO.read(path)\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    case catena_parser:parse(Tokens) of
-        {ok, {module, _, _, _, Decls, _}} ->
-            [{transform_decl, readFile, _, Clauses, _}] = Decls,
-            [{transform_clause, _, _, Body, _}] = Clauses,
-            %% Body should be a perform expression
-            ?assertMatch({perform_expr, 'IO', read, [_], _}, Body);
-        {error, Reason} ->
-            io:format("Parse error: ~p~n", [Reason]),
-            ?assert(false)
-    end.
-
-%% 1.5.6.10 Test parse handle expression removes effects
-parse_handle_removes_effect_test() ->
-    Source = "transform safeRead path = handle perform IO.read(path) then { IO { read(p) -> p } }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    case catena_parser:parse(Tokens) of
-        {ok, {module, _, _, _, Decls, _}} ->
-            [{transform_decl, safeRead, _, Clauses, _}] = Decls,
-            [{transform_clause, _, _, Body, _}] = Clauses,
-            %% Body should be a handle expression
-            ?assertMatch({handle_expr, _, [{handler_clause, 'IO', _, _}], _}, Body);
-        {error, Reason} ->
-            io:format("Parse error: ~p~n", [Reason]),
-            ?assert(false)
-    end.
-
-%% =============================================================================
-%% Section 1.5.7 - Operator Desugaring (placeholder)
-%% TODO: Implement when trait resolution integration is complete
-%% =============================================================================
-
-%% =============================================================================
 %% Error Path Tests
 %% =============================================================================
-
-%% Test invalid do-statement: bind as final statement (no return)
-error_do_bind_as_final_test() ->
-    %% A do-block must end with a return expression, not a bind
-    %% This is a function_clause error since desugar expects do_return as final
-    Stmts = [
-        {do_bind, x, {var, ma, {location, 1, 1}}, {location, 1, 1}}
-        %% Missing final return statement
-    ],
-    DoExpr = {do_expr, Stmts, {location, 1, 1}},
-    %% Desugaring will crash with function_clause - this documents expected behavior
-    Result = (catch catena_desugar:desugar_do_expr(DoExpr)),
-    %% Expect a function_clause error for unhandled case
-    ?assertMatch({'EXIT', {function_clause, _}}, Result).
-
-%% Test invalid do-statement: action as final statement (no return)
-error_do_action_as_final_test() ->
-    %% A do-block should end with a return, not an action
-    Stmts = [
-        {do_action, {var, action, {location, 1, 1}}, {location, 1, 1}}
-        %% Missing final return
-    ],
-    DoExpr = {do_expr, Stmts, {location, 1, 1}},
-    %% Desugaring will crash with function_clause
-    Result = (catch catena_desugar:desugar_do_expr(DoExpr)),
-    ?assertMatch({'EXIT', {function_clause, _}}, Result).
-
-%% Test invalid do-statement: empty do-block
-error_do_empty_block_test() ->
-    %% Empty do-block is invalid
-    Stmts = [],
-    DoExpr = {do_expr, Stmts, {location, 1, 1}},
-    Result = (catch catena_desugar:desugar_do_expr(DoExpr)),
-    %% Empty list causes function_clause error
-    ?assertMatch({'EXIT', {function_clause, _}}, Result).
 
 %% Test kind mismatch: over-applied type constructor
 error_kind_over_applied_test() ->
@@ -931,21 +518,6 @@ error_kind_excessive_arity_test() ->
     %% Arity > 100 should return error
     Result = catena_kind:kind_from_arity(150),
     ?assertMatch({error, {kind_arity_exceeded, 150, 100}}, Result).
-
-%% Test effect annotation on non-function type (parser level)
-error_effect_on_non_function_parse_test() ->
-    %% Effect annotation on a simple type should parse but may be invalid
-    Source = "transform test : Int / {IO}",
-    {ok, Tokens, _} = catena_lexer:string(Source),
-    %% Parser may accept this syntax
-    case catena_parser:parse(Tokens) of
-        {ok, _AST} ->
-            %% Syntax is valid, but semantically questionable
-            ok;
-        {error, _Reason} ->
-            %% Parser rejection is also acceptable
-            ok
-    end.
 
 %% Test invalid trait constraint syntax
 error_invalid_constraint_test() ->

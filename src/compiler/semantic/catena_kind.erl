@@ -58,11 +58,18 @@
 %%% Kind Constructors
 %%%===================================================================
 
-%% @doc The kind of concrete types
+%% @doc The kind of concrete types (Type or *)
+%%
+%% Star is the kind of types that have values (Int, Bool, String, etc.).
+%% Higher-kinded types like Maybe or List have arrow kinds instead.
 -spec star() -> kind().
 star() -> star.
 
 %% @doc Arrow kind (type constructor kind)
+%%
+%% Represents kind K1 -> K2. Type constructors like Maybe have kind
+%% Type -> Type (takes a type, returns a type). Either has kind
+%% Type -> Type -> Type.
 -spec arrow(kind(), kind()) -> kind().
 arrow(K1, K2) -> {arrow, K1, K2}.
 
@@ -135,9 +142,16 @@ builtin_kinds() ->
     }.
 
 %% @doc Create kind from arity
-%% Maximum arity to prevent DoS via stack overflow
+%%
+%% Converts a type constructor's arity (number of type parameters) to its kind:
+%% - Arity 0 (Int) -> Type
+%% - Arity 1 (Maybe) -> Type -> Type
+%% - Arity 2 (Either) -> Type -> Type -> Type
+%%
+%% Returns error if arity exceeds MAX_KIND_ARITY (DoS protection).
 -define(MAX_KIND_ARITY, 100).
 
+-spec kind_from_arity(non_neg_integer()) -> kind() | {error, term()}.
 kind_from_arity(N) when N > ?MAX_KIND_ARITY ->
     {error, {kind_arity_exceeded, N, ?MAX_KIND_ARITY}};
 kind_from_arity(0) -> star();
@@ -341,7 +355,13 @@ validate_args_kinds([Arg | Args], [{_Var, ExpectedKind} | Kinds], Env, Loc) ->
 validate_args_kinds(_, _, _Env, Loc) ->
     {error, {Loc, arity_mismatch}}.
 
-%% @doc Check if two kinds are compatible
+%% @doc Check if two kinds are compatible (structurally equal)
+%%
+%% Two kinds are compatible if they have the same structure:
+%% - star is compatible with star
+%% - {arrow, K1, K2} is compatible with {arrow, K3, K4} if K1~K3 and K2~K4
+%%
+%% Used to verify instance type arguments match trait parameter kinds.
 -spec kinds_compatible(kind(), kind()) -> boolean().
 kinds_compatible(K, K) -> true;
 kinds_compatible({arrow, A1, B1}, {arrow, A2, B2}) ->
@@ -352,7 +372,12 @@ kinds_compatible(_, _) -> false.
 %%% Pretty Printing
 %%%===================================================================
 
-%% @doc Format kind for display
+%% @doc Format kind as human-readable string
+%%
+%% Examples:
+%% - format_kind(star) -> "Type"
+%% - format_kind({arrow, star, star}) -> "Type -> Type"
+%% - format_kind({arrow, star, {arrow, star, star}}) -> "Type -> Type -> Type"
 -spec format_kind(kind()) -> string().
 format_kind(star) -> "Type";
 format_kind({arrow, K1, K2}) ->
