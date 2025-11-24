@@ -944,6 +944,22 @@ type_expr -> type_expr arrow type_expr :
 type_expr -> forall type_params dot type_expr :
     {type_forall, '$2', '$4', extract_location('$1')}.
 
+%% Effect annotation on types
+%%
+%% IMPORTANT: Effects wrap the return type, not the whole function.
+%% For `a -> b / {IO}`, the AST is:
+%%   {type_fun, A, {type_effect, B, [IO], Loc}, Loc}
+%%
+%% NOT:
+%%   {type_effect, {type_fun, A, B, Loc}, [IO], Loc}
+%%
+%% This reflects the semantics: a function `a -> b / {IO}` takes an `a`
+%% and returns a `b` while performing effect `IO`. The effect is on the
+%% return, not the function itself.
+%%
+%% For multi-argument functions like `a -> b -> c / {IO}`:
+%%   {type_fun, A, {type_fun, B, {type_effect, C, [IO], Loc}, Loc}, Loc}
+%%
 type_expr -> type_expr_app slash lbrace rbrace :
     {type_effect, '$1', [], extract_location('$2')}.
 

@@ -416,6 +416,15 @@
 
 %% Effect annotation (Type / {Effect1, Effect2})
 %% ENHANCED: Supports effect expressions and polymorphism
+%%
+%% IMPORTANT: Effects wrap the return type, not the whole function.
+%% For `a -> b / {IO}`, the AST is:
+%%   #type_fun{from = A, to = #type_effect{type = B, effects = [IO]}}
+%%
+%% NOT:
+%%   #type_effect{type = #type_fun{from = A, to = B}, effects = [IO]}
+%%
+%% This reflects that effects are on the return value, not the function itself.
 -record(type_effect, {
     type :: type_expr(),
     effects :: effect_expr() | [effect_expr()], % NEW: Complex effect expressions
