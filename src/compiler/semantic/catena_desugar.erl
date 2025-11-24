@@ -12,6 +12,20 @@
 %%%
 %%% The desugared code uses Pipeline.chain for >>= operations.
 %%%
+%%% == Location Tracking ==
+%%%
+%%% Synthesized AST nodes (lambdas, applications) use the location of
+%%% their originating statement. This means all nodes generated from
+%%% `x <- ma` will have the same location as that statement.
+%%%
+%%% Implications for error messages:
+%%% - Errors point to the original do-notation statement
+%%% - Multiple nodes may share the same location
+%%% - This is intentional: users wrote the do-statement, not the bind
+%%%
+%%% Future enhancement: Could use synthesized/generated location markers
+%%% to distinguish user code from generated code in error messages.
+%%%
 %%% @end
 %%%-------------------------------------------------------------------
 -module(catena_desugar).
