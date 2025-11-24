@@ -20,7 +20,8 @@
     prop_desugar_preserves_structure/0,
     prop_nested_do_blocks_handled/0,
     prop_all_statement_types_handled/0,
-    prop_depth_limit_enforced/0
+    prop_depth_limit_enforced/0,
+    prop_desugar_roundtrip/0
 ]).
 
 %%====================================================================
@@ -103,6 +104,97 @@ prop_depth_limit_enforced() ->
         end).
 
 %%====================================================================
+%% Property: Desugar -> Pretty Print -> Parse Roundtrip
+%%====================================================================
+
+prop_desugar_roundtrip() ->
+    ?FORALL(DoExpr, simple_do_expr_generator(),
+        begin
+            %% Step 1: Desugar the do-expression
+            Desugared = catena_desugar:desugar_do_expr(DoExpr),
+
+            %% Step 2: Pretty print the desugared expression
+            Source = catena_ast_pp:pp_expr(Desugared),
+
+            %% Step 3: Wrap in a transform and parse
+            FullSource = "transform test x = " ++ Source ++ "\n",
+            case catena_lexer:string(FullSource) of
+                {ok, Tokens, _} ->
+                    case catena_parser:parse(Tokens) of
+                        {ok, {module, _, _, _, Decls, _}} ->
+                            %% Extract the body from the parsed result
+                            [{transform_decl, test, _, Clauses, _}] = Decls,
+                            [{transform_clause, _, _, ParsedBody, _}] = Clauses,
+
+                            %% Step 4: Compare (ignoring locations)
+                            NormDesugared = strip_locations(Desugared),
+                            NormParsed = strip_locations(ParsedBody),
+
+                            NormDesugared =:= NormParsed;
+                        {error, _Reason} ->
+                            %% Parse error - log for debugging
+                            false
+                    end;
+                {error, _LexError, _} ->
+                    false
+            end
+        end).
+
+%% Generator for simple do-expressions (easier to roundtrip)
+simple_do_expr_generator() ->
+    ?LET(Stmts, simple_stmt_list(),
+        {do_expr, Stmts, {location, 1, 1}}).
+
+simple_stmt_list() ->
+    ?LET({Intermediate, Final}, {list(simple_intermediate_stmt()), return_stmt()},
+        Intermediate ++ [Final]).
+
+simple_intermediate_stmt() ->
+    %% Only use do_bind for roundtrip test
+    %% do_action produces fn _ -> ... which parser doesn't accept
+    %% (parser only allows fn lower_ident -> ...)
+    {do_bind, x, {var, ma, {location, 1, 1}}, {location, 1, 1}}.
+
+%% Strip locations from AST for comparison
+%% Also normalizes multi-arg apps to nested form for comparison
+strip_locations({app, Fun, Args, _Loc}) ->
+    NormFun = strip_locations(Fun),
+    NormArgs = strip_locations(Args),
+    %% Normalize multi-arg app to nested apps: f(a, b) -> f(a)(b)
+    case NormArgs of
+        [] -> {app, NormFun, [], no_loc};
+        [Single] -> {app, NormFun, [Single], no_loc};
+        [First | Rest] ->
+            %% Build nested apps: f(a)(b)(c)...
+            lists:foldl(fun(Arg, Acc) ->
+                {app, Acc, [Arg], no_loc}
+            end, {app, NormFun, [First], no_loc}, Rest)
+    end;
+strip_locations({lambda, Params, Body, _Loc}) ->
+    {lambda, strip_locations(Params), strip_locations(Body), no_loc};
+strip_locations({var, Name, _Loc}) ->
+    {var, Name, no_loc};
+strip_locations({pat_var, Name, _Loc}) ->
+    {pat_var, Name, no_loc};
+strip_locations({pat_wildcard, _Loc}) ->
+    {pat_wildcard, no_loc};
+strip_locations({literal, Val, Type, _Loc}) ->
+    {literal, Val, Type, no_loc};
+strip_locations({let_expr, Bindings, Body, _Loc}) ->
+    {let_expr, strip_locations(Bindings), strip_locations(Body), no_loc};
+strip_locations({binary_op, Op, Left, Right, _Loc}) ->
+    {binary_op, Op, strip_locations(Left), strip_locations(Right), no_loc};
+strip_locations({tuple_expr, Elems, _Loc}) ->
+    {tuple_expr, strip_locations(Elems), no_loc};
+strip_locations(List) when is_list(List) ->
+    [strip_locations(E) || E <- List];
+strip_locations({A, B}) ->
+    %% For pairs like bindings
+    {strip_locations(A), strip_locations(B)};
+strip_locations(Other) ->
+    Other.
+
+%%====================================================================
 %% Generators
 %%====================================================================
 
@@ -177,5 +269,6 @@ desugar_properties_test_() ->
         {"Desugar preserves structure", ?_assert(proper:quickcheck(prop_desugar_preserves_structure(), 50))},
         {"Nested do-blocks handled", ?_assert(proper:quickcheck(prop_nested_do_blocks_handled(), 30))},
         {"All statement types handled", ?_assert(proper:quickcheck(prop_all_statement_types_handled(), 50))},
-        {"Depth limit enforced", ?_assert(proper:quickcheck(prop_depth_limit_enforced(), 10))}
+        {"Depth limit enforced", ?_assert(proper:quickcheck(prop_depth_limit_enforced(), 10))},
+        {"Desugar roundtrip", ?_assert(proper:quickcheck(prop_desugar_roundtrip(), 30))}
     ].
