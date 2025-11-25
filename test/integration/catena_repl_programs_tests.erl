@@ -196,7 +196,7 @@ tree_find(_, leaf) ->
     none;
 tree_find(Target, {node, Value, _, _}) when Target =:= Value ->
     {some, Value};
-tree_find(Target, {node, Value, Left, Right}) when Target < Value ->
+tree_find(Target, {node, Value, Left, _Right}) when Target < Value ->
     tree_find(Target, Left);
 tree_find(Target, {node, _Value, _Left, Right}) ->
     tree_find(Target, Right).

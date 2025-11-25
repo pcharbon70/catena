@@ -83,6 +83,22 @@ rebar3 proper -m catena_parser_properties -n 1000
 - HTML reports generated in `_build/test/cover/` after running `make coverage`
 - Generated modules (lexer/parser) are excluded from coverage metrics
 
+### Static Analysis with Dialyzer
+
+Dialyzer performs static type analysis to find type errors, unreachable code, and other issues:
+
+```bash
+# Run dialyzer (first run builds PLT, which takes a few minutes)
+rebar3 dialyzer
+
+# The PLT is cached in _build/default/ for subsequent runs
+```
+
+Configuration (in `rebar.config`):
+- Warnings enabled: `unmatched_returns`, `error_handling`, `underspecs`, `unknown`
+- Generated modules (`catena_lexer`, `catena_parser`) are excluded from analysis
+- PLT includes OTP apps: `compiler`, `syntax_tools`
+
 ## Module Naming Convention
 
 All modules follow the `catena_*` naming pattern:
