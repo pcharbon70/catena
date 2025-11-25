@@ -168,13 +168,13 @@ pattern_depth_list_test() ->
 
 %% Test 4.1: Simple type passes
 type_depth_simple_test() ->
-    Source = "transform f : Int -> Int\nflow f x = x",
+    Source = "transform f : Int -> Int\ntransform f x = x",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result).
 
 %% Test 4.2: Function type chain passes
 type_depth_moderate_test() ->
-    Source = "transform f : Int -> Int -> Int -> Int\nflow f x y z = x",
+    Source = "transform f : Int -> Int -> Int -> Int\ntransform f x y z = x",
     Result = catena_parse:parse(Source),
     ?assertMatch({ok, _}, Result).
 

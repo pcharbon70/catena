@@ -277,9 +277,10 @@ test_syntax_error_reporting(_TempDir) ->
          Result1 = parse_source(Source1),
          ?assertMatch({error, _}, Result1),
 
-         %% Invalid operator
+         %% ++ is a valid operator (append/concat), so test with truly invalid syntax
+         %% Multiple equals signs
          Source2 = "
-             transform bad x = x ++ y
+             transform bad x == x
          ",
 
          Result2 = parse_source(Source2),

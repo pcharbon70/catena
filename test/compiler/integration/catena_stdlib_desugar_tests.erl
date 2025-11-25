@@ -12,11 +12,11 @@
 
 %% 1.5.5.1 Test parsing do-block syntax
 parse_do_block_test() ->
-    Source = "transform check x = do { y <- x; pure y }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
+    Source = "transform check x = do { y <- x; pure y }",
+    {ok, Tokens} = catena_lexer:tokenize(Source),
     case catena_parser:parse(Tokens) of
         {ok, {module, _, _, _, Decls, _}} ->
-            [{transform_decl, test, _, Clauses, _}] = Decls,
+            [{transform_decl, check, _, Clauses, _}] = Decls,
             [{transform_clause, _, _, Body, _}] = Clauses,
             %% Body should be a do_expr
             ?assertMatch({do_expr, _, _}, Body);
@@ -27,11 +27,11 @@ parse_do_block_test() ->
 
 %% 1.5.5.2 Test parsing bind in do-block
 parse_do_bind_test() ->
-    Source = "transform check x = do { a <- x; b <- a; pure b }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
+    Source = "transform check x = do { a <- x; b <- a; pure b }",
+    {ok, Tokens} = catena_lexer:tokenize(Source),
     case catena_parser:parse(Tokens) of
         {ok, {module, _, _, _, Decls, _}} ->
-            [{transform_decl, test, _, Clauses, _}] = Decls,
+            [{transform_decl, check, _, Clauses, _}] = Decls,
             [{transform_clause, _, _, {do_expr, Stmts, _}, _}] = Clauses,
             %% Should have 3 statements: bind, bind, return
             ?assertEqual(3, length(Stmts)),
@@ -43,11 +43,11 @@ parse_do_bind_test() ->
 
 %% 1.5.5.3 Test parsing let in do-block
 parse_do_let_test() ->
-    Source = "transform check x = do { let y = 42; pure y }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
+    Source = "transform check x = do { let y = 42; pure y }",
+    {ok, Tokens} = catena_lexer:tokenize(Source),
     case catena_parser:parse(Tokens) of
         {ok, {module, _, _, _, Decls, _}} ->
-            [{transform_decl, test, _, Clauses, _}] = Decls,
+            [{transform_decl, check, _, Clauses, _}] = Decls,
             [{transform_clause, _, _, {do_expr, Stmts, _}, _}] = Clauses,
             %% Should have 2 statements: let, return
             ?assertEqual(2, length(Stmts)),
@@ -59,11 +59,11 @@ parse_do_let_test() ->
 
 %% 1.5.5.4 Test parsing action in do-block (sequence without binding)
 parse_do_action_test() ->
-    Source = "transform check x = do { print x; pure 42 }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
+    Source = "transform check x = do { print x; pure 42 }",
+    {ok, Tokens} = catena_lexer:tokenize(Source),
     case catena_parser:parse(Tokens) of
         {ok, {module, _, _, _, Decls, _}} ->
-            [{transform_decl, test, _, Clauses, _}] = Decls,
+            [{transform_decl, check, _, Clauses, _}] = Decls,
             [{transform_clause, _, _, {do_expr, Stmts, _}, _}] = Clauses,
             %% Should have 2 statements: action, return
             ?assertEqual(2, length(Stmts)),
@@ -75,42 +75,42 @@ parse_do_action_test() ->
 
 %% 1.5.5.5 Test desugaring bind to chain
 desugar_bind_test() ->
-    Source = "transform check x = do { y <- x; pure y }\n",
+    Source = "transform check x = do { y <- x; pure y }",
     {ok, AST} = catena_test_helpers:parse_source(Source),
     %% Desugar
     Desugared = catena_desugar:desugar(AST),
     %% Extract the desugared body
-    {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,
+    {module, _, _, _, [{transform_decl, check, _, Clauses, _}], _} = Desugared,
     [{transform_clause, _, _, Body, _}] = Clauses,
     %% Should be: chain (fn y -> pure y) x
     ?assertMatch({app, {var, chain, _}, [_, _], _}, Body).
 
 %% 1.5.5.6 Test desugaring let to let_expr
 desugar_let_test() ->
-    Source = "transform check u = do { let x = 42; pure x }\n",
+    Source = "transform check u = do { let x = 42; pure x }",
     {ok, AST} = catena_test_helpers:parse_source(Source),
     Desugared = catena_desugar:desugar(AST),
-    {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,
+    {module, _, _, _, [{transform_decl, check, _, Clauses, _}], _} = Desugared,
     [{transform_clause, _, _, Body, _}] = Clauses,
     %% Should be: let x = 42 in pure x
     ?assertMatch({let_expr, _, _, _}, Body).
 
 %% 1.5.5.7 Test desugaring action (sequence)
 desugar_action_test() ->
-    Source = "transform check x = do { print x; pure 42 }\n",
+    Source = "transform check x = do { print x; pure 42 }",
     {ok, AST} = catena_test_helpers:parse_source(Source),
     Desugared = catena_desugar:desugar(AST),
-    {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,
+    {module, _, _, _, [{transform_decl, check, _, Clauses, _}], _} = Desugared,
     [{transform_clause, _, _, Body, _}] = Clauses,
     %% Should be: chain (fn _ -> pure 42) (print x)
     ?assertMatch({app, {var, chain, _}, [{lambda, [{pat_wildcard, _}], _, _}, _], _}, Body).
 
 %% 1.5.5.8 Test complex do-block with multiple binds
 desugar_complex_do_test() ->
-    Source = "transform check x = do { a <- x; b <- f a; c <- g b; pure (a, b, c) }\n",
+    Source = "transform check x = do { a <- x; b <- f a; c <- g b; pure (a, b, c) }",
     {ok, AST} = catena_test_helpers:parse_source(Source),
     Desugared = catena_desugar:desugar(AST),
-    {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,
+    {module, _, _, _, [{transform_decl, check, _, Clauses, _}], _} = Desugared,
     [{transform_clause, _, _, Body, _}] = Clauses,
     %% Should be nested chain calls
     ?assertMatch({app, {var, chain, _}, _, _}, Body).

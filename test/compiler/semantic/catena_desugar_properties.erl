@@ -118,12 +118,12 @@ prop_desugar_roundtrip() ->
 
             %% Step 3: Wrap in a transform and parse
             FullSource = "transform check x = " ++ Source ++ "\n",
-            case catena_lexer:string(FullSource) of
-                {ok, Tokens, _} ->
+            case catena_lexer:tokenize(FullSource) of
+                {ok, Tokens} ->
                     case catena_parser:parse(Tokens) of
                         {ok, {module, _, _, _, Decls, _}} ->
                             %% Extract the body from the parsed result
-                            [{transform_decl, test, _, Clauses, _}] = Decls,
+                            [{transform_decl, check, _, Clauses, _}] = Decls,
                             [{transform_clause, _, _, ParsedBody, _}] = Clauses,
 
                             %% Step 4: Compare (ignoring locations)
@@ -135,7 +135,7 @@ prop_desugar_roundtrip() ->
                             %% Parse error - log for debugging
                             false
                     end;
-                {error, _LexError, _} ->
+                {error, _LexError} ->
                     false
             end
         end).

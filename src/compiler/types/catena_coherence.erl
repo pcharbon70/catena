@@ -173,8 +173,8 @@ format_overlap_error({instance, Trait, Args1, Loc1},
 
     lists:flatten(io_lib:format(
         "Overlapping instances for trait '~p':~n"
-        "  Instance 1: ~p ~s at ~s~n"
-        "  Instance 2: ~p ~s at ~s~n"
+        "  Instance 1: ~p ~ts at ~s~n"
+        "  Instance 2: ~p ~ts at ~s~n"
         "  These instances overlap and could cause ambiguous resolution.",
         [Trait, Trait, Args1Str, Loc1Str, Trait, Args2Str, Loc2Str]
     )).

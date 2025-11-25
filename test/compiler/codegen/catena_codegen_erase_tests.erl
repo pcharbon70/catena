@@ -324,8 +324,9 @@ test_erase_typed_transform() ->
 
 test_erase_type_decl() ->
     %% Type declarations completely erased
+    %% type_decl tuple is {type_decl, Name, TypeVars, Constructors, Derives, Loc}
     Module = {module, test_mod, [], [
-        {type_decl, 'Maybe', [a], [{'None', []}, {'Some', [a]}], loc()}
+        {type_decl, 'Maybe', [a], [{'None', []}, {'Some', [a]}], [], loc()}
     ], loc()},
     {module, _, _, Decls, _} = catena_codegen_erase:erase_module(Module),
     ?assertEqual([erased], Decls).

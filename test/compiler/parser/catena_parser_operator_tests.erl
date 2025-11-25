@@ -1,6 +1,5 @@
 -module(catena_parser_operator_tests).
 -include_lib("eunit/include/eunit.hrl").
--include("src/compiler/parser/catena_ast.hrl").
 
 %%====================================================================
 %% Operator Tests - Type-Level Equality
@@ -32,7 +31,9 @@ parse_setoid_eq_in_trait_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
-    ?assertMatch(#trait_decl{name = 'Setoid', methods = [{eq, _}]}, TraitDecl).
+    %% Parser returns tuple format: {trait_decl, Name, TypeParams, Extends, Methods, Location}
+    {trait_decl, 'Setoid', [a], _Extends, Methods, _Loc} = TraitDecl,
+    [{trait_sig, eq, _, _}] = Methods.
 
 parse_instance_with_setoid_operators_test() ->
     %% instance Setoid Bool where
@@ -55,8 +56,11 @@ parse_instance_with_setoid_operators_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [InstanceDecl], _} = Result,
-    #instance_decl{trait = 'Setoid', methods = [{eq, MethodBody}]} = InstanceDecl,
-    ?assertMatch({lambda, _, {binary_op, setoid_eq, _, _, _}, _}, MethodBody).
+    %% Parser returns tuple format: {instance_decl, Trait, Types, Constraints, Methods, Location}
+    {instance_decl, 'Setoid', _Types, _Constraints, Methods, _Loc} = InstanceDecl,
+    %% Methods are [{Name, Lambda}] tuples
+    [{eq, {lambda, _Params, Body, _}}] = Methods,
+    ?assertMatch({binary_op, setoid_eq, _, _, _}, Body).
 
 parse_instance_with_setoid_neq_test() ->
     %% instance Test T where
@@ -79,8 +83,11 @@ parse_instance_with_setoid_neq_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [InstanceDecl], _} = Result,
-    #instance_decl{methods = [{neq, MethodBody}]} = InstanceDecl,
-    ?assertMatch({lambda, _, {binary_op, setoid_neq, _, _, _}, _}, MethodBody).
+    %% Parser returns tuple format: {instance_decl, Trait, Types, Constraints, Methods, Location}
+    {instance_decl, 'Test', _Types, _Constraints, Methods, _Loc} = InstanceDecl,
+    %% Methods are [{Name, Lambda}] tuples
+    [{neq, {lambda, _Params, Body, _}}] = Methods,
+    ?assertMatch({binary_op, setoid_neq, _, _, _}, Body).
 
 %%--------------------------------------------------------------------
 %% Comprehensive Tests - Type-Level Equality Operators
@@ -95,7 +102,7 @@ parse_all_operators_comprehensive_test() ->
 
     lists:foreach(
         fun({ExprStr, ExpectedOp}) ->
-            {ok, Tokens, _} = catena_lexer:string(ExprStr),
+            {ok, Tokens} = catena_lexer:tokenize(ExprStr),
             %% Verify the operator token is present
             ?assert(lists:any(fun({Op, _}) -> Op =:= ExpectedOp; (_) -> false end, Tokens),
                     "Operator " ++ atom_to_list(ExpectedOp) ++ " should tokenize in: " ++ ExprStr)

@@ -399,7 +399,7 @@ instantiate_monomorphic_test() ->
 
     Scheme = catena_type_scheme:mono({tcon, int}),
 
-    {Type, State1} = catena_infer_expr:instantiate(Scheme, State),
+    {Type, _Constraints, State1} = catena_infer_expr:instantiate(Scheme, State),
 
     ?assertEqual({tcon, int}, Type),
     % Should not generate any fresh variables
@@ -412,7 +412,7 @@ instantiate_polymorphic_test() ->
     PolyType = {tfun, {tvar, 1}, {tvar, 1}, {effect_set, []}},
     Scheme = catena_type_scheme:poly([1], PolyType),
 
-    {Type, State1} = catena_infer_expr:instantiate(Scheme, State),
+    {Type, _Constraints, State1} = catena_infer_expr:instantiate(Scheme, State),
 
     % Should replace α with fresh variable
     ?assertMatch({tfun, {tvar, _}, {tvar, _}, _}, Type),
@@ -430,7 +430,7 @@ instantiate_multiple_vars_test() ->
     PolyType = {tfun, {tvar, 1}, {tfun, {tvar, 2}, {tvar, 1}, {effect_set, []}}, {effect_set, []}},
     Scheme = catena_type_scheme:poly([1, 2], PolyType),
 
-    {Type, _State1} = catena_infer_expr:instantiate(Scheme, State),
+    {Type, _Constraints, _State1} = catena_infer_expr:instantiate(Scheme, State),
 
     % Should replace both variables
     ?assertMatch({tfun, {tvar, _}, {tfun, {tvar, _}, {tvar, _}, _}, _}, Type).

@@ -67,25 +67,25 @@ multi_param_adt_pipeline_test() ->
 
 %% Test do-block parsing (desugaring is tested, type checking requires chain in env)
 do_block_parsing_test() ->
-    Source = "transform check x = do { y <- x; pure y }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
+    Source = "transform check x = do { y <- x; pure y }",
+    {ok, Tokens} = catena_lexer:tokenize(Source),
     {ok, AST} = catena_parser:parse(Tokens),
     {ok, Analyzed} = catena_semantic:analyze(AST),
     %% Verify do-expression was desugared
     {module, _, _, _, Decls, _} = Analyzed,
-    [{transform_decl, test, _, Clauses, _}] = Decls,
+    [{transform_decl, check, _, Clauses, _}] = Decls,
     [{transform_clause, _, _, Body, _}] = Clauses,
     %% After desugaring, should not be do_expr
     ?assertNotMatch({do_expr, _, _}, Body).
 
 %% Test do-block with let parsing
 do_let_parsing_test() ->
-    Source = "transform check x = do { let y = 42; pure y }\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
+    Source = "transform check x = do { let y = 42; pure y }",
+    {ok, Tokens} = catena_lexer:tokenize(Source),
     {ok, AST} = catena_parser:parse(Tokens),
     {ok, Analyzed} = catena_semantic:analyze(AST),
     {module, _, _, _, Decls, _} = Analyzed,
-    [{transform_decl, test, _, Clauses, _}] = Decls,
+    [{transform_decl, check, _, Clauses, _}] = Decls,
     [{transform_clause, _, _, Body, _}] = Clauses,
     %% Should be let_expr after desugaring
     ?assertMatch({let_expr, _, _, _}, Body).
@@ -96,8 +96,8 @@ complex_do_parsing_test() ->
              "  a <- x;\n"
              "  let b = a;\n"
              "  pure b\n"
-             "}\n",
-    {ok, Tokens, _} = catena_lexer:string(Source),
+             "}",
+    {ok, Tokens} = catena_lexer:tokenize(Source),
     {ok, AST} = catena_parser:parse(Tokens),
     {ok, _Analyzed} = catena_semantic:analyze(AST).
 

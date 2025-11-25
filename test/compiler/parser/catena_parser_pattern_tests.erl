@@ -484,9 +484,10 @@ list_pattern_location_test() ->
 %%====================================================================
 
 %% Test 9.1: Multiple patterns of different types
-%% Pattern: 0 None [] _
+%% Pattern: 0 None() [] _
+%% Note: Constructor syntax None() needed to prevent it consuming [] _ as arguments
 mixed_pattern_types_test() ->
-    FlowDecl = parse_transform("transform complex 0 None [] _ = true"),
+    FlowDecl = parse_transform("transform complex 0 None() [] _ = true"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(4, length(Patterns)),
     [P1, P2, P3, P4] = Patterns,
@@ -514,9 +515,10 @@ complex_nested_mixed_test() ->
     ).
 
 %% Test 9.3: All pattern types in one transform
-%% Pattern: x _ 0 "hi" None [a] Point(p)
+%% Pattern: x _ 0 "hi" None() [a] Point(p)
+%% Note: Constructor syntax None() needed to prevent it consuming [a] Point(p) as arguments
 all_pattern_types_test() ->
-    FlowDecl = parse_transform("transform kitchen_sink x _ 0 \"hi\" None [a] Point(p) = x"),
+    FlowDecl = parse_transform("transform kitchen_sink x _ 0 \"hi\" None() [a] Point(p) = x"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(7, length(Patterns)),
     [P1, P2, P3, P4, P5, P6, P7] = Patterns,
