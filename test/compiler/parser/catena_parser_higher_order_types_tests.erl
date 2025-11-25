@@ -1,6 +1,5 @@
 -module(catena_parser_higher_order_types_tests).
 -include_lib("eunit/include/eunit.hrl").
--include("src/compiler/parser/catena_ast.hrl").
 
 %%====================================================================
 %% Higher-Order Function Type Tests
@@ -38,10 +37,11 @@ parse_simple_parenthesized_function_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
-    #trait_decl{name = 'Functor', type_params = [f], methods = Methods} = TraitDecl,
+    %% Parser returns tuple format: {trait_decl, Name, TypeParams, Extends, Methods, Location}
+    {trait_decl, 'Functor', [f], _Extends, Methods, _Loc} = TraitDecl,
 
-    %% Verify method signature
-    [{fmap, TypeSig}] = Methods,
+    %% Verify method signature - methods are {trait_sig, Name, Type, Loc} tuples
+    [{trait_sig, fmap, TypeSig, _}] = Methods,
 
     %% Should be: (a -> b) -> f a -> f b
     %% Which is: fun(fun(a, b), fun(f a, f b))
@@ -78,10 +78,10 @@ parse_monad_bind_signature_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
-    #trait_decl{name = 'Monad', type_params = [m], methods = Methods} = TraitDecl,
+    {trait_decl, 'Monad', [m], _Extends, Methods, _Loc} = TraitDecl,
 
     %% Verify method signature
-    [{bind, TypeSig}] = Methods,
+    [{trait_sig, bind, TypeSig, _}] = Methods,
 
     %% Should parse successfully
     ?assertMatch({type_fun, _, _, _}, TypeSig).
@@ -115,9 +115,9 @@ parse_foldable_signature_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
-    #trait_decl{name = 'Foldable', type_params = [t], methods = Methods} = TraitDecl,
+    {trait_decl, 'Foldable', [t], _Extends, Methods, _Loc} = TraitDecl,
 
-    [{foldl, TypeSig}] = Methods,
+    [{trait_sig, foldl, TypeSig, _}] = Methods,
     ?assertMatch({type_fun, _, _, _}, TypeSig).
 
 %%--------------------------------------------------------------------
@@ -155,9 +155,9 @@ parse_deeply_nested_function_types_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
-    #trait_decl{methods = Methods} = TraitDecl,
+    {trait_decl, _Name, _TypeParams, _Extends, Methods, _Loc} = TraitDecl,
 
-    [{compose, TypeSig}] = Methods,
+    [{trait_sig, compose, TypeSig, _}] = Methods,
     ?assertMatch({type_fun, _, _, _}, TypeSig).
 
 %%--------------------------------------------------------------------
@@ -185,9 +185,9 @@ parse_tuple_type_two_elements_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
-    #trait_decl{methods = Methods} = TraitDecl,
+    {trait_decl, _Name, _TypeParams, _Extends, Methods, _Loc} = TraitDecl,
 
-    [{first, TypeSig}] = Methods,
+    [{trait_sig, first, TypeSig, _}] = Methods,
 
     %% Should be: (a, b) -> a
     {type_fun, TupleType, RetType, _} = TypeSig,
@@ -220,9 +220,9 @@ parse_tuple_type_three_elements_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
-    #trait_decl{methods = Methods} = TraitDecl,
+    {trait_decl, _Name, _TypeParams, _Extends, Methods, _Loc} = TraitDecl,
 
-    [{mk, TypeSig}] = Methods,
+    [{trait_sig, mk, TypeSig, _}] = Methods,
     {type_fun, TupleType, _, _} = TypeSig,
     ?assertMatch({type_tuple, [_, _, _], _}, TupleType).
 
@@ -288,9 +288,9 @@ parse_applicative_ap_signature_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
-    #trait_decl{name = 'Applicative', methods = Methods} = TraitDecl,
+    {trait_decl, 'Applicative', _TypeParams, _Extends, Methods, _Loc} = TraitDecl,
 
-    [{ap, TypeSig}] = Methods,
+    [{trait_sig, ap, TypeSig, _}] = Methods,
     ?assertMatch({type_fun, _, _, _}, TypeSig).
 
 parse_traversable_signature_test() ->
@@ -323,9 +323,9 @@ parse_traversable_signature_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
-    #trait_decl{name = 'Traversable', methods = Methods} = TraitDecl,
+    {trait_decl, 'Traversable', _TypeParams, _Extends, Methods, _Loc} = TraitDecl,
 
-    [{traverse, TypeSig}] = Methods,
+    [{trait_sig, traverse, TypeSig, _}] = Methods,
     ?assertMatch({type_fun, _, _, _}, TypeSig).
 
 %%--------------------------------------------------------------------
@@ -365,7 +365,7 @@ parse_multiple_methods_with_higher_order_types_test() ->
     ],
     {ok, Result} = catena_parser:parse(Tokens),
     {module, _, _, _, [TraitDecl], _} = Result,
-    #trait_decl{name = 'Category', methods = Methods} = TraitDecl,
+    {trait_decl, 'Category', _TypeParams, _Extends, Methods, _Loc} = TraitDecl,
 
     %% Should have 2 methods
     ?assertEqual(2, length(Methods)).

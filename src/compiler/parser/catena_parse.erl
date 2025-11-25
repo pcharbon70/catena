@@ -543,9 +543,12 @@ validate_operations([_ | Rest], MaxIdLength) ->
 
 %% @doc Validate effect annotations (type effect sets)
 -spec validate_effect_annotations(term()) -> {ok, term()} | {error, term()}.
-validate_effect_annotations({_ASTType, _, _, _, Declarations, _}) ->
+validate_effect_annotations(AST = {_ASTType, _, _, _, Declarations, _}) ->
     MaxEffectsAnnotation = get_max_effects_in_annotation(),
-    validate_declarations_for_annotations(Declarations, MaxEffectsAnnotation);
+    case validate_declarations_for_annotations(Declarations, MaxEffectsAnnotation) of
+        {ok, _} -> {ok, AST};
+        Error -> Error
+    end;
 validate_effect_annotations(AST) ->
     {ok, AST}.
 
@@ -769,8 +772,26 @@ calculate_type_depth(_Other, CurrentDepth) ->
 
 %% @doc Format lexer error messages
 -spec format_lex_error(atom(), term()) -> string().
+format_lex_error(catena_lexer, {unclosed_comment, Line}) ->
+    io_lib:format("unclosed comment starting at line ~p", [Line]);
+format_lex_error(catena_lexer, {comment_depth_exceeded, Depth, Max}) ->
+    io_lib:format("comment nesting too deep: ~p exceeds maximum of ~p", [Depth, Max]);
+format_lex_error(catena_lexer, unmatched_comment_end) ->
+    "unexpected comment end marker -}";
+format_lex_error(catena_lexer, {user, {identifier_too_long, _Line, Len, Max}}) ->
+    io_lib:format("identifier too long: ~p exceeds maximum of ~p", [Len, Max]);
+format_lex_error(catena_lexer, {user, {string_too_long, _Line, Len, Max}}) ->
+    io_lib:format("string literal too long: ~p exceeds maximum of ~p", [Len, Max]);
+format_lex_error(catena_lexer, {invalid_utf8, Msg}) ->
+    io_lib:format("invalid UTF-8: ~s", [Msg]);
+format_lex_error(catena_lexer, {invalid_unicode, Pos, Char, Msg}) ->
+    io_lib:format("invalid unicode at position ~p (codepoint ~p): ~s", [Pos, Char, Msg]);
 format_lex_error(catena_lexer, Reason) ->
-    catena_lexer:format_error(Reason);
+    try
+        catena_lexer:format_error(Reason)
+    catch
+        _:_ -> io_lib:format("~p", [Reason])
+    end;
 format_lex_error(_Module, Reason) when is_list(Reason) ->
     Reason;
 format_lex_error(_Module, Reason) ->
