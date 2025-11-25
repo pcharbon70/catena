@@ -117,7 +117,7 @@ prop_desugar_roundtrip() ->
             Source = catena_ast_pp:pp_expr(Desugared),
 
             %% Step 3: Wrap in a transform and parse
-            FullSource = "transform test x = " ++ Source ++ "\n",
+            FullSource = "transform check x = " ++ Source ++ "\n",
             case catena_lexer:string(FullSource) of
                 {ok, Tokens, _} ->
                     case catena_parser:parse(Tokens) of

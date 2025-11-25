@@ -1212,7 +1212,7 @@ security_deep_parameter_nesting_test() ->
 %% Test ambiguous perform expression syntax
 security_perform_ambiguity_test() ->
     %% Test perform expressions that might confuse the parser
-    Code = "transform test = perform A.B.C.D.E.F()",
+    Code = "transform check = perform A.B.C.D.E.F()",
     %% Should either parse clearly or reject unambiguously
     case catena_lexer:tokenize(Code) of
         {ok, Tokens} ->

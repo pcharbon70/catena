@@ -70,7 +70,7 @@ three_variable_patterns_test() ->
 %% Test 1.4: Variable pattern with underscore in name
 %% Pattern: some_var
 variable_with_underscore_test() ->
-    FlowDecl = parse_transform("transform test some_var = some_var"),
+    FlowDecl = parse_transform("transform check some_var = some_var"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -370,7 +370,7 @@ constructor_with_list_pattern_test() ->
 %% Test 6.3: List with constructor elements
 %% Pattern: [Some(x) None]
 list_with_constructor_elements_test() ->
-    FlowDecl = parse_transform("transform test [Some(x) None] = x"),
+    FlowDecl = parse_transform("transform check [Some(x) None] = x"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,
@@ -430,7 +430,7 @@ multiple_guard_conditions_test() ->
 %% Test 7.4: Guard with arithmetic
 %% Pattern: x  when x + 1 > 10
 guard_with_arithmetic_test() ->
-    FlowDecl = parse_transform("transform test x when x + 1 > 10 = true"),
+    FlowDecl = parse_transform("transform check x when x + 1 > 10 = true"),
     Guards = get_guards(FlowDecl),
     ?assertEqual(1, length(Guards)),
     [Guard] = Guards,
@@ -465,7 +465,7 @@ variable_pattern_location_test() ->
 
 %% Test 8.2: Constructor pattern has location
 constructor_pattern_location_test() ->
-    FlowDecl = parse_transform("transform test Some(x) = x"),
+    FlowDecl = parse_transform("transform check Some(x) = x"),
     Patterns = get_patterns(FlowDecl),
     [Pattern] = Patterns,
     {pat_constructor, 'Some', _, Loc} = Pattern,
@@ -473,7 +473,7 @@ constructor_pattern_location_test() ->
 
 %% Test 8.3: List pattern has location
 list_pattern_location_test() ->
-    FlowDecl = parse_transform("transform test [x y] = x"),
+    FlowDecl = parse_transform("transform check [x y] = x"),
     Patterns = get_patterns(FlowDecl),
     [Pattern] = Patterns,
     {pat_list, _, Loc} = Pattern,
@@ -498,7 +498,7 @@ mixed_pattern_types_test() ->
 %% Test 9.2: Constructor with mixed nested patterns
 %% Pattern: Pair([1 x] Some(_))
 complex_nested_mixed_test() ->
-    FlowDecl = parse_transform("transform test Pair([1 x] Some(_)) = x"),
+    FlowDecl = parse_transform("transform check Pair([1 x] Some(_)) = x"),
     Patterns = get_patterns(FlowDecl),
     ?assertEqual(1, length(Patterns)),
     [Pattern] = Patterns,

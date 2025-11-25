@@ -165,7 +165,7 @@ parse_handle_removes_effect_test() ->
 %% Test effect annotation on non-function type (parser level)
 error_effect_on_non_function_parse_test() ->
     %% Effect annotation on a simple type should parse but may be invalid
-    Source = "transform test : Int / {IO}",
+    Source = "transform check : Int / {IO}",
     {ok, Tokens, _} = catena_lexer:string(Source),
     %% Parser may accept this syntax
     case catena_parser:parse(Tokens) of

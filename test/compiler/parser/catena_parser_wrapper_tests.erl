@@ -199,7 +199,7 @@ parse_tokens_suggestion_for_invalid_operator_double_equals_test() ->
 
 parse_tokens_suggestion_for_invalid_operator_not_equals_test() ->
     % Test that '!=' suggests using '/='
-    Content = "transform test x = x != 0\n",  % Invalid: should be '/='
+    Content = "transform check x = x != 0\n",  % Invalid: should be '/='
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
@@ -255,7 +255,7 @@ parse_tokens_suggestion_for_typo_in_keyword_flwo_test() ->
 
 parse_tokens_suggestion_for_typo_in_keyword_mtach_test() ->
     % Test typo detection: 'mtach' instead of 'match'
-    Content = "transform test x = mtach x\n  | 0 -> true\nend\n",  % Typo: should be 'match'
+    Content = "transform check x = mtach x\n  | 0 -> true\nend\n",  % Typo: should be 'match'
     test_helpers:with_temp_file(Content, fun(TestFile) ->
         Result = catena_parser_wrapper:parse_file(TestFile),
         case Result of
