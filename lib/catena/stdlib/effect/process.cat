@@ -1,0 +1,66 @@
+-- Process Effect
+-- Actor-style concurrency primitives as algebraic effects
+--
+-- The Process effect provides fundamental operations for working with
+-- Erlang/BEAM processes. This enables actor-model programming where
+-- lightweight processes communicate via message passing.
+--
+-- Key concepts:
+-- - spawn: Create a new concurrent process
+-- - send: Send a message to a process (fire and forget)
+-- - self: Get the current process identifier
+--
+-- These operations integrate with BEAM's battle-tested process model,
+-- giving you access to millions of lightweight processes with built-in
+-- fault isolation.
+
+module Effect.Process
+export effect Process
+
+-- Process Effect declaration
+-- Provides actor-model concurrency primitives
+effect Process
+  -- Create a new process running the given computation.
+  -- Returns the ProcessId (Pid) of the spawned process.
+  -- The new process runs concurrently with the current one.
+  operation spawn : (() -> a) -> Pid
+
+  -- Send a message to a process identified by its Pid.
+  -- This is asynchronous - it returns immediately without waiting
+  -- for the message to be received or processed.
+  operation send : Pid -> msg -> Unit
+
+  -- Get the ProcessId of the current process.
+  -- Useful when you need to tell other processes how to reach you.
+  operation self : () -> Pid
+end
+
+-- Example usage:
+--
+-- -- A simple echo server that receives messages and prints them
+-- transform echoServer : () -> Unit / {Process, IO}
+-- transform echoServer () =
+--   let myPid = perform Process.self ()
+--   perform IO.println ("Echo server started with pid: " ++ show myPid)
+--   -- In a real implementation, you'd receive and handle messages here
+--
+-- -- Spawning a worker process
+-- transform spawnWorker : (Natural -> Natural) -> Natural -> Pid / {Process}
+-- transform spawnWorker computation input =
+--   perform Process.spawn (fn () -> computation input)
+--
+-- -- Send a message to a process
+-- transform notifyProcess : Pid -> String -> Unit / {Process}
+-- transform notifyProcess targetPid message =
+--   perform Process.send targetPid message
+--
+-- -- A ping-pong example showing bidirectional communication
+-- transform pingPong : () -> Unit / {Process, IO}
+-- transform pingPong () =
+--   let mainPid = perform Process.self ()
+--   let pongPid = perform Process.spawn (fn () ->
+--     -- Pong process would receive "ping" and send back "pong"
+--     perform IO.println "Pong process started"
+--   )
+--   perform Process.send pongPid { from: mainPid, message: "ping" }
+--   perform IO.println "Sent ping!"

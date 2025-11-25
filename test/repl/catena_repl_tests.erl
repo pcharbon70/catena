@@ -224,4 +224,5 @@ setup_state() ->
     %% Add 'x' to environment for testing
     XScheme = catena_type_scheme:mono({tcon, int}),
     Env2 = catena_type_env:extend(Env, x, XScheme),
-    {repl_state, Env2, #{}, [], "catena> ", ""}.
+    %% Record: {repl_state, env, bindings, runtime_bindings, history, prompt, continuation}
+    {repl_state, Env2, #{}, #{}, [], "catena> ", ""}.

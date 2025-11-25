@@ -25,6 +25,7 @@
 -record(repl_state, {
     env :: map(),              % Type environment
     bindings :: map(),         % Value bindings (name -> typed AST)
+    runtime_bindings :: map(), % Runtime value bindings (name -> {Fun, Arity})
     history :: [string()],     % Command history
     prompt :: string(),        % Current prompt
     continuation :: string()   % Accumulated incomplete input
@@ -47,16 +48,23 @@ start() ->
 %% Options:
 %%   - quiet: boolean() - suppress banner
 %%   - env: map() - initial type environment
+%%   - no_prelude: boolean() - skip loading prelude (for testing)
 -spec start(map()) -> ok.
 start(Opts) ->
     case maps:get(quiet, Opts, false) of
         false -> print_banner();
         true -> ok
     end,
-    InitEnv = maps:get(env, Opts, init_env()),
+    {InitEnv, RuntimeBindings} = case maps:get(no_prelude, Opts, false) of
+        true ->
+            {maps:get(env, Opts, init_env()), #{}};
+        false ->
+            init_with_prelude(maps:get(env, Opts, init_env()))
+    end,
     State = #repl_state{
         env = InitEnv,
         bindings = #{},
+        runtime_bindings = RuntimeBindings,
         history = [],
         prompt = ?PROMPT,
         continuation = ""
@@ -186,6 +194,8 @@ handle_command(Input, State) ->
         "b" -> cmd_browse(Args, State);
         "env" -> cmd_env(State);
         "clear" -> cmd_clear(State);
+        "prelude" -> cmd_prelude(State);
+        "p" -> cmd_prelude(State);
         _ -> {error, {unknown_command, Cmd}, State}
     end.
 
@@ -237,16 +247,27 @@ cmd_browse(_Module, State) ->
 cmd_env(State) ->
     {ok, {env, State#repl_state.env}, State}.
 
-%% :clear - clear bindings
+%% :clear - clear user bindings (preserves prelude)
 cmd_clear(State) ->
-    NewState = State#repl_state{bindings = #{}, env = init_env()},
+    {NewEnv, RuntimeBindings} = init_with_prelude(init_env()),
+    NewState = State#repl_state{
+        bindings = #{},
+        env = NewEnv,
+        runtime_bindings = RuntimeBindings
+    },
     {ok, cleared, NewState}.
+
+%% :prelude - show available prelude functions
+cmd_prelude(State) ->
+    Bindings = maps:to_list(State#repl_state.runtime_bindings),
+    {ok, {prelude, Bindings}, State}.
 
 help_text() ->
     {help, [
         {":type <expr>", "Show the type of an expression"},
         {":load <file>", "Load a Catena source file"},
         {":browse", "Show all current bindings"},
+        {":prelude", "Show available prelude functions"},
         {":clear", "Clear all bindings"},
         {":quit", "Exit the REPL"},
         {":help", "Show this help message"}
@@ -338,11 +359,13 @@ compile_expr(Input, State) ->
     end.
 
 compile_expr_ast(AST, State) ->
+    %% First desugar do-notation and other syntactic sugar
+    DesugaredAST = catena_desugar:desugar_expr(AST),
     %% Convert parser AST to inference AST and type check
-    InferAST = convert_to_infer_ast(AST),
+    InferAST = convert_to_infer_ast(DesugaredAST),
     case catena_infer:infer_expr(InferAST, State#repl_state.env) of
         {ok, Type} ->
-            {ok, AST, Type};
+            {ok, DesugaredAST, Type};
         {error, Errors} ->
             {error, {type_error, Errors}}
     end.
@@ -426,6 +449,53 @@ init_env() ->
     {ok, Env} = catena_compile:build_type_env([]),
     Env.
 
+%% @doc Initialize environment with prelude functions loaded.
+%%
+%% Loads all functions from catena_prelude.erl and makes them available
+%% in the REPL. Returns {TypeEnv, RuntimeBindings}.
+-spec init_with_prelude(map()) -> {map(), map()}.
+init_with_prelude(BaseEnv) ->
+    %% Get prelude bindings from catena_prelude
+    PreludeBindings = catena_prelude:prelude_bindings(),
+
+    %% Build runtime bindings (Fun, Arity) and type environment
+    {RuntimeBindings, TypeEnv} = maps:fold(
+        fun(Name, {Fun, Arity, TypeSig}, {RunAcc, EnvAcc}) ->
+            %% Add to runtime bindings
+            NewRunAcc = maps:put(Name, {Fun, Arity}, RunAcc),
+            %% Add to type environment - create a scheme from the type
+            Scheme = type_sig_to_scheme(TypeSig),
+            NewEnvAcc = catena_type_env:extend(EnvAcc, Name, Scheme),
+            {NewRunAcc, NewEnvAcc}
+        end,
+        {#{}, BaseEnv},
+        PreludeBindings
+    ),
+
+    {TypeEnv, RuntimeBindings}.
+
+%% Convert internal type signature to type scheme
+type_sig_to_scheme({forall, Vars, Type}) ->
+    %% Convert type vars to proper tvar format
+    FreeVars = sets:from_list([{tvar, V} || V <- Vars]),
+    {scheme, FreeVars, convert_type_sig(Type)};
+type_sig_to_scheme(Type) ->
+    {scheme, sets:new(), convert_type_sig(Type)}.
+
+%% Convert simplified type signature to internal type representation
+convert_type_sig({tfun, Arg, Ret}) ->
+    {tfun, convert_type_sig(Arg), convert_type_sig(Ret)};
+convert_type_sig({tvar, V}) ->
+    {tvar, V};
+convert_type_sig({tcon, C}) ->
+    {tcon, C};
+convert_type_sig({tapp, Con, Arg}) ->
+    {tapp, {tcon, Con}, convert_type_sig(Arg)};
+convert_type_sig({tapp2, Con, Arg1, Arg2}) ->
+    {tapp, {tapp, {tcon, Con}, convert_type_sig(Arg1)}, convert_type_sig(Arg2)};
+convert_type_sig(Other) ->
+    Other.
+
 merge_env(Env1, Env2) ->
     %% Simple merge - Env2 takes precedence
     %% TODO: proper environment merging with conflict detection
@@ -479,6 +549,32 @@ print_result({env, Env}) ->
     io:format("Type environment: ~p~n", [Env]);
 print_result(cleared) ->
     io:format("Environment cleared~n");
+print_result({prelude, []}) ->
+    io:format("No prelude functions loaded~n");
+print_result({prelude, Bindings}) ->
+    io:format("~nAvailable prelude functions:~n"),
+    %% Group by category
+    Categories = [
+        {"Core Functions", [identity, const, compose, flip]},
+        {"List Operations", [map, filter, fold, foldRight, append]},
+        {"List Helpers", [head, tail, length, reverse, take, drop]},
+        {"Maybe Operations", [fromMaybe, 'maybe', isJust, isNothing]},
+        {"Result Operations", [fromResult, isOk, isErr]},
+        {"Functor/Monad", [fmap, pure, bind, chain, join]}
+    ],
+    lists:foreach(fun({Category, Names}) ->
+        io:format("~n  ~s~s~s~n", [color(yellow), Category, color(reset)]),
+        lists:foreach(fun(Name) ->
+            case lists:keyfind(Name, 1, Bindings) of
+                {Name, {_Fun, Arity}} ->
+                    io:format("    ~s~p~s/~p~n",
+                              [color(cyan), Name, color(reset), Arity]);
+                false ->
+                    ok
+            end
+        end, Names)
+    end, Categories),
+    io:format("~n");
 print_result({help, Commands}) ->
     io:format("~nAvailable commands:~n"),
     lists:foreach(fun({Cmd, Desc}) ->
