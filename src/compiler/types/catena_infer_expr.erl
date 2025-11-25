@@ -265,7 +265,106 @@ infer({ann, Expr, AnnotType}, Env, State) ->
             end;
         {error, _, _} = Error ->
             Error
-    end.
+    end;
+
+% Expression: Binary operation
+% e1 op e2 : T  (type depends on operator)
+infer({binary_op, Op, Left, Right, _Loc}, Env, State) ->
+    case infer(Left, Env, State) of
+        {LeftType, State1} ->
+            case infer(Right, Env, State1) of
+                {RightType, State2} ->
+                    infer_binary_op(Op, LeftType, RightType, State2);
+                {error, _, _} = Error ->
+                    Error
+            end;
+        {error, _, _} = Error ->
+            Error
+    end;
+
+% Expression: List literal
+% [e1, e2, ..., en] : List T  where all ei : T
+infer({list, Elements, _Loc}, Env, State) ->
+    case Elements of
+        [] ->
+            % Empty list - polymorphic [] : List a
+            {ElemType, State1} = catena_infer_state:fresh_var(State),
+            {{tapp, {tcon, list}, [ElemType]}, State1};
+        [First | Rest] ->
+            case infer(First, Env, State) of
+                {FirstType, State1} ->
+                    % Infer rest and unify with first element type
+                    case infer_list_elements(Rest, FirstType, Env, State1) of
+                        {ElemType, State2} ->
+                            {{tapp, {tcon, list}, [ElemType]}, State2};
+                        {error, _, _} = Error ->
+                            Error
+                    end;
+                {error, _, _} = Error ->
+                    Error
+            end
+    end;
+
+% Expression: Cons (list construction)
+% h :: t : List a  where h : a, t : List a
+infer({cons, Head, Tail, _Loc}, Env, State) ->
+    case infer(Head, Env, State) of
+        {HeadType, State1} ->
+            case infer(Tail, Env, State1) of
+                {TailType, State2} ->
+                    % Expected tail type is List HeadType
+                    ExpectedTail = {tapp, {tcon, list}, [HeadType]},
+                    case catena_infer_unify:unify(TailType, ExpectedTail, State2) of
+                        {ok, _Subst, State3} ->
+                            FinalSubst = catena_infer_state:get_subst(State3),
+                            FinalElemType = catena_type_subst:apply(FinalSubst, HeadType),
+                            {{tapp, {tcon, list}, [FinalElemType]}, State3};
+                        {error, _, _} = Error ->
+                            Error
+                    end;
+                {error, _, _} = Error ->
+                    Error
+            end;
+        {error, _, _} = Error ->
+            Error
+    end;
+
+% Expression: Match (pattern matching)
+% match e of | p1 -> e1 | ... | pn -> en end : T
+infer({'match', Scrutinee, Clauses, _Loc}, Env, State) ->
+    infer_match(Scrutinee, Clauses, Env, State);
+
+% Expression: Match alternative form (from REPL)
+infer({match, Scrutinee, Clauses}, Env, State) ->
+    infer_match(Scrutinee, Clauses, Env, State);
+
+% Expression: Constructor application
+% C e1 ... en : T  where C is a data constructor
+infer({constructor, Name, Args, _Loc}, Env, State) ->
+    case infer_exprs(Args, Env, State) of
+        {ArgTypes, State1} ->
+            Type = {tvariant, [{Name, ArgTypes}]},
+            {Type, State1};
+        {error, _, _} = Error ->
+            Error
+    end;
+
+% Expression: Literal (alternative format from parser)
+infer({literal, Type, Value, _Loc}, _Env, State) ->
+    InferredType = case Type of
+        integer -> {tcon, int};
+        float -> {tcon, float};
+        string -> {tcon, string};
+        bool -> {tcon, bool};
+        atom -> {tcon, atom};
+        _ -> {tcon, Type}
+    end,
+    _ = Value, % Value is not needed for type inference
+    {InferredType, State};
+
+% Expression: Identifier (alternative var format from parser)
+infer({identifier, Name, _Loc}, Env, State) ->
+    infer({var, Name}, Env, State).
 
 %% @doc Instantiate a type scheme by replacing quantified variables with fresh ones
 %%
@@ -380,4 +479,240 @@ infer_record_fields_acc([{Label, Expr} | Rest], Env, State, FieldsAcc) ->
             Error
     end.
 
+%% @doc Infer type of binary operation
+-spec infer_binary_op(atom(), catena_types:type(), catena_types:type(),
+                      catena_infer_state:infer_state()) ->
+    {catena_types:type(), catena_infer_state:infer_state()} |
+    {error, catena_type_error:type_error(), catena_infer_state:infer_state()}.
+
+% Arithmetic operators: +, -, *, /
+infer_binary_op(Op, LeftType, RightType, State)
+  when Op =:= plus; Op =:= minus; Op =:= star; Op =:= slash ->
+    % Both operands must be numeric (int or float)
+    case catena_infer_unify:unify(LeftType, RightType, State) of
+        {ok, _Subst, State1} ->
+            FinalSubst = catena_infer_state:get_subst(State1),
+            ResultType = catena_type_subst:apply(FinalSubst, LeftType),
+            % For now, accept any unified numeric type
+            {ResultType, State1};
+        {error, _, _} = Error ->
+            Error
+    end;
+
+% Comparison operators: <, >, <=, >=
+infer_binary_op(Op, LeftType, RightType, State)
+  when Op =:= lt; Op =:= gt; Op =:= lte; Op =:= gte ->
+    case catena_infer_unify:unify(LeftType, RightType, State) of
+        {ok, _Subst, State1} ->
+            % Comparison returns Bool
+            {{tcon, bool}, State1};
+        {error, _, _} = Error ->
+            Error
+    end;
+
+% Equality operators: ==, /=
+infer_binary_op(Op, LeftType, RightType, State)
+  when Op =:= eq; Op =:= neq ->
+    case catena_infer_unify:unify(LeftType, RightType, State) of
+        {ok, _Subst, State1} ->
+            {{tcon, bool}, State1};
+        {error, _, _} = Error ->
+            Error
+    end;
+
+% Setoid equality operators: ===, !==
+infer_binary_op(Op, LeftType, RightType, State)
+  when Op =:= setoid_eq; Op =:= setoid_neq ->
+    case catena_infer_unify:unify(LeftType, RightType, State) of
+        {ok, _Subst, State1} ->
+            % TODO: Should generate Comparable constraint
+            {{tcon, bool}, State1};
+        {error, _, _} = Error ->
+            Error
+    end;
+
+% Boolean operators: and, or
+infer_binary_op(Op, LeftType, RightType, State)
+  when Op =:= 'and'; Op =:= 'or' ->
+    case catena_infer_unify:unify(LeftType, {tcon, bool}, State) of
+        {ok, _Subst, State1} ->
+            case catena_infer_unify:unify(RightType, {tcon, bool}, State1) of
+                {ok, _Subst2, State2} ->
+                    {{tcon, bool}, State2};
+                {error, _, _} = Error ->
+                    Error
+            end;
+        {error, _, _} = Error ->
+            Error
+    end;
+
+% List append: ++
+infer_binary_op(plus_plus, LeftType, RightType, State) ->
+    case catena_infer_unify:unify(LeftType, RightType, State) of
+        {ok, _Subst, State1} ->
+            FinalSubst = catena_infer_state:get_subst(State1),
+            ResultType = catena_type_subst:apply(FinalSubst, LeftType),
+            {ResultType, State1};
+        {error, _, _} = Error ->
+            Error
+    end;
+
+% Pipe operator: |>
+% e1 |> e2 === e2(e1)
+infer_binary_op(pipe_right, LeftType, RightType, State) ->
+    % Generate fresh result type
+    {ResultType, State1} = catena_infer_state:fresh_var(State),
+    % Right side should be a function from LeftType to ResultType
+    ExpectedFunType = {tfun, LeftType, ResultType, {effect_set, []}},
+    case catena_infer_unify:unify(RightType, ExpectedFunType, State1) of
+        {ok, _Subst, State2} ->
+            FinalSubst = catena_infer_state:get_subst(State2),
+            FinalResultType = catena_type_subst:apply(FinalSubst, ResultType),
+            {FinalResultType, State2};
+        {error, _, _} = Error ->
+            Error
+    end;
+
+% Default: unknown operator
+infer_binary_op(Op, _LeftType, _RightType, State) ->
+    Error = catena_type_error:unknown_operator(Op),
+    State1 = catena_infer_state:add_error(Error, State),
+    {error, Error, State1}.
+
+%% @doc Infer types for list elements, unifying with expected type
+-spec infer_list_elements([catena_ast:expr()], catena_types:type(),
+                          catena_type_env:env(), catena_infer_state:infer_state()) ->
+    {catena_types:type(), catena_infer_state:infer_state()} |
+    {error, catena_type_error:type_error(), catena_infer_state:infer_state()}.
+infer_list_elements([], ElemType, _Env, State) ->
+    FinalSubst = catena_infer_state:get_subst(State),
+    FinalType = catena_type_subst:apply(FinalSubst, ElemType),
+    {FinalType, State};
+infer_list_elements([Elem | Rest], ElemType, Env, State) ->
+    case infer(Elem, Env, State) of
+        {ElemInferredType, State1} ->
+            case catena_infer_unify:unify(ElemType, ElemInferredType, State1) of
+                {ok, _Subst, State2} ->
+                    FinalSubst = catena_infer_state:get_subst(State2),
+                    UnifiedType = catena_type_subst:apply(FinalSubst, ElemType),
+                    infer_list_elements(Rest, UnifiedType, Env, State2);
+                {error, _, _} = Error ->
+                    Error
+            end;
+        {error, _, _} = Error ->
+            Error
+    end.
+
+%% @doc Infer type of match expression
+-spec infer_match(catena_ast:expr(), [{catena_ast:pattern(), catena_ast:expr()}],
+                  catena_type_env:env(), catena_infer_state:infer_state()) ->
+    {catena_types:type(), catena_infer_state:infer_state()} |
+    {error, catena_type_error:type_error(), catena_infer_state:infer_state()}.
+infer_match(Scrutinee, Clauses, Env, State) ->
+    % Infer scrutinee type
+    case infer(Scrutinee, Env, State) of
+        {ScrutineeType, State1} ->
+            % Generate fresh type variable for result
+            {ResultType, State2} = catena_infer_state:fresh_var(State1),
+            % Infer each clause
+            infer_match_clauses(Clauses, ScrutineeType, ResultType, Env, State2);
+        {error, _, _} = Error ->
+            Error
+    end.
+
+%% @doc Infer types for match clauses
+-spec infer_match_clauses([{catena_ast:pattern(), catena_ast:expr()} |
+                           {catena_ast:pattern(), catena_ast:expr(), catena_ast:expr()}],
+                          catena_types:type(), catena_types:type(),
+                          catena_type_env:env(), catena_infer_state:infer_state()) ->
+    {catena_types:type(), catena_infer_state:infer_state()} |
+    {error, catena_type_error:type_error(), catena_infer_state:infer_state()}.
+infer_match_clauses([], _ScrutineeType, ResultType, _Env, State) ->
+    FinalSubst = catena_infer_state:get_subst(State),
+    FinalType = catena_type_subst:apply(FinalSubst, ResultType),
+    {FinalType, State};
+infer_match_clauses([Clause | Rest], ScrutineeType, ResultType, Env, State) ->
+    case infer_match_clause(Clause, ScrutineeType, ResultType, Env, State) of
+        {UpdatedResultType, State1} ->
+            infer_match_clauses(Rest, ScrutineeType, UpdatedResultType, Env, State1);
+        {error, _, _} = Error ->
+            Error
+    end.
+
+%% @doc Infer type for a single match clause
+-spec infer_match_clause({catena_ast:pattern(), catena_ast:expr()} |
+                          {catena_ast:pattern(), catena_ast:expr(), catena_ast:expr()},
+                         catena_types:type(), catena_types:type(),
+                         catena_type_env:env(), catena_infer_state:infer_state()) ->
+    {catena_types:type(), catena_infer_state:infer_state()} |
+    {error, catena_type_error:type_error(), catena_infer_state:infer_state()}.
+% Clause without guard
+infer_match_clause({Pattern, Body}, ScrutineeType, ResultType, Env, State) ->
+    % Infer pattern type and get bindings
+    case catena_infer_pattern:infer(Pattern, Env, State) of
+        {PatternType, PatternBindings, State1} ->
+            % Unify pattern type with scrutinee type
+            case catena_infer_unify:unify(PatternType, ScrutineeType, State1) of
+                {ok, _Subst, State2} ->
+                    % Merge pattern bindings into environment
+                    Env1 = catena_type_env:merge(Env, PatternBindings),
+                    % Infer body type
+                    case infer(Body, Env1, State2) of
+                        {BodyType, State3} ->
+                            % Unify body type with result type
+                            case catena_infer_unify:unify(BodyType, ResultType, State3) of
+                                {ok, _Subst2, State4} ->
+                                    FinalSubst = catena_infer_state:get_subst(State4),
+                                    FinalResult = catena_type_subst:apply(FinalSubst, ResultType),
+                                    {FinalResult, State4};
+                                {error, _, _} = Error ->
+                                    Error
+                            end;
+                        {error, _, _} = Error ->
+                            Error
+                    end;
+                {error, _, _} = Error ->
+                    Error
+            end;
+        {error, _, _} = Error ->
+            Error
+    end;
+% Clause with guard
+infer_match_clause({Pattern, Guard, Body}, ScrutineeType, ResultType, Env, State) ->
+    case catena_infer_pattern:infer(Pattern, Env, State) of
+        {PatternType, PatternBindings, State1} ->
+            case catena_infer_unify:unify(PatternType, ScrutineeType, State1) of
+                {ok, _Subst, State2} ->
+                    Env1 = catena_type_env:merge(Env, PatternBindings),
+                    % Infer guard type - must be Bool
+                    case infer(Guard, Env1, State2) of
+                        {GuardType, State3} ->
+                            case catena_infer_unify:unify(GuardType, {tcon, bool}, State3) of
+                                {ok, _Subst2, State4} ->
+                                    % Infer body type
+                                    case infer(Body, Env1, State4) of
+                                        {BodyType, State5} ->
+                                            case catena_infer_unify:unify(BodyType, ResultType, State5) of
+                                                {ok, _Subst3, State6} ->
+                                                    FinalSubst = catena_infer_state:get_subst(State6),
+                                                    FinalResult = catena_type_subst:apply(FinalSubst, ResultType),
+                                                    {FinalResult, State6};
+                                                {error, _, _} = Error ->
+                                                    Error
+                                            end;
+                                        {error, _, _} = Error ->
+                                            Error
+                                    end;
+                                {error, _, _} = Error ->
+                                    Error
+                            end;
+                        {error, _, _} = Error ->
+                            Error
+                    end;
+                {error, _, _} = Error ->
+                    Error
+            end;
+        {error, _, _} = Error ->
+            Error
+    end.
 

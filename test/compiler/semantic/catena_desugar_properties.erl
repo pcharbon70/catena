@@ -1,8 +1,8 @@
 %%%-------------------------------------------------------------------
-%%% @doc Property-Based Tests for Do-Notation Desugaring
+%%% @doc Property-Based Tests for Desugaring
 %%%
 %%% Uses PropEr for comprehensive testing of desugaring invariants,
-%%% including nested do-blocks, various statement types, and edge cases.
+%%% including nested do-blocks, operator desugaring, and edge cases.
 %%%
 %%% ## Running Property Tests
 %%%
@@ -21,7 +21,9 @@
     prop_nested_do_blocks_handled/0,
     prop_all_statement_types_handled/0,
     prop_depth_limit_enforced/0,
-    prop_desugar_roundtrip/0
+    prop_desugar_roundtrip/0,
+    %% Operator desugaring properties
+    prop_operator_desugaring_never_crashes/0
 ]).
 
 %%====================================================================
@@ -270,5 +272,131 @@ desugar_properties_test_() ->
         {"Nested do-blocks handled", ?_assert(proper:quickcheck(prop_nested_do_blocks_handled(), 30))},
         {"All statement types handled", ?_assert(proper:quickcheck(prop_all_statement_types_handled(), 50))},
         {"Depth limit enforced", ?_assert(proper:quickcheck(prop_depth_limit_enforced(), 10))},
-        {"Desugar roundtrip", ?_assert(proper:quickcheck(prop_desugar_roundtrip(), 30))}
+        {"Desugar roundtrip", ?_assert(proper:quickcheck(prop_desugar_roundtrip(), 30))},
+        {"Operator desugaring never crashes", ?_assert(proper:quickcheck(prop_operator_desugaring_never_crashes(), 50))}
     ].
+
+%%====================================================================
+%% Operator Desugaring Properties (Section 1.5.7)
+%%====================================================================
+
+prop_operator_desugaring_never_crashes() ->
+    ?FORALL(Expr, binary_op_expr_generator(),
+        begin
+            Result = (catch catena_desugar:desugar_expr(Expr)),
+            case Result of
+                {'EXIT', _} -> false;
+                _ -> true
+            end
+        end).
+
+%% Generator for binary operator expressions
+binary_op_expr_generator() ->
+    ?LET({Op, Left, Right}, {desugared_operator(), simple_expr(), simple_expr()},
+        {binary_op, Op, Left, Right, {location, 1, 1}}).
+
+%% Operators that get desugared
+desugared_operator() ->
+    oneof([fmap, ap, bind, mappend, setoid_eq, setoid_neq,
+           %% Also test operators that don't get desugared
+           plus, minus, lt, gt]).
+
+simple_expr() ->
+    oneof([
+        {var, x, {location, 1, 1}},
+        {var, y, {location, 1, 1}},
+        {literal, integer, 42, {location, 1, 1}}
+    ]).
+
+%%====================================================================
+%% Operator Desugaring Unit Tests (Section 1.5.7)
+%%====================================================================
+
+operator_desugaring_unit_test_() ->
+    [
+        {"fmap (<$>) desugars to map",
+         fun() ->
+             Expr = {binary_op, fmap, {var, f, loc()}, {var, x, loc()}, loc()},
+             Result = catena_desugar:desugar_expr(Expr),
+             ?assertMatch({app, {var, map, _}, [{var, f, _}, {var, x, _}], _}, Result)
+         end},
+
+        {"ap (<*>) desugars to apply",
+         fun() ->
+             Expr = {binary_op, ap, {var, f, loc()}, {var, x, loc()}, loc()},
+             Result = catena_desugar:desugar_expr(Expr),
+             ?assertMatch({app, {var, apply, _}, [{var, f, _}, {var, x, _}], _}, Result)
+         end},
+
+        {"bind (>>=) desugars to chain with swapped args",
+         fun() ->
+             %% m >>= f => chain f m (operands swap)
+             Expr = {binary_op, bind, {var, m, loc()}, {var, f, loc()}, loc()},
+             Result = catena_desugar:desugar_expr(Expr),
+             ?assertMatch({app, {var, chain, _}, [{var, f, _}, {var, m, _}], _}, Result)
+         end},
+
+        {"mappend (<>) desugars to combine",
+         fun() ->
+             Expr = {binary_op, mappend, {var, a, loc()}, {var, b, loc()}, loc()},
+             Result = catena_desugar:desugar_expr(Expr),
+             ?assertMatch({app, {var, combine, _}, [{var, a, _}, {var, b, _}], _}, Result)
+         end},
+
+        {"setoid_eq (===) desugars to equals",
+         fun() ->
+             Expr = {binary_op, setoid_eq, {var, a, loc()}, {var, b, loc()}, loc()},
+             Result = catena_desugar:desugar_expr(Expr),
+             ?assertMatch({app, {var, equals, _}, [{var, a, _}, {var, b, _}], _}, Result)
+         end},
+
+        {"setoid_neq (!==) desugars to not (equals a b)",
+         fun() ->
+             Expr = {binary_op, setoid_neq, {var, a, loc()}, {var, b, loc()}, loc()},
+             Result = catena_desugar:desugar_expr(Expr),
+             ?assertMatch({app, {var, 'not', _}, [{app, {var, equals, _}, _, _}], _}, Result)
+         end},
+
+        {"plus (+) is NOT desugared (remains binary_op)",
+         fun() ->
+             Expr = {binary_op, plus, {var, a, loc()}, {var, b, loc()}, loc()},
+             Result = catena_desugar:desugar_expr(Expr),
+             ?assertMatch({binary_op, plus, {var, a, _}, {var, b, _}, _}, Result)
+         end},
+
+        {"operator_to_method returns not_desugared for arithmetic",
+         fun() ->
+             ?assertEqual(not_desugared, catena_desugar:operator_to_method(plus)),
+             ?assertEqual(not_desugared, catena_desugar:operator_to_method(minus)),
+             ?assertEqual(not_desugared, catena_desugar:operator_to_method(lt))
+         end},
+
+        {"operator_to_method returns methods for category ops",
+         fun() ->
+             ?assertEqual({ok, map}, catena_desugar:operator_to_method(fmap)),
+             ?assertEqual({ok, apply}, catena_desugar:operator_to_method(ap)),
+             ?assertEqual({ok, chain}, catena_desugar:operator_to_method(bind)),
+             ?assertEqual({ok, combine}, catena_desugar:operator_to_method(mappend)),
+             ?assertEqual({ok, equals}, catena_desugar:operator_to_method(setoid_eq)),
+             ?assertEqual({ok, not_equals}, catena_desugar:operator_to_method(setoid_neq))
+         end},
+
+        {"desugar_operator builds correct AST",
+         fun() ->
+             %% Test direct API usage
+             Result = catena_desugar:desugar_operator(map, {var, f, loc()}, {var, x, loc()}, loc()),
+             ?assertMatch({app, {var, map, _}, [{var, f, _}, {var, x, _}], _}, Result)
+         end},
+
+        {"nested desugaring works",
+         fun() ->
+             %% f <$> (g <$> x) should desugar both operators
+             Inner = {binary_op, fmap, {var, g, loc()}, {var, x, loc()}, loc()},
+             Outer = {binary_op, fmap, {var, f, loc()}, Inner, loc()},
+             Result = catena_desugar:desugar_expr(Outer),
+             %% Should be: map f (map g x)
+             ?assertMatch({app, {var, map, _}, [{var, f, _}, {app, {var, map, _}, _, _}], _}, Result)
+         end}
+    ].
+
+loc() -> {location, 1, 1}.

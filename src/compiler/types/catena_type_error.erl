@@ -60,7 +60,9 @@
     handler_missing_operation/3,
     handler_arity_mismatch/5,
     effect_annotation_mismatch/3,
-    effect_context_chain/2
+    effect_context_chain/2,
+    %% Operator errors
+    unknown_operator/1
 ]).
 
 %%====================================================================
@@ -109,8 +111,11 @@
     {missing_field, atom(), catena_types:ty()} |
 
     % Constraint errors
-    {unsatisfied_constraint, catena_constraint:trait_name(), [catena_types:ty()], term()}.
+    {unsatisfied_constraint, catena_constraint:trait_name(), [catena_types:ty()], term()} |
     % {unsatisfied_constraint, TraitName, TypeArgs, Reason}
+
+    % Operator errors
+    {unknown_operator, atom()}.
 
 -export_type([type_error/0]).
 
@@ -384,6 +389,14 @@ format_error({unsatisfied_constraint, TraitName, TypeArgs, Reason}) ->
         [ConstraintStr, ReasonStr]
     ));
 
+%% Operator errors
+format_error({unknown_operator, Op}) ->
+    lists:flatten(io_lib:format(
+        "Unknown operator: ~p~n"
+        "This operator is not supported in the type system.",
+        [Op]
+    ));
+
 %% Catch-all for unknown errors
 format_error(Error) ->
     lists:flatten(io_lib:format("Unknown type error: ~p", [Error])).
@@ -562,6 +575,19 @@ effect_annotation_mismatch(FunctionName, Declared, Inferred) ->
 -spec effect_context_chain(atom(), [{atom(), catena_location:location()}]) -> type_error().
 effect_context_chain(EffectName, Chain) ->
     {effect_context_chain, EffectName, Chain}.
+
+%%====================================================================
+%% Operator Error Constructors
+%%====================================================================
+
+%% @doc Create an unknown operator error
+%%
+%% Reports when an operator is used that is not recognized by the type system.
+%%
+%% @param Op The unrecognized operator
+-spec unknown_operator(atom()) -> type_error().
+unknown_operator(Op) ->
+    {unknown_operator, Op}.
 
 %%====================================================================
 %% Location Formatting

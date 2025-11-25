@@ -1,16 +1,28 @@
 %%%-------------------------------------------------------------------
-%%% @doc Do-Notation Desugaring (Section 1.5.5)
+%%% @doc Desugaring Transformations (Sections 1.5.5 and 1.5.7)
 %%%
 %%% This module implements desugaring transformations for Catena's
-%%% do-notation, converting do-blocks into explicit bind chains.
+%%% syntactic sugar, converting high-level constructs to core forms.
+%%%
+%%% == Do-Notation Desugaring (Section 1.5.5) ==
 %%%
 %%% Transformations:
-%%% - `x <- ma; rest` becomes `ma >>= (fn x -> rest)`
-%%% - `ma; rest` becomes `ma >> rest` (sequence)
+%%% - `x <- ma; rest` becomes `chain (fn x -> rest) ma`
+%%% - `ma; rest` becomes `chain (fn _ -> rest) ma`
 %%% - `let x = e; rest` becomes `let x = e in rest`
 %%% - Final expr remains as-is (return value)
 %%%
-%%% The desugared code uses Pipeline.chain for >>= operations.
+%%% == Operator Desugaring (Section 1.5.7) ==
+%%%
+%%% Category theory operators are desugared to trait method calls:
+%%% - `f <$> x` becomes `map f x` (Mapper trait)
+%%% - `f <*> x` becomes `apply f x` (Applicator trait)
+%%% - `m >>= f` becomes `chain f m` (Chainable trait)
+%%% - `a <> b` becomes `combine a b` (Combiner trait)
+%%% - `a === b` becomes `equals a b` (Comparable trait)
+%%% - `a !== b` becomes `not (equals a b)` (Comparable trait)
+%%%
+%%% The desugared code uses trait methods (chain, map, etc.).
 %%%
 %%% == Location Tracking ==
 %%%
@@ -33,7 +45,10 @@
 -export([
     desugar/1,
     desugar_expr/1,
-    desugar_do_expr/1
+    desugar_do_expr/1,
+    %% Operator desugaring (Section 1.5.7)
+    desugar_operator/4,
+    operator_to_method/1
 ]).
 
 %%%===================================================================
@@ -75,6 +90,17 @@ desugar_method(Other) ->
 desugar_expr({do_expr, Stmts, Loc}) ->
     desugar_do_expr({do_expr, Stmts, Loc});
 
+%% Binary operators that should be desugared to trait methods (Section 1.5.7)
+desugar_expr({binary_op, Op, Left, Right, Loc}) ->
+    DesugaredLeft = desugar_expr(Left),
+    DesugaredRight = desugar_expr(Right),
+    case operator_to_method(Op) of
+        {ok, Method} ->
+            desugar_operator(Method, DesugaredLeft, DesugaredRight, Loc);
+        not_desugared ->
+            {binary_op, Op, DesugaredLeft, DesugaredRight, Loc}
+    end;
+
 %% Recursive cases
 desugar_expr({let_expr, [{Pat, Val}], Body, Loc}) ->
     {let_expr, [{Pat, desugar_expr(Val)}], desugar_expr(Body), Loc};
@@ -82,8 +108,6 @@ desugar_expr({lambda, Params, Body, Loc}) ->
     {lambda, Params, desugar_expr(Body), Loc};
 desugar_expr({app, Fun, Args, Loc}) ->
     {app, desugar_expr(Fun), [desugar_expr(A) || A <- Args], Loc};
-desugar_expr({binary_op, Op, Left, Right, Loc}) ->
-    {binary_op, Op, desugar_expr(Left), desugar_expr(Right), Loc};
 desugar_expr({cons_expr, Head, Tail, Loc}) ->
     {cons_expr, desugar_expr(Head), desugar_expr(Tail), Loc};
 desugar_expr({match_expr, Scrutinee, Clauses, Loc}) ->
@@ -171,3 +195,69 @@ desugar_stmts([{do_let, Var, Expr, StmtLoc} | Rest], Loc, Depth) ->
         [{pat_var, Var, StmtLoc}, desugar_expr(Expr)],
         RestDesugared,
         StmtLoc}.
+
+%%%===================================================================
+%%% Operator Desugaring (Section 1.5.7)
+%%%===================================================================
+
+%% @doc Map operators to their trait method names
+%% Returns {ok, Method} for operators that should be desugared,
+%% or not_desugared for operators that remain as binary ops.
+-spec operator_to_method(atom()) -> {ok, atom()} | not_desugared.
+
+%% Functor map: f <$> x => map f x
+operator_to_method(fmap) -> {ok, map};
+
+%% Applicative apply: f <*> x => apply f x
+operator_to_method(ap) -> {ok, apply};
+
+%% Monad bind: m >>= f => chain f m
+operator_to_method(bind) -> {ok, chain};
+
+%% Semigroup combine: a <> b => combine a b
+operator_to_method(mappend) -> {ok, combine};
+
+%% Setoid equality: a === b => equals a b
+operator_to_method(setoid_eq) -> {ok, equals};
+
+%% Setoid inequality: a !== b => not (equals a b)
+%% Note: This requires special handling - see desugar_operator
+operator_to_method(setoid_neq) -> {ok, not_equals};
+
+%% All other operators remain as binary ops
+operator_to_method(_) -> not_desugared.
+
+%% @doc Desugar an operator to a function application
+%% Different operators have different argument orders:
+%% - map f x (function first, value second)
+%% - chain f m (function first, monad second)
+%% - combine a b (left to right)
+%% - equals a b (left to right)
+-spec desugar_operator(atom(), term(), term(), term()) -> term().
+
+%% map: f <$> x => map f x
+desugar_operator(map, Func, Value, Loc) ->
+    {app, {var, map, Loc}, [Func, Value], Loc};
+
+%% apply: f <*> x => apply f x
+desugar_operator(apply, Func, Value, Loc) ->
+    {app, {var, apply, Loc}, [Func, Value], Loc};
+
+%% chain: m >>= f => chain f m (note: operand order reverses!)
+%% In Haskell: m >>= f means "bind m to f"
+%% Our chain: chain f m means "chain function f over monad m"
+desugar_operator(chain, Monad, Func, Loc) ->
+    {app, {var, chain, Loc}, [Func, Monad], Loc};
+
+%% combine: a <> b => combine a b
+desugar_operator(combine, Left, Right, Loc) ->
+    {app, {var, combine, Loc}, [Left, Right], Loc};
+
+%% equals: a === b => equals a b
+desugar_operator(equals, Left, Right, Loc) ->
+    {app, {var, equals, Loc}, [Left, Right], Loc};
+
+%% not_equals: a !== b => not (equals a b)
+desugar_operator(not_equals, Left, Right, Loc) ->
+    EqualsApp = {app, {var, equals, Loc}, [Left, Right], Loc},
+    {app, {var, 'not', Loc}, [EqualsApp], Loc}.
