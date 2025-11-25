@@ -197,11 +197,11 @@ filter_comments([], Acc, 0, _Line) ->
     {ok, lists:reverse(Acc)};
 filter_comments([], _Acc, Depth, Line) when Depth > 0 ->
     {error, {0, catena_lexer, {unclosed_comment, Line}}};
-filter_comments([{comment_start, Line} | Rest], Acc, Depth, _) when Depth >= ?MAX_COMMENT_DEPTH ->
+filter_comments([{comment_start, Line} | _Rest], _Acc, Depth, _) when Depth >= ?MAX_COMMENT_DEPTH ->
     {error, {Line, catena_lexer, {comment_depth_exceeded, Depth + 1, ?MAX_COMMENT_DEPTH}}};
 filter_comments([{comment_start, Line} | Rest], Acc, Depth, _) ->
     filter_comments(Rest, Acc, Depth + 1, Line);
-filter_comments([{comment_end, Line} | Rest], Acc, 0, _) ->
+filter_comments([{comment_end, Line} | _Rest], _Acc, 0, _) ->
     {error, {Line, catena_lexer, unmatched_comment_end}};
 filter_comments([{comment_end, _} | Rest], Acc, Depth, Line) ->
     filter_comments(Rest, Acc, Depth - 1, Line);
