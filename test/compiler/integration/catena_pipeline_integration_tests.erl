@@ -67,7 +67,7 @@ multi_param_adt_pipeline_test() ->
 
 %% Test do-block parsing (desugaring is tested, type checking requires chain in env)
 do_block_parsing_test() ->
-    Source = "transform test x = do { y <- x; pure y }\n",
+    Source = "transform check x = do { y <- x; pure y }\n",
     {ok, Tokens, _} = catena_lexer:string(Source),
     {ok, AST} = catena_parser:parse(Tokens),
     {ok, Analyzed} = catena_semantic:analyze(AST),
@@ -80,7 +80,7 @@ do_block_parsing_test() ->
 
 %% Test do-block with let parsing
 do_let_parsing_test() ->
-    Source = "transform test x = do { let y = 42; pure y }\n",
+    Source = "transform check x = do { let y = 42; pure y }\n",
     {ok, Tokens, _} = catena_lexer:string(Source),
     {ok, AST} = catena_parser:parse(Tokens),
     {ok, Analyzed} = catena_semantic:analyze(AST),
@@ -92,7 +92,7 @@ do_let_parsing_test() ->
 
 %% Test complex do-block parsing
 complex_do_parsing_test() ->
-    Source = "transform test x = do {\n"
+    Source = "transform check x = do {\n"
              "  a <- x;\n"
              "  let b = a;\n"
              "  pure b\n"
@@ -114,7 +114,7 @@ lambda_pipeline_test() ->
 
 %% Test let expressions
 let_expr_pipeline_test() ->
-    Source = "transform test x = let y = x in y\n",
+    Source = "transform check x = let y = x in y\n",
     Result = catena_compile:compile_string(Source),
     ?assertMatch({ok, {typed_module, _, _, _}}, Result).
 
@@ -147,7 +147,7 @@ constructor_usage_test() ->
 %% NOTE: Match expressions need more parser work
 literal_pattern_pipeline_test() ->
     Source = "type Unit = Unit\n"
-             "transform test x = Unit\n",
+             "transform check x = Unit\n",
     Result = catena_compile:compile_string(Source),
     ?assertMatch({ok, {typed_module, _, _, _}}, Result).
 
@@ -171,7 +171,7 @@ nested_pattern_pipeline_test() ->
 
 %% Test that each stage produces expected output
 stage_verification_test() ->
-    Source = "transform test x = x\n",
+    Source = "transform check x = x\n",
 
     %% Stage 1: Lexing
     {ok, Tokens, _} = catena_lexer:string(Source),
@@ -192,7 +192,7 @@ stage_verification_test() ->
 %% Test type environment building
 type_env_building_test() ->
     Source = "type Maybe a = None | Some a\n"
-             "transform test x = Some x\n",
+             "transform check x = Some x\n",
     {ok, {typed_module, _, _, Env}} = catena_compile:compile_string(Source),
 
     %% Verify constructors are in environment
@@ -205,13 +205,13 @@ type_env_building_test() ->
 
 %% Test lexer error propagation
 lexer_error_test() ->
-    Source = "transform test = \"unterminated string\n",
+    Source = "transform check = \"unterminated string\n",
     Result = catena_compile:compile_string(Source),
     ?assertMatch({error, {lex_error, _}}, Result).
 
 %% Test parser error propagation
 parser_error_test() ->
-    Source = "transform test = + +\n",
+    Source = "transform check = + +\n",
     Result = catena_compile:compile_string(Source),
     ?assertMatch({error, _}, Result).
 
@@ -246,7 +246,7 @@ do_notation_program_test() ->
     Source =
         "type Maybe a = None | Some a\n"
         "\n"
-        "transform test x = do {\n"
+        "transform check x = do {\n"
         "  a <- x;\n"
         "  pure a\n"
         "}\n",

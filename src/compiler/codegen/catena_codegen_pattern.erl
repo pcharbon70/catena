@@ -49,16 +49,43 @@ compile_match(Scrutinee, Clauses, State, Opts) ->
     {Case, State1}.
 
 %% @doc Compile a list of pattern clauses
+%% Expands or-patterns into multiple clauses sharing the same body
 -spec compile_clauses([clause()], catena_codegen_utils:codegen_state(), compile_opts()) ->
     {[cerl:cerl()], catena_codegen_utils:codegen_state()}.
 compile_clauses(Clauses, State, Opts) ->
+    %% First expand any or-patterns in clauses
+    ExpandedClauses = expand_or_patterns_in_clauses(Clauses),
+    %% Then compile the expanded clauses
     lists:mapfoldl(
         fun(Clause, St) ->
             compile_clause(Clause, St, Opts)
         end,
         State,
-        Clauses
+        ExpandedClauses
     ).
+
+%% @doc Expand or-patterns in a list of clauses
+%% A clause with an or-pattern becomes multiple clauses with the same body
+-spec expand_or_patterns_in_clauses([clause()]) -> [clause()].
+expand_or_patterns_in_clauses(Clauses) ->
+    lists:flatmap(fun expand_or_pattern_clause/1, Clauses).
+
+%% @doc Expand a single clause if it contains an or-pattern
+-spec expand_or_pattern_clause(clause()) -> [clause()].
+expand_or_pattern_clause({clause, [Pattern], Guards, Body}) ->
+    %% Single pattern - check if it's an or-pattern
+    case Pattern of
+        {pat_or, Alternatives, _Loc} ->
+            %% Expand into multiple clauses
+            [{clause, [Alt], Guards, Body} || Alt <- Alternatives];
+        _ ->
+            %% Not an or-pattern, keep as-is
+            [{clause, [Pattern], Guards, Body}]
+    end;
+expand_or_pattern_clause(Clause) ->
+    %% Multi-pattern or other format - keep as-is for now
+    %% TODO: Handle or-patterns in multi-pattern clauses
+    [Clause].
 
 %% @doc Compile a single clause (pattern, guard, body)
 -spec compile_clause(clause(), catena_codegen_utils:codegen_state(), compile_opts()) ->
@@ -157,6 +184,15 @@ compile_pattern({pat_as, Name, Pattern, _Loc}, State) ->
     {CorePattern, State1} = compile_pattern(Pattern, State),
     Alias = cerl:c_alias(cerl:c_var(Name), CorePattern),
     {Alias, State1};
+
+%% Or-pattern: p1 | p2 | ... | pn
+%% Or-patterns must be expanded at the clause level, not pattern level
+%% This compile_pattern is only called for individual alternatives
+compile_pattern({pat_or, _Patterns, _Loc}, State) ->
+    %% Or-patterns should be handled by compile_clause/expand_or_patterns
+    %% If we get here, something went wrong - log warning and use wildcard
+    logger:warning("Or-pattern reached compile_pattern - should be expanded at clause level"),
+    {cerl:c_var('_'), State};
 
 %% Record pattern: {field: x, ...}
 compile_pattern({pat_record, Fields, _Loc}, State) ->

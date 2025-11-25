@@ -23,6 +23,7 @@
     is_pure/1,
     subsumes/2,
     check_pure/2,
+    check_guard_purity/1,
     infer_expr_effects/1,
     compatible/2
 ]).
@@ -103,8 +104,52 @@ compatible(E1, E2) ->
     ok | {error, catena_type_error:type_error()}.
 check_pure(_Type, {effect_set, []}) ->
     ok;
-check_pure(Type, {effect_set, Effects}) ->
+check_pure(_Type, {effect_set, Effects}) ->
     {error, catena_type_error:effect_mismatch(pure(), {effect_set, Effects})}.
+
+%% @doc Check that a guard expression is pure (no effects)
+%% Guards in pattern matching must not have side effects.
+%% Returns ok if pure, {error, Reason} if effectful.
+-spec check_guard_purity(catena_ast:expr()) -> ok | {error, term()}.
+check_guard_purity(Guard) ->
+    Effects = infer_guard_effects(Guard),
+    case is_pure(Effects) of
+        true ->
+            ok;
+        false ->
+            {error, {impure_guard, Guard, Effects}}
+    end.
+
+%% @doc Infer effects from a guard expression recursively
+%% This walks the guard expression tree to detect any effectful operations
+-spec infer_guard_effects(catena_ast:expr()) -> effect_set().
+infer_guard_effects({literal, _, _, _}) ->
+    pure();
+infer_guard_effects({var, _, _}) ->
+    pure();
+infer_guard_effects({binary_op, _, Left, Right, _}) ->
+    union(infer_guard_effects(Left), infer_guard_effects(Right));
+infer_guard_effects({unary_op, _, Expr, _}) ->
+    infer_guard_effects(Expr);
+infer_guard_effects({app, Fun, Arg, _}) ->
+    union(infer_guard_effects(Fun), infer_guard_effects(Arg));
+infer_guard_effects({tuple, Elements, _}) when is_list(Elements) ->
+    lists:foldl(fun(E, Acc) -> union(Acc, infer_guard_effects(E)) end, pure(), Elements);
+infer_guard_effects({list, Elements, _}) when is_list(Elements) ->
+    lists:foldl(fun(E, Acc) -> union(Acc, infer_guard_effects(E)) end, pure(), Elements);
+infer_guard_effects({record, Fields, _}) when is_list(Fields) ->
+    lists:foldl(fun({_, E}, Acc) -> union(Acc, infer_guard_effects(E)) end, pure(), Fields);
+infer_guard_effects({field_access, Expr, _, _}) ->
+    infer_guard_effects(Expr);
+%% Effectful operations - reject in guards
+infer_guard_effects({perform, Effect, _, _}) ->
+    from_list([Effect]);
+infer_guard_effects({do_expr, _, _}) ->
+    %% Do expressions in guards are not allowed (likely effectful)
+    from_list([unknown_effect]);
+%% Default case - assume pure for other expressions
+infer_guard_effects(_Other) ->
+    pure().
 
 %%%===================================================================
 %%% API Functions - Effect Inference

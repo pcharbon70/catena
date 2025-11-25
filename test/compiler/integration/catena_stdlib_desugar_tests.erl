@@ -12,7 +12,7 @@
 
 %% 1.5.5.1 Test parsing do-block syntax
 parse_do_block_test() ->
-    Source = "transform test x = do { y <- x; pure y }\n",
+    Source = "transform check x = do { y <- x; pure y }\n",
     {ok, Tokens, _} = catena_lexer:string(Source),
     case catena_parser:parse(Tokens) of
         {ok, {module, _, _, _, Decls, _}} ->
@@ -27,7 +27,7 @@ parse_do_block_test() ->
 
 %% 1.5.5.2 Test parsing bind in do-block
 parse_do_bind_test() ->
-    Source = "transform test x = do { a <- x; b <- a; pure b }\n",
+    Source = "transform check x = do { a <- x; b <- a; pure b }\n",
     {ok, Tokens, _} = catena_lexer:string(Source),
     case catena_parser:parse(Tokens) of
         {ok, {module, _, _, _, Decls, _}} ->
@@ -43,7 +43,7 @@ parse_do_bind_test() ->
 
 %% 1.5.5.3 Test parsing let in do-block
 parse_do_let_test() ->
-    Source = "transform test x = do { let y = 42; pure y }\n",
+    Source = "transform check x = do { let y = 42; pure y }\n",
     {ok, Tokens, _} = catena_lexer:string(Source),
     case catena_parser:parse(Tokens) of
         {ok, {module, _, _, _, Decls, _}} ->
@@ -59,7 +59,7 @@ parse_do_let_test() ->
 
 %% 1.5.5.4 Test parsing action in do-block (sequence without binding)
 parse_do_action_test() ->
-    Source = "transform test x = do { print x; pure 42 }\n",
+    Source = "transform check x = do { print x; pure 42 }\n",
     {ok, Tokens, _} = catena_lexer:string(Source),
     case catena_parser:parse(Tokens) of
         {ok, {module, _, _, _, Decls, _}} ->
@@ -75,7 +75,7 @@ parse_do_action_test() ->
 
 %% 1.5.5.5 Test desugaring bind to chain
 desugar_bind_test() ->
-    Source = "transform test x = do { y <- x; pure y }\n",
+    Source = "transform check x = do { y <- x; pure y }\n",
     {ok, AST} = catena_test_helpers:parse_source(Source),
     %% Desugar
     Desugared = catena_desugar:desugar(AST),
@@ -87,7 +87,7 @@ desugar_bind_test() ->
 
 %% 1.5.5.6 Test desugaring let to let_expr
 desugar_let_test() ->
-    Source = "transform test u = do { let x = 42; pure x }\n",
+    Source = "transform check u = do { let x = 42; pure x }\n",
     {ok, AST} = catena_test_helpers:parse_source(Source),
     Desugared = catena_desugar:desugar(AST),
     {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,
@@ -97,7 +97,7 @@ desugar_let_test() ->
 
 %% 1.5.5.7 Test desugaring action (sequence)
 desugar_action_test() ->
-    Source = "transform test x = do { print x; pure 42 }\n",
+    Source = "transform check x = do { print x; pure 42 }\n",
     {ok, AST} = catena_test_helpers:parse_source(Source),
     Desugared = catena_desugar:desugar(AST),
     {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,
@@ -107,7 +107,7 @@ desugar_action_test() ->
 
 %% 1.5.5.8 Test complex do-block with multiple binds
 desugar_complex_do_test() ->
-    Source = "transform test x = do { a <- x; b <- f a; c <- g b; pure (a, b, c) }\n",
+    Source = "transform check x = do { a <- x; b <- f a; c <- g b; pure (a, b, c) }\n",
     {ok, AST} = catena_test_helpers:parse_source(Source),
     Desugared = catena_desugar:desugar(AST),
     {module, _, _, _, [{transform_decl, test, _, Clauses, _}], _} = Desugared,

@@ -95,7 +95,13 @@ infer({pas, Name, Pattern}, Env, State) ->
     % Merge bindings
     CombinedBindings = merge_bindings(NameBinding, PatBindings),
 
-    {Type, CombinedBindings, State1}.
+    {Type, CombinedBindings, State1};
+
+% Pattern: Or-pattern
+% (p1 | p2 | ... | pn) : T where all pi : T
+% All alternatives must bind the same variables with the same types
+infer({por, Patterns}, Env, State) ->
+    infer_or_pattern(Patterns, Env, State).
 
 %%%===================================================================
 %%% Internal Functions
@@ -134,6 +140,61 @@ infer_record_fields_acc([{Label, Pattern} | Rest], Env, State, FieldsAcc, Bindin
     CombinedBindings = merge_bindings(BindingsAcc, Bindings),
 
     infer_record_fields_acc(Rest, Env, State1, [{Label, Type} | FieldsAcc], CombinedBindings).
+
+%% @doc Infer type for or-patterns
+%% All alternatives must have the same type and bind the same variables
+-spec infer_or_pattern([catena_ast:pattern()], catena_type_env:env(), catena_infer_state:infer_state()) ->
+    {catena_types:type(), catena_type_env:env(), catena_infer_state:infer_state()}.
+infer_or_pattern([], _Env, _State) ->
+    error({empty_or_pattern});
+infer_or_pattern([Pattern], Env, State) ->
+    % Single pattern - just infer it
+    infer(Pattern, Env, State);
+infer_or_pattern([Pattern | Rest], Env, State) ->
+    % Infer first pattern to get expected type and bindings
+    {Type, Bindings, State1} = infer(Pattern, Env, State),
+
+    % Infer remaining patterns, checking consistency
+    {State2} = check_or_pattern_consistency(Rest, Env, State1, Type, Bindings),
+
+    {Type, Bindings, State2}.
+
+%% @doc Check that all or-pattern alternatives have consistent types and bindings
+-spec check_or_pattern_consistency([catena_ast:pattern()], catena_type_env:env(),
+                                   catena_infer_state:infer_state(),
+                                   catena_types:type(), catena_type_env:env()) ->
+    {catena_infer_state:infer_state()}.
+check_or_pattern_consistency([], _Env, State, _ExpectedType, _ExpectedBindings) ->
+    {State};
+check_or_pattern_consistency([Pattern | Rest], Env, State, ExpectedType, ExpectedBindings) ->
+    {Type, Bindings, State1} = infer(Pattern, Env, State),
+
+    % Unify type with expected type
+    State2 = case catena_infer_unify:unify(Type, ExpectedType, State1) of
+        {ok, _Subst, S} -> S;
+        {error, Reason, S} ->
+            error({or_pattern_type_mismatch, Pattern, Type, ExpectedType, Reason, S})
+    end,
+
+    % Check bindings are consistent (same variables, same types)
+    check_or_pattern_bindings(Bindings, ExpectedBindings, Pattern),
+
+    check_or_pattern_consistency(Rest, Env, State2, ExpectedType, ExpectedBindings).
+
+%% @doc Check that or-pattern alternative binds same variables as expected
+-spec check_or_pattern_bindings(catena_type_env:env(), catena_type_env:env(),
+                                catena_ast:pattern()) -> ok.
+check_or_pattern_bindings(Bindings, ExpectedBindings, Pattern) ->
+    BindingVars = lists:sort(maps:keys(Bindings)),
+    ExpectedVars = lists:sort(maps:keys(ExpectedBindings)),
+
+    case BindingVars =:= ExpectedVars of
+        true -> ok;
+        false ->
+            MissingVars = ExpectedVars -- BindingVars,
+            ExtraVars = BindingVars -- ExpectedVars,
+            error({or_pattern_binding_mismatch, Pattern, MissingVars, ExtraVars})
+    end.
 
 %% @doc Merge two binding environments, detecting duplicate bindings
 %% In patterns, duplicate variable names are not allowed unless they bind
