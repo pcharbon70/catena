@@ -21,6 +21,7 @@ Nonterminals
   module_header module_decl export_decl export_list export_item
   declarations declaration
   type_decl transform_decl effect_decl trait_decl instance_decl
+  test_decl property_decl property_body property_bindings property_binding
   type_params type_params_nonempty constructors constructor constructor_fields
   effect_operations effect_operation
   trait_extends trait_extends_list trait_constraint
@@ -55,6 +56,9 @@ Terminals
   trait instance where then
   effect operation perform handle
   actor process module 'do'
+
+  %% Testing keywords
+  test property
 
   %% Syntax Keywords (supplementary keywords)
   'case' 'of' 'when' as forall fn
@@ -251,6 +255,8 @@ declaration -> transform_decl : '$1'.
 declaration -> effect_decl : '$1'.
 declaration -> trait_decl : '$1'.
 declaration -> instance_decl : '$1'.
+declaration -> test_decl : '$1'.
+declaration -> property_decl : '$1'.
 
 %% Error recovery: skip malformed declaration and continue with next
 declaration -> error type :
@@ -474,6 +480,51 @@ instance_methods -> instance_method comma :
 %% Instance method implementation (e.g., "fmap f = match | None -> None | Some x -> Some (f x) end")
 instance_method -> transform lower_ident pattern_list equals expr :
     {extract_atom('$2'), {lambda, '$3', '$5', extract_location('$1')}}.
+
+%%----------------------------------------------------------------------------
+%% Test Declarations (Unit Tests)
+%%----------------------------------------------------------------------------
+
+%% Test declaration: test "name" = expr
+%% The expression should evaluate to Bool (true = pass, false = fail)
+test_decl -> test string equals expr :
+    {test_decl,
+        extract_value('$2'),
+        '$4',
+        extract_location('$1')}.
+
+%% Error recovery for incomplete test declarations
+test_decl -> test error :
+    make_error_declaration(extract_location('$1'), "Incomplete test declaration", '$2').
+
+%%----------------------------------------------------------------------------
+%% Property Declarations (Property-Based Tests)
+%%----------------------------------------------------------------------------
+
+%% Property declaration: property "name" = forall x : Gen, y : Gen. expr
+property_decl -> property string equals property_body :
+    {property_decl,
+        extract_value('$2'),
+        '$4',
+        extract_location('$1')}.
+
+%% Property body: forall bindings. expr
+property_body -> forall property_bindings dot expr :
+    {property_forall, '$2', '$4', extract_location('$1')}.
+
+%% Property bindings: x : Gen, y : Gen, ...
+property_bindings -> property_binding :
+    ['$1'].
+property_bindings -> property_binding comma property_bindings :
+    ['$1' | '$3'].
+
+%% Property binding: x : Gen
+property_binding -> lower_ident colon upper_ident :
+    {extract_atom('$1'), extract_atom('$3')}.
+
+%% Error recovery for incomplete property declarations
+property_decl -> property error :
+    make_error_declaration(extract_location('$1'), "Incomplete property declaration", '$2').
 
 %%----------------------------------------------------------------------------
 %% Transform Declarations (Function Definitions)

@@ -69,6 +69,13 @@
     chain/2,
     join/1,
 
+    %% Assertion functions (2.3.1)
+    assert/1,
+    assert_equals/2,
+    assert_not_equals/2,
+    assert_true/1,
+    assert_false/1,
+
     %% Environment bindings for REPL
     prelude_bindings/0,
     prelude_types/0
@@ -568,6 +575,81 @@ join(List) when is_list(List) ->
     lists:flatten(List).
 
 %%====================================================================
+%% Assertion Functions (2.3.1)
+%%
+%% These functions are used in tests to verify expected behavior.
+%% They either succeed (return ok) or throw an assertion_failed exception
+%% with details about what went wrong.
+%%====================================================================
+
+%% @doc Assert that a condition is true.
+%%
+%% If the condition is true, returns ok. If false, throws an assertion_failed
+%% exception. This is the most basic assertion for testing.
+%%
+%% Example: assert(1 + 1 == 2)   => ok
+%%          assert(1 + 1 == 3)   => throws {assertion_failed, "Assertion failed"}
+%%
+%% assert : Bool -> Unit
+-spec assert(boolean()) -> ok.
+assert(true) -> ok;
+assert(false) -> throw({assertion_failed, "Assertion failed"}).
+
+%% @doc Assert that two values are equal.
+%%
+%% Compares two values for structural equality. If equal, returns ok.
+%% If not equal, throws an exception with both the expected and actual values.
+%%
+%% Example: assert_equals(4, 2 + 2) => ok
+%%          assert_equals(5, 2 + 2) => throws {assertion_failed, {expected, 5, actual, 4}}
+%%
+%% assert_equals : a -> a -> Unit
+-spec assert_equals(term(), term()) -> ok.
+assert_equals(Expected, Actual) when Expected =:= Actual -> ok;
+assert_equals(Expected, Actual) ->
+    throw({assertion_failed, {expected, Expected, actual, Actual}}).
+
+%% @doc Assert that two values are NOT equal.
+%%
+%% Compares two values for inequality. If they differ, returns ok.
+%% If they're the same, throws an exception showing the duplicate value.
+%%
+%% Example: assert_not_equals(1, 2) => ok
+%%          assert_not_equals(1, 1) => throws {assertion_failed, {should_not_equal, 1, 1}}
+%%
+%% assert_not_equals : a -> a -> Unit
+-spec assert_not_equals(term(), term()) -> ok.
+assert_not_equals(X, Y) when X =/= Y -> ok;
+assert_not_equals(X, Y) ->
+    throw({assertion_failed, {should_not_equal, X, Y}}).
+
+%% @doc Assert that a value is true.
+%%
+%% This is a clearer way to express assert(x) when x should be true.
+%%
+%% Example: assert_true(is_list([])) => ok
+%%          assert_true(false) => throws {assertion_failed, {expected_true, false}}
+%%
+%% assert_true : Bool -> Unit
+-spec assert_true(boolean()) -> ok.
+assert_true(true) -> ok;
+assert_true(Value) ->
+    throw({assertion_failed, {expected_true, Value}}).
+
+%% @doc Assert that a value is false.
+%%
+%% Use this when you expect a condition to be false.
+%%
+%% Example: assert_false(is_list(42)) => ok
+%%          assert_false(true) => throws {assertion_failed, {expected_false, true}}
+%%
+%% assert_false : Bool -> Unit
+-spec assert_false(boolean()) -> ok.
+assert_false(false) -> ok;
+assert_false(Value) ->
+    throw({assertion_failed, {expected_false, Value}}).
+
+%%====================================================================
 %% Environment Bindings for REPL
 %%
 %% These functions provide the prelude to the REPL, making all the
@@ -618,7 +700,14 @@ prelude_bindings() ->
         pure => {fun pure/1, 1, pure_type()},
         bind => {fun bind/2, 2, bind_type()},
         chain => {fun chain/2, 2, chain_type()},
-        join => {fun join/1, 1, join_type()}
+        join => {fun join/1, 1, join_type()},
+
+        %% Assertion functions
+        assert => {fun assert/1, 1, assert_type()},
+        assert_equals => {fun assert_equals/2, 2, assert_equals_type()},
+        assert_not_equals => {fun assert_not_equals/2, 2, assert_not_equals_type()},
+        assert_true => {fun assert_true/1, 1, assert_type()},
+        assert_false => {fun assert_false/1, 1, assert_type()}
     }.
 
 %% @doc Get prelude type definitions.
@@ -808,3 +897,17 @@ chain_type() ->
 join_type() ->
     {forall, [a],
         {tfun, {tvar, mma}, {tvar, ma}}}.
+
+%% Bool -> Unit
+assert_type() ->
+    {tfun, {tcon, bool}, {tcon, unit}}.
+
+%% forall a. a -> a -> Unit
+assert_equals_type() ->
+    {forall, [a],
+        {tfun, {tvar, a}, {tfun, {tvar, a}, {tcon, unit}}}}.
+
+%% forall a. a -> a -> Unit
+assert_not_equals_type() ->
+    {forall, [a],
+        {tfun, {tvar, a}, {tfun, {tvar, a}, {tcon, unit}}}}.

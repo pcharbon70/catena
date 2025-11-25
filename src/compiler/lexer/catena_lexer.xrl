@@ -84,6 +84,10 @@ private : {token, {private, TokenLine}}.
 %% Do-notation for monadic composition
 do : {token, {'do', TokenLine}}.
 
+%% Testing keywords
+test : {token, {test, TokenLine}}.
+property : {token, {property, TokenLine}}.
+
 %% Trait system keywords
 extend : {token, {extend, TokenLine}}.
 constrain : {token, {constrain, TokenLine}}.
