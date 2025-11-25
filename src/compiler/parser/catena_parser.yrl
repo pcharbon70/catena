@@ -32,6 +32,7 @@ Nonterminals
   transform_signature transform_clauses transform_clause
   match_clauses match_clause
   pattern_list pattern_list_nonempty pattern pattern_primary pattern_list_comma tuple_pattern_list
+  or_pattern
   guards guard
   expr expr_primary expr_app expr_list expr_list_opt tuple_expr_list
   record_fields record_field
@@ -601,19 +602,32 @@ match_clauses -> match_clause :
 match_clauses -> match_clause match_clauses :
     ['$1' | '$2'].
 
-match_clause -> pipe pattern arrow expr :
+match_clause -> pipe or_pattern arrow expr :
     {match_clause,
         '$2',
         undefined,
         '$4',
         extract_location('$1')}.
 
-match_clause -> pipe pattern 'when' guards arrow expr :
+match_clause -> pipe or_pattern 'when' guards arrow expr :
     {match_clause,
         '$2',
         '$4',
         '$6',
         extract_location('$1')}.
+
+%% Or-patterns: multiple pattern alternatives sharing the same body
+%% Example: | Red | Green | Blue -> "color"
+%% Or-patterns must bind the same variables in all alternatives
+or_pattern -> pattern :
+    '$1'.
+or_pattern -> pattern pipe or_pattern :
+    case '$3' of
+        {pat_or, Patterns, _Loc} ->
+            {pat_or, ['$1' | Patterns], extract_location('$2')};
+        SinglePattern ->
+            {pat_or, ['$1', SinglePattern], extract_location('$2')}
+    end.
 
 %%----------------------------------------------------------------------------
 %% Patterns
@@ -708,6 +722,11 @@ pattern -> lbrace record_pattern_fields rbrace :
 %% Cons pattern (h :: t)
 pattern -> pattern cons pattern :
     {pat_cons, '$1', '$3', extract_location('$2')}.
+
+%% As-pattern: pattern as name (binds both the pattern and the whole value)
+%% Example: Cons x xs as list -> uses x, xs, and list
+pattern -> pattern as lower_ident :
+    {pat_as, extract_atom('$3'), '$1', extract_location('$2')}.
 
 %% Tuple pattern lists (comma-separated patterns)
 tuple_pattern_list -> pattern comma pattern :
