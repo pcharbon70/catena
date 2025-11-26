@@ -649,25 +649,22 @@ infer_match_clauses([Clause | Rest], ScrutineeType, ResultType, Env, State) ->
 % Clause without guard
 infer_match_clause({Pattern, Body}, ScrutineeType, ResultType, Env, State) ->
     % Infer pattern type and get bindings
-    case catena_infer_pattern:infer(Pattern, Env, State) of
-        {PatternType, PatternBindings, State1} ->
-            % Unify pattern type with scrutinee type
-            case catena_infer_unify:unify(PatternType, ScrutineeType, State1) of
-                {ok, _Subst, State2} ->
-                    % Merge pattern bindings into environment
-                    Env1 = catena_type_env:merge(Env, PatternBindings),
-                    % Infer body type
-                    case infer(Body, Env1, State2) of
-                        {BodyType, State3} ->
-                            % Unify body type with result type
-                            case catena_infer_unify:unify(BodyType, ResultType, State3) of
-                                {ok, _Subst2, State4} ->
-                                    FinalSubst = catena_infer_state:get_subst(State4),
-                                    FinalResult = catena_type_subst:apply(FinalSubst, ResultType),
-                                    {FinalResult, State4};
-                                {error, _, _} = Error ->
-                                    Error
-                            end;
+    % Note: catena_infer_pattern:infer/3 always succeeds (returns 3-tuple)
+    {PatternType, PatternBindings, State1} = catena_infer_pattern:infer(Pattern, Env, State),
+    % Unify pattern type with scrutinee type
+    case catena_infer_unify:unify(PatternType, ScrutineeType, State1) of
+        {ok, _Subst, State2} ->
+            % Merge pattern bindings into environment
+            Env1 = catena_type_env:merge(Env, PatternBindings),
+            % Infer body type
+            case infer(Body, Env1, State2) of
+                {BodyType, State3} ->
+                    % Unify body type with result type
+                    case catena_infer_unify:unify(BodyType, ResultType, State3) of
+                        {ok, _Subst2, State4} ->
+                            FinalSubst = catena_infer_state:get_subst(State4),
+                            FinalResult = catena_type_subst:apply(FinalSubst, ResultType),
+                            {FinalResult, State4};
                         {error, _, _} = Error ->
                             Error
                     end;
@@ -679,27 +676,24 @@ infer_match_clause({Pattern, Body}, ScrutineeType, ResultType, Env, State) ->
     end;
 % Clause with guard
 infer_match_clause({Pattern, Guard, Body}, ScrutineeType, ResultType, Env, State) ->
-    case catena_infer_pattern:infer(Pattern, Env, State) of
-        {PatternType, PatternBindings, State1} ->
-            case catena_infer_unify:unify(PatternType, ScrutineeType, State1) of
-                {ok, _Subst, State2} ->
-                    Env1 = catena_type_env:merge(Env, PatternBindings),
-                    % Infer guard type - must be Bool
-                    case infer(Guard, Env1, State2) of
-                        {GuardType, State3} ->
-                            case catena_infer_unify:unify(GuardType, {tcon, bool}, State3) of
-                                {ok, _Subst2, State4} ->
-                                    % Infer body type
-                                    case infer(Body, Env1, State4) of
-                                        {BodyType, State5} ->
-                                            case catena_infer_unify:unify(BodyType, ResultType, State5) of
-                                                {ok, _Subst3, State6} ->
-                                                    FinalSubst = catena_infer_state:get_subst(State6),
-                                                    FinalResult = catena_type_subst:apply(FinalSubst, ResultType),
-                                                    {FinalResult, State6};
-                                                {error, _, _} = Error ->
-                                                    Error
-                                            end;
+    % Note: catena_infer_pattern:infer/3 always succeeds (returns 3-tuple)
+    {PatternType, PatternBindings, State1} = catena_infer_pattern:infer(Pattern, Env, State),
+    case catena_infer_unify:unify(PatternType, ScrutineeType, State1) of
+        {ok, _Subst, State2} ->
+            Env1 = catena_type_env:merge(Env, PatternBindings),
+            % Infer guard type - must be Bool
+            case infer(Guard, Env1, State2) of
+                {GuardType, State3} ->
+                    case catena_infer_unify:unify(GuardType, {tcon, bool}, State3) of
+                        {ok, _Subst2, State4} ->
+                            % Infer body type
+                            case infer(Body, Env1, State4) of
+                                {BodyType, State5} ->
+                                    case catena_infer_unify:unify(BodyType, ResultType, State5) of
+                                        {ok, _Subst3, State6} ->
+                                            FinalSubst = catena_infer_state:get_subst(State6),
+                                            FinalResult = catena_type_subst:apply(FinalSubst, ResultType),
+                                            {FinalResult, State6};
                                         {error, _, _} = Error ->
                                             Error
                                     end;
