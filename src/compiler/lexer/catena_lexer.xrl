@@ -100,6 +100,11 @@ constrain : {token, {constrain, TokenLine}}.
 %% Two-character and three-character operators (must come before single-character)
 %% Ordering is critical: longer operators must come before shorter ones
 \|> : {token, {pipe_right, TokenLine}}.
+>=> : {token, {kleisli, TokenLine}}.
+>>= : {token, {bind, TokenLine}}.
+<\$> : {token, {fmap, TokenLine}}.
+<\*> : {token, {ap, TokenLine}}.
+<> : {token, {mappend, TokenLine}}.
 -> : {token, {arrow, TokenLine}}.
 => : {token, {double_arrow, TokenLine}}.
 === : {token, {setoid_eq, TokenLine}}.

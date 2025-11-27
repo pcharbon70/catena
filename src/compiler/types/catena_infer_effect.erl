@@ -24,6 +24,7 @@
     subsumes/2,
     check_pure/2,
     check_guard_purity/1,
+    infer_guard_effects/1,
     infer_expr_effects/1,
     compatible/2
 ]).

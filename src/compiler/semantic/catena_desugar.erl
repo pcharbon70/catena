@@ -224,6 +224,10 @@ operator_to_method(setoid_eq) -> {ok, equals};
 %% Note: This requires special handling - see desugar_operator
 operator_to_method(setoid_neq) -> {ok, not_equals};
 
+%% Kleisli composition: f >=> g => kleisli f g
+%% (a -> m b) >=> (b -> m c) : a -> m c
+operator_to_method(kleisli) -> {ok, kleisli};
+
 %% All other operators remain as binary ops
 operator_to_method(_) -> not_desugared.
 
@@ -260,4 +264,9 @@ desugar_operator(equals, Left, Right, Loc) ->
 %% not_equals: a !== b => not (equals a b)
 desugar_operator(not_equals, Left, Right, Loc) ->
     EqualsApp = {app, {var, equals, Loc}, [Left, Right], Loc},
-    {app, {var, 'not', Loc}, [EqualsApp], Loc}.
+    {app, {var, 'not', Loc}, [EqualsApp], Loc};
+
+%% kleisli: f >=> g => kleisli f g
+%% Kleisli composition: (a -> m b) >=> (b -> m c) : a -> m c
+desugar_operator(kleisli, Left, Right, Loc) ->
+    {app, {var, kleisli, Loc}, [Left, Right], Loc}.

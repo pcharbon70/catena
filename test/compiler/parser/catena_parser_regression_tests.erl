@@ -19,53 +19,16 @@
 %%   - removed_in: Task/version where it was removed
 %%   - reason: Why it was removed
 %%   - expected_behavior: How it should tokenize now
+%%
+%% NOTE: Most category theory operators were restored in Section 1.5.6
+%% (Effect Integration with Kleisli Arrows). Only <=< remains removed.
 removed_operators() ->
     [
-        #{
-            operator => "<$>",
-            name => "Functor fmap operator",
-            removed_in => "Task 1.1.7",
-            reason => "Category theory operators removed - syntax reserved for future use",
-            expected_behavior => lexer_error,
-            error_pattern => {illegal, "$"}
-        },
-        #{
-            operator => "<>",
-            name => "Semigroup concat operator",
-            removed_in => "Task 1.1.7",
-            reason => "Category theory operators removed - syntax reserved for future use",
-            expected_behavior => separate_tokens,
-            expected_tokens => [lt, gt]
-        },
-        #{
-            operator => ">>=",
-            name => "Monad bind operator",
-            removed_in => "Task 1.1.7",
-            reason => "Category theory operators removed - syntax reserved for future use",
-            expected_behavior => separate_tokens,
-            expected_tokens => [gt, gte]  % Tokenizes as > >=
-        },
-        #{
-            operator => "<*>",
-            name => "Applicative ap operator",
-            removed_in => "Task 1.1.7",
-            reason => "Category theory operators removed - syntax reserved for future use",
-            expected_behavior => separate_tokens,
-            expected_tokens => [lt, star, gt]
-        },
-        #{
-            operator => ">=>",
-            name => "Kleisli left-to-right operator",
-            removed_in => "Task 1.1.7",
-            reason => "Category theory operators removed - syntax reserved for future use",
-            expected_behavior => separate_tokens,
-            expected_tokens => [gte, gt]  % Tokenizes as >= >
-        },
         #{
             operator => "<=<",
             name => "Kleisli right-to-left operator",
             removed_in => "Task 1.1.7",
-            reason => "Category theory operators removed - syntax reserved for future use",
+            reason => "Right-to-left Kleisli composition not needed - use >=> instead",
             expected_behavior => separate_tokens,
             expected_tokens => [lte, lt]
         }
@@ -77,14 +40,16 @@ removed_operators() ->
 %%====================================================================
 
 %% @doc Registry of syntax features removed from the language.
+%% NOTE: Category theory operators were restored in Section 1.5.6.
+%% Only <=< (right-to-left Kleisli) remains removed.
 removed_syntax_features() ->
     [
         #{
-            feature => "category_theory_operators",
-            description => "Category theory operators (<$>, <>, >>=, <*>, >=>, <=<)",
+            feature => "kleisli_right_to_left",
+            description => "Kleisli right-to-left composition operator (<=<)",
             removed_in => "Task 1.1.7",
-            reason => "Simplified operator set for PoC - may return in future phases",
-            operators => ["<$>", "<>", ">>=", "<*>", ">=>", "<=<"]
+            reason => "Use >=> instead - right-to-left composition not needed",
+            operators => ["<=<"]
         }
     ].
 
@@ -149,11 +114,7 @@ extract_token_type({TokenType, _, _}) -> TokenType;
 extract_token_type(Token) -> Token.
 
 %% @doc Map operator string to its old single-token name (if it had one).
-operator_to_single_token_name("<$>") -> fmap;
-operator_to_single_token_name("<>") -> concat;
-operator_to_single_token_name(">>=") -> bind;
-operator_to_single_token_name("<*>") -> ap;
-operator_to_single_token_name(">=>") -> kleisli_lr;
+%% NOTE: Most operators are now restored. Only <=< remains removed.
 operator_to_single_token_name("<=<") -> kleisli_rl;
 operator_to_single_token_name(_) -> undefined.
 

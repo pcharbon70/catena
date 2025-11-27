@@ -364,7 +364,65 @@ infer({literal, Type, Value, _Loc}, _Env, State) ->
 
 % Expression: Identifier (alternative var format from parser)
 infer({identifier, Name, _Loc}, Env, State) ->
-    infer({var, Name}, Env, State).
+    infer({var, Name}, Env, State);
+
+%%%===================================================================
+%%% Effect Expressions (Section 1.5.6)
+%%%===================================================================
+
+% Expression: Perform (introduces effects)
+% perform Effect.operation(args) : ResultType / {Effect}
+%
+% The perform expression introduces an effect into the function's effect set.
+% The result type depends on the operation's declared type.
+infer({perform_expr, EffectName, _OperationName, Args, _Loc}, Env, State) ->
+    %% Infer types of arguments
+    case infer_exprs(Args, Env, State) of
+        {_ArgTypes, State1} ->
+            %% For now, return a fresh type variable for the result
+            %% In a full implementation, we'd look up the operation's type
+            {ResultType, State2} = catena_infer_state:fresh_var(State1),
+
+            %% Record the effect in the state
+            %% The effect is tracked as part of the function's type
+            State3 = add_effect_to_state(EffectName, State2),
+
+            {ResultType, State3};
+        {error, _, _} = Error ->
+            Error
+    end;
+
+% Expression: Handle (removes effects)
+% handle body with { Effect { handlers } } : ResultType / (Effects - {Effect})
+%
+% The handle expression removes an effect from the function's effect set
+% by providing handlers for all operations of that effect.
+infer({handle_expr, Body, _Handlers, _Loc}, Env, State) ->
+    %% Infer the type of the body
+    case infer(Body, Env, State) of
+        {BodyType, State1} ->
+            %% The handle removes effects from the body's effect set
+            %% For now, just return the body type
+            %% In a full implementation, we'd:
+            %% 1. Check that handlers cover all operations
+            %% 2. Remove the handled effect from the effect set
+            {BodyType, State1};
+        {error, _, _} = Error ->
+            Error
+    end.
+
+%% @doc Add an effect to the current inference state
+%% This tracks effects for function type annotations
+-spec add_effect_to_state(atom(), catena_infer_state:infer_state()) ->
+    catena_infer_state:infer_state().
+add_effect_to_state(EffectName, State) ->
+    %% Get current effects from state (or empty set)
+    CurrentEffects = catena_infer_state:get_effects(State),
+    %% Add the new effect
+    NewEffects = catena_infer_effect:union(CurrentEffects,
+                                           catena_infer_effect:from_list([EffectName])),
+    %% Update state with new effects
+    catena_infer_state:set_effects(NewEffects, State).
 
 %% @doc Instantiate a type scheme by replacing quantified variables with fresh ones
 %%

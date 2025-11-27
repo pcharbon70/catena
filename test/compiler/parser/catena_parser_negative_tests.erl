@@ -75,87 +75,45 @@ parse_mixed_equality_chaining_fails_test() ->
     ?assertMatch({error, _}, Result).
 
 %%--------------------------------------------------------------------
-%% Removed Operators - Verification Tests
+%% Category Theory Operators - Now Restored (Section 1.5.6)
+%% These operators were removed in Task 1.1.7 but restored in Section 1.5.6
+%% for Effect Integration with Kleisli Arrows
 %%--------------------------------------------------------------------
 
-parse_removed_fmap_operator_test() ->
-    %% Verify <$> does not tokenize as single fmap operator
-    %% Note: $ is an illegal character, so this will return a lexer error
+parse_restored_fmap_operator_test() ->
+    %% Verify <$> tokenizes as fmap operator (restored in 1.5.6)
     Source = "x <$> y",
-    Result = catena_lexer:string(Source),
+    {ok, Tokens} = catena_lexer:tokenize(Source),
+    TokenTypes = [element(1, T) || T <- Tokens],
+    ?assert(lists:member(fmap, TokenTypes)).
 
-    %% Should return a lexer error (illegal character $)
-    ?assertMatch({error, _, _}, Result).
-
-parse_removed_concat_operator_test() ->
-    %% Verify <> is tokenized as separate < > tokens
+parse_restored_mappend_operator_test() ->
+    %% Verify <> tokenizes as mappend operator (restored in 1.5.6)
     Source = "x <> y",
-    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, Tokens} = catena_lexer:tokenize(Source),
+    TokenTypes = [element(1, T) || T <- Tokens],
+    ?assert(lists:member(mappend, TokenTypes)).
 
-    %% Should NOT contain a single concat token
-    HasConcatToken = lists:any(
-        fun({Token, _}) when is_atom(Token) -> Token =:= concat;
-           (_) -> false
-        end,
-        Tokens
-    ),
-    ?assertEqual(false, HasConcatToken),
-
-    %% Should contain separate < and > tokens
-    ?assert(lists:member({lt, 1}, Tokens)),
-    ?assert(lists:member({gt, 1}, Tokens)).
-
-parse_removed_bind_operator_test() ->
-    %% Verify >>= is tokenized as >> and =
+parse_restored_bind_operator_test() ->
+    %% Verify >>= tokenizes as bind operator (restored in 1.5.6)
     Source = "x >>= y",
-    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, Tokens} = catena_lexer:tokenize(Source),
+    TokenTypes = [element(1, T) || T <- Tokens],
+    ?assert(lists:member(bind, TokenTypes)).
 
-    %% Should NOT contain a single bind token
-    HasBindToken = lists:any(
-        fun({Token, _}) when is_atom(Token) -> Token =:= bind;
-           (_) -> false
-        end,
-        Tokens
-    ),
-    ?assertEqual(false, HasBindToken).
-
-parse_removed_ap_operator_test() ->
-    %% Verify <*> is tokenized as separate tokens
+parse_restored_ap_operator_test() ->
+    %% Verify <*> tokenizes as ap operator (restored in 1.5.6)
     Source = "x <*> y",
-    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, Tokens} = catena_lexer:tokenize(Source),
+    TokenTypes = [element(1, T) || T <- Tokens],
+    ?assert(lists:member(ap, TokenTypes)).
 
-    %% Should NOT contain a single ap token
-    HasApToken = lists:any(
-        fun({Token, _}) when is_atom(Token) -> Token =:= ap;
-           (_) -> false
-        end,
-        Tokens
-    ),
-    ?assertEqual(false, HasApToken).
-
-parse_removed_kleisli_operators_test() ->
-    %% Verify >=> and <=< are tokenized as separate tokens
-    Source1 = "x >=> y",
-    {ok, Tokens1, _} = catena_lexer:string(Source1),
-
-    HasKleisliLR = lists:any(
-        fun({Token, _}) when is_atom(Token) -> Token =:= kleisli_lr;
-           (_) -> false
-        end,
-        Tokens1
-    ),
-    ?assertEqual(false, HasKleisliLR),
-
-    Source2 = "x <=< y",
-    {ok, Tokens2, _} = catena_lexer:string(Source2),
-
-    HasKleisliRL = lists:any(
-        fun({Token, _}) when is_atom(Token) -> Token =:= kleisli_rl;
-           (_) -> false
-        end,
-        Tokens2
-    ),
-    ?assertEqual(false, HasKleisliRL).
+parse_restored_kleisli_operator_test() ->
+    %% Verify >=> tokenizes as kleisli operator (restored in 1.5.6)
+    Source = "x >=> y",
+    {ok, Tokens} = catena_lexer:tokenize(Source),
+    TokenTypes = [element(1, T) || T <- Tokens],
+    ?assert(lists:member(kleisli, TokenTypes)).
 
 %%--------------------------------------------------------------------
 %% Invalid Type Signatures

@@ -32,7 +32,11 @@
     add_constraints/2,
     get_constraints/1,
     clear_constraints/1,
-    substitute_constraints/1
+    substitute_constraints/1,
+    % Effect tracking (Section 1.5.6)
+    get_effects/1,
+    set_effects/2,
+    add_effect/2
 ]).
 
 -export_type([infer_state/0]).
@@ -45,7 +49,8 @@
     next_var :: pos_integer(),                    % Next fresh type variable ID
     subst :: catena_type_subst:subst(),            % Accumulated substitution
     errors :: [catena_type_error:type_error()],    % Collected errors
-    constraints :: catena_constraint:constraint_set() % Trait constraints
+    constraints :: catena_constraint:constraint_set(), % Trait constraints
+    effects :: catena_infer_effect:effect_set()   % Current effect set (Section 1.5.6)
 }).
 
 
@@ -63,7 +68,8 @@ new() ->
         next_var = 1,
         subst = catena_type_subst:empty(),
         errors = [],
-        constraints = catena_constraint:empty_constraint_set()
+        constraints = catena_constraint:empty_constraint_set(),
+        effects = catena_infer_effect:pure()
     }.
 
 %% @doc Create a new state with specified starting counter
@@ -74,7 +80,8 @@ new(StartCounter) when is_integer(StartCounter), StartCounter > 0 ->
         next_var = StartCounter,
         subst = catena_type_subst:empty(),
         errors = [],
-        constraints = catena_constraint:empty_constraint_set()
+        constraints = catena_constraint:empty_constraint_set(),
+        effects = catena_infer_effect:pure()
     }.
 
 %% @doc Generate a fresh type variable
@@ -214,3 +221,24 @@ clear_constraints(State) ->
 substitute_constraints(#infer_state{subst = Subst, constraints = Cs} = State) ->
     NewCs = catena_constraint:substitute(Subst, Cs),
     State#infer_state{constraints = NewCs}.
+
+%%%===================================================================
+%%% Effect Tracking (Section 1.5.6)
+%%%===================================================================
+
+%% @doc Get the current effect set from the state
+-spec get_effects(infer_state()) -> catena_infer_effect:effect_set().
+get_effects(#infer_state{effects = Effects}) ->
+    Effects.
+
+%% @doc Set the effect set in the state
+-spec set_effects(catena_infer_effect:effect_set(), infer_state()) -> infer_state().
+set_effects(Effects, State) ->
+    State#infer_state{effects = Effects}.
+
+%% @doc Add a single effect to the current effect set
+-spec add_effect(atom(), infer_state()) -> infer_state().
+add_effect(EffectName, #infer_state{effects = Effects} = State) ->
+    NewEffects = catena_infer_effect:union(Effects,
+                                           catena_infer_effect:from_list([EffectName])),
+    State#infer_state{effects = NewEffects}.
