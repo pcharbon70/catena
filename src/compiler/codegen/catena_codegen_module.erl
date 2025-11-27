@@ -48,7 +48,7 @@ generate_module(ModuleAST) ->
     generate_module(ModuleAST, #{}).
 
 -spec generate_module(module_ast(), gen_opts()) -> {ok, cerl:cerl()} | {error, term()}.
-generate_module({module, Name, _Exports, Decls, _Loc}, Opts) ->
+generate_module({module, Name, _Exports, _Imports, Decls, _Loc}, Opts) ->
     try
         State = catena_codegen_utils:new_state(),
 
@@ -93,7 +93,7 @@ erase_types(Decls) ->
 
 %% @doc Build module info from AST
 -spec build_module_info(module_ast()) -> module_info().
-build_module_info({module, Name, Exports, Decls, Loc}) ->
+build_module_info({module, Name, Exports, _Imports, Decls, Loc}) ->
     #{
         name => Name,
         exports => Exports,

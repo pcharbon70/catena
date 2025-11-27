@@ -41,9 +41,9 @@
 
 %% @doc Erase types from an entire module
 -spec erase_module(module_ast()) -> module_ast().
-erase_module({module, Name, Exports, Decls, Loc}) ->
+erase_module({module, Name, Exports, Imports, Decls, Loc}) ->
     ErasedDecls = [erase_decl(D) || D <- Decls],
-    {module, Name, Exports, ErasedDecls, Loc}.
+    {module, Name, Exports, Imports, ErasedDecls, Loc}.
 
 %% @doc Erase types from a declaration
 erase_decl({transform, Name, Params, Body, Loc}) ->

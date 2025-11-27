@@ -16,12 +16,12 @@ loc() ->
     {location, 1, 1}.
 
 simple_module() ->
-    {module, test_module, [{foo, 1}], [
+    {module, test_module, [{foo, 1}], [], [
         {transform, foo, [{pat_var, x, loc()}], {var, x, loc()}, loc()}
     ], loc()}.
 
 multi_function_module() ->
-    {module, math_module, [{add, 2}, {double, 1}], [
+    {module, math_module, [{add, 2}, {double, 1}], [], [
         {transform, add, [
             {pat_var, x, loc()},
             {pat_var, y, loc()}
@@ -32,7 +32,7 @@ multi_function_module() ->
     ], loc()}.
 
 typed_module() ->
-    {module, typed_mod, [{inc, 1}], [
+    {module, typed_mod, [{inc, 1}], [], [
         {transform_typed, inc, {fun_type, int, int, pure},
             [{pat_typed_var, x, {tcon, int}, loc()}],
             {binary_op, '+', {var, x, loc()}, {literal, integer, 1, loc()}, loc()},
@@ -73,7 +73,7 @@ test_generate_simple_module() ->
     ?assertEqual(test_module, cerl:atom_val(cerl:module_name(CoreModule))).
 
 test_module_name() ->
-    Module = {module, my_mod, [], [], loc()},
+    Module = {module, my_mod, [], [], [], loc()},
     {ok, CoreModule} = catena_codegen_module:generate_module(Module),
     ?assertEqual(my_mod, cerl:atom_val(cerl:module_name(CoreModule))).
 
@@ -160,7 +160,7 @@ test_filter_public() ->
     [{pub_func, _}] = Public.
 
 test_no_exports_empty_module() ->
-    Module = {module, empty_mod, [], [], loc()},
+    Module = {module, empty_mod, [], [], [], loc()},
     {ok, CoreModule} = catena_codegen_module:generate_module(Module),
     Exports = cerl:module_exports(CoreModule),
     ?assertEqual([], Exports).
@@ -263,7 +263,7 @@ test_full_module_compilation() ->
 
 test_module_with_type_decls() ->
     %% Type declarations should be erased
-    Module = {module, with_types, [{foo, 0}], [
+    Module = {module, with_types, [{foo, 0}], [], [
         {type_decl, 'Maybe', [a], [{'None', []}, {'Some', [a]}], loc()},
         {transform, foo, [], {literal, integer, 42, loc()}, loc()}
     ], loc()},
@@ -273,7 +273,7 @@ test_module_with_type_decls() ->
     ?assertEqual(1, length(Defs)).
 
 test_complex_function_bodies() ->
-    Module = {module, complex_mod, [{factorial, 1}], [
+    Module = {module, complex_mod, [{factorial, 1}], [], [
         {transform, factorial, [{pat_var, n, loc()}],
             {if_expr,
                 {binary_op, '=:=', {var, n, loc()}, {literal, integer, 0, loc()}, loc()},

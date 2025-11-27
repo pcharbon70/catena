@@ -420,9 +420,10 @@ compile_source(Source, ModuleName, TempDir) ->
 
 %% Build codegen-compatible AST
 %% This is a temporary helper until parser-to-codegen transformation is complete
+%% Module format: {module, Name, Exports, Imports, Decls, Loc}
 build_codegen_ast(_Source, test_arith) ->
     Loc = {1, 1},
-    {module, test_arith, [{add, 2}, {multiply, 2}], [
+    {module, test_arith, [{add, 2}, {multiply, 2}], [], [
         {transform, add, [{pat_var, x, Loc}, {pat_var, y, Loc}],
          {binary_op, '+', {var, x, Loc}, {var, y, Loc}, Loc}, Loc},
         {transform, multiply, [{pat_var, x, Loc}, {pat_var, y, Loc}],
@@ -432,7 +433,7 @@ build_codegen_ast(_Source, test_arith) ->
 build_codegen_ast(_Source, test_factorial) ->
     Loc = {1, 1},
     %% Factorial requires match expression - simplified to identity for now
-    {module, test_factorial, [{factorial, 1}], [
+    {module, test_factorial, [{factorial, 1}], [], [
         {transform, factorial, [{pat_var, n, Loc}],
          {var, n, Loc}, Loc}  %% Simplified - returns n
     ], Loc};
@@ -440,7 +441,7 @@ build_codegen_ast(_Source, test_factorial) ->
 build_codegen_ast(_Source, test_fib) ->
     Loc = {1, 1},
     %% Fib requires match expression - simplified to identity for now
-    {module, test_fib, [{fib, 1}], [
+    {module, test_fib, [{fib, 1}], [], [
         {transform, fib, [{pat_var, n, Loc}],
          {var, n, Loc}, Loc}  %% Simplified - returns n
     ], Loc};
@@ -448,7 +449,7 @@ build_codegen_ast(_Source, test_fib) ->
 build_codegen_ast(_Source, test_pattern) ->
     Loc = {1, 1},
     %% Pattern matching - simplified to identity
-    {module, test_pattern, [{classify, 1}], [
+    {module, test_pattern, [{classify, 1}], [], [
         {transform, classify, [{pat_var, n, Loc}],
          {var, n, Loc}, Loc}  %% Simplified - returns n
     ], Loc};
@@ -456,7 +457,7 @@ build_codegen_ast(_Source, test_pattern) ->
 build_codegen_ast(_Source, test_let) ->
     Loc = {1, 1},
     %% Simplified: compute x = x + 12 (let expressions need codegen support)
-    {module, test_let, [{compute, 1}], [
+    {module, test_let, [{compute, 1}], [], [
         {transform, compute, [{pat_var, x, Loc}],
          {binary_op, '+', {var, x, Loc}, {literal, integer, 12, Loc}, Loc},
          Loc}
@@ -465,7 +466,7 @@ build_codegen_ast(_Source, test_let) ->
 build_codegen_ast(_Source, test_list) ->
     Loc = {1, 1},
     %% List operations - simplified to constants for now
-    {module, test_list, [{len, 1}, {sum, 1}], [
+    {module, test_list, [{len, 1}, {sum, 1}], [], [
         {transform, len, [{pat_var, xs, Loc}],
          {literal, integer, 0, Loc}, Loc},  %% Always returns 0
         {transform, sum, [{pat_var, xs, Loc}],
@@ -474,28 +475,28 @@ build_codegen_ast(_Source, test_list) ->
 
 build_codegen_ast(_Source, test_beam_load) ->
     Loc = {1, 1},
-    {module, test_beam_load, [{identity, 1}], [
+    {module, test_beam_load, [{identity, 1}], [], [
         {transform, identity, [{pat_var, x, Loc}],
          {var, x, Loc}, Loc}
     ], Loc};
 
 build_codegen_ast(_Source, test_exports) ->
     Loc = {1, 1},
-    {module, test_exports, [{foo, 1}], [
+    {module, test_exports, [{foo, 1}], [], [
         {transform, foo, [{pat_var, x, Loc}],
          {binary_op, '+', {var, x, Loc}, {literal, integer, 1, Loc}, Loc}, Loc}
     ], Loc};
 
 build_codegen_ast(_Source, test_arity) ->
     Loc = {1, 1},
-    {module, test_arity, [{two, 2}], [
+    {module, test_arity, [{two, 2}], [], [
         {transform, two, [{pat_var, x, Loc}, {pat_var, y, Loc}],
          {binary_op, '+', {var, x, Loc}, {var, y, Loc}, Loc}, Loc}
     ], Loc};
 
 build_codegen_ast(_Source, test_pure) ->
     Loc = {1, 1},
-    {module, test_pure, [{pure_add, 2}], [
+    {module, test_pure, [{pure_add, 2}], [], [
         {transform, pure_add, [{pat_var, x, Loc}, {pat_var, y, Loc}],
          {binary_op, '+', {var, x, Loc}, {var, y, Loc}, Loc}, Loc}
     ], Loc}.

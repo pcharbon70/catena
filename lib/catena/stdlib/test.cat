@@ -10,7 +10,7 @@ export type Property
 export type TestResult
 export type Suite
 export transform unit
-export transform property
+export transform prop
 export transform assert
 export transform assertEqual
 export transform assertMatch
@@ -88,7 +88,7 @@ transform suite name tests = Suite {
 
 -- Run a test and get result
 -- Note: () syntax not yet supported, using placeholder
-transform run test = test.run unit
+transform run t = t.run unit
 
 -- Benchmark type and function
 type Benchmark = Benchmark {

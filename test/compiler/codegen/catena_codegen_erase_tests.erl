@@ -307,39 +307,39 @@ module_erasure_test_() ->
 
 test_erase_transform_decl() ->
     %% Transform declaration preserved without types
-    Module = {module, test_mod, [], [
+    Module = {module, test_mod, [], [], [
         {transform, foo, [{pat_var, x, loc()}], {var, x, loc()}, loc()}
     ], loc()},
-    {module, _, _, [Decl], _} = catena_codegen_erase:erase_module(Module),
+    {module, _, _, _, [Decl], _} = catena_codegen_erase:erase_module(Module),
     ?assertMatch({transform, foo, [{pat_var, x, _}], {var, x, _}, _}, Decl).
 
 test_erase_typed_transform() ->
     %% Typed transform loses type signature
-    Module = {module, test_mod, [], [
+    Module = {module, test_mod, [], [], [
         {transform_typed, foo, {fun_type, int, int, pure},
             [{pat_var, x, loc()}], {var, x, loc()}, loc()}
     ], loc()},
-    {module, _, _, [Decl], _} = catena_codegen_erase:erase_module(Module),
+    {module, _, _, _, [Decl], _} = catena_codegen_erase:erase_module(Module),
     ?assertMatch({transform, foo, [{pat_var, x, _}], {var, x, _}, _}, Decl).
 
 test_erase_type_decl() ->
     %% Type declarations completely erased
     %% type_decl tuple is {type_decl, Name, TypeVars, Constructors, Derives, Loc}
-    Module = {module, test_mod, [], [
+    Module = {module, test_mod, [], [], [
         {type_decl, 'Maybe', [a], [{'None', []}, {'Some', [a]}], [], loc()}
     ], loc()},
-    {module, _, _, Decls, _} = catena_codegen_erase:erase_module(Module),
+    {module, _, _, _, Decls, _} = catena_codegen_erase:erase_module(Module),
     ?assertEqual([erased], Decls).
 
 test_erase_module() ->
     %% Full module erasure
-    Module = {module, test_mod, [{foo, 1}], [
+    Module = {module, test_mod, [{foo, 1}], [], [
         {transform_typed, foo, {fun_type, int, int, pure},
             [{pat_typed_var, x, {tcon, int}, loc()}],
             {typed_expr, {var, x, loc()}, {tcon, int}, loc()},
             loc()}
     ], loc()},
-    {module, Name, Exports, Decls, _} = catena_codegen_erase:erase_module(Module),
+    {module, Name, Exports, _, Decls, _} = catena_codegen_erase:erase_module(Module),
     ?assertEqual(test_mod, Name),
     ?assertEqual([{foo, 1}], Exports),
     ?assertEqual(1, length(Decls)),
