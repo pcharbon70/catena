@@ -445,8 +445,9 @@ type_to_string(_) -> "unknown".
 %% Type Definitions
 %%====================================================================
 
--type module_ast() :: {module, atom(), [export()], [decl()], term()}.
+-type module_ast() :: {module, atom(), [export()], [import()], [decl()], term()}.
 -type export() :: {atom(), integer()}.
+-type import() :: term().
 -type decl() :: term().
 -type expr() :: term().
 -type pattern() :: term().

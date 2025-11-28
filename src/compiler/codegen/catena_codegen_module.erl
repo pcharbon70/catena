@@ -286,8 +286,9 @@ compile_to_string(ModuleAST) ->
 %% Type Definitions
 %%====================================================================
 
--type module_ast() :: {module, atom(), [export()], [decl()], term()}.
+-type module_ast() :: {module, atom(), [export()], [import()], [decl()], term()}.
 -type export() :: {atom(), integer()}.
+-type import() :: term().
 -type decl() :: term().
 -type gen_opts() :: #{
     file => string(),
