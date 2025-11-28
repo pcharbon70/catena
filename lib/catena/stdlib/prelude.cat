@@ -25,6 +25,11 @@ export trait Extractor
 export trait Traversable
 export trait Foldable
 
+export type Ordering
+export type Maybe
+export type Either
+export type Result
+
 -- Comparable: Types with equality testing
 -- Laws:
 --   reflexivity: x === x

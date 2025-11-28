@@ -12,7 +12,10 @@
 -export([
     compile_file/1,
     compile_string/1,
+    compile_string/2,
     build_type_env/1,
+    build_module_exports_env/1,
+    process_imports/1,
     type_check_module/2
 ]).
 
@@ -29,13 +32,21 @@ compile_file(Path) ->
 %% @doc Compile a Catena source string.
 -spec compile_string(string()) -> {ok, term()} | {error, term()}.
 compile_string(Source) ->
+    compile_string(Source, #{}).
+
+%% @doc Compile a Catena source string with options.
+%% Options:
+%%   - process_imports: boolean() - whether to load and process imports (default: true)
+%%   - import_env: env() - pre-built environment from imports (skips import processing)
+-spec compile_string(string(), map()) -> {ok, term()} | {error, term()}.
+compile_string(Source, Opts) ->
     case catena_lexer:string(Source) of
         {ok, Tokens, _EndLoc} ->
             case catena_parser:parse(Tokens) of
                 {ok, AST} ->
                     case catena_semantic:analyze(AST) of
                         {ok, AnalyzedAST} ->
-                            type_check(AnalyzedAST);
+                            type_check_with_imports(AnalyzedAST, Opts);
                         {error, _} = SemanticError ->
                             SemanticError
                     end;
@@ -44,6 +55,52 @@ compile_string(Source) ->
             end;
         {error, LexError, _} ->
             {error, {lex_error, LexError}}
+    end.
+
+%% @doc Type check with import processing.
+type_check_with_imports({module, Name, Exports, Imports, Declarations, Location} = AST, Opts) ->
+    %% Get imported environment
+    ImportedEnvResult = case maps:get(import_env, Opts, undefined) of
+        undefined ->
+            %% Process imports unless disabled
+            case maps:get(process_imports, Opts, true) of
+                true -> process_imports(Imports);
+                false -> {ok, catena_type_env:empty()}
+            end;
+        PrebuiltEnv ->
+            {ok, PrebuiltEnv}
+    end,
+    case ImportedEnvResult of
+        {ok, ImportedEnv} ->
+            type_check_with_env(AST, ImportedEnv);
+        {error, _} = Error ->
+            Error
+    end.
+
+%% @doc Type check with a pre-built imported environment.
+type_check_with_env({module, Name, _Exports, _Imports, Declarations, _Location}, ImportedEnv) ->
+    %% Build kind environment and validate HKT usage
+    KindEnv = catena_kind:build_kind_env(Declarations),
+    case catena_kind:validate_hkt(Declarations, KindEnv) of
+        {ok, _} ->
+            %% Build initial type environment from local declarations
+            case build_type_env(Declarations) of
+                {ok, LocalEnv} ->
+                    %% Merge imported env with local env
+                    %% Local definitions shadow imports
+                    Env = catena_type_env:merge(ImportedEnv, LocalEnv),
+                    %% Type check all declarations
+                    case type_check_declarations(Declarations, Env) of
+                        {ok, TypedDecls} ->
+                            {ok, {typed_module, Name, TypedDecls, Env}};
+                        {error, _} = Error ->
+                            Error
+                    end;
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, KindErrors} ->
+            {error, {kind_errors, KindErrors}}
     end.
 
 %% @doc Type check a module AST.
@@ -135,6 +192,80 @@ build_type_env([Decl | Rest], Env) ->
         {error, _} = Error ->
             Error
     end.
+
+%% @doc Build type environment from a module's exported declarations only.
+%% Used when importing a module - only exported symbols are visible.
+-spec build_module_exports_env(term()) -> {ok, term()} | {error, term()}.
+build_module_exports_env({module, _Name, Exports, _Imports, Declarations, _Location}) ->
+    %% Get the set of exported names
+    ExportedNames = get_exported_names(Exports),
+    %% Filter declarations to only exported ones
+    ExportedDecls = filter_exported_declarations(Declarations, ExportedNames),
+    %% Build environment from exported declarations
+    build_type_env(ExportedDecls);
+build_module_exports_env(_) ->
+    {error, invalid_module_ast}.
+
+%% @doc Get the set of exported names from export declarations.
+get_exported_names(Exports) ->
+    sets:from_list([get_export_name(E) || E <- Exports]).
+
+get_export_name({export_transform, Name}) -> Name;
+get_export_name({export_type, Name}) -> Name;
+get_export_name({export_trait, Name}) -> Name;
+get_export_name({export_effect, Name}) -> Name;
+get_export_name(_) -> undefined.
+
+%% @doc Filter declarations to only those that are exported.
+filter_exported_declarations(Declarations, ExportedNames) ->
+    case sets:is_empty(ExportedNames) of
+        true ->
+            %% If no exports specified, export all (like Haskell default)
+            Declarations;
+        false ->
+            lists:filter(
+                fun(Decl) -> is_exported(Decl, ExportedNames) end,
+                Declarations
+            )
+    end.
+
+is_exported({type_decl, Name, _, _, _, _}, ExportedNames) ->
+    sets:is_element(Name, ExportedNames);
+is_exported({transform_decl, Name, _, _, _}, ExportedNames) ->
+    sets:is_element(Name, ExportedNames);
+is_exported({trait_decl, Name, _, _, _, _}, ExportedNames) ->
+    sets:is_element(Name, ExportedNames);
+is_exported({effect_decl, Name, _, _}, ExportedNames) ->
+    sets:is_element(Name, ExportedNames);
+is_exported(_, _ExportedNames) ->
+    false.
+
+%% @doc Process import declarations and build combined type environment.
+%% Returns merged environment from all imported modules.
+-spec process_imports([term()]) -> {ok, term()} | {error, term()}.
+process_imports(Imports) ->
+    SearchPaths = catena_module_loader:get_default_search_paths(),
+    process_imports(Imports, SearchPaths, catena_type_env:empty()).
+
+process_imports([], _SearchPaths, Env) ->
+    {ok, Env};
+process_imports([{import, ModuleName, _Loc} | Rest], SearchPaths, Env) ->
+    case catena_module_loader:load_module(ModuleName, SearchPaths) of
+        {ok, ModuleAST} ->
+            case build_module_exports_env(ModuleAST) of
+                {ok, ModuleEnv} ->
+                    %% Merge module env into accumulated env
+                    MergedEnv = catena_type_env:merge(Env, ModuleEnv),
+                    process_imports(Rest, SearchPaths, MergedEnv);
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end;
+process_imports([_Other | Rest], SearchPaths, Env) ->
+    %% Skip invalid import entries
+    process_imports(Rest, SearchPaths, Env).
 
 %% @doc Add a declaration to the type environment.
 add_decl_to_env({type_decl, Name, Params, Constructors, _Derives, _Location}, Env) ->

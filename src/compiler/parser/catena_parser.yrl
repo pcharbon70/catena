@@ -19,6 +19,7 @@ Header
 Nonterminals
   catena_module
   module_header module_decl export_decl export_list export_item
+  import_decl
   declarations declaration
   type_decl transform_decl effect_decl trait_decl instance_decl
   test_decl property_decl property_body property_bindings property_binding
@@ -199,16 +200,17 @@ Left     600 dot.             %% .
 %%============================================================================
 
 %% Module structure
+%% Note: Imports are handled as declarations and extracted during semantic analysis
 catena_module -> module_header declarations :
     {module,
         element(2, '$1'),   %% Module name
         element(3, '$1'),   %% Exports
-        [],                 %% Imports (future)
-        '$2',               %% Declarations
+        extract_imports('$2'),  %% Extract imports from declarations
+        filter_imports('$2'),   %% Filter out imports from declarations
         element(4, '$1')}.  %% Location
 
 catena_module -> declarations :
-    {module, undefined, [], [], '$1', {line, 1}}.
+    {module, undefined, [], extract_imports('$1'), filter_imports('$1'), {line, 1}}.
 
 %% Module header (module declaration + optional exports)
 module_header -> module_decl :
@@ -258,6 +260,17 @@ declaration -> trait_decl : '$1'.
 declaration -> instance_decl : '$1'.
 declaration -> test_decl : '$1'.
 declaration -> property_decl : '$1'.
+declaration -> import_decl : '$1'.
+
+%% Import declarations (parsed as declarations, extracted to module imports field)
+import_decl -> import upper_ident :
+    {import_decl, extract_atom('$2'), extract_location('$1')}.
+
+%% Dotted import: import Effect.IO
+import_decl -> import upper_ident dot upper_ident :
+    {import_decl,
+        list_to_atom(atom_to_list(extract_atom('$2')) ++ "." ++ atom_to_list(extract_atom('$4'))),
+        extract_location('$1')}.
 
 %% Error recovery: skip malformed declaration and continue with next
 declaration -> error type :
@@ -1167,5 +1180,15 @@ make_error_declaration(Location, Message, _ErrorInfo) ->
 %% This helper is shared between parser and type checker
 extract_trait_constraint(TypeExpr) ->
     catena_compiler_utils:extract_trait_constraint(TypeExpr).
+
+%% @doc Extract import declarations from a list of declarations
+%% Returns list of {import, ModuleName, Loc} tuples
+extract_imports(Decls) ->
+    [{import, Name, Loc} || {import_decl, Name, Loc} <- Decls].
+
+%% @doc Filter out import declarations from a list of declarations
+%% Returns all non-import declarations
+filter_imports(Decls) ->
+    [D || D <- Decls, element(1, D) =/= import_decl].
 
 
