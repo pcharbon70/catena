@@ -322,15 +322,15 @@ Validate that all standard library files parse, type-check, and compile to BEAM 
 - [x] 1.5.1.5 Generate Core Erlang and compile to .beam for all stdlib modules
 
 ### 1.5.2 Trait Instance Resolution
-- [ ] **Task 1.5.2 Complete**
+- [x] **Task 1.5.2 Complete**
 
 Validate that trait instances resolve correctly during type checking. The prelude defines instances for Maybe, Either, List for various traits (Mapper, Applicator, Chainable, Pipeline, Comparable, etc.).
 
-- [ ] 1.5.2.1 Resolve Mapper instance for Maybe when type-checking `map f (Some x)`
-- [ ] 1.5.2.2 Resolve Mapper instance for List when type-checking `map f [1, 2, 3]`
-- [ ] 1.5.2.3 Resolve constrained instances like `Comparable a => Comparable (List a)` with nested resolution
-- [ ] 1.5.2.4 Detect and report missing instances with clear error messages
-- [ ] 1.5.2.5 Verify trait hierarchy resolution (Pipeline requires Applicator requires Mapper)
+- [x] 1.5.2.1 Resolve Mapper instance for Maybe when type-checking `map f (Some x)`
+- [x] 1.5.2.2 Resolve Mapper instance for List when type-checking `map f [1, 2, 3]`
+- [x] 1.5.2.3 Resolve constrained instances like `Comparable a => Comparable (List a)` with nested resolution
+- [x] 1.5.2.4 Detect and report missing instances with clear error messages
+- [x] 1.5.2.5 Verify trait hierarchy resolution (Pipeline requires Applicator requires Mapper)
 
 ### 1.5.3 Higher-Kinded Type Validation
 - [ ] **Task 1.5.3 Complete**
