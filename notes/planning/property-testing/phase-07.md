@@ -10,6 +10,38 @@ By the end of this phase, the property testing library will be feature-complete 
 
 This phase runs for **4 weeks** and focuses on polish, power, and production-readiness.
 
+**Implementation Note - Blockers and Workarounds**: This phase includes advanced features requiring Catena constructs not yet implemented:
+
+1. **Generic Generator Derivation (Section 7.1)**: Requires type reflection and derive attributes
+   - **Workaround**: Implement manual derivation helpers rather than automatic derivation. Provide builder functions like:
+     ```erlang
+     catena_derive:record_gen([{name, gen_string()}, {age, gen_pos_int()}])
+     catena_derive:variant_gen([{none, []}, {some, [gen_any()]}])
+     ```
+   - Full automatic derivation can be added when Catena's type reflection is available.
+
+2. **`@derive Generator` Attribute (Section 7.1.5)**: Requires Catena's attribute/derive system
+   - **Workaround**: Use explicit generator construction or registration:
+     ```erlang
+     catena_gen:register(my_type, fun gen_my_type/0)
+     ```
+
+3. **Type-Directed Properties (Section 7.4)**: Requires inspecting function type signatures
+   - **Workaround**: Implement property patterns as explicit combinators:
+     ```erlang
+     catena_props:roundtrip(encode, decode, gen_value())
+     catena_props:idempotent(normalize, gen_value())
+     catena_props:commutative(add, gen_int(), gen_int())
+     ```
+   - Type-directed automatic generation can be added when type reflection is available.
+
+4. **Property Generation Macro (Section 7.4.4)**: `derive_properties/1`
+   - **Workaround**: Explicit property registration using the combinator approach above.
+
+The workarounds provide the same functionality with slightly more explicit code. Once Catena's macro system, type reflection, and derive attributes are implemented, we can add ergonomic syntax that compiles to these underlying primitives.
+
+**Phases 1-3 provide immediate value** with no blockers, allowing property testing to be used right away. Advanced features in Phases 4-7 can be incrementally enhanced as Catena's metaprogramming capabilities mature.
+
 ---
 
 ## 7.1 Generic Generator Derivation

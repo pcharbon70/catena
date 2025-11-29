@@ -10,6 +10,29 @@ By the end of this phase, developers can test stateful systems like GenServers, 
 
 This phase runs for **4 weeks** and focuses on enabling testing of real-world OTP applications.
 
+**Implementation Note - Blockers and Workarounds**: This phase includes macro-based DSL features that would ideally use Catena syntax:
+
+1. **`state_machine/2` Macro (Section 5.1.1)**: For declarative state machine specification
+   - **Workaround**: Implement as Erlang records and callback modules, similar to PropEr's `proper_statem` behavior. Users implement a callback module with `initial_state/0`, `command/1`, `precondition/2`, `postcondition/3`, and `next_state/3` callbacks.
+
+2. **`command/1` Macro (Section 5.1.2)**: For command specification syntax
+   - **Workaround**: Use record-based command definitions: `#command{name = put, args_gen = ..., precondition = ..., execute = ...}` or equivalent map syntax.
+
+3. **DSL Syntax for Invariants**: `invariant/2` and related constructs
+   - **Workaround**: Express invariants as plain functions: `fun(State) -> boolean()`.
+
+This callback-based approach is well-established (see PropEr, QuickCheck) and provides a stable foundation. Once Catena's macro system is available, we can add syntactic sugar that compiles to these callbacks. The underlying testing engine remains the same.
+
+Example structure:
+```erlang
+-module(my_counter_statem).
+-behaviour(catena_statem).
+
+initial_state() -> #{count => 0}.
+command(State) -> catena_gen:one_of([{call, counter, increment, []}, ...]).
+%% ... other callbacks
+```
+
 ---
 
 ## 5.1 State Machine DSL

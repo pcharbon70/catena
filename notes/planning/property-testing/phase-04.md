@@ -10,6 +10,24 @@ By the end of this phase, developers can verify their trait implementations sati
 
 This phase runs for **4 weeks** and focuses on correctness verification and developer education through clear law descriptions.
 
+**Implementation Note - Blockers and Workarounds**: This phase includes features requiring Catena constructs not yet implemented:
+
+1. **`derive_law_tests` Macro (Section 4.4)**: Requires Catena's macro system and derive/attribute system
+   - **Workaround**: Implement law test generation as Erlang functions. Instead of `@derive Generator` attributes, use explicit `law_tests_for(Module, [functor, monad])` function calls that return test cases.
+
+2. **Type Reflection (Sections 4.4.2, 4.4.3)**: Requires inspecting trait implementations at compile time
+   - **Workaround**: Use explicit configuration rather than automatic reflection. Users specify which traits their type implements and provide the required generator. This mirrors how PropEr currently works.
+
+3. **Trait Introspection**: Checking if a type implements specific traits
+   - **Workaround**: Maintain a manual registry or require explicit trait lists in law test definitions.
+
+The function-based approach is actually more flexible and can serve as the foundation for ergonomic Catena syntax once the macro system is available. Example:
+
+```erlang
+%% Instead of: derive_law_tests for: [Mapper, Pipeline]
+%% Use: catena_laws:test_suite(my_type, [{generator, gen_my_type()}, {traits, [functor, monad]}])
+```
+
 ---
 
 ## 4.1 Law Specification Architecture

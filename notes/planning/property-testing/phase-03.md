@@ -10,6 +10,13 @@ By the end of this phase, developers can write property tests using a familiar Q
 
 This phase runs for **4 weeks** and focuses on developer experience, ensuring that property testing is accessible and productive.
 
+**Implementation Note - Blockers and Workarounds**: This phase includes macro-based DSL features (`property_test/2` macro in Section 3.2.4) that would ideally be implemented in Catena. However, since Catena's macro system is not yet available, we will implement these features using **Erlang parse transforms or function-based APIs** initially. Specifically:
+- The `property/2`, `forall/2`, and related constructs will be implemented as regular Erlang functions
+- The `property_test/2` macro will use Erlang's parse_transform mechanism
+- Once Catena's macro system is implemented, we can add native Catena syntax as syntactic sugar over the existing function-based API
+
+This approach allows immediate implementation while preserving the option to add ergonomic Catena syntax later.
+
 ---
 
 ## 3.1 Property Specification DSL

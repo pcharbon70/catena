@@ -10,6 +10,8 @@ By the end of this phase, we will have a working generator system that can produ
 
 This phase runs for **4 weeks** and focuses on correctness and categorical law compliance, establishing clean abstractions that support future feature additions.
 
+**Implementation Note - No Blockers**: This phase can be implemented entirely as a pure Erlang library. All features (rose trees, generators, categorical instances, ranges, shrinking) use standard Erlang constructs with no dependencies on unimplemented Catena features. Implementation can begin immediately.
+
 ---
 
 ## 1.1 Rose Tree Data Structure
