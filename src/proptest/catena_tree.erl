@@ -44,6 +44,18 @@
     children/1
 ]).
 
+%% API exports - Section 1.1.2: Comonadic Operations
+-export([
+    extract/1,
+    duplicate/1,
+    extend/2
+]).
+
+%% API exports - Section 1.1.3: Functor Instance (needed for comonad laws)
+-export([
+    map/2
+]).
+
 %%====================================================================
 %% Types
 %%====================================================================
@@ -175,3 +187,155 @@ root(#tree{root = Value}) ->
 -spec children(tree(A)) -> [tree(A)].
 children(#tree{children = ChildrenThunk}) ->
     ChildrenThunk().
+
+%%====================================================================
+%% API Functions - Section 1.1.2: Comonadic Operations
+%%====================================================================
+
+%% @doc Extract the root value from a tree (comonad's extract/counit).
+%%
+%% This is the fundamental comonadic operation that extracts the "focus"
+%% value from a comonadic context. For rose trees, this returns the root
+%% value without evaluating any children.
+%%
+%% This is an alias for `root/1` provided for categorical consistency.
+%%
+%% == Comonad Law ==
+%% `extract` is the left and right identity for `extend`:
+%% - `extend extract t == t`
+%% - `extract (extend f t) == f t`
+%%
+%% == Example ==
+%% ```
+%% Tree = catena_tree:singleton(42),
+%% 42 = catena_tree:extract(Tree).
+%% ```
+-spec extract(tree(A)) -> A.
+extract(#tree{root = Value}) ->
+    Value.
+
+%% @doc Create a tree of subtrees (comonad's duplicate/cojoin).
+%%
+%% Transforms a tree into a tree of trees, where each node contains
+%% the subtree rooted at that position. This is the dual of monadic join.
+%%
+%% For a tree with structure:
+%% ```
+%%     A
+%%    / \
+%%   B   C
+%% ```
+%%
+%% `duplicate` produces:
+%% ```
+%%        Tree(A,B,C)
+%%       /          \
+%%   Tree(B)      Tree(C)
+%% ```
+%%
+%% Where each node now contains the entire subtree from that position.
+%%
+%% == Comonad Laws ==
+%% - `extract . duplicate == id`
+%% - `map extract . duplicate == id`
+%% - `duplicate . duplicate == map duplicate . duplicate`
+%%
+%% == Example ==
+%% ```
+%% Tree = catena_tree:tree(1, fun() ->
+%%     [catena_tree:singleton(2), catena_tree:singleton(3)]
+%% end),
+%% Dup = catena_tree:duplicate(Tree),
+%% %% Root of Dup is the original tree
+%% Tree = catena_tree:extract(Dup),
+%% %% Children of Dup are duplicated subtrees
+%% [Child2, Child3] = catena_tree:children(Dup),
+%% 2 = catena_tree:extract(catena_tree:extract(Child2)).
+%% ```
+-spec duplicate(tree(A)) -> tree(tree(A)).
+duplicate(Tree) ->
+    #tree{
+        root = Tree,
+        children = fun() ->
+            [duplicate(Child) || Child <- children(Tree)]
+        end
+    }.
+
+%% @doc Apply a function to all subtrees (comonad's extend/cobind).
+%%
+%% Extends a function that consumes a tree to work on all subtrees.
+%% The function receives the entire subtree at each position and produces
+%% a new value for that position.
+%%
+%% This is the dual of monadic bind. Where bind (>>=) lets you use a value
+%% to produce a new context, extend lets you use a context to produce a
+%% new value.
+%%
+%% `extend f` is equivalent to `map f . duplicate`.
+%%
+%% == Use Cases ==
+%% - Context-aware transformations where each node needs info about its subtree
+%% - Computing aggregates at each position (e.g., subtree size, depth)
+%% - Shrinking strategies that consider the shrink tree structure
+%%
+%% == Comonad Laws ==
+%% - `extend extract == id`
+%% - `extract . extend f == f`
+%% - `extend f . extend g == extend (f . extend g)`
+%%
+%% == Example ==
+%% ```
+%% %% Count nodes in subtree rooted at each position
+%% CountNodes = fun CountNodes(T) ->
+%%     1 + lists:sum([CountNodes(C) || C <- catena_tree:children(T)])
+%% end,
+%% Tree = catena_tree:tree(a, fun() ->
+%%     [catena_tree:singleton(b), catena_tree:singleton(c)]
+%% end),
+%% Counted = catena_tree:extend(CountNodes, Tree),
+%% 3 = catena_tree:extract(Counted),  % Total tree has 3 nodes
+%% [C1, C2] = catena_tree:children(Counted),
+%% 1 = catena_tree:extract(C1).  % Each leaf subtree has 1 node
+%% ```
+-spec extend(fun((tree(A)) -> B), tree(A)) -> tree(B).
+extend(F, Tree) when is_function(F, 1) ->
+    #tree{
+        root = F(Tree),
+        children = fun() ->
+            [extend(F, Child) || Child <- children(Tree)]
+        end
+    }.
+
+%%====================================================================
+%% API Functions - Section 1.1.3: Functor Instance
+%%====================================================================
+
+%% @doc Apply a function to every value in the tree (functor's fmap).
+%%
+%% Transforms all values in the tree while preserving the tree structure.
+%% The function is applied lazily - children are only transformed when
+%% they are actually accessed.
+%%
+%% == Functor Laws ==
+%% - `map id == id` (identity)
+%% - `map (f . g) == map f . map g` (composition)
+%%
+%% == Example ==
+%% ```
+%% Tree = catena_tree:tree(1, fun() ->
+%%     [catena_tree:singleton(2), catena_tree:singleton(3)]
+%% end),
+%% Doubled = catena_tree:map(fun(X) -> X * 2 end, Tree),
+%% 2 = catena_tree:extract(Doubled),
+%% [C1, C2] = catena_tree:children(Doubled),
+%% 4 = catena_tree:extract(C1),
+%% 6 = catena_tree:extract(C2).
+%% ```
+-spec map(fun((A) -> B), tree(A)) -> tree(B).
+map(F, Tree) when is_function(F, 1) ->
+    #tree{
+        root = F(root(Tree)),
+        children = fun() ->
+            [map(F, Child) || Child <- children(Tree)]
+        end
+    }.
