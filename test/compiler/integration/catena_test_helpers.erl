@@ -24,7 +24,10 @@
     %% Prelude helpers
     load_prelude_decls/0,
     load_prelude_instances/0,
-    build_prelude_kind_env/0
+    build_prelude_kind_env/0,
+
+    %% File system helpers
+    temp_dir/0
 ]).
 
 %% =============================================================================
@@ -130,3 +133,23 @@ load_prelude_instances() ->
 build_prelude_kind_env() ->
     Decls = load_prelude_decls(),
     catena_kind:build_kind_env(Decls).
+
+%% =============================================================================
+%% File System Helpers
+%% =============================================================================
+
+%% @doc Get a temporary directory for test files
+%% Creates the directory if it doesn't exist
+-spec temp_dir() -> string().
+temp_dir() ->
+    TempBase = case os:getenv("TMPDIR") of
+        false ->
+            case os:getenv("TMP") of
+                false -> "/tmp";
+                Tmp -> Tmp
+            end;
+        TmpDir -> TmpDir
+    end,
+    TestDir = filename:join([TempBase, "catena_test"]),
+    ok = filelib:ensure_dir(filename:join(TestDir, "dummy")),
+    TestDir.

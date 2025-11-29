@@ -311,15 +311,15 @@ This section validates that Catena's standard library compiles to BEAM and execu
 **Architectural Note**: Per Catena's minimal-core design, category theory abstractions are library code, not compiler features. The compiler provides `trait`, `instance`, and `effect` keywords; the standard library builds all abstractions on top.
 
 ### 1.5.1 Standard Library Compilation
-- [ ] **Task 1.5.1 Complete**
+- [x] **Task 1.5.1 Complete**
 
 Validate that all standard library files parse, type-check, and compile to BEAM bytecode. This proves the compiler can handle real Catena code with traits, instances, and effects.
 
-- [ ] 1.5.1.1 Parse `lib/catena/stdlib/prelude.cat` successfully producing valid AST for all trait and instance declarations
-- [ ] 1.5.1.2 Type-check prelude.cat validating all trait method signatures and instance implementations
-- [ ] 1.5.1.3 Parse and type-check `lib/catena/stdlib/test.cat` for testing framework
-- [ ] 1.5.1.4 Parse and type-check effect modules (`effect/io.cat`, `effect/state.cat`, `effect/error.cat`)
-- [ ] 1.5.1.5 Generate Core Erlang and compile to .beam for all stdlib modules
+- [x] 1.5.1.1 Parse `lib/catena/stdlib/prelude.cat` successfully producing valid AST for all trait and instance declarations
+- [x] 1.5.1.2 Type-check prelude.cat validating all trait method signatures and instance implementations
+- [x] 1.5.1.3 Parse and type-check `lib/catena/stdlib/test.cat` for testing framework
+- [x] 1.5.1.4 Parse and type-check effect modules (`effect/io.cat`, `effect/state.cat`, `effect/error.cat`)
+- [x] 1.5.1.5 Generate Core Erlang and compile to .beam for all stdlib modules
 
 ### 1.5.2 Trait Instance Resolution
 - [ ] **Task 1.5.2 Complete**

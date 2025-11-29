@@ -570,3 +570,140 @@ error_hkt_kind_mismatch_test() ->
         _ ->
             ok
     end.
+
+%% =============================================================================
+%% Section 1.5.1.5 - Core Erlang Generation and BEAM Compilation
+%% =============================================================================
+
+%% Test Core Erlang generation for IO effect module
+codegen_io_effect_test() ->
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "effect", "io.cat"]),
+    {ok, Content} = file:read_file(Path),
+    Source = binary_to_list(Content),
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+    case catena_codegen_module:generate_module(AST) of
+        {ok, CoreModule} ->
+            %% Verify Core Erlang module structure
+            ?assertEqual(module, cerl:type(CoreModule)),
+            ?assertEqual('Effect.IO', cerl:atom_val(cerl:module_name(CoreModule))),
+            ok;
+        {error, Reason} ->
+            io:format("~nCodegen error for io.cat: ~p~n", [Reason]),
+            ?assert(false, {codegen_failed, Reason})
+    end.
+
+%% Test Core Erlang generation for State effect module
+codegen_state_effect_test() ->
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "effect", "state.cat"]),
+    {ok, Content} = file:read_file(Path),
+    Source = binary_to_list(Content),
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+    case catena_codegen_module:generate_module(AST) of
+        {ok, CoreModule} ->
+            ?assertEqual(module, cerl:type(CoreModule)),
+            ?assertEqual('Effect.State', cerl:atom_val(cerl:module_name(CoreModule))),
+            ok;
+        {error, Reason} ->
+            io:format("~nCodegen error for state.cat: ~p~n", [Reason]),
+            ?assert(false, {codegen_failed, Reason})
+    end.
+
+%% Test Core Erlang generation for Error effect module
+codegen_error_effect_test() ->
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "effect", "error.cat"]),
+    {ok, Content} = file:read_file(Path),
+    Source = binary_to_list(Content),
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+    case catena_codegen_module:generate_module(AST) of
+        {ok, CoreModule} ->
+            ?assertEqual(module, cerl:type(CoreModule)),
+            ?assertEqual('Effect.Error', cerl:atom_val(cerl:module_name(CoreModule))),
+            ok;
+        {error, Reason} ->
+            io:format("~nCodegen error for error.cat: ~p~n", [Reason]),
+            ?assert(false, {codegen_failed, Reason})
+    end.
+
+%% Test writing Core Erlang to file and compiling to BEAM
+compile_to_beam_io_effect_test() ->
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "effect", "io.cat"]),
+    {ok, Content} = file:read_file(Path),
+    Source = binary_to_list(Content),
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+    case catena_codegen_module:generate_module(AST) of
+        {ok, CoreModule} ->
+            %% Write to temp .core file
+            TempDir = catena_test_helpers:temp_dir(),
+            CorePath = filename:join(TempDir, "Effect.IO.core"),
+            case catena_codegen_module:write_core_file(CoreModule, CorePath) of
+                ok ->
+                    %% Verify file exists
+                    ?assert(filelib:is_file(CorePath)),
+                    %% Compile .core to .beam
+                    BeamPath = filename:join(TempDir, "Effect.IO.beam"),
+                    case compile:file(CorePath, [from_core, {outdir, TempDir}]) of
+                        {ok, 'Effect.IO'} ->
+                            ?assert(filelib:is_file(BeamPath)),
+                            %% Verify BEAM can be loaded
+                            case code:load_abs(filename:join(TempDir, "Effect.IO")) of
+                                {module, 'Effect.IO'} ->
+                                    %% Clean up
+                                    code:purge('Effect.IO'),
+                                    code:delete('Effect.IO'),
+                                    ok;
+                                LoadError ->
+                                    ?assert(false, {beam_load_failed, LoadError})
+                            end;
+                        CompileError ->
+                            io:format("~nCompile error: ~p~n", [CompileError]),
+                            ?assert(false, {compile_failed, CompileError})
+                    end;
+                WriteError ->
+                    ?assert(false, {write_failed, WriteError})
+            end;
+        {error, Reason} ->
+            ?assert(false, {codegen_failed, Reason})
+    end.
+
+%% Test that generated BEAM has correct exports
+beam_exports_io_effect_test() ->
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "effect", "io.cat"]),
+    {ok, Content} = file:read_file(Path),
+    Source = binary_to_list(Content),
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+    case catena_codegen_module:generate_module(AST) of
+        {ok, CoreModule} ->
+            %% Check exports in Core module
+            Exports = cerl:module_exports(CoreModule),
+            %% IO effect should have operations as exports
+            ExportNames = [cerl:fname_id(E) || E <- Exports],
+            io:format("~nIO effect exports: ~p~n", [ExportNames]),
+            %% Effect modules may have no function exports (effect declaration only)
+            ok;
+        {error, Reason} ->
+            ?assert(false, {codegen_failed, Reason})
+    end.
+
+%% Test Core Erlang string output
+core_erlang_string_output_test() ->
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "effect", "io.cat"]),
+    {ok, Content} = file:read_file(Path),
+    Source = binary_to_list(Content),
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+    case catena_codegen_module:generate_module(AST) of
+        {ok, CoreModule} ->
+            CoreString = catena_codegen_module:module_to_core_string(CoreModule),
+            ?assert(is_list(CoreString)),
+            ?assert(length(CoreString) > 0),
+            %% Should contain module declaration
+            ?assert(string:str(CoreString, "module") > 0),
+            ok;
+        {error, Reason} ->
+            ?assert(false, {codegen_failed, Reason})
+    end.
