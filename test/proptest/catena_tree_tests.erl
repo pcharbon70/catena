@@ -796,6 +796,258 @@ functor_law_composition_test() ->
     ).
 
 %%====================================================================
+%% Test: Functor Edge Cases (Section 1.1.3)
+%%====================================================================
+
+%% Edge case: map over singleton (no children)
+map_singleton_test() ->
+    Tree = catena_tree:singleton(100),
+    Mapped = catena_tree:map(fun(X) -> X div 2 end, Tree),
+    ?assertEqual(50, catena_tree:extract(Mapped)),
+    ?assertEqual([], catena_tree:children(Mapped)).
+
+%% Edge case: map with type-changing function
+map_type_change_test() ->
+    Tree = catena_tree:tree(42, fun() ->
+        [catena_tree:singleton(1), catena_tree:singleton(2)]
+    end),
+    %% Integer to string
+    Mapped = catena_tree:map(fun integer_to_list/1, Tree),
+    ?assertEqual("42", catena_tree:extract(Mapped)),
+    [C1, C2] = catena_tree:children(Mapped),
+    ?assertEqual("1", catena_tree:extract(C1)),
+    ?assertEqual("2", catena_tree:extract(C2)).
+
+%% Edge case: map with constant function (ignores input)
+map_constant_function_test() ->
+    Tree = catena_tree:tree(1, fun() ->
+        [catena_tree:singleton(2), catena_tree:singleton(3)]
+    end),
+    Mapped = catena_tree:map(fun(_) -> constant end, Tree),
+    ?assertEqual(constant, catena_tree:extract(Mapped)),
+    [C1, C2] = catena_tree:children(Mapped),
+    ?assertEqual(constant, catena_tree:extract(C1)),
+    ?assertEqual(constant, catena_tree:extract(C2)).
+
+%% Edge case: map over deeply nested tree
+map_deep_tree_test() ->
+    %% Create tree with depth 5
+    Deep = lists:foldl(
+        fun(N, Child) ->
+            catena_tree:tree(N, fun() -> [Child] end)
+        end,
+        catena_tree:singleton(0),
+        lists:seq(1, 5)
+    ),
+
+    %% Double all values
+    Mapped = catena_tree:map(fun(X) -> X * 2 end, Deep),
+
+    %% Verify all levels
+    ?assertEqual(10, catena_tree:extract(Mapped)),
+    [L4] = catena_tree:children(Mapped),
+    ?assertEqual(8, catena_tree:extract(L4)),
+    [L3] = catena_tree:children(L4),
+    ?assertEqual(6, catena_tree:extract(L3)),
+    [L2] = catena_tree:children(L3),
+    ?assertEqual(4, catena_tree:extract(L2)),
+    [L1] = catena_tree:children(L2),
+    ?assertEqual(2, catena_tree:extract(L1)),
+    [L0] = catena_tree:children(L1),
+    ?assertEqual(0, catena_tree:extract(L0)).
+
+%% Edge case: map over wide tree (many children)
+map_wide_tree_test() ->
+    NumChildren = 50,
+    Children = [catena_tree:singleton(N) || N <- lists:seq(1, NumChildren)],
+    Tree = catena_tree:tree(0, fun() -> Children end),
+
+    Mapped = catena_tree:map(fun(X) -> X * 3 end, Tree),
+
+    ?assertEqual(0, catena_tree:extract(Mapped)),
+    MappedChildren = catena_tree:children(Mapped),
+    ?assertEqual(NumChildren, length(MappedChildren)),
+    Expected = [N * 3 || N <- lists:seq(1, NumChildren)],
+    Actual = [catena_tree:extract(C) || C <- MappedChildren],
+    ?assertEqual(Expected, Actual).
+
+%% Edge case: map with function that returns complex values
+map_complex_values_test() ->
+    Tree = catena_tree:tree(1, fun() ->
+        [catena_tree:singleton(2)]
+    end),
+    %% Return tuples
+    Mapped = catena_tree:map(fun(X) -> {value, X, X * X} end, Tree),
+    ?assertEqual({value, 1, 1}, catena_tree:extract(Mapped)),
+    [C] = catena_tree:children(Mapped),
+    ?assertEqual({value, 2, 4}, catena_tree:extract(C)).
+
+%% Edge case: map preserves children count at each level
+map_preserves_children_count_test() ->
+    %% Tree with varying number of children at each level
+    %% root (3 children) -> [a (2 children), b (0 children), c (1 child)]
+    TreeA = catena_tree:tree(a, fun() ->
+        [catena_tree:singleton(a1), catena_tree:singleton(a2)]
+    end),
+    TreeB = catena_tree:singleton(b),
+    TreeC = catena_tree:tree(c, fun() ->
+        [catena_tree:singleton(c1)]
+    end),
+    Root = catena_tree:tree(root, fun() -> [TreeA, TreeB, TreeC] end),
+
+    Mapped = catena_tree:map(fun(X) -> {mapped, X} end, Root),
+
+    %% Verify structure preserved
+    ?assertEqual({mapped, root}, catena_tree:extract(Mapped)),
+    [MA, MB, MC] = catena_tree:children(Mapped),
+
+    ?assertEqual({mapped, a}, catena_tree:extract(MA)),
+    ?assertEqual(2, length(catena_tree:children(MA))),
+
+    ?assertEqual({mapped, b}, catena_tree:extract(MB)),
+    ?assertEqual(0, length(catena_tree:children(MB))),
+
+    ?assertEqual({mapped, c}, catena_tree:extract(MC)),
+    ?assertEqual(1, length(catena_tree:children(MC))).
+
+%% Edge case: double map (map twice)
+map_double_application_test() ->
+    Tree = catena_tree:tree(5, fun() ->
+        [catena_tree:singleton(10)]
+    end),
+
+    %% Apply map twice
+    Mapped1 = catena_tree:map(fun(X) -> X + 1 end, Tree),
+    Mapped2 = catena_tree:map(fun(X) -> X * 2 end, Mapped1),
+
+    ?assertEqual(12, catena_tree:extract(Mapped2)),  % (5 + 1) * 2
+    [C] = catena_tree:children(Mapped2),
+    ?assertEqual(22, catena_tree:extract(C)).  % (10 + 1) * 2
+
+%% Edge case: map doesn't evaluate siblings when accessing one child
+map_lazy_sibling_evaluation_test() ->
+    Counter = spawn(fun() -> counter_loop(0) end),
+
+    %% Create tree with two children, each tracking evaluation
+    Tree = catena_tree:tree(root, fun() ->
+        [
+            catena_tree:tree(left, fun() ->
+                Counter ! {increment, left},
+                []
+            end),
+            catena_tree:tree(right, fun() ->
+                Counter ! {increment, right},
+                []
+            end)
+        ]
+    end),
+
+    Mapped = catena_tree:map(fun(X) -> {mapped, X} end, Tree),
+
+    %% Get children of mapped tree
+    [Left, _Right] = catena_tree:children(Mapped),
+
+    %% Access only left child's children
+    _ = catena_tree:children(Left),
+
+    %% Only left should have been evaluated
+    Counter ! {get, self()},
+    receive
+        {count, Count} -> ?assertEqual(1, Count)
+    after 100 ->
+        ?assert(false)
+    end,
+
+    Counter ! stop.
+
+%% Edge case: map with function that may crash (robustness)
+map_partial_function_test() ->
+    Tree = catena_tree:tree(10, fun() ->
+        [catena_tree:singleton(5), catena_tree:singleton(2)]
+    end),
+
+    %% Division - partial function (would crash on 0)
+    Mapped = catena_tree:map(fun(X) -> 100 div X end, Tree),
+
+    ?assertEqual(10, catena_tree:extract(Mapped)),  % 100 div 10
+    [C1, C2] = catena_tree:children(Mapped),
+    ?assertEqual(20, catena_tree:extract(C1)),  % 100 div 5
+    ?assertEqual(50, catena_tree:extract(C2)).  % 100 div 2
+
+%% Edge case: map identity over unfold-generated tree
+map_identity_unfold_test() ->
+    %% Create tree using unfold
+    ShrinkFn = fun(N) ->
+        case N of
+            0 -> {0, []};
+            _ -> {N, [N div 2]}
+        end
+    end,
+    Tree = catena_tree:unfold(8, ShrinkFn),
+
+    %% Map identity should preserve values
+    Mapped = catena_tree:map(fun(X) -> X end, Tree),
+
+    ?assertEqual(catena_tree:extract(Tree), catena_tree:extract(Mapped)),
+
+    %% Check first few levels match
+    [C1] = catena_tree:children(Tree),
+    [MC1] = catena_tree:children(Mapped),
+    ?assertEqual(catena_tree:extract(C1), catena_tree:extract(MC1)),
+
+    [C2] = catena_tree:children(C1),
+    [MC2] = catena_tree:children(MC1),
+    ?assertEqual(catena_tree:extract(C2), catena_tree:extract(MC2)).
+
+%% Functor law: identity on deeply nested structure
+functor_law_identity_deep_test() ->
+    %% Create a more complex tree structure
+    TreeD = catena_tree:singleton(d),
+    TreeE = catena_tree:singleton(e),
+    TreeC = catena_tree:tree(c, fun() -> [TreeD, TreeE] end),
+    TreeB = catena_tree:tree(b, fun() -> [TreeC] end),
+    TreeA = catena_tree:tree(a, fun() -> [TreeB] end),
+
+    %% map id should preserve all values at all levels
+    Mapped = catena_tree:map(fun(X) -> X end, TreeA),
+
+    %% Verify all levels
+    ?assertEqual(a, catena_tree:extract(Mapped)),
+    [MB] = catena_tree:children(Mapped),
+    ?assertEqual(b, catena_tree:extract(MB)),
+    [MC] = catena_tree:children(MB),
+    ?assertEqual(c, catena_tree:extract(MC)),
+    [MD, ME] = catena_tree:children(MC),
+    ?assertEqual(d, catena_tree:extract(MD)),
+    ?assertEqual(e, catena_tree:extract(ME)).
+
+%% Functor law: composition with three functions
+functor_law_composition_triple_test() ->
+    Tree = catena_tree:tree(1, fun() ->
+        [catena_tree:singleton(2), catena_tree:singleton(3)]
+    end),
+
+    F = fun(X) -> X * 2 end,
+    G = fun(X) -> X + 10 end,
+    H = fun(X) -> X * X end,
+
+    %% map (f . g . h) tree
+    Composed = fun(X) -> F(G(H(X))) end,
+    MapComposed = catena_tree:map(Composed, Tree),
+
+    %% map f . map g . map h $ tree
+    MapH = catena_tree:map(H, Tree),
+    MapGH = catena_tree:map(G, MapH),
+    MapFGH = catena_tree:map(F, MapGH),
+
+    %% Should be equal
+    ?assertEqual(catena_tree:extract(MapComposed), catena_tree:extract(MapFGH)),
+
+    ComposedChildren = [catena_tree:extract(C) || C <- catena_tree:children(MapComposed)],
+    FGHChildren = [catena_tree:extract(C) || C <- catena_tree:children(MapFGH)],
+    ?assertEqual(ComposedChildren, FGHChildren).
+
+%%====================================================================
 %% Test: extend == map . duplicate equivalence
 %%====================================================================
 
@@ -831,6 +1083,8 @@ extend_equals_map_duplicate_test() ->
 counter_loop(Count) ->
     receive
         increment ->
+            counter_loop(Count + 1);
+        {increment, _Tag} ->
             counter_loop(Count + 1);
         {get, Pid} ->
             Pid ! {count, Count},
