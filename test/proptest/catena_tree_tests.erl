@@ -1496,6 +1496,342 @@ liftA2_commutative_operation_test() ->
     ?assertEqual([11, 8], ChildrenBA).
 
 %%====================================================================
+%% Section 1.1.5: Monad Instance Tests
+%%====================================================================
+
+%%--------------------------------------------------------------------
+%% return/1 tests
+%%--------------------------------------------------------------------
+
+return_creates_singleton_test() ->
+    Tree = catena_tree:return(42),
+    ?assertEqual(42, catena_tree:extract(Tree)),
+    ?assertEqual([], catena_tree:children(Tree)).
+
+return_equivalent_to_pure_test() ->
+    Value = {complex, [1, 2, 3]},
+    ReturnTree = catena_tree:return(Value),
+    PureTree = catena_tree:pure(Value),
+    ?assertEqual(catena_tree:extract(ReturnTree), catena_tree:extract(PureTree)),
+    ?assertEqual(catena_tree:children(ReturnTree), catena_tree:children(PureTree)).
+
+return_equivalent_to_singleton_test() ->
+    Value = fun(X) -> X * 2 end,
+    ReturnTree = catena_tree:return(Value),
+    SingletonTree = catena_tree:singleton(Value),
+    ?assertEqual(catena_tree:extract(ReturnTree), catena_tree:extract(SingletonTree)),
+    ?assertEqual(catena_tree:children(ReturnTree), catena_tree:children(SingletonTree)).
+
+%%--------------------------------------------------------------------
+%% bind/2 tests
+%%--------------------------------------------------------------------
+
+bind_applies_function_to_root_test() ->
+    TreeA = catena_tree:singleton(10),
+    F = fun(X) -> catena_tree:singleton(X * 2) end,
+    Result = catena_tree:bind(TreeA, F),
+    ?assertEqual(20, catena_tree:extract(Result)).
+
+bind_with_no_shrinks_test() ->
+    TreeA = catena_tree:singleton(5),
+    F = fun(X) -> catena_tree:singleton(X + 1) end,
+    Result = catena_tree:bind(TreeA, F),
+    ?assertEqual(6, catena_tree:extract(Result)),
+    ?assertEqual([], catena_tree:children(Result)).
+
+bind_preserves_inner_shrinks_test() ->
+    %% TreeA has no shrinks, but F produces a tree with shrinks
+    TreeA = catena_tree:singleton(10),
+    F = fun(X) ->
+        catena_tree:tree(X * 2, fun() ->
+            [catena_tree:singleton(X), catena_tree:singleton(0)]
+        end)
+    end,
+    Result = catena_tree:bind(TreeA, F),
+    ?assertEqual(20, catena_tree:extract(Result)),
+    Children = catena_tree:children(Result),
+    ?assertEqual(2, length(Children)),
+    ChildValues = [catena_tree:extract(C) || C <- Children],
+    ?assertEqual([10, 0], ChildValues).
+
+bind_preserves_outer_shrinks_test() ->
+    %% TreeA has shrinks, F produces singletons
+    TreeA = catena_tree:tree(10, fun() ->
+        [catena_tree:singleton(5), catena_tree:singleton(0)]
+    end),
+    F = fun(X) -> catena_tree:singleton(X * 2) end,
+    Result = catena_tree:bind(TreeA, F),
+    ?assertEqual(20, catena_tree:extract(Result)),
+    Children = catena_tree:children(Result),
+    ?assertEqual(2, length(Children)),
+    ChildValues = [catena_tree:extract(C) || C <- Children],
+    %% Outer shrinks: F(5) = 10, F(0) = 0
+    ?assertEqual([10, 0], ChildValues).
+
+bind_interleaves_inner_and_outer_shrinks_test() ->
+    %% Both have shrinks - inner comes first, then outer
+    TreeA = catena_tree:tree(10, fun() ->
+        [catena_tree:singleton(5)]
+    end),
+    F = fun(X) ->
+        catena_tree:tree(X * 2, fun() ->
+            [catena_tree:singleton(X)]
+        end)
+    end,
+    Result = catena_tree:bind(TreeA, F),
+    ?assertEqual(20, catena_tree:extract(Result)),
+    Children = catena_tree:children(Result),
+    ?assertEqual(2, length(Children)),
+    ChildValues = [catena_tree:extract(C) || C <- Children],
+    %% Inner shrink (10) first, then outer shrink via F(5) = 10
+    ?assertEqual([10, 10], ChildValues).
+
+bind_dependent_generation_test() ->
+    %% Generate list of length N, where N comes from first tree
+    TreeN = catena_tree:tree(3, fun() ->
+        [catena_tree:singleton(2), catena_tree:singleton(1)]
+    end),
+    F = fun(N) ->
+        catena_tree:singleton(lists:duplicate(N, x))
+    end,
+    Result = catena_tree:bind(TreeN, F),
+    ?assertEqual([x, x, x], catena_tree:extract(Result)),
+    Children = catena_tree:children(Result),
+    ChildValues = [catena_tree:extract(C) || C <- Children],
+    ?assertEqual([[x, x], [x]], ChildValues).
+
+bind_chaining_test() ->
+    %% Chain two binds
+    TreeA = catena_tree:singleton(2),
+    F = fun(X) -> catena_tree:singleton(X * 3) end,
+    G = fun(X) -> catena_tree:singleton(X + 1) end,
+    Result = catena_tree:bind(catena_tree:bind(TreeA, F), G),
+    ?assertEqual(7, catena_tree:extract(Result)).  % (2 * 3) + 1 = 7
+
+bind_preserves_laziness_test() ->
+    Counter = spawn(fun() -> counter_loop(0) end),
+    TreeA = catena_tree:tree(1, fun() ->
+        Counter ! increment,
+        [catena_tree:singleton(0)]
+    end),
+    F = fun(X) ->
+        catena_tree:tree(X * 2, fun() ->
+            Counter ! increment,
+            [catena_tree:singleton(X)]
+        end)
+    end,
+    Result = catena_tree:bind(TreeA, F),
+    %% Just accessing root should not evaluate children
+    _ = catena_tree:extract(Result),
+    Counter ! {get, self()},
+    receive {count, Count1} -> ?assertEqual(0, Count1) end,
+    %% Accessing children evaluates the thunks
+    _ = catena_tree:children(Result),
+    Counter ! {get, self()},
+    receive {count, Count2} -> ?assertEqual(2, Count2) end,
+    Counter ! stop.
+
+%%--------------------------------------------------------------------
+%% flatten/1 tests
+%%--------------------------------------------------------------------
+
+flatten_nested_singletons_test() ->
+    Inner = catena_tree:singleton(42),
+    Outer = catena_tree:singleton(Inner),
+    Flat = catena_tree:flatten(Outer),
+    ?assertEqual(42, catena_tree:extract(Flat)),
+    ?assertEqual([], catena_tree:children(Flat)).
+
+flatten_inner_shrinks_test() ->
+    Inner = catena_tree:tree(42, fun() ->
+        [catena_tree:singleton(21), catena_tree:singleton(0)]
+    end),
+    Outer = catena_tree:singleton(Inner),
+    Flat = catena_tree:flatten(Outer),
+    ?assertEqual(42, catena_tree:extract(Flat)),
+    Children = catena_tree:children(Flat),
+    ChildValues = [catena_tree:extract(C) || C <- Children],
+    ?assertEqual([21, 0], ChildValues).
+
+flatten_outer_shrinks_test() ->
+    Inner1 = catena_tree:singleton(42),
+    Inner2 = catena_tree:singleton(21),
+    Outer = catena_tree:tree(Inner1, fun() ->
+        [catena_tree:singleton(Inner2)]
+    end),
+    Flat = catena_tree:flatten(Outer),
+    ?assertEqual(42, catena_tree:extract(Flat)),
+    Children = catena_tree:children(Flat),
+    ?assertEqual(1, length(Children)),
+    ?assertEqual(21, catena_tree:extract(hd(Children))).
+
+flatten_both_shrinks_test() ->
+    %% Inner tree has shrinks, outer tree has shrinks
+    Inner = catena_tree:tree(100, fun() ->
+        [catena_tree:singleton(50)]
+    end),
+    ShrunkInner = catena_tree:singleton(0),
+    Outer = catena_tree:tree(Inner, fun() ->
+        [catena_tree:singleton(ShrunkInner)]
+    end),
+    Flat = catena_tree:flatten(Outer),
+    ?assertEqual(100, catena_tree:extract(Flat)),
+    Children = catena_tree:children(Flat),
+    ?assertEqual(2, length(Children)),
+    ChildValues = [catena_tree:extract(C) || C <- Children],
+    %% Inner shrink (50) first, then outer shrink (0)
+    ?assertEqual([50, 0], ChildValues).
+
+flatten_deeply_nested_test() ->
+    %% Triple nesting
+    InnerMost = catena_tree:singleton(1),
+    Middle = catena_tree:singleton(InnerMost),
+    Outer = catena_tree:singleton(Middle),
+    %% Flatten once
+    Flat1 = catena_tree:flatten(Outer),
+    ?assertEqual(InnerMost, catena_tree:extract(Flat1)),
+    %% Flatten again
+    Flat2 = catena_tree:flatten(Flat1),
+    ?assertEqual(1, catena_tree:extract(Flat2)).
+
+%%--------------------------------------------------------------------
+%% Monad law tests
+%%--------------------------------------------------------------------
+
+monad_law_left_identity_test() ->
+    %% bind(return(a), f) == f(a)
+    A = 42,
+    F = fun(X) -> catena_tree:tree(X * 2, fun() ->
+        [catena_tree:singleton(X)]
+    end) end,
+    Left = catena_tree:bind(catena_tree:return(A), F),
+    Right = F(A),
+    ?assertEqual(catena_tree:extract(Left), catena_tree:extract(Right)),
+    LeftChildren = [catena_tree:extract(C) || C <- catena_tree:children(Left)],
+    RightChildren = [catena_tree:extract(C) || C <- catena_tree:children(Right)],
+    ?assertEqual(LeftChildren, RightChildren).
+
+monad_law_right_identity_test() ->
+    %% bind(m, return) == m
+    M = catena_tree:tree(42, fun() ->
+        [catena_tree:singleton(21), catena_tree:singleton(0)]
+    end),
+    Result = catena_tree:bind(M, fun catena_tree:return/1),
+    ?assertEqual(catena_tree:extract(M), catena_tree:extract(Result)),
+    %% Check structure is preserved (root values of children match)
+    MChildValues = [catena_tree:extract(C) || C <- catena_tree:children(M)],
+    ResultChildValues = [catena_tree:extract(C) || C <- catena_tree:children(Result)],
+    ?assertEqual(MChildValues, ResultChildValues).
+
+monad_law_associativity_test() ->
+    %% bind(bind(m, f), g) == bind(m, fun(x) -> bind(f(x), g) end)
+    M = catena_tree:tree(2, fun() ->
+        [catena_tree:singleton(1)]
+    end),
+    F = fun(X) -> catena_tree:tree(X * 3, fun() ->
+        [catena_tree:singleton(X)]
+    end) end,
+    G = fun(X) -> catena_tree:tree(X + 10, fun() ->
+        [catena_tree:singleton(X)]
+    end) end,
+    Left = catena_tree:bind(catena_tree:bind(M, F), G),
+    Right = catena_tree:bind(M, fun(X) -> catena_tree:bind(F(X), G) end),
+    ?assertEqual(catena_tree:extract(Left), catena_tree:extract(Right)).
+
+monad_law_associativity_deep_test() ->
+    %% Deeper test with more shrinks
+    M = catena_tree:tree(10, fun() ->
+        [catena_tree:tree(5, fun() -> [catena_tree:singleton(0)] end)]
+    end),
+    F = fun(X) -> catena_tree:singleton(X * 2) end,
+    G = fun(X) -> catena_tree:singleton(X + 1) end,
+    Left = catena_tree:bind(catena_tree:bind(M, F), G),
+    Right = catena_tree:bind(M, fun(X) -> catena_tree:bind(F(X), G) end),
+    ?assertEqual(catena_tree:extract(Left), catena_tree:extract(Right)).
+
+%%--------------------------------------------------------------------
+%% bind/flatten equivalence tests
+%%--------------------------------------------------------------------
+
+flatten_equals_bind_identity_test() ->
+    %% flatten(t) == bind(t, id)
+    Inner = catena_tree:tree(42, fun() ->
+        [catena_tree:singleton(21)]
+    end),
+    Outer = catena_tree:tree(Inner, fun() ->
+        [catena_tree:singleton(catena_tree:singleton(0))]
+    end),
+    FlatResult = catena_tree:flatten(Outer),
+    BindResult = catena_tree:bind(Outer, fun(X) -> X end),
+    ?assertEqual(catena_tree:extract(FlatResult), catena_tree:extract(BindResult)),
+    FlatChildren = [catena_tree:extract(C) || C <- catena_tree:children(FlatResult)],
+    BindChildren = [catena_tree:extract(C) || C <- catena_tree:children(BindResult)],
+    ?assertEqual(FlatChildren, BindChildren).
+
+bind_equals_flatten_map_test() ->
+    %% bind(t, f) == flatten(map(f, t))
+    T = catena_tree:tree(10, fun() ->
+        [catena_tree:singleton(5)]
+    end),
+    F = fun(X) -> catena_tree:tree(X * 2, fun() ->
+        [catena_tree:singleton(X)]
+    end) end,
+    BindResult = catena_tree:bind(T, F),
+    FlattenMapResult = catena_tree:flatten(catena_tree:map(F, T)),
+    ?assertEqual(catena_tree:extract(BindResult), catena_tree:extract(FlattenMapResult)),
+    BindChildren = [catena_tree:extract(C) || C <- catena_tree:children(BindResult)],
+    FlattenMapChildren = [catena_tree:extract(C) || C <- catena_tree:children(FlattenMapResult)],
+    ?assertEqual(BindChildren, FlattenMapChildren).
+
+%%--------------------------------------------------------------------
+%% Edge case tests
+%%--------------------------------------------------------------------
+
+bind_deep_shrink_tree_test() ->
+    %% Test with a deeply nested shrink tree
+    Deep = catena_tree:unfold(5, fun(N) ->
+        if N =< 0 -> {N, []};
+           true -> {N, [N - 1]}
+        end
+    end),
+    F = fun(X) -> catena_tree:singleton(X * 10) end,
+    Result = catena_tree:bind(Deep, F),
+    ?assertEqual(50, catena_tree:extract(Result)),
+    %% Should have one child (from the 5->4 shrink)
+    [Child1] = catena_tree:children(Result),
+    ?assertEqual(40, catena_tree:extract(Child1)).
+
+bind_wide_shrink_tree_test() ->
+    %% Test with a wide shrink tree (many children)
+    Wide = catena_tree:tree(10, fun() ->
+        [catena_tree:singleton(N) || N <- lists:seq(0, 9)]
+    end),
+    F = fun(X) -> catena_tree:singleton(X * 2) end,
+    Result = catena_tree:bind(Wide, F),
+    ?assertEqual(20, catena_tree:extract(Result)),
+    Children = catena_tree:children(Result),
+    ?assertEqual(10, length(Children)),
+    ChildValues = [catena_tree:extract(C) || C <- Children],
+    ?assertEqual([0, 2, 4, 6, 8, 10, 12, 14, 16, 18], ChildValues).
+
+bind_type_changing_test() ->
+    %% Bind that changes types (int -> string)
+    TreeInt = catena_tree:tree(42, fun() ->
+        [catena_tree:singleton(0)]
+    end),
+    F = fun(N) ->
+        catena_tree:tree(integer_to_list(N), fun() ->
+            [catena_tree:singleton("zero")]
+        end)
+    end,
+    Result = catena_tree:bind(TreeInt, F),
+    ?assertEqual("42", catena_tree:extract(Result)),
+    Children = catena_tree:children(Result),
+    ChildValues = [catena_tree:extract(C) || C <- Children],
+    %% Inner shrink "zero" first, then outer shrink "0"
+    ?assertEqual(["zero", "0"], ChildValues).
+
+%%====================================================================
 %% Helper functions
 %%====================================================================
 

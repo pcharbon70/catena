@@ -63,6 +63,13 @@
     liftA2/3
 ]).
 
+%% API exports - Section 1.1.5: Monad Instance
+-export([
+    bind/2,
+    flatten/1,
+    return/1
+]).
+
 %%====================================================================
 %% Types
 %%====================================================================
@@ -467,3 +474,131 @@ ap(TreeF, TreeX) ->
 -spec liftA2(fun((A, B) -> C), tree(A), tree(B)) -> tree(C).
 liftA2(F, TreeA, TreeB) when is_function(F, 2) ->
     ap(map(fun(A) -> fun(B) -> F(A, B) end end, TreeA), TreeB).
+
+%%====================================================================
+%% API Functions - Section 1.1.5: Monad Instance
+%%====================================================================
+
+%% @doc Lift a value into a tree (monad's return).
+%%
+%% This is an alias for `pure/1` provided for consistency with the
+%% Monad interface. Creates a singleton tree containing the value
+%% with no children.
+%%
+%% == Monad Laws ==
+%% `return` is the identity for `bind`:
+%% - Left identity: `bind(return(a), f) == f(a)`
+%% - Right identity: `bind(m, return) == m`
+%%
+%% == Example ==
+%% ```
+%% Tree = catena_tree:return(42),
+%% 42 = catena_tree:extract(Tree),
+%% [] = catena_tree:children(Tree).
+%% ```
+-spec return(A) -> tree(A).
+return(Value) ->
+    singleton(Value).
+
+%% @doc Sequence a tree through a tree-producing function (monad's >>=/flatMap).
+%%
+%% Takes a tree and a function that produces a tree from values, applies
+%% the function to the root value, and flattens the result while preserving
+%% the shrinking structure.
+%%
+%% == IMPORTANT: Shrinking Trade-off ==
+%% Monadic bind has suboptimal shrinking for dependent values. When the
+%% second tree depends on the first value, shrinking the first value does
+%% NOT automatically re-shrink the dependent values.
+%%
+%% Consider using Applicative (`ap`, `liftA2`) when values are independent,
+%% as it provides better shrinking behavior. Use `bind` only when you need
+%% true dependency between generated values.
+%%
+%% == Shrinking Strategy ==
+%% For `bind(TreeA, F)`:
+%% 1. Root: Extract A from TreeA, compute F(A), extract root of F(A)
+%% 2. Children from F(A): The inner tree's shrinks are preserved
+%% 3. Children from TreeA: Each shrink of A produces F(shrunkA) subtrees
+%%
+%% The shrinks from the inner tree (F(A)) come first, followed by shrinks
+%% that re-run F on shrunk values of A.
+%%
+%% == Monad Laws ==
+%% - Left identity: `bind(return(a), f) == f(a)`
+%% - Right identity: `bind(m, return) == m`
+%% - Associativity: `bind(bind(m, f), g) == bind(m, fun(x) -> bind(f(x), g) end)`
+%%
+%% == Example ==
+%% ```
+%% %% Generate a list of length N where N is generated first
+%% TreeN = catena_tree:tree(3, fun() -> [catena_tree:singleton(1)] end),
+%% Result = catena_tree:bind(TreeN, fun(N) ->
+%%     %% Generate a list of N elements
+%%     catena_tree:singleton(lists:duplicate(N, x))
+%% end),
+%% [x, x, x] = catena_tree:extract(Result).
+%% ```
+-spec bind(tree(A), fun((A) -> tree(B))) -> tree(B).
+bind(TreeA, F) when is_function(F, 1) ->
+    A = root(TreeA),
+    TreeB = F(A),
+    B = root(TreeB),
+    #tree{
+        root = B,
+        children = fun() ->
+            %% Inner shrinks: shrinks from F(A) come first
+            InnerShrinks = children(TreeB),
+            %% Outer shrinks: shrinks of A, re-running F on each
+            %% Note: This is the source of suboptimal shrinking -
+            %% when A shrinks, we get a whole new tree F(shrunkA),
+            %% but we don't coordinate shrinking between the two.
+            OuterShrinks = [bind(ShrunkA, F) || ShrunkA <- children(TreeA)],
+            InnerShrinks ++ OuterShrinks
+        end
+    }.
+
+%% @doc Flatten a nested tree into a single tree (monad's join).
+%%
+%% Collapses a tree of trees into a single tree. The outer tree structure
+%% provides one level of shrinking, while the inner trees provide another.
+%%
+%% This is the dual of `duplicate` from the comonad instance.
+%%
+%% == Relationship to bind ==
+%% `flatten` is related to `bind` by:
+%% - `flatten(t) == bind(t, fun(x) -> x end)`
+%% - `bind(t, f) == flatten(map(f, t))`
+%%
+%% == Shrinking Strategy ==
+%% For `flatten(TreeOfTrees)`:
+%% 1. Root: Extract inner tree from outer root, extract root from that
+%% 2. Children from inner tree: Inner tree's shrinks come first
+%% 3. Children from outer tree: Flatten each outer shrink
+%%
+%% == Example ==
+%% ```
+%% %% A tree of trees
+%% Inner = catena_tree:tree(42, fun() -> [catena_tree:singleton(21)] end),
+%% Outer = catena_tree:tree(Inner, fun() ->
+%%     [catena_tree:singleton(catena_tree:singleton(0))]
+%% end),
+%% Flat = catena_tree:flatten(Outer),
+%% 42 = catena_tree:extract(Flat),
+%% [Shrink1, Shrink2] = catena_tree:children(Flat),
+%% 21 = catena_tree:extract(Shrink1),  % From inner tree
+%% 0 = catena_tree:extract(Shrink2).   % From outer tree (flattened)
+%% ```
+-spec flatten(tree(tree(A))) -> tree(A).
+flatten(TreeOfTrees) ->
+    InnerTree = root(TreeOfTrees),
+    #tree{
+        root = root(InnerTree),
+        children = fun() ->
+            %% Inner shrinks: from the inner tree
+            InnerShrinks = children(InnerTree),
+            %% Outer shrinks: flatten each outer child
+            OuterShrinks = [flatten(OuterChild) || OuterChild <- children(TreeOfTrees)],
+            InnerShrinks ++ OuterShrinks
+        end
+    }.
