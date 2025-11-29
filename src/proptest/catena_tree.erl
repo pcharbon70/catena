@@ -56,6 +56,13 @@
     map/2
 ]).
 
+%% API exports - Section 1.1.4: Applicative Instance
+-export([
+    pure/1,
+    ap/2,
+    liftA2/3
+]).
+
 %%====================================================================
 %% Types
 %%====================================================================
@@ -339,3 +346,124 @@ map(F, Tree) when is_function(F, 1) ->
             [map(F, Child) || Child <- children(Tree)]
         end
     }.
+
+%%====================================================================
+%% API Functions - Section 1.1.4: Applicative Instance
+%%====================================================================
+
+%% @doc Lift a value into a tree with no shrinks (applicative's pure/return).
+%%
+%% Creates a singleton tree containing the value with no children.
+%% This is the identity element for applicative operations - a value
+%% that cannot be shrunk further.
+%%
+%% Note: This is equivalent to `singleton/1` but named `pure` for
+%% consistency with the Applicative interface.
+%%
+%% == Applicative Laws ==
+%% `pure` satisfies:
+%% - Identity: `ap(pure(id), v) == v`
+%% - Homomorphism: `ap(pure(f), pure(x)) == pure(f(x))`
+%% - Interchange: `ap(u, pure(y)) == ap(pure(fun(f) -> f(y) end), u)`
+%%
+%% == Example ==
+%% ```
+%% Tree = catena_tree:pure(42),
+%% 42 = catena_tree:extract(Tree),
+%% [] = catena_tree:children(Tree).
+%% ```
+-spec pure(A) -> tree(A).
+pure(Value) ->
+    singleton(Value).
+
+%% @doc Apply a tree of functions to a tree of values (applicative's <*>).
+%%
+%% Produces a tree where the root is `F(X)` (applying root function to root value),
+%% and children represent all possible shrinks. The shrinking strategy is
+%% "interleaved" meaning we explore:
+%% 1. Shrinking the function tree (left shrinks)
+%% 2. Shrinking the value tree (right shrinks)
+%%
+%% This interleaving ensures thorough exploration of the shrink space for
+%% independent values. The order (left then right) prioritizes shrinking
+%% the earlier/outer generator first.
+%%
+%% == Shrinking Strategy ==
+%% For `ap(TreeF, TreeX)`:
+%% - First, try shrinks from TreeF applied to the current X
+%% - Then, try shrinks from TreeX with the current F
+%%
+%% This produces a tree where children = [shrink F with X] ++ [F with shrink X]
+%%
+%% == Applicative Laws ==
+%% - Identity: `ap(pure(fun(X) -> X end), v) == v`
+%% - Composition: `ap(ap(ap(pure(compose), u), v), w) == ap(u, ap(v, w))`
+%% - Homomorphism: `ap(pure(f), pure(x)) == pure(f(x))`
+%% - Interchange: `ap(u, pure(y)) == ap(pure(fun(f) -> f(y) end), u)`
+%%
+%% == Example ==
+%% ```
+%% %% Tree of functions
+%% FnTree = catena_tree:tree(fun(X) -> X * 2 end, fun() ->
+%%     [catena_tree:singleton(fun(X) -> X end)]
+%% end),
+%% %% Tree of values
+%% ValTree = catena_tree:tree(10, fun() ->
+%%     [catena_tree:singleton(5)]
+%% end),
+%% %% Apply
+%% Result = catena_tree:ap(FnTree, ValTree),
+%% 20 = catena_tree:extract(Result),  % (*2)(10)
+%% %% Children: [10 (shrunk fn), 10 (shrunk val)]
+%% [ShrunkFn, ShrunkVal] = catena_tree:children(Result),
+%% 10 = catena_tree:extract(ShrunkFn),  % id(10)
+%% 10 = catena_tree:extract(ShrunkVal). % (*2)(5)
+%% ```
+-spec ap(tree(fun((A) -> B)), tree(A)) -> tree(B).
+ap(TreeF, TreeX) ->
+    F = root(TreeF),
+    X = root(TreeX),
+    #tree{
+        root = F(X),
+        children = fun() ->
+            %% Interleaved shrinking: left shrinks first, then right shrinks
+            %% Left: shrink the function tree, keep X constant
+            LeftShrinks = [ap(ShrunkF, TreeX) || ShrunkF <- children(TreeF)],
+            %% Right: keep F constant, shrink the value tree
+            RightShrinks = [ap(TreeF, ShrunkX) || ShrunkX <- children(TreeX)],
+            %% Combine: left shrinks have priority
+            LeftShrinks ++ RightShrinks
+        end
+    }.
+
+%% @doc Lift a binary function over two trees (applicative's liftA2).
+%%
+%% Combines two trees using a binary function, with interleaved shrinking
+%% of both inputs. This is a convenience function equivalent to:
+%% `ap(map(F, TreeA), TreeB)`
+%%
+%% == Use Case ==
+%% Useful for combining independent generated values:
+%% ```
+%% %% Generate pairs with independent shrinking
+%% liftA2(fun(A, B) -> {A, B} end, GenA, GenB)
+%% ```
+%%
+%% == Shrinking ==
+%% Like `ap`, shrinking is interleaved:
+%% 1. First shrink TreeA (with current B)
+%% 2. Then shrink TreeB (with current A)
+%%
+%% == Example ==
+%% ```
+%% TreeA = catena_tree:tree(10, fun() -> [catena_tree:singleton(5)] end),
+%% TreeB = catena_tree:tree(3, fun() -> [catena_tree:singleton(1)] end),
+%% Result = catena_tree:liftA2(fun(A, B) -> A + B end, TreeA, TreeB),
+%% 13 = catena_tree:extract(Result),
+%% [Shrink1, Shrink2] = catena_tree:children(Result),
+%% 8 = catena_tree:extract(Shrink1),   % 5 + 3 (shrunk A)
+%% 11 = catena_tree:extract(Shrink2).  % 10 + 1 (shrunk B)
+%% ```
+-spec liftA2(fun((A, B) -> C), tree(A), tree(B)) -> tree(C).
+liftA2(F, TreeA, TreeB) when is_function(F, 2) ->
+    ap(map(fun(A) -> fun(B) -> F(A, B) end end, TreeA), TreeB).

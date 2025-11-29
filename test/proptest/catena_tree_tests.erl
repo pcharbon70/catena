@@ -1077,6 +1077,425 @@ extend_equals_map_duplicate_test() ->
     ).
 
 %%====================================================================
+%% Test: pure/1 (Section 1.1.4)
+%%====================================================================
+
+pure_creates_singleton_test() ->
+    Tree = catena_tree:pure(42),
+    ?assertEqual(42, catena_tree:extract(Tree)),
+    ?assertEqual([], catena_tree:children(Tree)).
+
+pure_equivalent_to_singleton_test() ->
+    Value = {complex, [1, 2, 3], #{key => value}},
+    PureTree = catena_tree:pure(Value),
+    SingletonTree = catena_tree:singleton(Value),
+    ?assertEqual(catena_tree:extract(PureTree), catena_tree:extract(SingletonTree)),
+    ?assertEqual(catena_tree:children(PureTree), catena_tree:children(SingletonTree)).
+
+pure_with_function_value_test() ->
+    %% Pure can hold functions as values
+    F = fun(X) -> X * 2 end,
+    Tree = catena_tree:pure(F),
+    ExtractedF = catena_tree:extract(Tree),
+    ?assertEqual(10, ExtractedF(5)).
+
+%%====================================================================
+%% Test: ap/2 (Section 1.1.4)
+%%====================================================================
+
+ap_applies_function_to_value_test() ->
+    FnTree = catena_tree:pure(fun(X) -> X * 2 end),
+    ValTree = catena_tree:pure(5),
+    Result = catena_tree:ap(FnTree, ValTree),
+    ?assertEqual(10, catena_tree:extract(Result)).
+
+ap_with_no_shrinks_test() ->
+    %% When both trees have no children, result has no children
+    FnTree = catena_tree:pure(fun(X) -> X + 1 end),
+    ValTree = catena_tree:pure(10),
+    Result = catena_tree:ap(FnTree, ValTree),
+    ?assertEqual(11, catena_tree:extract(Result)),
+    ?assertEqual([], catena_tree:children(Result)).
+
+ap_interleaved_shrinking_test() ->
+    %% Function tree with one shrink
+    FnTree = catena_tree:tree(fun(X) -> X * 2 end, fun() ->
+        [catena_tree:singleton(fun(X) -> X end)]  % shrink to identity
+    end),
+    %% Value tree with one shrink
+    ValTree = catena_tree:tree(10, fun() ->
+        [catena_tree:singleton(5)]  % shrink to 5
+    end),
+
+    Result = catena_tree:ap(FnTree, ValTree),
+
+    %% Root: (*2)(10) = 20
+    ?assertEqual(20, catena_tree:extract(Result)),
+
+    %% Children: [left shrinks, right shrinks]
+    %% Left shrink: id(10) = 10
+    %% Right shrink: (*2)(5) = 10
+    Children = catena_tree:children(Result),
+    ?assertEqual(2, length(Children)),
+
+    [LeftShrink, RightShrink] = Children,
+    ?assertEqual(10, catena_tree:extract(LeftShrink)),   % id(10)
+    ?assertEqual(10, catena_tree:extract(RightShrink)).  % (*2)(5)
+
+ap_left_shrinks_before_right_test() ->
+    %% Verify left shrinks come before right shrinks
+    FnTree = catena_tree:tree(fun(X) -> X * 10 end, fun() ->
+        [catena_tree:singleton(fun(X) -> X * 2 end),
+         catena_tree:singleton(fun(X) -> X end)]
+    end),
+    ValTree = catena_tree:tree(5, fun() ->
+        [catena_tree:singleton(3),
+         catena_tree:singleton(1)]
+    end),
+
+    Result = catena_tree:ap(FnTree, ValTree),
+
+    %% Root: 5 * 10 = 50
+    ?assertEqual(50, catena_tree:extract(Result)),
+
+    %% Children order: [left1, left2, right1, right2]
+    %% left1: (*2)(5) = 10
+    %% left2: id(5) = 5
+    %% right1: (*10)(3) = 30
+    %% right2: (*10)(1) = 10
+    Children = catena_tree:children(Result),
+    ?assertEqual(4, length(Children)),
+    ChildValues = [catena_tree:extract(C) || C <- Children],
+    ?assertEqual([10, 5, 30, 10], ChildValues).
+
+ap_only_fn_shrinks_test() ->
+    %% Only function tree has shrinks
+    FnTree = catena_tree:tree(fun(X) -> X * 3 end, fun() ->
+        [catena_tree:singleton(fun(X) -> X end)]
+    end),
+    ValTree = catena_tree:pure(7),
+
+    Result = catena_tree:ap(FnTree, ValTree),
+
+    ?assertEqual(21, catena_tree:extract(Result)),
+    Children = catena_tree:children(Result),
+    ?assertEqual(1, length(Children)),
+    ?assertEqual(7, catena_tree:extract(hd(Children))).
+
+ap_only_val_shrinks_test() ->
+    %% Only value tree has shrinks
+    FnTree = catena_tree:pure(fun(X) -> X + 100 end),
+    ValTree = catena_tree:tree(50, fun() ->
+        [catena_tree:singleton(25), catena_tree:singleton(0)]
+    end),
+
+    Result = catena_tree:ap(FnTree, ValTree),
+
+    ?assertEqual(150, catena_tree:extract(Result)),
+    Children = catena_tree:children(Result),
+    ?assertEqual(2, length(Children)),
+    ChildValues = [catena_tree:extract(C) || C <- Children],
+    ?assertEqual([125, 100], ChildValues).
+
+ap_nested_shrinks_test() ->
+    %% Shrinks have their own shrinks
+    FnTree = catena_tree:tree(fun(X) -> X * 4 end, fun() ->
+        [catena_tree:tree(fun(X) -> X * 2 end, fun() ->
+            [catena_tree:singleton(fun(X) -> X end)]
+        end)]
+    end),
+    ValTree = catena_tree:tree(10, fun() ->
+        [catena_tree:tree(5, fun() ->
+            [catena_tree:singleton(0)]
+        end)]
+    end),
+
+    Result = catena_tree:ap(FnTree, ValTree),
+
+    %% Root: (*4)(10) = 40
+    ?assertEqual(40, catena_tree:extract(Result)),
+
+    %% First level children
+    [FnShrink, ValShrink] = catena_tree:children(Result),
+
+    %% FnShrink: (*2)(10) = 20
+    ?assertEqual(20, catena_tree:extract(FnShrink)),
+    %% ValShrink: (*4)(5) = 20
+    ?assertEqual(20, catena_tree:extract(ValShrink)),
+
+    %% Second level - FnShrink's children
+    FnShrinkChildren = catena_tree:children(FnShrink),
+    ?assertEqual(2, length(FnShrinkChildren)),
+
+    %% Second level - ValShrink's children
+    ValShrinkChildren = catena_tree:children(ValShrink),
+    ?assertEqual(2, length(ValShrinkChildren)).
+
+ap_preserves_laziness_test() ->
+    Counter = spawn(fun() -> counter_loop(0) end),
+
+    FnTree = catena_tree:tree(fun(X) -> X end, fun() ->
+        Counter ! increment,
+        []
+    end),
+    ValTree = catena_tree:tree(42, fun() ->
+        Counter ! increment,
+        []
+    end),
+
+    Result = catena_tree:ap(FnTree, ValTree),
+
+    %% Just creating result doesn't force children
+    Counter ! {get, self()},
+    receive
+        {count, Count0} -> ?assertEqual(0, Count0)
+    after 100 ->
+        ?assert(false)
+    end,
+
+    %% Extracting root doesn't force children
+    ?assertEqual(42, catena_tree:extract(Result)),
+    Counter ! {get, self()},
+    receive
+        {count, Count1} -> ?assertEqual(0, Count1)
+    after 100 ->
+        ?assert(false)
+    end,
+
+    %% Accessing children forces evaluation of both input trees' children
+    _ = catena_tree:children(Result),
+    Counter ! {get, self()},
+    receive
+        {count, Count2} -> ?assertEqual(2, Count2)
+    after 100 ->
+        ?assert(false)
+    end,
+
+    Counter ! stop.
+
+%%====================================================================
+%% Test: liftA2/3 (Section 1.1.4)
+%%====================================================================
+
+liftA2_combines_two_trees_test() ->
+    TreeA = catena_tree:pure(10),
+    TreeB = catena_tree:pure(3),
+    Result = catena_tree:liftA2(fun(A, B) -> A + B end, TreeA, TreeB),
+    ?assertEqual(13, catena_tree:extract(Result)).
+
+liftA2_with_shrinks_test() ->
+    TreeA = catena_tree:tree(10, fun() ->
+        [catena_tree:singleton(5)]
+    end),
+    TreeB = catena_tree:tree(3, fun() ->
+        [catena_tree:singleton(1)]
+    end),
+
+    Result = catena_tree:liftA2(fun(A, B) -> A + B end, TreeA, TreeB),
+
+    ?assertEqual(13, catena_tree:extract(Result)),
+    Children = catena_tree:children(Result),
+    ?assertEqual(2, length(Children)),
+    ChildValues = [catena_tree:extract(C) || C <- Children],
+    ?assertEqual([8, 11], ChildValues).  % [5+3, 10+1]
+
+liftA2_tuple_construction_test() ->
+    TreeA = catena_tree:tree(a, fun() ->
+        [catena_tree:singleton(a1)]
+    end),
+    TreeB = catena_tree:tree(b, fun() ->
+        [catena_tree:singleton(b1)]
+    end),
+
+    Result = catena_tree:liftA2(fun(A, B) -> {A, B} end, TreeA, TreeB),
+
+    ?assertEqual({a, b}, catena_tree:extract(Result)),
+    Children = catena_tree:children(Result),
+    ChildValues = [catena_tree:extract(C) || C <- Children],
+    ?assertEqual([{a1, b}, {a, b1}], ChildValues).
+
+liftA2_three_args_via_composition_test() ->
+    %% Can chain liftA2 for more args
+    TreeA = catena_tree:pure(1),
+    TreeB = catena_tree:pure(2),
+    TreeC = catena_tree:pure(3),
+
+    %% First combine A and B
+    TreeAB = catena_tree:liftA2(fun(A, B) -> {A, B} end, TreeA, TreeB),
+    %% Then combine with C
+    Result = catena_tree:liftA2(fun({A, B}, C) -> A + B + C end, TreeAB, TreeC),
+
+    ?assertEqual(6, catena_tree:extract(Result)).
+
+%%====================================================================
+%% Test: Applicative Laws (Section 1.1.4)
+%%====================================================================
+
+%% Law 1: Identity - ap(pure(id), v) == v
+applicative_law_identity_test() ->
+    V = catena_tree:tree(42, fun() ->
+        [catena_tree:singleton(21), catena_tree:singleton(0)]
+    end),
+
+    Id = fun(X) -> X end,
+    Result = catena_tree:ap(catena_tree:pure(Id), V),
+
+    %% Result should have same values as V
+    ?assertEqual(catena_tree:extract(V), catena_tree:extract(Result)),
+    ?assertEqual(
+        [catena_tree:extract(C) || C <- catena_tree:children(V)],
+        [catena_tree:extract(C) || C <- catena_tree:children(Result)]
+    ).
+
+%% Law 2: Homomorphism - ap(pure(f), pure(x)) == pure(f(x))
+applicative_law_homomorphism_test() ->
+    F = fun(X) -> X * 2 + 1 end,
+    X = 10,
+
+    %% ap(pure(f), pure(x))
+    Left = catena_tree:ap(catena_tree:pure(F), catena_tree:pure(X)),
+
+    %% pure(f(x))
+    Right = catena_tree:pure(F(X)),
+
+    ?assertEqual(catena_tree:extract(Right), catena_tree:extract(Left)),
+    ?assertEqual(catena_tree:children(Right), catena_tree:children(Left)).
+
+%% Law 3: Interchange - ap(u, pure(y)) == ap(pure(fun(f) -> f(y) end), u)
+applicative_law_interchange_test() ->
+    U = catena_tree:tree(fun(X) -> X * 2 end, fun() ->
+        [catena_tree:singleton(fun(X) -> X + 1 end)]
+    end),
+    Y = 5,
+
+    %% ap(u, pure(y))
+    Left = catena_tree:ap(U, catena_tree:pure(Y)),
+
+    %% ap(pure(fun(f) -> f(y) end), u)
+    ApplyY = fun(F) -> F(Y) end,
+    Right = catena_tree:ap(catena_tree:pure(ApplyY), U),
+
+    %% Both should produce same values
+    ?assertEqual(catena_tree:extract(Left), catena_tree:extract(Right)),
+    ?assertEqual(
+        [catena_tree:extract(C) || C <- catena_tree:children(Left)],
+        [catena_tree:extract(C) || C <- catena_tree:children(Right)]
+    ).
+
+%% Law 4: Composition - ap(ap(ap(pure(compose), u), v), w) == ap(u, ap(v, w))
+applicative_law_composition_test() ->
+    %% compose = fun(F) -> fun(G) -> fun(X) -> F(G(X)) end end end
+    Compose = fun(F) -> fun(G) -> fun(X) -> F(G(X)) end end end,
+
+    U = catena_tree:tree(fun(X) -> X * 2 end, fun() ->
+        [catena_tree:singleton(fun(X) -> X end)]
+    end),
+    V = catena_tree:tree(fun(X) -> X + 10 end, fun() ->
+        [catena_tree:singleton(fun(X) -> X + 1 end)]
+    end),
+    W = catena_tree:tree(5, fun() ->
+        [catena_tree:singleton(3)]
+    end),
+
+    %% Left side: ap(ap(ap(pure(compose), u), v), w)
+    Left = catena_tree:ap(
+        catena_tree:ap(
+            catena_tree:ap(catena_tree:pure(Compose), U),
+            V
+        ),
+        W
+    ),
+
+    %% Right side: ap(u, ap(v, w))
+    Right = catena_tree:ap(U, catena_tree:ap(V, W)),
+
+    %% Both should produce same root value
+    ?assertEqual(catena_tree:extract(Left), catena_tree:extract(Right)).
+
+%% Verify: map f == ap (pure f)
+applicative_map_ap_equivalence_test() ->
+    F = fun(X) -> X * 3 end,
+    Tree = catena_tree:tree(10, fun() ->
+        [catena_tree:singleton(5), catena_tree:singleton(2)]
+    end),
+
+    %% map f tree
+    Mapped = catena_tree:map(F, Tree),
+
+    %% ap (pure f) tree
+    Applied = catena_tree:ap(catena_tree:pure(F), Tree),
+
+    %% Should be equivalent
+    ?assertEqual(catena_tree:extract(Mapped), catena_tree:extract(Applied)),
+    ?assertEqual(
+        [catena_tree:extract(C) || C <- catena_tree:children(Mapped)],
+        [catena_tree:extract(C) || C <- catena_tree:children(Applied)]
+    ).
+
+%%====================================================================
+%% Test: Applicative Edge Cases (Section 1.1.4)
+%%====================================================================
+
+ap_deep_shrink_tree_test() ->
+    %% Deep shrink tree for function
+    FnTree = catena_tree:unfold(
+        {fun(X) -> X * 8 end, 3},
+        fun({F, 0}) -> {F, []};
+           ({_F, N}) ->
+                NewF = fun(X) -> X * (1 bsl (N - 1)) end,
+                {fun(X) -> X * (1 bsl N) end, [{NewF, N - 1}]}
+        end
+    ),
+
+    ValTree = catena_tree:pure(10),
+    Result = catena_tree:ap(FnTree, ValTree),
+
+    %% Root: 10 * 8 = 80
+    ?assertEqual(80, catena_tree:extract(Result)),
+
+    %% First shrink: 10 * 4 = 40
+    [FirstChild] = catena_tree:children(Result),
+    ?assertEqual(40, catena_tree:extract(FirstChild)).
+
+ap_many_shrinks_test() ->
+    %% Many shrinks on both sides
+    FnTree = catena_tree:tree(fun(X) -> X end, fun() ->
+        [catena_tree:singleton(fun(X) -> X + N end) || N <- lists:seq(1, 5)]
+    end),
+    ValTree = catena_tree:tree(100, fun() ->
+        [catena_tree:singleton(N) || N <- lists:seq(0, 4)]
+    end),
+
+    Result = catena_tree:ap(FnTree, ValTree),
+
+    ?assertEqual(100, catena_tree:extract(Result)),
+    Children = catena_tree:children(Result),
+    %% 5 left shrinks + 5 right shrinks = 10 children
+    ?assertEqual(10, length(Children)).
+
+liftA2_commutative_operation_test() ->
+    %% For commutative operations, swapping trees changes shrink order but not values
+    TreeA = catena_tree:tree(10, fun() -> [catena_tree:singleton(5)] end),
+    TreeB = catena_tree:tree(3, fun() -> [catena_tree:singleton(1)] end),
+
+    Add = fun(A, B) -> A + B end,
+
+    ResultAB = catena_tree:liftA2(Add, TreeA, TreeB),
+    ResultBA = catena_tree:liftA2(Add, TreeB, TreeA),
+
+    %% Same root
+    ?assertEqual(catena_tree:extract(ResultAB), catena_tree:extract(ResultBA)),
+
+    %% Different shrink order
+    ChildrenAB = [catena_tree:extract(C) || C <- catena_tree:children(ResultAB)],
+    ChildrenBA = [catena_tree:extract(C) || C <- catena_tree:children(ResultBA)],
+
+    %% AB: [5+3, 10+1] = [8, 11]
+    %% BA: [1+10, 3+5] = [11, 8]
+    ?assertEqual([8, 11], ChildrenAB),
+    ?assertEqual([11, 8], ChildrenBA).
+
+%%====================================================================
 %% Helper functions
 %%====================================================================
 
