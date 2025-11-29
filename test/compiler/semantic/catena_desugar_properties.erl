@@ -15,6 +15,9 @@
 -include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
+%% Import common test helpers
+-import(catena_test_helpers, [loc/0]).
+
 -export([
     prop_desugar_never_crashes/0,
     prop_desugar_preserves_structure/0,
@@ -95,13 +98,13 @@ prop_depth_limit_enforced() ->
                 {do_bind, x, {var, ma, {location, 1, 1}}, {location, 1, 1}})
                 ++ [{do_return, {var, x, {location, 1, 1}}, {location, 1, 1}}],
             DoExpr = {do_expr, Stmts, {location, 1, 1}},
-            Result = catena_desugar:desugar_do_expr(DoExpr),
-            %% Should return error for excessive depth
-            case Result of
-                {error, {do_nesting_exceeded, _, _}} -> true;
-                _ ->
-                    %% May also be valid if depth doesn't trigger limit
-                    is_valid_desugared_expr(Result)
+            %% Should throw error for excessive depth (security limit)
+            try
+                catena_desugar:desugar_do_expr(DoExpr),
+                %% If we get here without exception, depth didn't trigger limit
+                false
+            catch
+                error:{do_nesting_exceeded, _, _} -> true
             end
         end).
 
@@ -398,5 +401,3 @@ operator_desugaring_unit_test_() ->
              ?assertMatch({app, {var, map, _}, [{var, f, _}, {app, {var, map, _}, _, _}], _}, Result)
          end}
     ].
-
-loc() -> {location, 1, 1}.

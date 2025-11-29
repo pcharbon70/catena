@@ -13,6 +13,9 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Import common test helpers
+-import(catena_test_helpers, [loc/0]).
+
 %%====================================================================
 %% Test Setup/Teardown
 %%====================================================================
@@ -418,88 +421,79 @@ compile_source(Source, ModuleName, TempDir) ->
             Error
     end.
 
-%% Build codegen-compatible AST
+%%====================================================================
+%% AST Builder Helpers
+%%====================================================================
+
+%% Build codegen-compatible module AST
 %% This is a temporary helper until parser-to-codegen transformation is complete
 %% Module format: {module, Name, Exports, Imports, Decls, Loc}
+
 build_codegen_ast(_Source, test_arith) ->
-    Loc = {1, 1},
-    {module, test_arith, [{add, 2}, {multiply, 2}], [], [
-        {transform, add, [{pat_var, x, Loc}, {pat_var, y, Loc}],
-         {binary_op, '+', {var, x, Loc}, {var, y, Loc}, Loc}, Loc},
-        {transform, multiply, [{pat_var, x, Loc}, {pat_var, y, Loc}],
-         {binary_op, '*', {var, x, Loc}, {var, y, Loc}, Loc}, Loc}
-    ], Loc};
+    build_module(test_arith, [
+        {add, [x, y], binary_op('+', x, y)},
+        {multiply, [x, y], binary_op('*', x, y)}
+    ]);
 
 build_codegen_ast(_Source, test_factorial) ->
-    Loc = {1, 1},
     %% Factorial requires match expression - simplified to identity for now
-    {module, test_factorial, [{factorial, 1}], [], [
-        {transform, factorial, [{pat_var, n, Loc}],
-         {var, n, Loc}, Loc}  %% Simplified - returns n
-    ], Loc};
+    build_module(test_factorial, [{factorial, [n], var(n)}]);
 
 build_codegen_ast(_Source, test_fib) ->
-    Loc = {1, 1},
     %% Fib requires match expression - simplified to identity for now
-    {module, test_fib, [{fib, 1}], [], [
-        {transform, fib, [{pat_var, n, Loc}],
-         {var, n, Loc}, Loc}  %% Simplified - returns n
-    ], Loc};
+    build_module(test_fib, [{fib, [n], var(n)}]);
 
 build_codegen_ast(_Source, test_pattern) ->
-    Loc = {1, 1},
     %% Pattern matching - simplified to identity
-    {module, test_pattern, [{classify, 1}], [], [
-        {transform, classify, [{pat_var, n, Loc}],
-         {var, n, Loc}, Loc}  %% Simplified - returns n
-    ], Loc};
+    build_module(test_pattern, [{classify, [n], var(n)}]);
 
 build_codegen_ast(_Source, test_let) ->
-    Loc = {1, 1},
     %% Simplified: compute x = x + 12 (let expressions need codegen support)
-    {module, test_let, [{compute, 1}], [], [
-        {transform, compute, [{pat_var, x, Loc}],
-         {binary_op, '+', {var, x, Loc}, {literal, integer, 12, Loc}, Loc},
-         Loc}
-    ], Loc};
+    build_module(test_let, [{compute, [x], binary_op('+', x, 12)}]);
 
 build_codegen_ast(_Source, test_list) ->
-    Loc = {1, 1},
     %% List operations - simplified to constants for now
-    {module, test_list, [{len, 1}, {sum, 1}], [], [
-        {transform, len, [{pat_var, xs, Loc}],
-         {literal, integer, 0, Loc}, Loc},  %% Always returns 0
-        {transform, sum, [{pat_var, xs, Loc}],
-         {literal, integer, 0, Loc}, Loc}   %% Always returns 0
-    ], Loc};
+    build_module(test_list, [
+        {len, [xs], lit(0)},
+        {sum, [xs], lit(0)}
+    ]);
 
 build_codegen_ast(_Source, test_beam_load) ->
-    Loc = {1, 1},
-    {module, test_beam_load, [{identity, 1}], [], [
-        {transform, identity, [{pat_var, x, Loc}],
-         {var, x, Loc}, Loc}
-    ], Loc};
+    build_module(test_beam_load, [{identity, [x], var(x)}]);
 
 build_codegen_ast(_Source, test_exports) ->
-    Loc = {1, 1},
-    {module, test_exports, [{foo, 1}], [], [
-        {transform, foo, [{pat_var, x, Loc}],
-         {binary_op, '+', {var, x, Loc}, {literal, integer, 1, Loc}, Loc}, Loc}
-    ], Loc};
+    build_module(test_exports, [{foo, [x], binary_op('+', x, 1)}]);
 
 build_codegen_ast(_Source, test_arity) ->
-    Loc = {1, 1},
-    {module, test_arity, [{two, 2}], [], [
-        {transform, two, [{pat_var, x, Loc}, {pat_var, y, Loc}],
-         {binary_op, '+', {var, x, Loc}, {var, y, Loc}, Loc}, Loc}
-    ], Loc};
+    build_module(test_arity, [{two, [x, y], binary_op('+', x, y)}]);
 
 build_codegen_ast(_Source, test_pure) ->
-    Loc = {1, 1},
-    {module, test_pure, [{pure_add, 2}], [], [
-        {transform, pure_add, [{pat_var, x, Loc}, {pat_var, y, Loc}],
-         {binary_op, '+', {var, x, Loc}, {var, y, Loc}, Loc}, Loc}
-    ], Loc}.
+    build_module(test_pure, [{pure_add, [x, y], binary_op('+', x, y)}]).
+
+%% Build module from transform specs: [{Name, Params, Body}]
+build_module(ModuleName, TransformSpecs) ->
+    Exports = [{Name, length(Params)} || {Name, Params, _} <- TransformSpecs],
+    Decls = [build_transform(Name, Params, Body) || {Name, Params, Body} <- TransformSpecs],
+    {module, ModuleName, Exports, [], Decls, loc()}.
+
+%% Build a transform declaration
+build_transform(Name, Params, Body) ->
+    L = loc(),
+    PatVars = [{pat_var, P, L} || P <- Params],
+    {transform, Name, PatVars, Body, L}.
+
+%% AST node builders
+var(Name) when is_atom(Name) -> {var, Name, loc()}.
+lit(N) when is_integer(N) -> {literal, integer, N, loc()}.
+
+binary_op(Op, Left, Right) when is_atom(Left), is_atom(Right) ->
+    {binary_op, Op, var(Left), var(Right), loc()};
+binary_op(Op, Left, Right) when is_atom(Left), is_integer(Right) ->
+    {binary_op, Op, var(Left), lit(Right), loc()};
+binary_op(Op, Left, Right) when is_integer(Left), is_atom(Right) ->
+    {binary_op, Op, lit(Left), var(Right), loc()};
+binary_op(Op, Left, Right) when is_integer(Left), is_integer(Right) ->
+    {binary_op, Op, lit(Left), lit(Right), loc()}.
 
 %% Parse Catena source code
 parse_source(Source) ->

@@ -12,11 +12,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
-%%%===================================================================
-%%% Test Fixtures
-%%%===================================================================
-
-loc() -> {location, 1, 1}.
+%% Import common test helpers
+-import(catena_test_helpers, [loc/0]).
 
 %%%===================================================================
 %%% 1.5.6.1 - Kleisli Composition with Effect Tracking

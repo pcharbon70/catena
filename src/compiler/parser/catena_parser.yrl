@@ -77,6 +77,8 @@ Terminals
   'or' 'and' cons left_arrow range
   colon equals pipe
   plus minus star slash dot plus_plus
+  %% Category theory operators (lexer tokens)
+  fmap ap bind mappend kleisli
 
   %% Delimiters
   lbrace rbrace lbracket rbracket lparen rparen
@@ -103,6 +105,13 @@ Rootsymbol catena_module.
 Right    100 arrow.           %% Type-level function arrow (right-assoc)
 
 Right    160 pipe_right.      %% |> pipe operator
+
+%% Category theory operators
+Right    170 kleisli.         %% >=> Kleisli composition
+Left     180 bind.            %% >>= monadic bind
+Left     185 fmap.            %% <$> functor map
+Left     190 ap.              %% <*> applicative apply
+Right    195 mappend.         %% <> semigroup combine
 
 %% Logical operators (low precedence)
 Right    200 'or'.            %% ||
@@ -826,6 +835,22 @@ expr -> expr plus_plus expr :
 %% List cons operator (right-associative)
 expr -> expr cons expr :
     {cons_expr, '$1', '$3', extract_location('$2')}.
+
+%% Category theory operators (Section 1.5.7 - desugared later)
+expr -> expr bind expr :
+    {binary_op, bind, '$1', '$3', extract_location('$2')}.
+
+expr -> expr fmap expr :
+    {binary_op, fmap, '$1', '$3', extract_location('$2')}.
+
+expr -> expr ap expr :
+    {binary_op, ap, '$1', '$3', extract_location('$2')}.
+
+expr -> expr mappend expr :
+    {binary_op, mappend, '$1', '$3', extract_location('$2')}.
+
+expr -> expr kleisli expr :
+    {binary_op, kleisli, '$1', '$3', extract_location('$2')}.
 
 expr -> expr_app : '$1'.
 

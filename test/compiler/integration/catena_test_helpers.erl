@@ -8,6 +8,9 @@
 -include_lib("eunit/include/eunit.hrl").
 
 -export([
+    %% Location helpers
+    loc/0,
+
     %% Parsing helpers
     parse_source/1,
     parse_and_match/2,
@@ -23,6 +26,19 @@
     load_prelude_instances/0,
     build_prelude_kind_env/0
 ]).
+
+%% =============================================================================
+%% Location Helpers
+%% =============================================================================
+
+%% @doc Return a standard test location
+%%
+%% Used for constructing AST nodes in tests. Returns {location, 1, 1}
+%% which represents line 1, column 1. This is a common helper needed
+%% across many test modules.
+-spec loc() -> {location, integer(), integer()}.
+loc() ->
+    {location, 1, 1}.
 
 %% =============================================================================
 %% Parsing Helpers

@@ -8,12 +8,12 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Import common test helpers
+-import(catena_test_helpers, [loc/0]).
+
 %%====================================================================
 %% Test Fixtures
 %%====================================================================
-
-loc() ->
-    {location, 1, 1}.
 
 simple_module() ->
     {module, test_module, [{foo, 1}], [], [

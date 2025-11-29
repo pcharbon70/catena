@@ -10,12 +10,12 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Import common test helpers
+-import(catena_test_helpers, [loc/0]).
+
 %%%===================================================================
 %%% Test Fixtures
 %%%===================================================================
-
-%% Location helper
-loc() -> {location, 1, 1}.
 
 %% Build kind environment with builtins
 kind_env() ->

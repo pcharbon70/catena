@@ -36,7 +36,16 @@
     % Effect tracking (Section 1.5.6)
     get_effects/1,
     set_effects/2,
-    add_effect/2
+    add_effect/2,
+    % Effect scope tracking (Phase 6 preparation)
+    push_effect_scope/1,
+    pop_effect_scope/1,
+    get_effect_scope_depth/1,
+    % Expression depth tracking (security)
+    get_expr_depth/1,
+    inc_expr_depth/1,
+    dec_expr_depth/1,
+    check_expr_depth/1
 ]).
 
 -export_type([infer_state/0]).
@@ -50,8 +59,13 @@
     subst :: catena_type_subst:subst(),            % Accumulated substitution
     errors :: [catena_type_error:type_error()],    % Collected errors
     constraints :: catena_constraint:constraint_set(), % Trait constraints
-    effects :: catena_infer_effect:effect_set()   % Current effect set (Section 1.5.6)
+    effects :: catena_infer_effect:effect_set(),  % Current effect set (Section 1.5.6)
+    effect_scope_stack :: [catena_infer_effect:effect_set()], % Effect scope stack (Phase 6)
+    expr_depth :: non_neg_integer()               % Current expression nesting depth
 }).
+
+%% Maximum expression depth to prevent stack overflow
+-define(MAX_EXPR_DEPTH, 1000).
 
 
 
@@ -69,7 +83,9 @@ new() ->
         subst = catena_type_subst:empty(),
         errors = [],
         constraints = catena_constraint:empty_constraint_set(),
-        effects = catena_infer_effect:pure()
+        effects = catena_infer_effect:pure(),
+        effect_scope_stack = [],
+        expr_depth = 0
     }.
 
 %% @doc Create a new state with specified starting counter
@@ -81,7 +97,9 @@ new(StartCounter) when is_integer(StartCounter), StartCounter > 0 ->
         subst = catena_type_subst:empty(),
         errors = [],
         constraints = catena_constraint:empty_constraint_set(),
-        effects = catena_infer_effect:pure()
+        effects = catena_infer_effect:pure(),
+        effect_scope_stack = [],
+        expr_depth = 0
     }.
 
 %% @doc Generate a fresh type variable
@@ -242,3 +260,71 @@ add_effect(EffectName, #infer_state{effects = Effects} = State) ->
     NewEffects = catena_infer_effect:union(Effects,
                                            catena_infer_effect:from_list([EffectName])),
     State#infer_state{effects = NewEffects}.
+
+%%%===================================================================
+%%% Effect Scope Tracking (Phase 6 Preparation)
+%%%===================================================================
+
+%% @doc Push current effects onto scope stack and start fresh
+%%
+%% Used when entering a scope where effects should be tracked separately
+%% (e.g., inside a handle block or let binding with local effects).
+%% The current effects are saved and can be restored with pop_effect_scope/1.
+-spec push_effect_scope(infer_state()) -> infer_state().
+push_effect_scope(#infer_state{effects = Effects, effect_scope_stack = Stack} = State) ->
+    State#infer_state{
+        effect_scope_stack = [Effects | Stack],
+        effects = catena_infer_effect:pure()
+    }.
+
+%% @doc Pop effect scope and merge with current effects
+%%
+%% Restores the saved effects from the stack and unions them with
+%% the effects accumulated in the current scope.
+-spec pop_effect_scope(infer_state()) -> infer_state().
+pop_effect_scope(#infer_state{effects = CurrentEffects, effect_scope_stack = [Saved | Rest]} = State) ->
+    MergedEffects = catena_infer_effect:union(Saved, CurrentEffects),
+    State#infer_state{
+        effect_scope_stack = Rest,
+        effects = MergedEffects
+    };
+pop_effect_scope(#infer_state{effect_scope_stack = []} = State) ->
+    %% No scope to pop - return unchanged (shouldn't happen in correct usage)
+    State.
+
+%% @doc Get the current effect scope depth
+-spec get_effect_scope_depth(infer_state()) -> non_neg_integer().
+get_effect_scope_depth(#infer_state{effect_scope_stack = Stack}) ->
+    length(Stack).
+
+%%%===================================================================
+%%% Expression Depth Tracking (Security)
+%%%===================================================================
+
+%% @doc Get current expression nesting depth
+-spec get_expr_depth(infer_state()) -> non_neg_integer().
+get_expr_depth(#infer_state{expr_depth = Depth}) ->
+    Depth.
+
+%% @doc Increment expression depth (call when entering nested expression)
+-spec inc_expr_depth(infer_state()) -> infer_state().
+inc_expr_depth(#infer_state{expr_depth = Depth} = State) ->
+    State#infer_state{expr_depth = Depth + 1}.
+
+%% @doc Decrement expression depth (call when exiting nested expression)
+-spec dec_expr_depth(infer_state()) -> infer_state().
+dec_expr_depth(#infer_state{expr_depth = Depth} = State) when Depth > 0 ->
+    State#infer_state{expr_depth = Depth - 1};
+dec_expr_depth(State) ->
+    State.
+
+%% @doc Check if expression depth exceeds limit
+%%
+%% Returns ok if within limit, or throws an error if exceeded.
+%% This is a security measure to prevent stack overflow from
+%% deeply nested expressions (potential DoS vector).
+-spec check_expr_depth(infer_state()) -> ok.
+check_expr_depth(#infer_state{expr_depth = Depth}) when Depth > ?MAX_EXPR_DEPTH ->
+    error({expr_depth_exceeded, Depth, ?MAX_EXPR_DEPTH});
+check_expr_depth(_State) ->
+    ok.

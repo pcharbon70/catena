@@ -153,9 +153,14 @@ desugar_do_expr({do_expr, Stmts, Loc}) ->
 -define(MAX_DO_DEPTH, 1000).
 
 %% @doc Desugar a list of do statements with depth tracking
+%%
+%% Note: Uses error/1 for depth exceeded to ensure immediate termination.
+%% This is a security measure - returning {error, ...} would embed it
+%% in the AST where it might not be properly handled.
 desugar_stmts(_, Loc, Depth) when Depth > ?MAX_DO_DEPTH ->
-    %% Return error marker for excessive nesting
-    {error, {do_nesting_exceeded, Depth, Loc}};
+    %% Security limit: throw exception rather than return error tuple
+    %% This ensures callers can't accidentally continue with invalid AST
+    error({do_nesting_exceeded, Depth, Loc});
 
 desugar_stmts([{do_return, Expr, _}], _Loc, _Depth) ->
     %% Final expression - just return it (possibly desugared)

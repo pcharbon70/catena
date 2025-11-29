@@ -26,8 +26,12 @@
     check_guard_purity/1,
     infer_guard_effects/1,
     infer_expr_effects/1,
-    compatible/2
+    compatible/2,
+    check_size/1
 ]).
+
+%% Maximum number of effects in a set (security limit)
+-define(MAX_EFFECT_SET_SIZE, 100).
 
 -export_type([effect_set/0]).
 
@@ -61,10 +65,21 @@ normalize({effect_set, Effects}) ->
 
 %% @doc Union of two effect sets
 %% Combines effects from both sets and normalizes
+%% Throws error if resulting set exceeds maximum size
 -spec union(effect_set(), effect_set()) -> effect_set().
 union({effect_set, E1}, {effect_set, E2}) ->
     Combined = E1 ++ E2,
-    normalize({effect_set, Combined}).
+    Result = normalize({effect_set, Combined}),
+    check_size(Result),
+    Result.
+
+%% @doc Check if an effect set exceeds the maximum size
+%% Throws an error if the set is too large (security limit)
+-spec check_size(effect_set()) -> ok.
+check_size({effect_set, Effects}) when length(Effects) > ?MAX_EFFECT_SET_SIZE ->
+    error({effect_set_too_large, length(Effects), ?MAX_EFFECT_SET_SIZE});
+check_size(_) ->
+    ok.
 
 %%%===================================================================
 %%% API Functions - Effect Checking

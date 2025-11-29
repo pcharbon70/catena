@@ -385,7 +385,7 @@ infer({perform_expr, EffectName, _OperationName, Args, _Loc}, Env, State) ->
 
             %% Record the effect in the state
             %% The effect is tracked as part of the function's type
-            State3 = add_effect_to_state(EffectName, State2),
+            State3 = catena_infer_state:add_effect(EffectName, State2),
 
             {ResultType, State3};
         {error, _, _} = Error ->
@@ -410,19 +410,6 @@ infer({handle_expr, Body, _Handlers, _Loc}, Env, State) ->
         {error, _, _} = Error ->
             Error
     end.
-
-%% @doc Add an effect to the current inference state
-%% This tracks effects for function type annotations
--spec add_effect_to_state(atom(), catena_infer_state:infer_state()) ->
-    catena_infer_state:infer_state().
-add_effect_to_state(EffectName, State) ->
-    %% Get current effects from state (or empty set)
-    CurrentEffects = catena_infer_state:get_effects(State),
-    %% Add the new effect
-    NewEffects = catena_infer_effect:union(CurrentEffects,
-                                           catena_infer_effect:from_list([EffectName])),
-    %% Update state with new effects
-    catena_infer_state:set_effects(NewEffects, State).
 
 %% @doc Instantiate a type scheme by replacing quantified variables with fresh ones
 %%
