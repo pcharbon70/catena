@@ -333,14 +333,14 @@ Validate that trait instances resolve correctly during type checking. The prelud
 - [x] 1.5.2.5 Verify trait hierarchy resolution (Pipeline requires Applicator requires Mapper)
 
 ### 1.5.3 Higher-Kinded Type Validation
-- [ ] **Task 1.5.3 Complete**
+- [x] **Task 1.5.3 Complete**
 
 Validate that higher-kinded types work correctly for traits like Mapper and Pipeline. These traits are parameterized by type constructors (`f : Type -> Type`), not simple types.
 
-- [ ] 1.5.3.1 Validate kind checking for `trait Mapper f where map : (a -> b) -> f a -> f b`
-- [ ] 1.5.3.2 Validate kind inference for instance declarations like `instance Mapper Maybe`
-- [ ] 1.5.3.3 Validate partially applied type constructors like `instance Mapper (Either e)`
-- [ ] 1.5.3.4 Report kind errors clearly when HKT constraints are violated
+- [x] 1.5.3.1 Validate kind checking for `trait Mapper f where map : (a -> b) -> f a -> f b`
+- [x] 1.5.3.2 Validate kind inference for instance declarations like `instance Mapper Maybe`
+- [x] 1.5.3.3 Validate partially applied type constructors like `instance Mapper (Either e)`
+- [x] 1.5.3.4 Report kind errors clearly when HKT constraints are violated
 
 ### 1.5.4 Law Verification via Test Module
 - [ ] **Task 1.5.4 Complete**
