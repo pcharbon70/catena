@@ -570,7 +570,7 @@ test_large_environment() ->
 
     % FTV should complete (though may be slow)
     Ftv = catena_type_env:ftv_env(LargeEnv),
-    ?assert(is_tuple(Ftv)).  % Returns a set
+    ?assertEqual([], sets:to_list(Ftv)).
 
 test_many_effects() ->
     % Create effect set with 100 effects
@@ -740,7 +740,7 @@ test_massive_environment() ->
 
     % FTV computation should complete
     Ftv = catena_type_env:ftv_env(MassiveEnv),
-    ?assert(is_tuple(Ftv)).
+    ?assertEqual([], sets:to_list(Ftv)).
 
 test_massive_record_type() ->
     % Create record type with 500 fields

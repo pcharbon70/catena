@@ -727,11 +727,16 @@ type_vars_acc({tcon, _}, Acc, _Depth) ->
 
 type_vars_acc({tapp, Con, Args}, Acc, Depth) ->
     Acc1 = type_vars_acc(Con, Acc, Depth + 1),
-    lists:foldl(
-        fun(Arg, A) -> type_vars_acc(Arg, A, Depth + 1) end,
-        Acc1,
-        Args
-    );
+    case Args of
+        ArgList when is_list(ArgList) ->
+            lists:foldl(
+                fun(Arg, A) -> type_vars_acc(Arg, A, Depth + 1) end,
+                Acc1,
+                ArgList
+            );
+        SingleArg ->
+            type_vars_acc(SingleArg, Acc1, Depth + 1)
+    end;
 
 type_vars_acc({tfun, From, To, _Effects}, Acc, Depth) ->
     Acc1 = type_vars_acc(From, Acc, Depth + 1),

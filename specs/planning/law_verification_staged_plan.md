@@ -81,7 +81,7 @@ This stage is where Catena moves from finite fixture checking toward data-driven
 
 ### Immediate Dependencies
 
-- keep the default `rebar3 eunit` path free of legacy PropEr compile contamination while migrating historical PropEr coverage into internal replacements
+- preserve the now-green default `rebar3 eunit` path while migrating historical PropEr coverage into internal replacements
 - continue the `src/proptest/*` track beyond `catena_tree`
 - decide whether the older `src/testing/*` runner is wrapped, replaced, or bridged during migration
 
@@ -122,7 +122,7 @@ This stage is explicitly downstream of the generic framework, not a prerequisite
 
 ## Recommended Execution Order
 
-1. Maintain the unblocked default repo test entry point while continuing the PropEr migration.
+1. Maintain the green default repo test path while continuing the PropEr migration.
 2. Complete Stage 2 by making current `Laws + Test.verify` executable for concrete suites.
 3. Continue Property Testing Phase 1.2 through the generator/runner foundation.
 4. Implement the generic law-specification and discipline framework from the property-testing Phase 4 plan.

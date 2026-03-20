@@ -85,11 +85,10 @@ Longer-term destination on this track:
 
 ## Current Quality State
 
-The default `rebar3 eunit` entry point is no longer blocked by legacy PropEr-based property suites because they were quarantined outside the active `test/` compile tree.
+The default `rebar3 eunit` entry point is clean again after quarantining the legacy PropEr-based property suites outside the active `test/` compile tree and fixing the remaining active-suite regressions that surfaced afterward.
 
 Promoted interpretation:
 
-- the PropEr compile-path gap is resolved for active repo surfaces
+- the repo-wide `rebar3 eunit` path is green for active repo surfaces
 - the internal property-testing transition is still underway
 - historical PropEr suites remain preserved under `test_legacy/proper/` as migration targets rather than active default tests
-- the repo-wide EUnit run still exposes unrelated active test failures, so the full suite is not yet green

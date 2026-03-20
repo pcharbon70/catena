@@ -17,6 +17,7 @@
     tokenize_source/1,
 
     %% Stdlib helpers
+    repo_root/0,
     stdlib_dir/0,
     load_stdlib_file/1,
     parse_stdlib_file/1,
@@ -82,15 +83,20 @@ parse_and_match(Source, Pattern) ->
 %% Stdlib Helpers
 %% =============================================================================
 
+%% @doc Get the repository root path
+-spec repo_root() -> string().
+repo_root() ->
+    case os:getenv("CATENA_ROOT") of
+        false ->
+            discover_repo_root();
+        Root ->
+            Root
+    end.
+
 %% @doc Get the stdlib directory path
 -spec stdlib_dir() -> string().
 stdlib_dir() ->
-    case os:getenv("CATENA_ROOT") of
-        false ->
-            "/home/ducky/code/catena/lib/catena/stdlib";
-        Root ->
-            filename:join([Root, "lib", "catena", "stdlib"])
-    end.
+    filename:join([repo_root(), "lib", "catena", "stdlib"]).
 
 %% @doc Load a stdlib file as a string
 -spec load_stdlib_file(string()) -> {ok, string()} | {error, term()}.
@@ -142,14 +148,38 @@ build_prelude_kind_env() ->
 %% Creates the directory if it doesn't exist
 -spec temp_dir() -> string().
 temp_dir() ->
-    TempBase = case os:getenv("TMPDIR") of
-        false ->
-            case os:getenv("TMP") of
-                false -> "/tmp";
-                Tmp -> Tmp
-            end;
-        TmpDir -> TmpDir
-    end,
-    TestDir = filename:join([TempBase, "catena_test"]),
+    % Keep temporary test artifacts inside the workspace so compiler path
+    % validation and test-only file generation use the same trust boundary.
+    TestDir = filename:join([repo_root(), "_build", "test", "catena_test"]),
     ok = filelib:ensure_dir(filename:join(TestDir, "dummy")),
     TestDir.
+
+%% =============================================================================
+%% Internal Helpers
+%% =============================================================================
+
+-spec discover_repo_root() -> string().
+discover_repo_root() ->
+    {ok, Cwd} = file:get_cwd(),
+    case find_repo_root(Cwd) of
+        {ok, Root} -> Root;
+        error -> Cwd
+    end.
+
+-spec find_repo_root(string()) -> {ok, string()} | error.
+find_repo_root(Dir) ->
+    case is_repo_root(Dir) of
+        true ->
+            {ok, Dir};
+        false ->
+            Parent = filename:dirname(Dir),
+            case Parent =:= Dir of
+                true -> error;
+                false -> find_repo_root(Parent)
+            end
+    end.
+
+-spec is_repo_root(string()) -> boolean().
+is_repo_root(Dir) ->
+    filelib:is_file(filename:join([Dir, "rebar.config"])) andalso
+    filelib:is_dir(filename:join([Dir, "lib", "catena", "stdlib"])).
