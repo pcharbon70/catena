@@ -132,61 +132,61 @@ Implement size parameter handling. Size starts small and grows during test runs,
 ---
 
 ## 1.3 Categorical Instances for Generators
-- [ ] **Section 1.3 Complete**
+- [x] **Section 1.3 Complete**
 
 Generators form a monad, enabling powerful composition. The Functor instance transforms generated values, Applicative combines independent generators, and Monad enables dependent generation. These instances lift the rose tree instances through the generator function wrapper.
 
 ### 1.3.1 Functor Instance
-- [ ] **Task 1.3.1 Complete**
+- [x] **Task 1.3.1 Complete**
 
 Implement Functor for generators, enabling transformation of generated values while preserving the generation strategy and shrinking.
 
-- [ ] 1.3.1.1 Implement `gen_map/2` applying a function to generated values
-- [ ] 1.3.1.2 Ensure mapping preserves shrinking (shrinks are also mapped)
-- [ ] 1.3.1.3 Implement `gen_map2/3`, `gen_map3/4`, `gen_map4/5` for multi-argument mapping
-- [ ] 1.3.1.4 Verify functor laws for generators
+- [x] 1.3.1.1 Implement `gen_map/2` applying a function to generated values
+- [x] 1.3.1.2 Ensure mapping preserves shrinking (shrinks are also mapped)
+- [x] 1.3.1.3 Implement `gen_map2/3`, `gen_map3/4`, `gen_map4/5` for multi-argument mapping
+- [x] 1.3.1.4 Verify functor laws for generators
 
 ### 1.3.2 Applicative Instance
-- [ ] **Task 1.3.2 Complete**
+- [x] **Task 1.3.2 Complete**
 
 Implement Applicative for generators. Applicative combination is preferred over Monadic when generators are independent, as it produces better shrinking behavior.
 
-- [ ] 1.3.2.1 Implement `gen_pure/1` creating a generator that always produces the same value
-- [ ] 1.3.2.2 Implement `gen_ap/2` applying a generator of functions to a generator of values
-- [ ] 1.3.2.3 Document that `gen_ap` uses independent seeds for each generator
-- [ ] 1.3.2.4 Verify applicative laws for generators
+- [x] 1.3.2.1 Implement `gen_pure/1` creating a generator that always produces the same value
+- [x] 1.3.2.2 Implement `gen_ap/2` applying a generator of functions to a generator of values
+- [x] 1.3.2.3 Document that `gen_ap` uses independent seeds for each generator
+- [x] 1.3.2.4 Verify applicative laws for generators
 
 ### 1.3.3 Monad Instance
-- [ ] **Task 1.3.3 Complete**
+- [x] **Task 1.3.3 Complete**
 
 Implement Monad for generators, enabling dependent generation where the second generator depends on the value produced by the first.
 
-- [ ] 1.3.3.1 Implement `gen_bind/2` (flatMap) threading generated value to next generator
-- [ ] 1.3.3.2 Document shrinking caveat: dependent values don't re-shrink when first shrinks
-- [ ] 1.3.3.3 Implement `gen_flatten/1` for nested generators
-- [ ] 1.3.3.4 Verify monad laws for generators
+- [x] 1.3.3.1 Implement `gen_bind/2` (flatMap) threading generated value to next generator
+- [x] 1.3.3.2 Document shrinking caveat: dependent values don't re-shrink when first shrinks
+- [x] 1.3.3.3 Implement `gen_flatten/1` for nested generators
+- [x] 1.3.3.4 Verify monad laws for generators
 
 ### 1.3.4 Alternative Instance
-- [ ] **Task 1.3.4 Complete**
+- [x] **Task 1.3.4 Complete**
 
 Implement Alternative for generators, enabling choice between generators. This is essential for sum types and conditional generation.
 
-- [ ] 1.3.4.1 Implement `gen_empty/0` creating a generator that always fails
-- [ ] 1.3.4.2 Implement `gen_alt/2` choosing between two generators
-- [ ] 1.3.4.3 Implement `gen_one_of/1` choosing uniformly from a list of generators
-- [ ] 1.3.4.4 Implement `gen_frequency/1` choosing with weighted probabilities
+- [x] 1.3.4.1 Implement `gen_empty/0` creating a generator that always fails
+- [x] 1.3.4.2 Implement `gen_alt/2` choosing between two generators
+- [x] 1.3.4.3 Implement `gen_one_of/1` choosing uniformly from a list of generators
+- [x] 1.3.4.4 Implement `gen_frequency/1` choosing with weighted probabilities
 
 ### Unit Tests - Section 1.3
-- [ ] **Unit Tests 1.3 Complete**
-- [ ] Test `gen_map` transforms values correctly
-- [ ] Test `gen_pure` produces constant values with no shrinks
-- [ ] Test `gen_ap` combines independent generators correctly
-- [ ] Test `gen_bind` produces dependent values correctly
-- [ ] Test `gen_one_of` chooses from all options with uniform probability
-- [ ] Test `gen_frequency` respects weights
-- [ ] Test functor laws for generators
-- [ ] Test applicative laws for generators
-- [ ] Test monad laws for generators
+- [x] **Unit Tests 1.3 Complete**
+- [x] Test `gen_map` transforms values correctly
+- [x] Test `gen_pure` produces constant values with no shrinks
+- [x] Test `gen_ap` combines independent generators correctly
+- [x] Test `gen_bind` produces dependent values correctly
+- [x] Test `gen_one_of` chooses from all options with uniform probability
+- [x] Test `gen_frequency` respects weights
+- [x] Test functor laws for generators
+- [x] Test applicative laws for generators
+- [x] Test monad laws for generators
 
 ---
 

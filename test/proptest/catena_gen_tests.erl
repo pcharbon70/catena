@@ -1,4 +1,4 @@
-%% @doc Unit Tests for Generator Type and Seed Management (Section 1.2)
+%% @doc Unit Tests for Generator Type, Seed Management, and Generator Instances
 -module(catena_gen_tests).
 
 -include_lib("eunit/include/eunit.hrl").
@@ -23,7 +23,7 @@ same_seed_produces_same_tree_test() ->
     Tree1 = catena_gen:run(Generator, 10, Seed),
     Tree2 = catena_gen:run(Generator, 10, Seed),
 
-    ?assertEqual(tree_signature(Tree1), tree_signature(Tree2)).
+    ?assertEqual(flat_tree_signature(Tree1), flat_tree_signature(Tree2)).
 
 different_seeds_produce_different_values_test() ->
     Generator = random_word_generator(),
@@ -96,6 +96,309 @@ scale_transforms_current_size_test() ->
     ?assertEqual(4, catena_tree:root(Tree)).
 
 %%====================================================================
+%% Test: Functor instance
+%%====================================================================
+
+gen_map_transforms_values_and_shrinks_test() ->
+    Generator = fixed_generator(3, [1, 0]),
+    Mapped = catena_gen:gen_map(fun(X) -> X * 2 end, Generator),
+
+    Tree = catena_gen:run(Mapped, 0, catena_gen:seed_from_int(1)),
+
+    ?assertEqual({6, [2, 0]}, flat_tree_signature(Tree)).
+
+gen_map_multi_argument_helpers_test() ->
+    GeneratorA = catena_gen:gen_pure(2),
+    GeneratorB = catena_gen:gen_pure(3),
+    GeneratorC = catena_gen:gen_pure(4),
+    GeneratorD = catena_gen:gen_pure(5),
+
+    Tree2 = catena_gen:run(
+        catena_gen:gen_map2(fun(A, B) -> A + B end, GeneratorA, GeneratorB),
+        0,
+        catena_gen:seed_from_int(1)
+    ),
+    Tree3 = catena_gen:run(
+        catena_gen:gen_map3(fun(A, B, C) -> A + B + C end, GeneratorA, GeneratorB, GeneratorC),
+        0,
+        catena_gen:seed_from_int(1)
+    ),
+    Tree4 = catena_gen:run(
+        catena_gen:gen_map4(
+            fun(A, B, C, D) -> A + B + C + D end,
+            GeneratorA,
+            GeneratorB,
+            GeneratorC,
+            GeneratorD
+        ),
+        0,
+        catena_gen:seed_from_int(1)
+    ),
+
+    ?assertEqual(5, catena_tree:root(Tree2)),
+    ?assertEqual(9, catena_tree:root(Tree3)),
+    ?assertEqual(14, catena_tree:root(Tree4)).
+
+functor_law_identity_test() ->
+    Generator = fixed_generator(7, [3, 1]),
+    Seed = catena_gen:seed_from_int(9),
+
+    Left = catena_gen:run(catena_gen:gen_map(fun(X) -> X end, Generator), 0, Seed),
+    Right = catena_gen:run(Generator, 0, Seed),
+
+    ?assertEqual(tree_to_term(Right), tree_to_term(Left)).
+
+functor_law_composition_test() ->
+    Generator = fixed_generator(7, [3, 1]),
+    Seed = catena_gen:seed_from_int(9),
+    F = fun(X) -> X + 1 end,
+    G = fun(X) -> X * 2 end,
+
+    Left = catena_gen:run(catena_gen:gen_map(fun(X) -> F(G(X)) end, Generator), 0, Seed),
+    Right = catena_gen:run(
+        catena_gen:gen_map(F, catena_gen:gen_map(G, Generator)),
+        0,
+        Seed
+    ),
+
+    ?assertEqual(tree_to_term(Right), tree_to_term(Left)).
+
+%%====================================================================
+%% Test: Applicative instance
+%%====================================================================
+
+gen_pure_produces_constant_tree_test() ->
+    Tree = catena_gen:run(catena_gen:gen_pure(hello), 10, catena_gen:seed_from_int(5)),
+
+    ?assertEqual(hello, catena_tree:root(Tree)),
+    ?assertEqual([], catena_tree:children(Tree)).
+
+gen_ap_matches_split_seed_tree_application_test() ->
+    Seed = catena_gen:seed_from_int(33),
+    {FunctionSeed, ValueSeed} = catena_gen:seed_split(Seed),
+    FunctionGenerator =
+        catena_gen:gen_map(
+            fun(Offset) ->
+                fun(Value) -> {Offset, Value} end
+            end,
+            seed_word_generator()
+        ),
+    ValueGenerator = seed_word_generator(),
+
+    Expected = catena_tree:ap(
+        catena_gen:run(FunctionGenerator, 4, FunctionSeed),
+        catena_gen:run(ValueGenerator, 4, ValueSeed)
+    ),
+    Actual = catena_gen:run(
+        catena_gen:gen_ap(FunctionGenerator, ValueGenerator),
+        4,
+        Seed
+    ),
+
+    ?assertEqual(tree_to_term(Expected), tree_to_term(Actual)).
+
+applicative_law_identity_test() ->
+    ValueGenerator = fixed_generator(7, [3, 1]),
+    Seed = catena_gen:seed_from_int(10),
+
+    Left = catena_gen:run(
+        catena_gen:gen_ap(catena_gen:gen_pure(fun(X) -> X end), ValueGenerator),
+        0,
+        Seed
+    ),
+    Right = catena_gen:run(ValueGenerator, 0, Seed),
+
+    ?assertEqual(tree_to_term(Right), tree_to_term(Left)).
+
+applicative_law_homomorphism_test() ->
+    Seed = catena_gen:seed_from_int(10),
+    F = fun(X) -> X * 3 end,
+
+    Left = catena_gen:run(
+        catena_gen:gen_ap(catena_gen:gen_pure(F), catena_gen:gen_pure(4)),
+        0,
+        Seed
+    ),
+    Right = catena_gen:run(catena_gen:gen_pure(F(4)), 0, Seed),
+
+    ?assertEqual(tree_to_term(Right), tree_to_term(Left)).
+
+applicative_law_interchange_test() ->
+    Seed = catena_gen:seed_from_int(10),
+    GeneratorU = catena_gen:gen_pure(fun(X) -> X + 2 end),
+    ApplyToThree = fun(F) -> F(3) end,
+
+    Left = catena_gen:run(
+        catena_gen:gen_ap(GeneratorU, catena_gen:gen_pure(3)),
+        0,
+        Seed
+    ),
+    Right = catena_gen:run(
+        catena_gen:gen_ap(catena_gen:gen_pure(ApplyToThree), GeneratorU),
+        0,
+        Seed
+    ),
+
+    ?assertEqual(tree_to_term(Right), tree_to_term(Left)).
+
+applicative_law_composition_test() ->
+    Seed = catena_gen:seed_from_int(10),
+    Compose =
+        fun(F) ->
+            fun(G) ->
+                fun(X) -> F(G(X)) end
+            end
+        end,
+    GeneratorU = catena_gen:gen_pure(fun(X) -> X + 1 end),
+    GeneratorV = catena_gen:gen_pure(fun(X) -> X * 2 end),
+    GeneratorW = catena_gen:gen_pure(5),
+
+    Left = catena_gen:run(
+        catena_gen:gen_ap(
+            catena_gen:gen_ap(
+                catena_gen:gen_ap(catena_gen:gen_pure(Compose), GeneratorU),
+                GeneratorV
+            ),
+            GeneratorW
+        ),
+        0,
+        Seed
+    ),
+    Right = catena_gen:run(
+        catena_gen:gen_ap(GeneratorU, catena_gen:gen_ap(GeneratorV, GeneratorW)),
+        0,
+        Seed
+    ),
+
+    ?assertEqual(tree_to_term(Right), tree_to_term(Left)).
+
+%%====================================================================
+%% Test: Monad instance
+%%====================================================================
+
+gen_bind_threads_dependent_generator_test() ->
+    Seed = catena_gen:seed_from_int(44),
+    BaseGenerator = fixed_generator(2, [1]),
+    NextFun = fun(Value) ->
+        catena_gen:gen_map(fun(RandomWord) -> {Value, RandomWord} end, seed_word_generator())
+    end,
+
+    Expected = catena_tree:bind(
+        catena_gen:run(BaseGenerator, 3, Seed),
+        fun(Value) ->
+            catena_gen:run(NextFun(Value), 3, Seed)
+        end
+    ),
+    Actual = catena_gen:run(catena_gen:gen_bind(BaseGenerator, NextFun), 3, Seed),
+
+    ?assertEqual(tree_to_term(Expected), tree_to_term(Actual)).
+
+gen_flatten_collapses_nested_generators_test() ->
+    Inner = catena_gen:gen_pure(5),
+    Outer = catena_gen:gen_pure(Inner),
+
+    Tree = catena_gen:run(catena_gen:gen_flatten(Outer), 0, catena_gen:seed_from_int(1)),
+
+    ?assertEqual(5, catena_tree:root(Tree)).
+
+monad_law_left_identity_test() ->
+    Seed = catena_gen:seed_from_int(12),
+    NextFun = fun(Value) -> catena_gen:gen_pure(Value * 10) end,
+
+    Left = catena_gen:run(
+        catena_gen:gen_bind(catena_gen:gen_pure(3), NextFun),
+        0,
+        Seed
+    ),
+    Right = catena_gen:run(NextFun(3), 0, Seed),
+
+    ?assertEqual(tree_to_term(Right), tree_to_term(Left)).
+
+monad_law_right_identity_test() ->
+    Seed = catena_gen:seed_from_int(12),
+    Generator = fixed_generator(7, [3, 1]),
+
+    Left = catena_gen:run(
+        catena_gen:gen_bind(Generator, fun(Value) -> catena_gen:gen_pure(Value) end),
+        0,
+        Seed
+    ),
+    Right = catena_gen:run(Generator, 0, Seed),
+
+    ?assertEqual(tree_to_term(Right), tree_to_term(Left)).
+
+monad_law_associativity_test() ->
+    Seed = catena_gen:seed_from_int(12),
+    Generator = catena_gen:gen_pure(5),
+    F = fun(Value) -> catena_gen:gen_pure(Value + 2) end,
+    G = fun(Value) -> catena_gen:gen_pure(Value * 3) end,
+
+    Left = catena_gen:run(
+        catena_gen:gen_bind(catena_gen:gen_bind(Generator, F), G),
+        0,
+        Seed
+    ),
+    Right = catena_gen:run(
+        catena_gen:gen_bind(Generator, fun(Value) ->
+            catena_gen:gen_bind(F(Value), G)
+        end),
+        0,
+        Seed
+    ),
+
+    ?assertEqual(tree_to_term(Right), tree_to_term(Left)).
+
+%%====================================================================
+%% Test: Alternative instance
+%%====================================================================
+
+gen_empty_throws_failure_test() ->
+    ?assertThrow(
+        {generator_failed, empty},
+        catena_gen:run(catena_gen:gen_empty(), 0, catena_gen:seed_from_int(1))
+    ).
+
+gen_alt_falls_back_when_primary_choice_fails_test() ->
+    Generator = catena_gen:gen_alt(catena_gen:gen_empty(), catena_gen:gen_pure(ok)),
+
+    Values =
+        [catena_tree:root(catena_gen:run(Generator, 0, catena_gen:seed_from_int(N)))
+         || N <- lists:seq(1, 20)],
+
+    ?assertEqual([ok], lists:usort(Values)).
+
+gen_one_of_visits_all_choices_test() ->
+    Generator =
+        catena_gen:gen_one_of([
+            catena_gen:gen_pure(alpha),
+            catena_gen:gen_pure(beta),
+            catena_gen:gen_pure(gamma)
+        ]),
+
+    Values =
+        [catena_tree:root(catena_gen:run(Generator, 0, catena_gen:seed_from_int(N)))
+         || N <- lists:seq(1, 240)],
+
+    ?assertEqual([alpha, beta, gamma], lists:usort(Values)).
+
+gen_frequency_biases_toward_heavier_weights_test() ->
+    Generator =
+        catena_gen:gen_frequency([
+            {1, catena_gen:gen_pure(light)},
+            {4, catena_gen:gen_pure(heavy)}
+        ]),
+
+    Values =
+        [catena_tree:root(catena_gen:run(Generator, 0, catena_gen:seed_from_int(N)))
+         || N <- lists:seq(1, 400)],
+    LightCount = length([Value || Value <- Values, Value =:= light]),
+    HeavyCount = length([Value || Value <- Values, Value =:= heavy]),
+
+    ?assert(LightCount > 0),
+    ?assert(HeavyCount > 0),
+    ?assert(HeavyCount > LightCount).
+
+%%====================================================================
 %% Helpers
 %%====================================================================
 
@@ -114,8 +417,26 @@ size_echo_generator() ->
         end)
     end).
 
-tree_signature(Tree) ->
+fixed_generator(Value, Shrinks) ->
+    catena_gen:new(fun(_Size, _Seed) ->
+        catena_tree:tree(Value, fun() ->
+            [catena_tree:singleton(Shrink) || Shrink <- Shrinks]
+        end)
+    end).
+
+seed_word_generator() ->
+    catena_gen:new(fun(Size, Seed) ->
+        {Word, _NextSeed} = catena_gen:seed_next(Seed),
+        catena_tree:tree(Word, fun() ->
+            [catena_tree:singleton(Size)]
+        end)
+    end).
+
+flat_tree_signature(Tree) ->
     {catena_tree:root(Tree), [catena_tree:root(Child) || Child <- catena_tree:children(Tree)]}.
+
+tree_to_term(Tree) ->
+    {catena_tree:root(Tree), [tree_to_term(Child) || Child <- catena_tree:children(Tree)]}.
 
 next_values(_Seed, 0) ->
     [];
