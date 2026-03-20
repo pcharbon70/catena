@@ -399,6 +399,159 @@ gen_frequency_biases_toward_heavier_weights_test() ->
     ?assert(HeavyCount > LightCount).
 
 %%====================================================================
+%% Test: Primitive combinators
+%%====================================================================
+
+constant_produces_fixed_value_without_shrinks_test() ->
+    Tree = catena_gen:run(catena_gen:constant(hello), 50, catena_gen:seed_from_int(9)),
+
+    ?assertEqual(hello, catena_tree:root(Tree)),
+    ?assertEqual([], catena_gen:shrinks(Tree)).
+
+element_produces_values_from_the_source_list_test() ->
+    Generator = catena_gen:element([alpha, beta, gamma]),
+    Values =
+        [catena_tree:root(catena_gen:run(Generator, 0, catena_gen:seed_from_int(N)))
+         || N <- lists:seq(1, 240)],
+
+    ?assertEqual([alpha, beta, gamma], lists:usort(Values)).
+
+element_shrinks_toward_earlier_values_test() ->
+    Generator = catena_gen:element([alpha, beta, gamma]),
+    Tree = first_tree_with_root(Generator, gamma, 500),
+
+    ?assertEqual([alpha, beta], catena_gen:shrinks(Tree)).
+
+elements_is_an_alias_for_element_test() ->
+    List = [alpha, beta, gamma],
+    ElementValues =
+        [catena_tree:root(catena_gen:run(catena_gen:element(List), 0, catena_gen:seed_from_int(N)))
+         || N <- lists:seq(1, 30)],
+    ElementsValues =
+        [catena_tree:root(catena_gen:run(catena_gen:elements(List), 0, catena_gen:seed_from_int(N)))
+         || N <- lists:seq(1, 30)],
+
+    ?assertEqual(ElementValues, ElementsValues).
+
+gen_bool_produces_both_boolean_values_test() ->
+    Generator = catena_gen:gen_bool(),
+    Values =
+        [catena_tree:root(catena_gen:run(Generator, 0, catena_gen:seed_from_int(N)))
+         || N <- lists:seq(1, 80)],
+
+    ?assertEqual([false, true], lists:usort(Values)).
+
+gen_bool_true_shrinks_to_false_test() ->
+    Generator = catena_gen:gen_bool(),
+    TrueTree = first_tree_satisfying(Generator, fun(Value) -> Value =:= true end, 200),
+    FalseTree = first_tree_satisfying(Generator, fun(Value) -> Value =:= false end, 200),
+
+    ?assertEqual([false], catena_gen:shrinks(TrueTree)),
+    ?assertEqual([], catena_gen:shrinks(FalseTree)).
+
+gen_bool_probability_biases_generation_test() ->
+    Generator = catena_gen:gen_bool(0.8),
+    Values =
+        [catena_tree:root(catena_gen:run(Generator, 0, catena_gen:seed_from_int(N)))
+         || N <- lists:seq(1, 400)],
+    TrueCount = length([Value || Value <- Values, Value =:= true]),
+    FalseCount = length([Value || Value <- Values, Value =:= false]),
+
+    ?assert(TrueCount > FalseCount).
+
+gen_int_respects_explicit_bounds_test() ->
+    Generator = catena_gen:gen_int({-5, 5}),
+    Values =
+        [catena_tree:root(catena_gen:run(Generator, 0, catena_gen:seed_from_int(N)))
+         || N <- lists:seq(1, 300)],
+
+    ?assert(lists:all(fun(Value) -> Value >= -5 andalso Value =< 5 end, Values)).
+
+gen_int_shrinks_toward_zero_when_available_test() ->
+    Generator = catena_gen:gen_int({-10, 10}),
+    Tree = first_tree_satisfying(Generator, fun(Value) -> Value =/= 0 end, 300),
+
+    ?assert(lists:member(0, catena_gen:shrinks(Tree))).
+
+gen_int_shrinks_toward_bound_when_zero_is_unavailable_test() ->
+    Generator = catena_gen:gen_int({5, 10}),
+    Tree = first_tree_satisfying(Generator, fun(Value) -> Value > 5 end, 300),
+
+    ?assert(lists:member(5, catena_gen:shrinks(Tree))).
+
+derived_integer_generators_respect_their_domains_test() ->
+    PosValues = catena_gen:sample(catena_gen:gen_pos_int(), 20),
+    NegValues = catena_gen:sample(catena_gen:gen_neg_int(), 20),
+    NatValues = catena_gen:sample(catena_gen:gen_nat(), 20),
+
+    ?assert(lists:all(fun(Value) -> Value > 0 end, PosValues)),
+    ?assert(lists:all(fun(Value) -> Value < 0 end, NegValues)),
+    ?assert(lists:all(fun(Value) -> Value >= 0 end, NatValues)).
+
+gen_filter_only_produces_matching_values_test() ->
+    Generator =
+        catena_gen:gen_filter(
+            fun(Value) -> Value rem 2 =:= 0 end,
+            catena_gen:gen_int({0, 20})
+        ),
+    Values = catena_gen:sample(Generator, 20),
+
+    ?assert(lists:all(fun(Value) -> Value rem 2 =:= 0 end, Values)).
+
+gen_filter_promotes_valid_shrinks_test() ->
+    BaseGenerator =
+        catena_gen:new(fun(_Size, _Seed) ->
+            catena_tree:tree(4, fun() ->
+                [
+                    catena_tree:tree(3, fun() -> [catena_tree:singleton(2)] end),
+                    catena_tree:singleton(1),
+                    catena_tree:singleton(0)
+                ]
+            end)
+        end),
+    FilteredGenerator =
+        catena_gen:gen_filter(fun(Value) -> Value rem 2 =:= 0 end, BaseGenerator),
+    Tree = catena_gen:run(FilteredGenerator, 0, catena_gen:seed_from_int(1)),
+
+    ?assertEqual(4, catena_tree:root(Tree)),
+    ?assertEqual([2, 0], catena_gen:shrinks(Tree)).
+
+gen_such_that_aliases_gen_filter_test() ->
+    BaseGenerator = catena_gen:gen_int({0, 10}),
+    Predicate = fun(Value) -> Value rem 2 =:= 0 end,
+    Seed = catena_gen:seed_from_int(18),
+    Filtered = catena_gen:run(catena_gen:gen_filter(Predicate, BaseGenerator), 5, Seed),
+    SuchThat = catena_gen:run(catena_gen:gen_such_that(Predicate, BaseGenerator), 5, Seed),
+
+    ?assertEqual(tree_to_term(Filtered), tree_to_term(SuchThat)).
+
+sample_returns_requested_number_of_values_test() ->
+    Values = catena_gen:sample(catena_gen:constant(ok), 5),
+
+    ?assertEqual([ok, ok, ok, ok, ok], Values).
+
+sample_uses_increasing_sizes_test() ->
+    Values = catena_gen:sample(size_echo_generator(), 4),
+
+    ?assertEqual([0, 1, 2, 3], Values).
+
+shrinks_returns_immediate_shrink_values_test() ->
+    Tree =
+        catena_tree:tree(root, fun() ->
+            [catena_tree:singleton(child_one), catena_tree:singleton(child_two)]
+        end),
+
+    ?assertEqual([child_one, child_two], catena_gen:shrinks(Tree)).
+
+print_tree_renders_a_displayable_tree_test() ->
+    Tree =
+        catena_tree:tree(root, fun() ->
+            [catena_tree:tree(child, fun() -> [catena_tree:singleton(leaf)] end)]
+        end),
+
+    ?assertEqual("root\n  child\n    leaf\n", catena_gen:print_tree(Tree)).
+
+%%====================================================================
 %% Helpers
 %%====================================================================
 
@@ -443,3 +596,17 @@ next_values(_Seed, 0) ->
 next_values(Seed, Count) when Count > 0 ->
     {Value, NextSeed} = catena_gen:seed_next(Seed),
     [Value | next_values(NextSeed, Count - 1)].
+
+first_tree_with_root(Generator, RootValue, Limit) ->
+    first_tree_satisfying(Generator, fun(Value) -> Value =:= RootValue end, Limit).
+
+first_tree_satisfying(Generator, Predicate, Limit) ->
+    Candidates =
+        [catena_gen:run(Generator, 20, catena_gen:seed_from_int(Seed))
+         || Seed <- lists:seq(1, Limit)],
+    case [Tree || Tree <- Candidates, Predicate(catena_tree:root(Tree))] of
+        [Tree | _] ->
+            Tree;
+        [] ->
+            erlang:error({test_seed_not_found, Limit})
+    end.
