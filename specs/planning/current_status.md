@@ -27,6 +27,9 @@ Reconciled Section 1.5 status:
 - 1.5.2 Trait Instance Resolution: complete
 - 1.5.3 Higher-Kinded Type Validation: complete
 - 1.5.4 Law Verification via Test Module: partial
+  - pure law definitions in `Laws` exist
+  - structural tests for those law surfaces exist
+  - executable concrete law suites and generic generator-backed law verification remain staged follow-on work
 - 1.5.5 Do-Notation Desugaring: implemented
 - 1.5.6 Effect Integration with Kleisli Arrows: mostly implemented
 - 1.5.7 Operator Desugaring: implemented
@@ -76,12 +79,17 @@ Next clear step on this track:
 
 - Phase 1 Section 1.2 Generator Type and Seed Management
 
-## Current Quality Gap
+Longer-term destination on this track:
 
-`rebar3 eunit` currently does not complete cleanly because PropEr-based property-test modules still compile under the test tree while PropEr has been removed from `rebar.config`.
+- Property Testing Phase 4 law testing provides the generic reusable destination for trait-law verification once generators and runner integration are mature
+
+## Current Quality State
+
+The default `rebar3 eunit` entry point is no longer blocked by legacy PropEr-based property suites because they were quarantined outside the active `test/` compile tree.
 
 Promoted interpretation:
 
-- the internal property-testing transition is underway
-- the default full test workflow still needs reconciliation
-- subsystem-level code and summaries remain useful evidence of implemented behavior, but the repo's default test entry point is not yet fully clean
+- the PropEr compile-path gap is resolved for active repo surfaces
+- the internal property-testing transition is still underway
+- historical PropEr suites remain preserved under `test_legacy/proper/` as migration targets rather than active default tests
+- the repo-wide EUnit run still exposes unrelated active test failures, so the full suite is not yet green

@@ -21,7 +21,7 @@ Based on `notes/planning/`, `notes/summaries/`, `notes/reviews/`, and the codeba
 - reconcile canonical specs and planning state around the implemented compiler/runtime/library surfaces
 - finish the remaining Phase 1.5 library-validation gaps
 - decide whether to resume the proof-of-concept track or continue the property-testing framework track next
-- restore a coherent default test workflow after the PropEr transition
+- continue migrating historical PropEr coverage into the internal property-testing architecture now that the PropEr compile-path blockage is removed
 
 ## Medium-Term Targets
 
