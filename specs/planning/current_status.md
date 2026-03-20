@@ -26,7 +26,12 @@ Reconciled Section 1.5 status:
 - 1.5.1 Standard Library Compilation: complete
 - 1.5.2 Trait Instance Resolution: complete
 - 1.5.3 Higher-Kinded Type Validation: complete
-- 1.5.4 Law Verification via Test Module: partial
+- 1.5.4 Law Verification via Test Module: implemented for concrete suites
+  - pure law definitions in `Laws` exist
+  - structural tests for those law surfaces exist
+  - concrete executable suites now run end to end through imported `Prelude`, `Test`, and `Laws` surfaces for `Maybe`, `Either`, and `List`
+  - intentionally broken fixtures are proven to fail through the active test path
+  - generic generator-backed law verification remains later staged work
 - 1.5.5 Do-Notation Desugaring: implemented
 - 1.5.6 Effect Integration with Kleisli Arrows: mostly implemented
 - 1.5.7 Operator Desugaring: implemented
@@ -76,12 +81,21 @@ Next clear step on this track:
 
 - Phase 1 Section 1.2 Generator Type and Seed Management
 
-## Current Quality Gap
+Longer-term destination on this track:
 
-`rebar3 eunit` currently does not complete cleanly because PropEr-based property-test modules still compile under the test tree while PropEr has been removed from `rebar.config`.
+- Property Testing Phase 4 law testing provides the generic reusable destination for trait-law verification once generators and runner integration are mature
+
+Immediate consequence of the completed concrete law-suite stage:
+
+- the next law-verification step is no longer “make `Laws + Test.verify` executable”
+- the next law-verification step is Property Testing Phase 1.2 and the broader Stage 3 generator/runner foundation
+
+## Current Quality State
+
+The default `rebar3 eunit` entry point is clean again after quarantining the legacy PropEr-based property suites outside the active `test/` compile tree and fixing the remaining active-suite regressions that surfaced afterward.
 
 Promoted interpretation:
 
-- the internal property-testing transition is underway
-- the default full test workflow still needs reconciliation
-- subsystem-level code and summaries remain useful evidence of implemented behavior, but the repo's default test entry point is not yet fully clean
+- the repo-wide `rebar3 eunit` path is green for active repo surfaces
+- the internal property-testing transition is still underway
+- historical PropEr suites remain preserved under `test_legacy/proper/` as migration targets rather than active default tests

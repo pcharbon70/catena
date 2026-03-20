@@ -1,6 +1,8 @@
 # Lexer Property-Based Tests
 
-## Quick Start
+This directory is a quarantined historical PropEr suite. It is preserved as a migration reference under `test_legacy/proper/` and is intentionally excluded from the default `rebar3 eunit` workflow.
+
+## Historical Quick Start
 
 ### Prerequisites
 ```bash
@@ -9,7 +11,7 @@ rebar3 get-deps
 rebar3 compile
 ```
 
-### Run All Tests
+### Historical Run Commands
 ```bash
 # Run all lexer property tests (100 cases each)
 rebar3 proper -m catena_lexer_properties

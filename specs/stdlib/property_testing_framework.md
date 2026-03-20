@@ -7,6 +7,7 @@ Promoted status: in progress. The rose-tree foundation is implemented and tested
 ## Design Anchors
 
 - [Property testing Phase 1 plan](../../notes/planning/property-testing/phase-01.md)
+- [Property testing Phase 4 law testing plan](../../notes/planning/property-testing/phase-04.md)
 - [Rose tree completion summary](../../notes/summaries/rose-tree-unit-tests-complete-2025-11-29.md)
 - [Phase 2.3 testing summary](../../notes/summaries/phase-2.3-testing-summary.md)
 - `src/proptest/catena_tree.erl`
@@ -19,7 +20,9 @@ Promoted status: in progress. The rose-tree foundation is implemented and tested
 - The new property-testing track is real implementation work, not only planning.
 - `catena_tree` is the current canonical implemented surface for the new framework.
 - The older Phase 2.3 property-test execution path still exists and remains the active runner for first-class `property` declarations.
+- Concrete law suites now execute on the current `Laws + Test.verify + src/testing/*` path for known instances while the generic framework is still under construction.
 - The repo is in transition from older/simple generation toward a more principled internal framework with integrated shrinking.
+- The generic long-term destination for trait-law verification is this internal framework, but that law-testing layer belongs to a later roadmap phase and is not yet implemented.
 
 ## Acceptance Criteria
 
@@ -46,6 +49,8 @@ The promoted current status for the property-testing roadmap is:
 
 The planning checklist has not yet been reconciled to that implemented state, so this spec uses the later summary and code as the current authority.
 
+The later reusable law-testing framework remains planned in Property Testing Phase 4 rather than being part of the current implemented surface.
+
 ### AC-PROP-003 Transitional Coexistence
 
 Until the new framework is fully wired through the language and tooling, Catena currently has two valid testing-related layers:
@@ -65,9 +70,25 @@ The canonical direction is internal property testing with integrated shrinking, 
 
 ### AC-PROP-005 Known Gap Visibility
 
-Documentation and tooling specs must continue to note that the PropEr transition is not yet fully reconciled at the repo-wide test-entry-point level. This prevents the specs from hiding the current workflow gap while the replacement architecture is still landing.
+Documentation and tooling specs must continue to note the true transition state:
+
+- the default repo-wide `rebar3 eunit` entry point is green again for the active suite
+- the migration is still incomplete because historical PropEr suites remain quarantined and their internal replacements are not all implemented yet
+
+This prevents the specs from confusing "default workflow restored" with "migration finished."
+
+### AC-PROP-006 Law-Testing Destination
+
+Generic trait-law verification SHOULD converge on the internal property-testing framework rather than remaining permanently split between ad hoc concrete suites and external tooling.
+
+Promoted staging:
+
+- near-term: concrete executable suites already use `Laws + Test.verify`
+- mid-term: generator and runner foundations become available
+- later: reusable law/disciplines/suite generation land on top of the internal framework
 
 ## Out Of Scope
 
 - claiming generator and seed management are already complete
 - claiming the new framework fully replaces the older test runner today
+- claiming generic law-test disciplines are already implemented today

@@ -55,7 +55,7 @@ The build scripts (`scripts/build.sh`, `scripts/build_lexer.sh`, `scripts/build_
 
 Tests are organized by compiler component:
 
-- `test/compiler/lexer/` - Lexer tests including property-based tests
+- `test/compiler/lexer/` - Lexer tests
 - `test/compiler/parser/` - Parser tests for syntax validation, AST construction, error handling
 - `test/compiler/types/` - Type system tests (type inference, unification, constraints, effects)
 - `test/compiler/error/` - Error reporting and formatting tests
@@ -68,13 +68,14 @@ Tests are organized by compiler component:
 # Run specific test module via eunit
 rebar3 eunit --module=catena_parser_effect_tests
 
-# Run property-based tests with PropEr
-rebar3 proper -m catena_parser_properties
-rebar3 proper -m catena_lexer_properties
+# Run the default supported repo-wide test path
+rebar3 eunit
 
-# Run property-based test with specific count
-rebar3 proper -m catena_parser_properties -n 1000
+# Property-testing implementation work lives here
+rebar3 eunit --module=catena_tree_tests
 ```
+
+The active supported workflow is `rebar3 eunit`. Internal property-testing work is landing in `src/proptest/*` and `src/testing/*`. Historical PropEr suites are preserved under `test_legacy/proper/` and are not part of the default workflow.
 
 ### Test Coverage
 
@@ -203,14 +204,13 @@ Catena uses dual notation - keywords and symbolic operators:
 - `notes/summaries/` - Session summaries and completed work
 - `notes/reviews/` - Code review notes
 
-## PropEr Property-Based Testing
+## Historical PropEr Suites
 
-The project uses PropEr for property-based testing:
+Legacy PropEr-based property suites are preserved under `test_legacy/proper/` as migration references.
 
-- Generators defined in `*_properties.erl` modules
-- Test properties with invariants (roundtrip parsing, never crashes, valid AST generation)
-- Configure test runs via `rebar.config` (`{numtests, 100}`, `{max_size, 20}`)
-- Run with `rebar3 proper -m module_name`
+- The supported default test path is `rebar3 eunit`
+- New property-testing work should target `src/proptest/*` and `src/testing/*`
+- Historical `*_properties.erl` suites are quarantined until they are migrated or retired
 
 ## Important Notes
 
