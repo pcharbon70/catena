@@ -9,7 +9,8 @@ It exists because the repository currently has:
 - real law definitions in the standard library
 - real test wrappers for law checks
 - structural tests proving those surfaces compile and normalize correctly
-- an unfinished path from those surfaces to generic property-based law verification
+- an implemented concrete-suite execution path
+- a still-unfinished path from those surfaces to generic property-based law verification
 
 The goal is to describe the intended path without overstating what is already executable.
 
@@ -20,13 +21,15 @@ Catena's current baseline for law verification is:
 - `lib/catena/stdlib/laws.cat` defines pure law transforms for `Mapper`, `Pipeline`, `Comparable`, and `Combiner`
 - `lib/catena/stdlib/test.cat` defines `verify` as the current standard-library wrapper for turning a Bool-producing law check into a test value
 - `test/compiler/integration/catena_stdlib_laws_tests.erl` verifies the `Laws` module parses, exports the expected transforms, and preserves the intended law arities and AST shape
-- full execution of reusable imported law suites is still partial
+- concrete imported law suites now execute end to end for `Maybe`, `Either`, and `List`
+- deliberately broken fixtures are proven to fail through the same maintained test path
 - generic generator-backed law verification is not yet implemented
 
 Promoted interpretation:
 
 - Stage 1 law definition work exists
-- Stage 2 and later execution/generality work remain to be done
+- Stage 2 executable concrete suites are implemented
+- Stage 3 and later generality work remain to be done
 
 ## Stage 1: Structural Law Definition
 
@@ -43,7 +46,7 @@ This stage proves the language and stdlib can represent the laws, but it does no
 
 ## Stage 2: Executable Concrete Law Suites
 
-Status: next law-verification step on the proof-of-concept track
+Status: implemented
 
 The second stage makes today's law surface executable for concrete known instances before the generic property-testing framework is complete.
 
@@ -65,6 +68,12 @@ The second stage makes today's law surface executable for concrete known instanc
 - at least one reusable law suite executes end-to-end against known stdlib-backed instances
 - a deliberately broken fixture or intentionally invalid instance can be shown to fail
 - the tests run through a maintained repo test path rather than ad hoc one-off scripts
+
+Current promoted outcome:
+
+- reusable suites execute against `Maybe`, `Either`, and `List`
+- failing fixtures are covered by active tests
+- the repo-wide maintained test path exercises this surface
 
 ## Stage 3: Generator And Runner Foundation
 
@@ -123,10 +132,9 @@ This stage is explicitly downstream of the generic framework, not a prerequisite
 ## Recommended Execution Order
 
 1. Maintain the green default repo test path while continuing the PropEr migration.
-2. Complete Stage 2 by making current `Laws + Test.verify` executable for concrete suites.
-3. Continue Property Testing Phase 1.2 through the generator/runner foundation.
-4. Implement the generic law-specification and discipline framework from the property-testing Phase 4 plan.
-5. Add ergonomic derivation only after the underlying framework is solid.
+2. Continue Property Testing Phase 1.2 through the generator/runner foundation now that Stage 2 is complete.
+3. Implement the generic law-specification and discipline framework from the property-testing Phase 4 plan.
+4. Add ergonomic derivation only after the underlying framework is solid.
 
 ## What This Plan Avoids
 

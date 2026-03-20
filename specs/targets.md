@@ -7,7 +7,7 @@ Based on `notes/planning/`, `notes/summaries/`, `notes/reviews/`, and the codeba
 - Proof-of-concept Phase 1 Sections 1.1 through 1.4 are materially implemented.
 - Proof-of-concept Phase 1.5 is partially reconciled:
   - 1.5.1, 1.5.2, and 1.5.3 are complete.
-  - 1.5.4 is partial.
+  - 1.5.4 is implemented for concrete suites.
   - 1.5.5 is implemented through do-notation parsing/desugaring.
   - 1.5.6 is mostly implemented through effect/Kleisli integration work.
   - 1.5.7 operator desugaring is implemented.
@@ -19,8 +19,8 @@ Based on `notes/planning/`, `notes/summaries/`, `notes/reviews/`, and the codeba
 ## Immediate Targets
 
 - reconcile canonical specs and planning state around the implemented compiler/runtime/library surfaces
-- finish the remaining Phase 1.5 library-validation gaps
-- decide whether to resume the proof-of-concept track or continue the property-testing framework track next
+- continue the property-testing framework track with generator/seed management now that concrete law suites are in place
+- decide whether to reconcile the remaining mostly-implemented Phase 1.5.6 work further or move directly into the property-testing roadmap
 - continue migrating historical PropEr coverage into the internal property-testing architecture now that the repo-wide `rebar3 eunit` path is green again
 
 ## Medium-Term Targets

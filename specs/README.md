@@ -59,6 +59,7 @@ The structure follows the layered model used by `../epic/jido_os/specs`, adapted
 
 - [planning/README.md](planning/README.md)
 - [planning/current_status.md](planning/current_status.md)
+- [planning/law_verification_staged_plan.md](planning/law_verification_staged_plan.md)
 - [operations/README.md](operations/README.md)
 
 ## Domain Indexes

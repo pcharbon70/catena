@@ -20,6 +20,7 @@ Promoted status: in progress. The rose-tree foundation is implemented and tested
 - The new property-testing track is real implementation work, not only planning.
 - `catena_tree` is the current canonical implemented surface for the new framework.
 - The older Phase 2.3 property-test execution path still exists and remains the active runner for first-class `property` declarations.
+- Concrete law suites now execute on the current `Laws + Test.verify + src/testing/*` path for known instances while the generic framework is still under construction.
 - The repo is in transition from older/simple generation toward a more principled internal framework with integrated shrinking.
 - The generic long-term destination for trait-law verification is this internal framework, but that law-testing layer belongs to a later roadmap phase and is not yet implemented.
 
@@ -82,7 +83,7 @@ Generic trait-law verification SHOULD converge on the internal property-testing 
 
 Promoted staging:
 
-- near-term: concrete executable suites may still use `Laws + Test.verify`
+- near-term: concrete executable suites already use `Laws + Test.verify`
 - mid-term: generator and runner foundations become available
 - later: reusable law/disciplines/suite generation land on top of the internal framework
 
