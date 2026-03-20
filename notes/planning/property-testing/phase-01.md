@@ -310,49 +310,49 @@ Integrate ranges with integer generation, replacing ad-hoc size handling with pr
 ---
 
 ## 1.6 Basic Shrinking Infrastructure
-- [ ] **Section 1.6 Complete**
+- [x] **Section 1.6 Complete**
 
 Shrinking finds minimal counterexamples by systematically trying smaller values. Integrated shrinking (via rose trees) ensures shrinks respect generator invariants. This section implements shrink search strategies and result minimization.
 
 ### 1.6.1 Shrink Strategies
-- [ ] **Task 1.6.1 Complete**
+- [x] **Task 1.6.1 Complete**
 
 Implement strategies for traversing shrink trees to find minimal failing cases. Different strategies trade off speed vs minimality.
 
-- [ ] 1.6.1.1 Implement `shrink_towards/2` creating shrink sequence toward a target
-- [ ] 1.6.1.2 Implement `shrink_binary/2` binary search shrinking for numeric values
-- [ ] 1.6.1.3 Implement `shrink_list/1` list shrinking (remove elements, shrink elements)
-- [ ] 1.6.1.4 Implement `shrink_halves/1` repeatedly halving toward zero
+- [x] 1.6.1.1 Implement `shrink_towards/2` creating shrink sequence toward a target
+- [x] 1.6.1.2 Implement `shrink_binary/2` binary search shrinking for numeric values
+- [x] 1.6.1.3 Implement `shrink_list/1` list shrinking (remove elements, shrink elements)
+- [x] 1.6.1.4 Implement `shrink_halves/1` repeatedly halving toward zero
 
 ### 1.6.2 Shrink Tree Traversal
-- [ ] **Task 1.6.2 Complete**
+- [x] **Task 1.6.2 Complete**
 
 Implement tree traversal for finding minimal failing cases. The traversal must efficiently search potentially large trees.
 
-- [ ] 1.6.2.1 Implement `find_minimal/2` finding smallest value failing a predicate
-- [ ] 1.6.2.2 Implement depth-first search with early termination
-- [ ] 1.6.2.3 Implement configurable shrink attempt limits
-- [ ] 1.6.2.4 Track shrink path for debugging (which shrinks were taken)
+- [x] 1.6.2.1 Implement `find_minimal/2` finding smallest value failing a predicate
+- [x] 1.6.2.2 Implement depth-first search with early termination
+- [x] 1.6.2.3 Implement configurable shrink attempt limits
+- [x] 1.6.2.4 Track shrink path for debugging (which shrinks were taken)
 
 ### 1.6.3 Custom Shrinking
-- [ ] **Task 1.6.3 Complete**
+- [x] **Task 1.6.3 Complete**
 
 Enable users to customize shrinking for domain-specific types while maintaining integration with the rose tree infrastructure.
 
-- [ ] 1.6.3.1 Implement `with_shrink/2` adding custom shrink function to generator
-- [ ] 1.6.3.2 Implement `no_shrink/1` disabling shrinking for a generator
-- [ ] 1.6.3.3 Implement `shrink_map/2` transforming shrink values
-- [ ] 1.6.3.4 Document when custom shrinking is needed vs relying on integrated shrinking
+- [x] 1.6.3.1 Implement `with_shrink/2` adding custom shrink function to generator
+- [x] 1.6.3.2 Implement `no_shrink/1` disabling shrinking for a generator
+- [x] 1.6.3.3 Implement `shrink_map/2` transforming shrink values
+- [x] 1.6.3.4 Document when custom shrinking is needed vs relying on integrated shrinking
 
 ### Unit Tests - Section 1.6
-- [ ] **Unit Tests 1.6 Complete**
-- [ ] Test `shrink_towards` produces correct sequence
-- [ ] Test `shrink_binary` finds values efficiently
-- [ ] Test `shrink_list` removes and shrinks elements
-- [ ] Test `find_minimal` finds smallest failing value
-- [ ] Test shrink limits prevent infinite loops
-- [ ] Test `no_shrink` produces trees with no children
-- [ ] Test `with_shrink` custom shrinks are used
+- [x] **Unit Tests 1.6 Complete**
+- [x] Test `shrink_towards` produces correct sequence
+- [x] Test `shrink_binary` finds values efficiently
+- [x] Test `shrink_list` removes and shrinks elements
+- [x] Test `find_minimal` finds smallest failing value
+- [x] Test shrink limits prevent infinite loops
+- [x] Test `no_shrink` produces trees with no children
+- [x] Test `with_shrink` custom shrinks are used
 
 ---
 

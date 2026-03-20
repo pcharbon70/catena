@@ -95,7 +95,8 @@ Current promoted progress inside this stage:
 - Property Testing Phase 1.3 categorical instances for generators: implemented
 - Property Testing Phase 1.4 primitive combinators: implemented
 - Property Testing Phase 1.5 range types: implemented
-- Property Testing Phase 1.6 basic shrinking infrastructure: next
+- Property Testing Phase 1.6 basic shrinking infrastructure: implemented
+- Property Testing Phase 1.7 integration tests: next
 - runner/reporting integration for internal properties: still pending
 
 ### Immediate Dependencies

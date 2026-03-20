@@ -2,7 +2,7 @@
 
 ## Status
 
-Promoted status: in progress. The rose-tree foundation, generator/seed/size layer, categorical generator instances, primitive combinators, and range types are implemented and tested, while fuller shrinking and runner integration remain active follow-on work.
+Promoted status: in progress. The rose-tree foundation, generator/seed/size layer, categorical generator instances, primitive combinators, range types, and basic shrinking infrastructure are implemented and tested, while runner integration and Phase 1 integration coverage remain active follow-on work.
 
 ## Design Anchors
 
@@ -13,11 +13,14 @@ Promoted status: in progress. The rose-tree foundation, generator/seed/size laye
 - [Generator categorical instances summary](../../notes/summaries/generator-categorical-instances-2026-03-20.md)
 - [Primitive combinators summary](../../notes/summaries/primitive-combinators-2026-03-20.md)
 - [Range types summary](../../notes/summaries/range-types-2026-03-20.md)
+- [Basic shrinking infrastructure summary](../../notes/summaries/basic-shrinking-infrastructure-2026-03-20.md)
 - [Phase 2.3 testing summary](../../notes/summaries/phase-2.3-testing-summary.md)
 - `src/proptest/catena_tree.erl`
 - `src/proptest/catena_range.erl`
+- `src/proptest/catena_shrink.erl`
 - `test/proptest/catena_tree_tests.erl`
 - `test/proptest/catena_range_tests.erl`
+- `test/proptest/catena_shrink_tests.erl`
 - `src/proptest/catena_gen.erl`
 - `test/proptest/catena_gen_tests.erl`
 - `src/testing/catena_generators.erl`
@@ -26,10 +29,12 @@ Promoted status: in progress. The rose-tree foundation, generator/seed/size laye
 ## Current Promoted Surface
 
 - The new property-testing track is real implementation work, not only planning.
-- `catena_tree`, `catena_range`, and `catena_gen` are the current canonical implemented surfaces for the new framework.
+- `catena_tree`, `catena_range`, `catena_shrink`, and `catena_gen` are the current canonical implemented surfaces for the new framework.
 - `catena_gen` now includes the functor/applicative/monad/alternative-style layer needed to compose generators before the primitive-combinator phase.
 - `catena_gen` now also includes primitive constant/element/bool/int/filter/sample utilities with first-class `Range` integration for integer generation.
 - `catena_range` now owns the promoted range abstraction, including origins, size-scaled bounds, and linear/exponential constructors.
+- `catena_shrink` now owns the promoted shrink/search layer, including reusable shrink sequences, depth-first minimal-case search, and configurable shrink limits.
+- `catena_gen` now also exposes custom shrinking hooks so generators can replace, disable, or transform their shrink descendants when integrated shrinking is not enough.
 - The older Phase 2.3 property-test execution path still exists and remains the active runner for first-class `property` declarations.
 - Concrete law suites now execute on the current `Laws + Test.verify + src/testing/*` path for known instances while the generic framework is still under construction.
 - The repo is in transition from older/simple generation toward a more principled internal framework with integrated shrinking.
@@ -110,7 +115,27 @@ This gives the property-testing track the planned Section 1.5 range semantics:
 explicit shrink targets, size-scaled bounds, and a canonical replacement for
 the earlier tuple-bound integer surface.
 
-### AC-PROP-006 Reconciled Project Status
+### AC-PROP-006 Basic Shrinking Infrastructure
+
+The promoted implemented next layer of the framework is the shrink/search
+surface in `src/proptest/catena_shrink.erl`, together with custom-shrinking
+hooks in `src/proptest/catena_gen.erl`, including:
+
+- `shrink_towards/2`
+- `shrink_binary/2`
+- `shrink_list/1`
+- `shrink_halves/1`
+- `find_minimal/2`
+- configurable `find_minimal/3`
+- `with_shrink/2`
+- `no_shrink/1`
+- `shrink_map/2`
+
+This gives the property-testing track the planned Section 1.6 execution layer:
+reusable shrink strategies, deterministic minimal-counterexample search, and a
+generator escape hatch for domain-specific shrinking behavior.
+
+### AC-PROP-007 Reconciled Project Status
 
 The promoted current status for the property-testing roadmap is:
 
@@ -119,13 +144,14 @@ The promoted current status for the property-testing roadmap is:
 - Phase 1 Section 1.3 categorical instances for generators: complete
 - Phase 1 Section 1.4 primitive combinators: complete
 - Phase 1 Section 1.5 range types: complete
-- next step: Phase 1 Section 1.6 basic shrinking infrastructure
+- Phase 1 Section 1.6 basic shrinking infrastructure: complete
+- next step: Phase 1 Section 1.7 integration tests
 
-The planning checklist is now reconciled through Section 1.5.
+The planning checklist is now reconciled through Section 1.6.
 
 The later reusable law-testing framework remains planned in Property Testing Phase 4 rather than being part of the current implemented surface.
 
-### AC-PROP-007 Transitional Coexistence
+### AC-PROP-008 Transitional Coexistence
 
 Until the new framework is fully wired through the language and tooling, Catena currently has two valid testing-related layers:
 
@@ -134,7 +160,7 @@ Until the new framework is fully wired through the language and tooling, Catena 
 
 The promoted spec must describe that coexistence honestly instead of pretending the migration is already complete.
 
-### AC-PROP-008 Internal Replacement Direction
+### AC-PROP-009 Internal Replacement Direction
 
 The canonical direction is internal property testing with integrated shrinking, not ongoing dependence on PropEr as Catena's lasting architecture. Migration work should therefore move toward:
 
@@ -142,7 +168,7 @@ The canonical direction is internal property testing with integrated shrinking, 
 - Catena-owned shrinking
 - Catena-owned runner/reporting semantics
 
-### AC-PROP-009 Known Gap Visibility
+### AC-PROP-010 Known Gap Visibility
 
 Documentation and tooling specs must continue to note the true transition state:
 
@@ -151,7 +177,7 @@ Documentation and tooling specs must continue to note the true transition state:
 
 This prevents the specs from confusing "default workflow restored" with "migration finished."
 
-### AC-PROP-010 Law-Testing Destination
+### AC-PROP-011 Law-Testing Destination
 
 Generic trait-law verification SHOULD converge on the internal property-testing framework rather than remaining permanently split between ad hoc concrete suites and external tooling.
 
@@ -163,6 +189,6 @@ Promoted staging:
 
 ## Out Of Scope
 
-- claiming the shrinking-search and runner/reporting layers are already complete
+- claiming the runner/reporting and Phase 1 integration-test layers are already complete
 - claiming the new framework fully replaces the older test runner today
 - claiming generic law-test disciplines are already implemented today

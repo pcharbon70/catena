@@ -569,6 +569,35 @@ print_tree_renders_a_displayable_tree_test() ->
     ?assertEqual("root\n  child\n    leaf\n", catena_gen:print_tree(Tree)).
 
 %%====================================================================
+%% Test: Custom shrinking
+%%====================================================================
+
+with_shrink_replaces_generator_shrinks_test() ->
+    Generator =
+        catena_gen:with_shrink(
+            fun(Value) -> catena_shrink:shrink_binary(0, Value) end,
+            catena_gen:constant(10)
+        ),
+    Tree = catena_gen:run(Generator, 0, catena_gen:seed_from_int(1)),
+
+    ?assertEqual(10, catena_tree:root(Tree)),
+    ?assertEqual([0, 5, 8, 9], catena_gen:shrinks(Tree)).
+
+no_shrink_produces_leaf_tree_test() ->
+    Generator = catena_gen:no_shrink(fixed_generator(10, [5, 0])),
+    Tree = catena_gen:run(Generator, 0, catena_gen:seed_from_int(1)),
+
+    ?assertEqual(10, catena_tree:root(Tree)),
+    ?assertEqual([], catena_gen:shrinks(Tree)).
+
+shrink_map_transforms_shrink_values_only_test() ->
+    Generator = catena_gen:shrink_map(fun erlang:abs/1, fixed_generator(-10, [-5, 0])),
+    Tree = catena_gen:run(Generator, 0, catena_gen:seed_from_int(1)),
+
+    ?assertEqual(-10, catena_tree:root(Tree)),
+    ?assertEqual([5, 0], catena_gen:shrinks(Tree)).
+
+%%====================================================================
 %% Helpers
 %%====================================================================
 

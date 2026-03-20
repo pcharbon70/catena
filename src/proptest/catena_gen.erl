@@ -1,6 +1,6 @@
 %% @doc Generator Type and Seed Management for Catena property testing.
 %%
-%% This module implements Property Testing Phase 1, Sections 1.2 through 1.5.
+%% This module implements Property Testing Phase 1, Sections 1.2 through 1.6.
 %% Generators are explicit values wrapping functions of `(Size, Seed) -> Tree`,
 %% where:
 %%
@@ -100,6 +100,13 @@
     sample/2,
     print_tree/1,
     shrinks/1
+]).
+
+%% API exports - Section 1.6.3: Custom Shrinking
+-export([
+    with_shrink/2,
+    no_shrink/1,
+    shrink_map/2
 ]).
 
 -define(MASK64, 16#FFFFFFFFFFFFFFFF).
@@ -496,6 +503,30 @@ shrinks(Tree) ->
     [catena_tree:root(Child) || Child <- catena_tree:children(Tree)].
 
 %%====================================================================
+%% API Functions - Section 1.6.3
+%%====================================================================
+
+%% @doc Replace a generator's shrink tree using a custom shrink function.
+-spec with_shrink(fun((A) -> [A]), generator(A)) -> generator(A).
+with_shrink(ShrinkFun, Generator) when is_function(ShrinkFun, 1) ->
+    new(fun(Size, Seed) ->
+        Value = catena_tree:root(run(Generator, Size, Seed)),
+        custom_shrink_tree(Value, ShrinkFun)
+    end).
+
+%% @doc Disable shrinking for a generator while preserving its generated value.
+-spec no_shrink(generator(A)) -> generator(A).
+no_shrink(Generator) ->
+    with_shrink(fun(_Value) -> [] end, Generator).
+
+%% @doc Transform only the shrink values of a generator, leaving the root value unchanged.
+-spec shrink_map(fun((A) -> A), generator(A)) -> generator(A).
+shrink_map(F, Generator) when is_function(F, 1) ->
+    new(fun(Size, Seed) ->
+        map_shrink_values(F, run(Generator, Size, Seed), true)
+    end).
+
+%%====================================================================
 %% Internal Helpers
 %%====================================================================
 
@@ -650,3 +681,21 @@ format_tree(Tree, Depth) ->
     RootLine = io_lib:format("~s~p~n", [Indent, catena_tree:root(Tree)]),
     ChildLines = [format_tree(Child, Depth + 1) || Child <- catena_tree:children(Tree)],
     [RootLine | ChildLines].
+
+-spec custom_shrink_tree(A, fun((A) -> [A])) -> catena_tree:tree(A).
+custom_shrink_tree(Value, ShrinkFun) ->
+    catena_tree:tree(Value, fun() ->
+        [custom_shrink_tree(ShrinkValue, ShrinkFun)
+         || ShrinkValue <- unique_preserving_order(ShrinkFun(Value)),
+            ShrinkValue =/= Value]
+    end).
+
+-spec map_shrink_values(fun((A) -> A), catena_tree:tree(A), boolean()) -> catena_tree:tree(A).
+map_shrink_values(F, Tree, true) ->
+    catena_tree:tree(catena_tree:root(Tree), fun() ->
+        [map_shrink_values(F, Child, false) || Child <- catena_tree:children(Tree)]
+    end);
+map_shrink_values(F, Tree, false) ->
+    catena_tree:tree(F(catena_tree:root(Tree)), fun() ->
+        [map_shrink_values(F, Child, false) || Child <- catena_tree:children(Tree)]
+    end).
