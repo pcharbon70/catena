@@ -14,12 +14,12 @@ Based on `notes/planning/`, `notes/summaries/`, `notes/reviews/`, and the codeba
 - Phase 2 work exists in code and summaries for the REPL, prelude, testing framework, and integration tests.
 - Phase 3 work exists in code and summaries for advanced patterns, decision trees, exhaustiveness/redundancy checking, and pattern integration tests.
 - Phase 4 is not complete, but a minimal import-resolution bridge exists.
-- The internal property-testing framework has completed the rose-tree foundation for Phase 1.1, the generator/seed/size layer for Phase 1.2, the categorical generator layer for Phase 1.3, and the primitive generator layer for Phase 1.4; the next major step is first-class range types.
+- The internal property-testing framework has completed the rose-tree foundation for Phase 1.1, the generator/seed/size layer for Phase 1.2, the categorical generator layer for Phase 1.3, the primitive generator layer for Phase 1.4, and the range layer for Phase 1.5; the next major step is basic shrinking infrastructure.
 
 ## Immediate Targets
 
 - reconcile canonical specs and planning state around the implemented compiler/runtime/library surfaces
-- continue the property-testing framework track with range types now that the primitive generator layer is in place
+- continue the property-testing framework track with basic shrinking infrastructure now that the range layer is in place
 - decide whether to reconcile the remaining mostly-implemented Phase 1.5.6 work further or move directly into the property-testing roadmap
 - continue migrating historical PropEr coverage into the internal property-testing architecture now that the repo-wide `rebar3 eunit` path is green again
 

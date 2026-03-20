@@ -76,16 +76,16 @@ Current promoted status:
 - Phase 1 Section 1.2 generator type and seed management: implemented
 - Phase 1 Section 1.3 generator categorical instances: implemented
 - Phase 1 Section 1.4 primitive combinators: implemented
-- `src/proptest/catena_tree.erl` provides the current concrete surface
-- `src/proptest/catena_gen.erl` now provides the generator/seed/size surface, categorical generator instances, primitive combinators, and debug helpers on top of rose trees
-- generator execution is deterministic for explicit seeds, size-aware by construction, and now supports primitive bool/int/element/filter/sample surfaces
-- integer generation currently uses transitional explicit bounds ahead of the planned first-class `Range` layer
-- the planning checklist is now reconciled through Section 1.4
+- Phase 1 Section 1.5 range types: implemented
+- `src/proptest/catena_tree.erl`, `src/proptest/catena_range.erl`, and `src/proptest/catena_gen.erl` provide the current concrete surface
+- generator execution is deterministic for explicit seeds, size-aware by construction, and now supports primitive bool/int/element/filter/sample surfaces with first-class range-backed integer generation
+- fixed integer bounds remain available explicitly through `gen_int_range/2` as compatibility glue
+- the planning checklist is now reconciled through Section 1.5
 - property-based law verification for the framework itself is intentionally deferred until the framework can test itself
 
 Next clear step on this track:
 
-- Phase 1 Section 1.5 Range Types
+- Phase 1 Section 1.6 Basic Shrinking Infrastructure
 
 Longer-term destination on this track:
 
@@ -94,7 +94,7 @@ Longer-term destination on this track:
 Immediate consequence of the completed concrete law-suite stage:
 
 - the next law-verification step is no longer “make `Laws + Test.verify` executable”
-- the next law-verification step is Property Testing Phase 1.5 and the broader Stage 3 generator/runner foundation
+- the next law-verification step is Property Testing Phase 1.6 and the broader Stage 3 generator/runner foundation
 
 ## Current Quality State
 

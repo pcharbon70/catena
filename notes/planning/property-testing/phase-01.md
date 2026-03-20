@@ -263,49 +263,49 @@ Implement utilities for debugging and exploring generators. Essential for develo
 ---
 
 ## 1.5 Range Types
-- [ ] **Section 1.5 Complete**
+- [x] **Section 1.5 Complete**
 
 Ranges provide first-class control over generation bounds and how values scale with the size parameter. A range specifies origin (shrink target), bounds, and scaling behavior. This Hedgehog-inspired innovation makes generation more predictable and shrinking more effective.
 
 ### 1.5.1 Range Type Definition
-- [ ] **Task 1.5.1 Complete**
+- [x] **Task 1.5.1 Complete**
 
 Define the Range type that encapsulates generation bounds and scaling. Ranges separate the concerns of "what values" from "how to generate them".
 
-- [ ] 1.5.1.1 Define `Range` record with `origin`, `min`, `max`, and `scale_fn` fields
-- [ ] 1.5.1.2 Implement `range_bounds/2` computing actual bounds for a given size
-- [ ] 1.5.1.3 Implement `range_origin/1` returning the shrink target
-- [ ] 1.5.1.4 Ensure origin is always within bounds after scaling
+- [x] 1.5.1.1 Define `Range` record with `origin`, `min`, `max`, and `scale_fn` fields
+- [x] 1.5.1.2 Implement `range_bounds/2` computing actual bounds for a given size
+- [x] 1.5.1.3 Implement `range_origin/1` returning the shrink target
+- [x] 1.5.1.4 Ensure origin is always within bounds after scaling
 
 ### 1.5.2 Range Constructors
-- [ ] **Task 1.5.2 Complete**
+- [x] **Task 1.5.2 Complete**
 
 Implement various range constructors for different scaling behaviors. Linear ranges grow proportionally with size, constant ranges ignore size, exponential ranges grow rapidly.
 
-- [ ] 1.5.2.1 Implement `range_constant/1` creating a range that ignores size (fixed bounds)
-- [ ] 1.5.2.2 Implement `range_linear/2` creating a range that scales linearly with size
-- [ ] 1.5.2.3 Implement `range_linear_from/3` with explicit origin
-- [ ] 1.5.2.4 Implement `range_exponential/2` for exponential scaling
-- [ ] 1.5.2.5 Implement `range_exponential_from/3` with explicit origin
+- [x] 1.5.2.1 Implement `range_constant/1` creating a range that ignores size (fixed bounds)
+- [x] 1.5.2.2 Implement `range_linear/2` creating a range that scales linearly with size
+- [x] 1.5.2.3 Implement `range_linear_from/3` with explicit origin
+- [x] 1.5.2.4 Implement `range_exponential/2` for exponential scaling
+- [x] 1.5.2.5 Implement `range_exponential_from/3` with explicit origin
 
 ### 1.5.3 Range Integration
-- [ ] **Task 1.5.3 Complete**
+- [x] **Task 1.5.3 Complete**
 
 Integrate ranges with integer generation, replacing ad-hoc size handling with principled range-based control.
 
-- [ ] 1.5.3.1 Update `gen_int/1` to accept Range instead of tuple bounds
-- [ ] 1.5.3.2 Implement automatic shrinking toward range origin
-- [ ] 1.5.3.3 Implement `gen_int_range/2` for backward compatibility with tuple bounds
-- [ ] 1.5.3.4 Document range usage patterns and best practices
+- [x] 1.5.3.1 Update `gen_int/1` to accept Range instead of tuple bounds
+- [x] 1.5.3.2 Implement automatic shrinking toward range origin
+- [x] 1.5.3.3 Implement `gen_int_range/2` for backward compatibility with tuple bounds
+- [x] 1.5.3.4 Document range usage patterns and best practices
 
 ### Unit Tests - Section 1.5
-- [ ] **Unit Tests 1.5 Complete**
-- [ ] Test `range_constant` produces same bounds regardless of size
-- [ ] Test `range_linear` scales proportionally with size
-- [ ] Test `range_exponential` grows exponentially with size
-- [ ] Test origin is always within computed bounds
-- [ ] Test `gen_int` with various ranges produces values in bounds
-- [ ] Test shrinking moves toward origin
+- [x] **Unit Tests 1.5 Complete**
+- [x] Test `range_constant` produces same bounds regardless of size
+- [x] Test `range_linear` scales proportionally with size
+- [x] Test `range_exponential` grows exponentially with size
+- [x] Test origin is always within computed bounds
+- [x] Test `gen_int` with various ranges produces values in bounds
+- [x] Test shrinking moves toward origin
 
 ---
 
