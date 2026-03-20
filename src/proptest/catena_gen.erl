@@ -1,6 +1,6 @@
 %% @doc Generator Type and Seed Management for Catena property testing.
 %%
-%% This module implements Property Testing Phase 1, Sections 1.2 through 1.4.
+%% This module implements Property Testing Phase 1, Sections 1.2 through 1.5.
 %% Generators are explicit values wrapping functions of `(Size, Seed) -> Tree`,
 %% where:
 %%
@@ -78,10 +78,11 @@
     gen_bool/1
 ]).
 
-%% API exports - Section 1.4.3: Integer Generators
+%% API exports - Section 1.4.3 and 1.5.3: Integer Generators
 -export([
     gen_int/0,
     gen_int/1,
+    gen_int_range/2,
     gen_pos_int/0,
     gen_neg_int/0,
     gen_nat/0
@@ -126,7 +127,6 @@
 }.
 
 -type weighted_generator(A) :: {pos_integer(), generator(A)}.
--type int_bounds() :: {integer(), integer()}.
 
 %%====================================================================
 %% API Functions - Section 1.2.1
@@ -407,53 +407,49 @@ gen_bool(TrueProbability) ->
 %% API Functions - Section 1.4.3
 %%====================================================================
 
-%% @doc Generate an integer using the current size as symmetric bounds.
-%%
-%% This section uses explicit integer bounds; first-class `Range` integration is
-%% the planned next step in Property Testing Phase 1.5.
+%% @doc Generate an integer using the default linear symmetric range.
 -spec gen_int() -> generator(integer()).
 gen_int() ->
-    sized(fun(Size) ->
-        gen_int({-Size, Size})
-    end).
+    gen_int(catena_range:range_linear_from(0, -100, 100)).
 
-%% @doc Generate an integer within explicit bounds or symmetric `[-Max, Max]`.
--spec gen_int(non_neg_integer() | int_bounds()) -> generator(integer()).
-gen_int(Max) when is_integer(Max), Max >= 0 ->
-    gen_int({-Max, Max});
-gen_int({Min, Max}) when is_integer(Min), is_integer(Max), Min =< Max ->
-    new(fun(_Size, Seed) ->
-        {Word, _NextSeed} = seed_next(Seed),
-        Span = Max - Min + 1,
-        Value = Min + (Word rem Span),
-        Origin = clamp(0, Min, Max),
-        build_int_tree(Value, Origin)
-    end);
-gen_int(Bounds) ->
-    erlang:error({badarg, {int_bounds, Bounds}}).
+%% @doc Generate an integer from a first-class range value.
+-spec gen_int(catena_range:range()) -> generator(integer()).
+gen_int(Range) ->
+    case catena_range:is_range(Range) of
+        true ->
+            new(fun(Size, Seed) ->
+                {Min, Max} = catena_range:range_bounds(Range, Size),
+                {Word, _NextSeed} = seed_next(Seed),
+                Span = Max - Min + 1,
+                Value = Min + (Word rem Span),
+                Origin = catena_range:range_origin(Range),
+                build_int_tree(Value, Origin)
+            end);
+        false ->
+            erlang:error({badarg, {range, Range}})
+    end.
 
-%% @doc Generate positive integers, using size as the current upper bound.
+%% @doc Compatibility helper for fixed integer bounds.
+-spec gen_int_range(integer(), integer()) -> generator(integer()).
+gen_int_range(Min, Max) when is_integer(Min), is_integer(Max), Min =< Max ->
+    gen_int(catena_range:range_constant({Min, Max}));
+gen_int_range(Min, Max) ->
+    erlang:error({badarg, {int_bounds, {Min, Max}}}).
+
+%% @doc Generate positive integers using a size-scaled positive range.
 -spec gen_pos_int() -> generator(pos_integer()).
 gen_pos_int() ->
-    sized(fun(Size) ->
-        Upper = erlang:max(1, Size),
-        gen_int({1, Upper})
-    end).
+    gen_int(catena_range:range_linear_from(1, 1, 100)).
 
-%% @doc Generate negative integers, using size as the current lower magnitude.
+%% @doc Generate negative integers using a size-scaled negative range.
 -spec gen_neg_int() -> generator(neg_integer()).
 gen_neg_int() ->
-    sized(fun(Size) ->
-        Magnitude = erlang:max(1, Size),
-        gen_int({-Magnitude, -1})
-    end).
+    gen_int(catena_range:range_linear_from(-1, -100, -1)).
 
-%% @doc Generate natural numbers, using size as the current upper bound.
+%% @doc Generate natural numbers using a size-scaled natural range.
 -spec gen_nat() -> generator(non_neg_integer()).
 gen_nat() ->
-    sized(fun(Size) ->
-        gen_int({0, Size})
-    end).
+    gen_int(catena_range:range_linear(0, 100)).
 
 %%====================================================================
 %% API Functions - Section 1.4.4
@@ -560,14 +556,6 @@ choose_weighted(Target, [{Weight, Generator} | _Rest]) when Target < Weight ->
     Generator;
 choose_weighted(Target, [{Weight, _Generator} | Rest]) ->
     choose_weighted(Target - Weight, Rest).
-
--spec clamp(integer(), integer(), integer()) -> integer().
-clamp(Value, Min, _Max) when Value < Min ->
-    Min;
-clamp(Value, _Min, Max) when Value > Max ->
-    Max;
-clamp(Value, _Min, _Max) ->
-    Value.
 
 -spec build_element_tree(pos_integer(), [A]) -> catena_tree:tree(A).
 build_element_tree(Index, Values) ->

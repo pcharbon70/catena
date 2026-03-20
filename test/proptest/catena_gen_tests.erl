@@ -459,22 +459,39 @@ gen_bool_probability_biases_generation_test() ->
 
     ?assert(TrueCount > FalseCount).
 
-gen_int_respects_explicit_bounds_test() ->
-    Generator = catena_gen:gen_int({-5, 5}),
+gen_int_respects_range_bounds_test() ->
+    Range = catena_range:range_linear_from(0, -20, 20),
+    Generator = catena_gen:gen_int(Range),
+    Values =
+        [catena_tree:root(catena_gen:run(Generator, 25, catena_gen:seed_from_int(N)))
+         || N <- lists:seq(1, 300)],
+    {Min, Max} = catena_range:range_bounds(Range, 25),
+
+    ?assert(lists:all(fun(Value) -> Value >= Min andalso Value =< Max end, Values)).
+
+gen_int_shrinks_toward_range_origin_test() ->
+    Generator = catena_gen:gen_int(catena_range:range_linear_from(7, 0, 20)),
+    Origin = 7,
+    Tree = first_tree_satisfying(Generator, fun(Value) -> Value =/= Origin end, 300),
+
+    ?assert(lists:member(Origin, catena_gen:shrinks(Tree))).
+
+gen_int_range_supports_fixed_bound_compatibility_test() ->
+    Generator = catena_gen:gen_int_range(-5, 5),
     Values =
         [catena_tree:root(catena_gen:run(Generator, 0, catena_gen:seed_from_int(N)))
          || N <- lists:seq(1, 300)],
 
     ?assert(lists:all(fun(Value) -> Value >= -5 andalso Value =< 5 end, Values)).
 
-gen_int_shrinks_toward_zero_when_available_test() ->
-    Generator = catena_gen:gen_int({-10, 10}),
+gen_int_range_shrinks_toward_zero_when_available_test() ->
+    Generator = catena_gen:gen_int_range(-10, 10),
     Tree = first_tree_satisfying(Generator, fun(Value) -> Value =/= 0 end, 300),
 
     ?assert(lists:member(0, catena_gen:shrinks(Tree))).
 
-gen_int_shrinks_toward_bound_when_zero_is_unavailable_test() ->
-    Generator = catena_gen:gen_int({5, 10}),
+gen_int_range_shrinks_toward_bound_when_zero_is_unavailable_test() ->
+    Generator = catena_gen:gen_int_range(5, 10),
     Tree = first_tree_satisfying(Generator, fun(Value) -> Value > 5 end, 300),
 
     ?assert(lists:member(5, catena_gen:shrinks(Tree))).
@@ -492,7 +509,7 @@ gen_filter_only_produces_matching_values_test() ->
     Generator =
         catena_gen:gen_filter(
             fun(Value) -> Value rem 2 =:= 0 end,
-            catena_gen:gen_int({0, 20})
+            catena_gen:gen_int_range(0, 20)
         ),
     Values = catena_gen:sample(Generator, 20),
 
@@ -517,7 +534,7 @@ gen_filter_promotes_valid_shrinks_test() ->
     ?assertEqual([2, 0], catena_gen:shrinks(Tree)).
 
 gen_such_that_aliases_gen_filter_test() ->
-    BaseGenerator = catena_gen:gen_int({0, 10}),
+    BaseGenerator = catena_gen:gen_int_range(0, 10),
     Predicate = fun(Value) -> Value rem 2 =:= 0 end,
     Seed = catena_gen:seed_from_int(18),
     Filtered = catena_gen:run(catena_gen:gen_filter(Predicate, BaseGenerator), 5, Seed),
