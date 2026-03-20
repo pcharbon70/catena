@@ -77,7 +77,7 @@ Current promoted outcome:
 
 ## Stage 3: Generator And Runner Foundation
 
-Status: blocked on the next property-testing work
+Status: in progress
 
 The third stage builds the internal foundation required for generic law verification:
 
@@ -87,6 +87,13 @@ The third stage builds the internal foundation required for generic law verifica
 - runner/reporting integration that can execute internal properties cleanly
 
 This stage is where Catena moves from finite fixture checking toward data-driven law checking with integrated shrinking.
+
+Current promoted progress inside this stage:
+
+- Property Testing Phase 1.2 Generator Type and Seed Management: implemented
+- Property Testing Phase 1.3 categorical instances for generators: next
+- Property Testing Phase 1.4 primitive combinators: later in this same stage
+- runner/reporting integration for internal properties: still pending
 
 ### Immediate Dependencies
 
@@ -132,7 +139,7 @@ This stage is explicitly downstream of the generic framework, not a prerequisite
 ## Recommended Execution Order
 
 1. Maintain the green default repo test path while continuing the PropEr migration.
-2. Continue Property Testing Phase 1.2 through the generator/runner foundation now that Stage 2 is complete.
+2. Continue Property Testing Phase 1.3 and later Stage 3 generator/runner work now that Phase 1.2 is complete.
 3. Implement the generic law-specification and discipline framework from the property-testing Phase 4 plan.
 4. Add ergonomic derivation only after the underlying framework is solid.
 
