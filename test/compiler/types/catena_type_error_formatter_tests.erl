@@ -289,5 +289,5 @@ make_deeply_nested(N, Base) ->
 %%% Property Tests
 %%%===================================================================
 
-%% Note: Property tests would go here if using PropEr/QuickCheck
-%% For now, we rely on the comprehensive unit tests above
+%% Property-style coverage can be added here through Catena's internal testing
+%% framework as that migration matures. For now, unit tests cover this surface.

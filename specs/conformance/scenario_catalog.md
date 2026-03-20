@@ -12,4 +12,5 @@ This catalog defines the stable `SCN-*` scenarios used by the backfilled Catena 
 | `SCN-006` | Pattern Analysis And Compilation | Advanced patterns, decision trees, and exhaustiveness/redundancy checks behave coherently across parser, typing, and code generation surfaces. |
 | `SCN-007` | Validate Standard Library Surfaces | Prelude, test, law, and effect modules parse, type-check, and validate against compiler capabilities. |
 | `SCN-008` | Exercise Internal Property Testing | The internal property-testing framework supports the implemented rose-tree layer and clearly marks later generator/runner work as pending. |
-| `SCN-009` | Build And Test The Repo | Build hooks, subsystem tests, and known workflow gaps are documented and reviewable. |
+| `SCN-009` | Build And Test The Repo | Build hooks, subsystem tests, and legacy migration boundaries are documented and reviewable. |
+| `SCN-010` | Verify Trait Laws | Law definitions, concrete `Test.verify` suites, and the future generator-backed law-testing path remain coherent across stdlib and property-testing surfaces. |

@@ -2,7 +2,7 @@
 
 ## Status
 
-Promoted status: implemented with generated lexer/parser hooks, multiple test entry points, subsystem-organized coverage, and one important unresolved gap in the default `rebar3 eunit` workflow.
+Promoted status: implemented with generated lexer/parser hooks, multiple test entry points, subsystem-organized coverage, and a default `rebar3 eunit` path that is no longer blocked by legacy PropEr compile contamination.
 
 ## Design Anchors
 
@@ -20,7 +20,8 @@ Promoted status: implemented with generated lexer/parser hooks, multiple test en
 - The repo supports both `make`-based and `rebar3`-based workflows.
 - Lexer and parser generation are part of the normal build path rather than a manual pre-step.
 - Tests are organized by subsystem across compiler, runtime, integration, REPL, stdlib, testing, and property-testing areas.
-- The default repo-wide `rebar3 eunit` path is not yet clean because legacy PropEr-oriented test modules still sit in the test tree while PropEr is no longer configured as a dependency.
+- Legacy PropEr-oriented suites are preserved under `test_legacy/proper/` and intentionally excluded from the default compile path while the internal replacement work continues.
+- The repo-wide `rebar3 eunit` entry point now reaches active suite execution without the old PropEr compile failure, but unrelated active-test failures still exist elsewhere in the suite.
 
 ## Acceptance Criteria
 
@@ -41,13 +42,13 @@ Promoted docs should describe the scope of each entry point rather than implying
 
 The test tree must remain organized by subsystem so implementation work can be validated in focused slices, including the existing families for compiler components, runtime, integration, REPL, stdlib, testing, and proptest.
 
-### AC-TOOL-004 Known Full-Test Gap
+### AC-TOOL-004 Default Test Entry Point Is Unblocked
 
-The following is part of the current promoted repo status and must stay visible until resolved:
+The following is part of the current promoted repo status:
 
-- `rebar3 eunit` does not complete cleanly because PropEr-oriented test modules still compile under the test tree while PropEr is absent from `rebar.config`
+- `rebar3 eunit` reaches active repo test execution without compiling the quarantined legacy PropEr suites
 
-This criterion is intentionally explicit so the specs do not accidentally overstate repository health.
+This criterion exists so the specs state the PropEr fix precisely rather than implying either that the old compile-path failure still exists or that the entire active suite is already green.
 
 ### AC-TOOL-005 Coverage And Analysis Boundaries
 
@@ -59,9 +60,9 @@ The promoted tooling configuration includes the current coverage and dialyzer bo
 
 ### AC-TOOL-006 Migration Expectation
 
-Before the repository can claim a clean default test workflow again, the project must either:
+The project must keep the historical PropEr suites quarantined from the default compile path until they are either:
 
-- migrate the legacy PropEr-style tests to the internal testing/property infrastructure, or
-- isolate/remove those tests from the default compilation path
+- migrated to the internal testing/property infrastructure, or
+- intentionally retired
 
-Until then, subsystem tests and implementation summaries remain meaningful evidence, but not a substitute for a clean repo-wide `rebar3 eunit`.
+This preserves a clean default workflow while keeping the migration status honest.
