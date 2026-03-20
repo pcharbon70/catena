@@ -1,6 +1,6 @@
 %% @doc Generator Type and Seed Management for Catena property testing.
 %%
-%% This module implements Property Testing Phase 1, Sections 1.2 and 1.3.
+%% This module implements Property Testing Phase 1, Sections 1.2 through 1.4.
 %% Generators are explicit values wrapping functions of `(Size, Seed) -> Tree`,
 %% where:
 %%
@@ -65,8 +65,47 @@
     gen_frequency/1
 ]).
 
+%% API exports - Section 1.4.1: Constant and Element Generators
+-export([
+    constant/1,
+    element/1,
+    elements/1
+]).
+
+%% API exports - Section 1.4.2: Boolean Generator
+-export([
+    gen_bool/0,
+    gen_bool/1
+]).
+
+%% API exports - Section 1.4.3: Integer Generators
+-export([
+    gen_int/0,
+    gen_int/1,
+    gen_pos_int/0,
+    gen_neg_int/0,
+    gen_nat/0
+]).
+
+%% API exports - Section 1.4.4: Filter Combinator
+-export([
+    gen_filter/2,
+    gen_such_that/2
+]).
+
+%% API exports - Section 1.4.5: Sample and Debug
+-export([
+    sample/1,
+    sample/2,
+    print_tree/1,
+    shrinks/1
+]).
+
 -define(MASK64, 16#FFFFFFFFFFFFFFFF).
 -define(SPLITMIX_GAMMA, 16#9E3779B97F4A7C15).
+-define(DEFAULT_FILTER_ATTEMPTS, 100).
+-define(DEFAULT_SAMPLE_COUNT, 10).
+-define(DEFAULT_BOOL_SCALE, 1000000).
 
 %%====================================================================
 %% Types
@@ -87,6 +126,7 @@
 }.
 
 -type weighted_generator(A) :: {pos_integer(), generator(A)}.
+-type int_bounds() :: {integer(), integer()}.
 
 %%====================================================================
 %% API Functions - Section 1.2.1
@@ -312,6 +352,154 @@ gen_frequency(WeightedGenerators) when is_list(WeightedGenerators) ->
     end).
 
 %%====================================================================
+%% API Functions - Section 1.4.1
+%%====================================================================
+
+%% @doc Generate a fixed value with no shrinks.
+-spec constant(A) -> generator(A).
+constant(Value) ->
+    gen_pure(Value).
+
+%% @doc Choose uniformly from a non-empty list, shrinking toward earlier items.
+-spec element([A]) -> generator(A).
+element([]) ->
+    erlang:error({badarg, empty_elements});
+element(Values) when is_list(Values) ->
+    new(fun(_Size, Seed) ->
+        {Index, _BranchSeed} = choose_index(Seed, length(Values)),
+        build_element_tree(Index, Values)
+    end).
+
+%% @doc Alias for `element/1` for compatibility with common generator APIs.
+-spec elements([A]) -> generator(A).
+elements(Values) ->
+    element(Values).
+
+%%====================================================================
+%% API Functions - Section 1.4.2
+%%====================================================================
+
+%% @doc Generate a boolean with equal probability.
+-spec gen_bool() -> generator(boolean()).
+gen_bool() ->
+    gen_bool(0.5).
+
+%% @doc Generate a boolean with the given probability of `true`.
+-spec gen_bool(float()) -> generator(boolean()).
+gen_bool(TrueProbability)
+    when is_float(TrueProbability), TrueProbability >= 0.0, TrueProbability =< 1.0 ->
+    new(fun(_Size, Seed) ->
+        {Word, _NextSeed} = seed_next(Seed),
+        Scale = ?DEFAULT_BOOL_SCALE,
+        Threshold = trunc(TrueProbability * Scale),
+        Value = (Word rem Scale) < Threshold,
+        catena_tree:tree(Value, fun() ->
+            case Value of
+                true -> [catena_tree:singleton(false)];
+                false -> []
+            end
+        end)
+    end);
+gen_bool(TrueProbability) ->
+    erlang:error({badarg, {true_probability, TrueProbability}}).
+
+%%====================================================================
+%% API Functions - Section 1.4.3
+%%====================================================================
+
+%% @doc Generate an integer using the current size as symmetric bounds.
+%%
+%% This section uses explicit integer bounds; first-class `Range` integration is
+%% the planned next step in Property Testing Phase 1.5.
+-spec gen_int() -> generator(integer()).
+gen_int() ->
+    sized(fun(Size) ->
+        gen_int({-Size, Size})
+    end).
+
+%% @doc Generate an integer within explicit bounds or symmetric `[-Max, Max]`.
+-spec gen_int(non_neg_integer() | int_bounds()) -> generator(integer()).
+gen_int(Max) when is_integer(Max), Max >= 0 ->
+    gen_int({-Max, Max});
+gen_int({Min, Max}) when is_integer(Min), is_integer(Max), Min =< Max ->
+    new(fun(_Size, Seed) ->
+        {Word, _NextSeed} = seed_next(Seed),
+        Span = Max - Min + 1,
+        Value = Min + (Word rem Span),
+        Origin = clamp(0, Min, Max),
+        build_int_tree(Value, Origin)
+    end);
+gen_int(Bounds) ->
+    erlang:error({badarg, {int_bounds, Bounds}}).
+
+%% @doc Generate positive integers, using size as the current upper bound.
+-spec gen_pos_int() -> generator(pos_integer()).
+gen_pos_int() ->
+    sized(fun(Size) ->
+        Upper = erlang:max(1, Size),
+        gen_int({1, Upper})
+    end).
+
+%% @doc Generate negative integers, using size as the current lower magnitude.
+-spec gen_neg_int() -> generator(neg_integer()).
+gen_neg_int() ->
+    sized(fun(Size) ->
+        Magnitude = erlang:max(1, Size),
+        gen_int({-Magnitude, -1})
+    end).
+
+%% @doc Generate natural numbers, using size as the current upper bound.
+-spec gen_nat() -> generator(non_neg_integer()).
+gen_nat() ->
+    sized(fun(Size) ->
+        gen_int({0, Size})
+    end).
+
+%%====================================================================
+%% API Functions - Section 1.4.4
+%%====================================================================
+
+%% @doc Keep only generated values satisfying the predicate.
+-spec gen_filter(fun((A) -> boolean()), generator(A)) -> generator(A).
+gen_filter(Predicate, Generator) when is_function(Predicate, 1) ->
+    new(fun(Size, Seed) ->
+        filter_run(Generator, Predicate, Size, Seed, ?DEFAULT_FILTER_ATTEMPTS)
+    end).
+
+%% @doc Alias for `gen_filter/2`.
+-spec gen_such_that(fun((A) -> boolean()), generator(A)) -> generator(A).
+gen_such_that(Predicate, Generator) ->
+    gen_filter(Predicate, Generator).
+
+%%====================================================================
+%% API Functions - Section 1.4.5
+%%====================================================================
+
+%% @doc Produce a small list of example values using increasing sizes.
+-spec sample(generator(A)) -> [A].
+sample(Generator) ->
+    sample(Generator, ?DEFAULT_SAMPLE_COUNT).
+
+-spec sample(generator(A), non_neg_integer()) -> [A].
+sample(_Generator, 0) ->
+    [];
+sample(Generator, Count) when is_integer(Count), Count > 0 ->
+    [catena_tree:root(run(Generator, Size, seed_from_int(Size + 1)))
+     || Size <- lists:seq(0, Count - 1)];
+sample(_Generator, Count) ->
+    erlang:error({badarg, {sample_count, Count}}).
+
+%% @doc Render a shrink tree to a printable string.
+-spec print_tree(catena_tree:tree(term())) -> string().
+print_tree(Tree) ->
+    lists:flatten(format_tree(Tree, 0)).
+
+%% @doc Return the immediate shrink values for a tree.
+-spec shrinks(catena_tree:tree(A)) -> [A].
+shrinks(Tree) ->
+    [catena_tree:root(Child) || Child <- catena_tree:children(Tree)].
+
+%%====================================================================
 %% Internal Helpers
 %%====================================================================
 
@@ -372,3 +560,105 @@ choose_weighted(Target, [{Weight, Generator} | _Rest]) when Target < Weight ->
     Generator;
 choose_weighted(Target, [{Weight, _Generator} | Rest]) ->
     choose_weighted(Target - Weight, Rest).
+
+-spec clamp(integer(), integer(), integer()) -> integer().
+clamp(Value, Min, _Max) when Value < Min ->
+    Min;
+clamp(Value, _Min, Max) when Value > Max ->
+    Max;
+clamp(Value, _Min, _Max) ->
+    Value.
+
+-spec build_element_tree(pos_integer(), [A]) -> catena_tree:tree(A).
+build_element_tree(Index, Values) ->
+    Value = lists:nth(Index, Values),
+    catena_tree:tree(Value, fun() ->
+        [build_element_tree(ShrinkIndex, Values) || ShrinkIndex <- lists:seq(1, Index - 1)]
+    end).
+
+-spec build_int_tree(integer(), integer()) -> catena_tree:tree(integer()).
+build_int_tree(Value, Origin) ->
+    catena_tree:tree(Value, fun() ->
+        [build_int_tree(Candidate, Origin) || Candidate <- int_shrink_candidates(Value, Origin)]
+    end).
+
+-spec int_shrink_candidates(integer(), integer()) -> [integer()].
+int_shrink_candidates(Value, Origin) when Value =:= Origin ->
+    [];
+int_shrink_candidates(Value, Origin) ->
+    Direction = sign(Value - Origin),
+    Midpoint = Origin + ((Value - Origin) div 2),
+    Step = Value - Direction,
+    unique_preserving_order(
+        [Candidate
+         || Candidate <- [Origin, Midpoint, Step],
+            Candidate =/= Value]
+    ).
+
+-spec sign(integer()) -> -1 | 0 | 1.
+sign(N) when N < 0 ->
+    -1;
+sign(0) ->
+    0;
+sign(_N) ->
+    1.
+
+-spec unique_preserving_order([A]) -> [A].
+unique_preserving_order(Items) ->
+    unique_preserving_order(Items, []).
+
+-spec unique_preserving_order([A], [A]) -> [A].
+unique_preserving_order([], Acc) ->
+    lists:reverse(Acc);
+unique_preserving_order([Item | Rest], Acc) ->
+    case lists:member(Item, Acc) of
+        true ->
+            unique_preserving_order(Rest, Acc);
+        false ->
+            unique_preserving_order(Rest, [Item | Acc])
+    end.
+
+-spec filter_run(generator(A), fun((A) -> boolean()), size(), seed(), non_neg_integer()) ->
+    catena_tree:tree(A).
+filter_run(_Generator, _Predicate, _Size, _Seed, 0) ->
+    throw({generator_failed, {filter_exhausted, ?DEFAULT_FILTER_ATTEMPTS}});
+filter_run(Generator, Predicate, Size, Seed, AttemptsLeft) ->
+    {_, NextSeed} = seed_next(Seed),
+    case try_run(Generator, Size, Seed) of
+        {ok, Tree} ->
+            case Predicate(catena_tree:root(Tree)) of
+                true ->
+                    filter_tree(Predicate, Tree);
+                false ->
+                    filter_run(Generator, Predicate, Size, NextSeed, AttemptsLeft - 1)
+            end;
+        {error, _Reason} ->
+            filter_run(Generator, Predicate, Size, NextSeed, AttemptsLeft - 1)
+    end.
+
+-spec filter_tree(fun((A) -> boolean()), catena_tree:tree(A)) -> catena_tree:tree(A).
+filter_tree(Predicate, Tree) ->
+    catena_tree:tree(catena_tree:root(Tree), fun() ->
+        valid_descendants(Predicate, catena_tree:children(Tree))
+    end).
+
+-spec valid_descendants(fun((A) -> boolean()), [catena_tree:tree(A)]) -> [catena_tree:tree(A)].
+valid_descendants(Predicate, Trees) ->
+    lists:flatmap(fun(Tree) -> collect_valid_subtrees(Predicate, Tree) end, Trees).
+
+-spec collect_valid_subtrees(fun((A) -> boolean()), catena_tree:tree(A)) -> [catena_tree:tree(A)].
+collect_valid_subtrees(Predicate, Tree) ->
+    Root = catena_tree:root(Tree),
+    case Predicate(Root) of
+        true ->
+            [filter_tree(Predicate, Tree)];
+        false ->
+            valid_descendants(Predicate, catena_tree:children(Tree))
+    end.
+
+-spec format_tree(catena_tree:tree(term()), non_neg_integer()) -> iolist().
+format_tree(Tree, Depth) ->
+    Indent = lists:duplicate(Depth * 2, $\s),
+    RootLine = io_lib:format("~s~p~n", [Indent, catena_tree:root(Tree)]),
+    ChildLines = [format_tree(Child, Depth + 1) || Child <- catena_tree:children(Tree)],
+    [RootLine | ChildLines].

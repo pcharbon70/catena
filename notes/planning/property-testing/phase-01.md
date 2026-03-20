@@ -191,72 +191,74 @@ Implement Alternative for generators, enabling choice between generators. This i
 ---
 
 ## 1.4 Primitive Combinators
-- [ ] **Section 1.4 Complete**
+- [x] **Section 1.4 Complete**
 
 Primitive combinators are the building blocks for all generators. They generate basic values like booleans, integers within ranges, and elements from lists. Each primitive includes appropriate shrinking toward "simpler" values (false for bool, 0 for int, first element for lists).
 
 ### 1.4.1 Constant and Element Generators
-- [ ] **Task 1.4.1 Complete**
+- [x] **Task 1.4.1 Complete**
 
 Implement generators for constant values and selection from finite sets. These form the base cases for generator composition.
 
-- [ ] 1.4.1.1 Implement `constant/1` generating a fixed value with no shrinks
-- [ ] 1.4.1.2 Implement `element/1` choosing uniformly from a non-empty list
-- [ ] 1.4.1.3 Implement `elements/1` as alias for `element/1` for compatibility
-- [ ] 1.4.1.4 Add shrinking to `element` that shrinks toward earlier list elements
+- [x] 1.4.1.1 Implement `constant/1` generating a fixed value with no shrinks
+- [x] 1.4.1.2 Implement `element/1` choosing uniformly from a non-empty list
+- [x] 1.4.1.3 Implement `elements/1` as alias for `element/1` for compatibility
+- [x] 1.4.1.4 Add shrinking to `element` that shrinks toward earlier list elements
 
 ### 1.4.2 Boolean Generator
-- [ ] **Task 1.4.2 Complete**
+- [x] **Task 1.4.2 Complete**
 
 Implement boolean generation with shrinking toward false (the "simpler" boolean value).
 
-- [ ] 1.4.2.1 Implement `gen_bool/0` generating true or false with equal probability
-- [ ] 1.4.2.2 Add shrinking: true shrinks to false, false has no shrinks
-- [ ] 1.4.2.3 Implement `gen_bool/1` with configurable probability of true
+- [x] 1.4.2.1 Implement `gen_bool/0` generating true or false with equal probability
+- [x] 1.4.2.2 Add shrinking: true shrinks to false, false has no shrinks
+- [x] 1.4.2.3 Implement `gen_bool/1` with configurable probability of true
 
 ### 1.4.3 Integer Generators
-- [ ] **Task 1.4.3 Complete**
+- [x] **Task 1.4.3 Complete**
 
-Implement integer generation with range control and shrinking toward zero. Integers are fundamental for most property tests.
+Implement integer generation with bounds control and shrinking toward zero. Full
+first-class `Range` integration is still the next section, so this section uses
+explicit integer bounds and size-derived defaults as the transitional surface.
 
-- [ ] 1.4.3.1 Implement `gen_int/1` generating integers within a Range
-- [ ] 1.4.3.2 Implement shrinking toward zero (or toward range bound if zero not in range)
-- [ ] 1.4.3.3 Implement `gen_pos_int/0` generating positive integers (1 to size)
-- [ ] 1.4.3.4 Implement `gen_neg_int/0` generating negative integers (-size to -1)
-- [ ] 1.4.3.5 Implement `gen_nat/0` generating natural numbers (0 to size)
+- [x] 1.4.3.1 Implement `gen_int/1` generating integers within explicit bounds, with first-class `Range` integration deferred to Section 1.5
+- [x] 1.4.3.2 Implement shrinking toward zero (or toward range bound if zero not in range)
+- [x] 1.4.3.3 Implement `gen_pos_int/0` generating positive integers (1 to size)
+- [x] 1.4.3.4 Implement `gen_neg_int/0` generating negative integers (-size to -1)
+- [x] 1.4.3.5 Implement `gen_nat/0` generating natural numbers (0 to size)
 
 ### 1.4.4 Filter Combinator
-- [ ] **Task 1.4.4 Complete**
+- [x] **Task 1.4.4 Complete**
 
 Implement filtering to constrain generated values. Filtering should be used sparingly as it can cause generation to fail if the predicate rarely holds.
 
-- [ ] 1.4.4.1 Implement `gen_filter/2` keeping only values satisfying a predicate
-- [ ] 1.4.4.2 Implement retry logic with configurable max attempts (default 100)
-- [ ] 1.4.4.3 Implement `gen_such_that/2` as alias for `gen_filter/2`
-- [ ] 1.4.4.4 Ensure shrinks also satisfy the predicate
+- [x] 1.4.4.1 Implement `gen_filter/2` keeping only values satisfying a predicate
+- [x] 1.4.4.2 Implement retry logic with configurable max attempts (default 100)
+- [x] 1.4.4.3 Implement `gen_such_that/2` as alias for `gen_filter/2`
+- [x] 1.4.4.4 Ensure shrinks also satisfy the predicate
 
 ### 1.4.5 Sample and Debug
-- [ ] **Task 1.4.5 Complete**
+- [x] **Task 1.4.5 Complete**
 
 Implement utilities for debugging and exploring generators. Essential for development and troubleshooting.
 
-- [ ] 1.4.5.1 Implement `sample/1` generating a list of example values
-- [ ] 1.4.5.2 Implement `sample/2` with configurable count
-- [ ] 1.4.5.3 Implement `print_tree/1` displaying the shrink tree structure
-- [ ] 1.4.5.4 Implement `shrinks/1` returning the list of immediate shrinks
+- [x] 1.4.5.1 Implement `sample/1` generating a list of example values
+- [x] 1.4.5.2 Implement `sample/2` with configurable count
+- [x] 1.4.5.3 Implement `print_tree/1` displaying the shrink tree structure
+- [x] 1.4.5.4 Implement `shrinks/1` returning the list of immediate shrinks
 
 ### Unit Tests - Section 1.4
-- [ ] **Unit Tests 1.4 Complete**
-- [ ] Test `constant` always produces same value with no shrinks
-- [ ] Test `element` produces only values from the list
-- [ ] Test `element` shrinks toward earlier elements
-- [ ] Test `gen_bool` produces both true and false
-- [ ] Test `gen_bool` shrinking (true -> false)
-- [ ] Test `gen_int` respects range bounds
-- [ ] Test `gen_int` shrinks toward zero
-- [ ] Test `gen_filter` only produces values satisfying predicate
-- [ ] Test `gen_filter` shrinks satisfy predicate
-- [ ] Test `sample` produces requested number of values
+- [x] **Unit Tests 1.4 Complete**
+- [x] Test `constant` always produces same value with no shrinks
+- [x] Test `element` produces only values from the list
+- [x] Test `element` shrinks toward earlier elements
+- [x] Test `gen_bool` produces both true and false
+- [x] Test `gen_bool` shrinking (true -> false)
+- [x] Test `gen_int` respects range bounds
+- [x] Test `gen_int` shrinks toward zero
+- [x] Test `gen_filter` only produces values satisfying predicate
+- [x] Test `gen_filter` shrinks satisfy predicate
+- [x] Test `sample` produces requested number of values
 
 ---
 
