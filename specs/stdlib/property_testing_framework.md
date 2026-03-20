@@ -2,23 +2,26 @@
 
 ## Status
 
-Promoted status: in progress. The rose-tree foundation is implemented and tested, while generator/seed management and fuller runner integration remain the next active step.
+Promoted status: in progress. The rose-tree foundation and generator/seed/size layer are implemented and tested, while generator instances, primitive combinators, and fuller runner integration remain active follow-on work.
 
 ## Design Anchors
 
 - [Property testing Phase 1 plan](../../notes/planning/property-testing/phase-01.md)
 - [Property testing Phase 4 law testing plan](../../notes/planning/property-testing/phase-04.md)
 - [Rose tree completion summary](../../notes/summaries/rose-tree-unit-tests-complete-2025-11-29.md)
+- [Generator type and seed management summary](../../notes/summaries/generator-type-and-seed-management-2026-03-20.md)
 - [Phase 2.3 testing summary](../../notes/summaries/phase-2.3-testing-summary.md)
 - `src/proptest/catena_tree.erl`
 - `test/proptest/catena_tree_tests.erl`
+- `src/proptest/catena_gen.erl`
+- `test/proptest/catena_gen_tests.erl`
 - `src/testing/catena_generators.erl`
 - `src/testing/catena_test_runner.erl`
 
 ## Current Promoted Surface
 
 - The new property-testing track is real implementation work, not only planning.
-- `catena_tree` is the current canonical implemented surface for the new framework.
+- `catena_tree` and `catena_gen` are the current canonical implemented surfaces for the new framework.
 - The older Phase 2.3 property-test execution path still exists and remains the active runner for first-class `property` declarations.
 - Concrete law suites now execute on the current `Laws + Test.verify + src/testing/*` path for known instances while the generic framework is still under construction.
 - The repo is in transition from older/simple generation toward a more principled internal framework with integrated shrinking.
@@ -40,18 +43,34 @@ The promoted implemented core of the new framework is the rose-tree data structu
 
 This is the current completed unit of work for the new framework.
 
-### AC-PROP-002 Reconciled Project Status
+### AC-PROP-002 Generator And Seed Foundation
+
+The promoted implemented next layer of the framework is the generator/seed/size
+surface in `src/proptest/catena_gen.erl`, including:
+
+- explicit generator values wrapping `(Size, Seed) -> Tree`
+- deterministic `seed_from_int/1`
+- non-deterministic `seed_new/0`
+- `seed_next/1` stepping
+- `seed_split/1` for deterministic independent sub-streams
+- `sized/1`, `resize/2`, and `scale/2` for explicit size control
+
+This establishes the planned Section 1.2 execution substrate for the later
+generator-instance and primitive-combinator work.
+
+### AC-PROP-003 Reconciled Project Status
 
 The promoted current status for the property-testing roadmap is:
 
 - Phase 1 Section 1.1 rose-tree foundation: complete
-- next step: Phase 1 Section 1.2 generator type and seed management
+- Phase 1 Section 1.2 generator type and seed management: complete
+- next step: Phase 1 Section 1.3 categorical instances for generators
 
-The planning checklist has not yet been reconciled to that implemented state, so this spec uses the later summary and code as the current authority.
+The planning checklist is now reconciled through Section 1.2.
 
 The later reusable law-testing framework remains planned in Property Testing Phase 4 rather than being part of the current implemented surface.
 
-### AC-PROP-003 Transitional Coexistence
+### AC-PROP-004 Transitional Coexistence
 
 Until the new framework is fully wired through the language and tooling, Catena currently has two valid testing-related layers:
 
@@ -60,7 +79,7 @@ Until the new framework is fully wired through the language and tooling, Catena 
 
 The promoted spec must describe that coexistence honestly instead of pretending the migration is already complete.
 
-### AC-PROP-004 Internal Replacement Direction
+### AC-PROP-005 Internal Replacement Direction
 
 The canonical direction is internal property testing with integrated shrinking, not ongoing dependence on PropEr as Catena's lasting architecture. Migration work should therefore move toward:
 
@@ -68,7 +87,7 @@ The canonical direction is internal property testing with integrated shrinking, 
 - Catena-owned shrinking
 - Catena-owned runner/reporting semantics
 
-### AC-PROP-005 Known Gap Visibility
+### AC-PROP-006 Known Gap Visibility
 
 Documentation and tooling specs must continue to note the true transition state:
 
@@ -77,7 +96,7 @@ Documentation and tooling specs must continue to note the true transition state:
 
 This prevents the specs from confusing "default workflow restored" with "migration finished."
 
-### AC-PROP-006 Law-Testing Destination
+### AC-PROP-007 Law-Testing Destination
 
 Generic trait-law verification SHOULD converge on the internal property-testing framework rather than remaining permanently split between ad hoc concrete suites and external tooling.
 
@@ -89,6 +108,6 @@ Promoted staging:
 
 ## Out Of Scope
 
-- claiming generator and seed management are already complete
+- claiming generator categorical instances are already complete
 - claiming the new framework fully replaces the older test runner today
 - claiming generic law-test disciplines are already implemented today

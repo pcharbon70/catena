@@ -73,13 +73,16 @@ The property-testing planning documents are newer than the implementation and ar
 Current promoted status:
 
 - Phase 1 Section 1.1 rose-tree foundation: implemented
+- Phase 1 Section 1.2 generator type and seed management: implemented
 - `src/proptest/catena_tree.erl` provides the current concrete surface
-- 107 rose-tree unit tests are documented in the latest summaries
+- `src/proptest/catena_gen.erl` now provides the generator/seed/size surface on top of rose trees
+- generator execution is deterministic for explicit seeds and size-aware by construction
+- the planning checklist is now reconciled through Section 1.2
 - property-based law verification for the framework itself is intentionally deferred until the framework can test itself
 
 Next clear step on this track:
 
-- Phase 1 Section 1.2 Generator Type and Seed Management
+- Phase 1 Section 1.3 Categorical Instances for Generators
 
 Longer-term destination on this track:
 
@@ -88,7 +91,7 @@ Longer-term destination on this track:
 Immediate consequence of the completed concrete law-suite stage:
 
 - the next law-verification step is no longer “make `Laws + Test.verify` executable”
-- the next law-verification step is Property Testing Phase 1.2 and the broader Stage 3 generator/runner foundation
+- the next law-verification step is Property Testing Phase 1.3 and the broader Stage 3 generator/runner foundation
 
 ## Current Quality State
 

@@ -15,119 +15,119 @@ This phase runs for **4 weeks** and focuses on correctness and categorical law c
 ---
 
 ## 1.1 Rose Tree Data Structure
-- [ ] **Section 1.1 Complete**
+- [x] **Section 1.1 Complete**
 
 The rose tree (multi-way tree) is the fundamental data structure for integrated shrinking. Each node contains a value and a lazy list of child trees representing possible shrinks. This structure enables shrinking to be generated alongside values, ensuring that all shrinks respect the same invariants as the original generation. The tree is comonadic, supporting `extract` (get current value), `duplicate` (tree of subtrees), and `extend` (context-aware transformations).
 
 ### 1.1.1 Rose Tree Type Definition
-- [ ] **Task 1.1.1 Complete**
+- [x] **Task 1.1.1 Complete**
 
 Define the core rose tree type and its basic operations. The tree must support lazy evaluation of children to avoid computing all possible shrinks upfront, which would be prohibitively expensive for complex types.
 
-- [ ] 1.1.1.1 Define `Tree<A>` record type with `value :: A` and `children :: () -> [Tree<A>]` fields
-- [ ] 1.1.1.2 Implement `tree/2` constructor function creating a tree from value and child thunk
-- [ ] 1.1.1.3 Implement `singleton/1` creating a tree with no children (leaf node)
-- [ ] 1.1.1.4 Implement `unfold/2` for generating trees from a seed and expansion function
+- [x] 1.1.1.1 Define `Tree<A>` record type with `value :: A` and `children :: () -> [Tree<A>]` fields
+- [x] 1.1.1.2 Implement `tree/2` constructor function creating a tree from value and child thunk
+- [x] 1.1.1.3 Implement `singleton/1` creating a tree with no children (leaf node)
+- [x] 1.1.1.4 Implement `unfold/2` for generating trees from a seed and expansion function
 
 ### 1.1.2 Comonadic Operations
-- [ ] **Task 1.1.2 Complete**
+- [x] **Task 1.1.2 Complete**
 
 Implement the comonadic interface for rose trees. These operations enable powerful shrinking strategies by allowing context-aware transformations across the entire tree structure.
 
-- [ ] 1.1.2.1 Implement `extract/1` returning the root value of the tree
-- [ ] 1.1.2.2 Implement `duplicate/1` creating a tree where each node contains the subtree rooted at that node
-- [ ] 1.1.2.3 Implement `extend/2` applying a function that sees the entire subtree at each position
-- [ ] 1.1.2.4 Verify comonad laws hold: `extract . duplicate = id`, `fmap extract . duplicate = id`, `duplicate . duplicate = fmap duplicate . duplicate`
+- [x] 1.1.2.1 Implement `extract/1` returning the root value of the tree
+- [x] 1.1.2.2 Implement `duplicate/1` creating a tree where each node contains the subtree rooted at that node
+- [x] 1.1.2.3 Implement `extend/2` applying a function that sees the entire subtree at each position
+- [x] 1.1.2.4 Verify comonad laws hold: `extract . duplicate = id`, `fmap extract . duplicate = id`, `duplicate . duplicate = fmap duplicate . duplicate`
 
 ### 1.1.3 Functor Instance
-- [ ] **Task 1.1.3 Complete**
+- [x] **Task 1.1.3 Complete**
 
 Implement the Functor instance for rose trees, enabling transformation of values while preserving tree structure. This is essential for building composed generators that maintain proper shrinking.
 
-- [ ] 1.1.3.1 Implement `map/2` applying a function to every value in the tree
-- [ ] 1.1.3.2 Ensure `map` preserves tree structure (same number of children at each level)
-- [ ] 1.1.3.3 Ensure `map` is lazy, not forcing evaluation of children until needed
-- [ ] 1.1.3.4 Verify functor laws: `map id = id`, `map (f . g) = map f . map g`
+- [x] 1.1.3.1 Implement `map/2` applying a function to every value in the tree
+- [x] 1.1.3.2 Ensure `map` preserves tree structure (same number of children at each level)
+- [x] 1.1.3.3 Ensure `map` is lazy, not forcing evaluation of children until needed
+- [x] 1.1.3.4 Verify functor laws: `map id = id`, `map (f . g) = map f . map g`
 
 ### 1.1.4 Applicative Instance
-- [ ] **Task 1.1.4 Complete**
+- [x] **Task 1.1.4 Complete**
 
 Implement the Applicative instance for rose trees. Applicative combination produces trees where shrinking explores all combinations of shrinks from both inputs, providing thorough shrinking for independent values.
 
-- [ ] 1.1.4.1 Implement `pure/1` creating a singleton tree (no shrinks)
-- [ ] 1.1.4.2 Implement `ap/2` applying a tree of functions to a tree of values
-- [ ] 1.1.4.3 Ensure `ap` produces interleaved shrinking (shrink left, shrink right, shrink both)
-- [ ] 1.1.4.4 Verify applicative laws: identity, composition, homomorphism, interchange
+- [x] 1.1.4.1 Implement `pure/1` creating a singleton tree (no shrinks)
+- [x] 1.1.4.2 Implement `ap/2` applying a tree of functions to a tree of values
+- [x] 1.1.4.3 Ensure `ap` produces interleaved shrinking (shrink left, shrink right, shrink both)
+- [x] 1.1.4.4 Verify applicative laws: identity, composition, homomorphism, interchange
 
 ### 1.1.5 Monad Instance
-- [ ] **Task 1.1.5 Complete**
+- [x] **Task 1.1.5 Complete**
 
 Implement the Monad instance for rose trees. Monadic bind is necessary for dependent generation but note that shrinking the first component doesn't automatically re-shrink dependent components.
 
-- [ ] 1.1.5.1 Implement `bind/2` (flatMap) threading a value through a tree-producing function
-- [ ] 1.1.5.2 Document the shrinking trade-off: monadic bind has suboptimal shrinking for dependent values
-- [ ] 1.1.5.3 Implement `flatten/1` collapsing nested trees
-- [ ] 1.1.5.4 Verify monad laws: left identity, right identity, associativity
+- [x] 1.1.5.1 Implement `bind/2` (flatMap) threading a value through a tree-producing function
+- [x] 1.1.5.2 Document the shrinking trade-off: monadic bind has suboptimal shrinking for dependent values
+- [x] 1.1.5.3 Implement `flatten/1` collapsing nested trees
+- [x] 1.1.5.4 Verify monad laws: left identity, right identity, associativity
 
 ### Unit Tests - Section 1.1
-- [ ] **Unit Tests 1.1 Complete**
-- [ ] Test rose tree construction with various depths and branching factors
-- [ ] Test `extract` returns root value correctly
-- [ ] Test `map` transforms all values while preserving structure
-- [ ] Test `ap` produces correct interleaved shrinking order
-- [ ] Test `bind` produces correct flattened tree structure
+- [x] **Unit Tests 1.1 Complete**
+- [x] Test rose tree construction with various depths and branching factors
+- [x] Test `extract` returns root value correctly
+- [x] Test `map` transforms all values while preserving structure
+- [x] Test `ap` produces correct interleaved shrinking order
+- [x] Test `bind` produces correct flattened tree structure
 - [ ] Test comonad laws with property-based verification
 - [ ] Test functor laws with property-based verification
 - [ ] Test applicative laws with property-based verification
 - [ ] Test monad laws with property-based verification
-- [ ] Test lazy evaluation of children (children not forced until accessed)
+- [x] Test lazy evaluation of children (children not forced until accessed)
 
 ---
 
 ## 1.2 Generator Type and Seed Management
-- [ ] **Section 1.2 Complete**
+- [x] **Section 1.2 Complete**
 
 The Generator type is a function from size and seed to a rose tree. The size parameter enables gradual complexity scaling for recursive structures, while the seed provides deterministic reproducibility for debugging. Proper seed management is critical for reproducible test failures and shrinking.
 
 ### 1.2.1 Generator Type Definition
-- [ ] **Task 1.2.1 Complete**
+- [x] **Task 1.2.1 Complete**
 
 Define the core generator type as a function that takes generation parameters and produces a rose tree. The type must be opaque to prevent direct manipulation while exposing a rich combinator interface.
 
-- [ ] 1.2.1.1 Define `Generator<A>` as `{generator, fun((Size, Seed) -> Tree<A>)}`
-- [ ] 1.2.1.2 Define `Size` type as non-negative integer controlling generation complexity
-- [ ] 1.2.1.3 Define `Seed` type wrapping random state for deterministic generation
-- [ ] 1.2.1.4 Implement `run/3` executing a generator with given size and seed
+- [x] 1.2.1.1 Define `Generator<A>` as `{generator, fun((Size, Seed) -> Tree<A>)}`
+- [x] 1.2.1.2 Define `Size` type as non-negative integer controlling generation complexity
+- [x] 1.2.1.3 Define `Seed` type wrapping random state for deterministic generation
+- [x] 1.2.1.4 Implement `run/3` executing a generator with given size and seed
 
 ### 1.2.2 Seed Operations
-- [ ] **Task 1.2.2 Complete**
+- [x] **Task 1.2.2 Complete**
 
 Implement seed creation, splitting, and management. Seed splitting is essential for combining generators while maintaining independence and reproducibility.
 
-- [ ] 1.2.2.1 Implement `seed_new/0` creating a random seed from system entropy
-- [ ] 1.2.2.2 Implement `seed_from_int/1` creating a deterministic seed from an integer
-- [ ] 1.2.2.3 Implement `seed_split/1` splitting a seed into two independent seeds
-- [ ] 1.2.2.4 Implement `seed_next/1` advancing a seed to produce (value, new_seed) pair
-- [ ] 1.2.2.5 Ensure seed splitting produces statistically independent streams
+- [x] 1.2.2.1 Implement `seed_new/0` creating a random seed from system entropy
+- [x] 1.2.2.2 Implement `seed_from_int/1` creating a deterministic seed from an integer
+- [x] 1.2.2.3 Implement `seed_split/1` splitting a seed into two independent seeds
+- [x] 1.2.2.4 Implement `seed_next/1` advancing a seed to produce (value, new_seed) pair
+- [x] 1.2.2.5 Ensure seed splitting produces statistically independent streams
 
 ### 1.2.3 Size Management
-- [ ] **Task 1.2.3 Complete**
+- [x] **Task 1.2.3 Complete**
 
 Implement size parameter handling. Size starts small and grows during test runs, enabling quick discovery of simple counterexamples before exploring complex cases.
 
-- [ ] 1.2.3.1 Implement `sized/1` creating a generator that receives the current size
-- [ ] 1.2.3.2 Implement `resize/2` running a generator with a modified size
-- [ ] 1.2.3.3 Implement `scale/2` scaling size by a function (e.g., halving for recursion)
-- [ ] 1.2.3.4 Document size semantics: size 0 = simplest, size 100 = typical max
+- [x] 1.2.3.1 Implement `sized/1` creating a generator that receives the current size
+- [x] 1.2.3.2 Implement `resize/2` running a generator with a modified size
+- [x] 1.2.3.3 Implement `scale/2` scaling size by a function (e.g., halving for recursion)
+- [x] 1.2.3.4 Document size semantics: size 0 = simplest, size 100 = typical max
 
 ### Unit Tests - Section 1.2
-- [ ] **Unit Tests 1.2 Complete**
-- [ ] Test generator execution produces consistent results with same seed
-- [ ] Test different seeds produce different results
-- [ ] Test seed splitting produces independent streams
-- [ ] Test sized generators receive correct size parameter
-- [ ] Test resize modifies size correctly
-- [ ] Test scale applies function to size
+- [x] **Unit Tests 1.2 Complete**
+- [x] Test generator execution produces consistent results with same seed
+- [x] Test different seeds produce different results
+- [x] Test seed splitting produces independent streams
+- [x] Test sized generators receive correct size parameter
+- [x] Test resize modifies size correctly
+- [x] Test scale applies function to size
 
 ---
 
