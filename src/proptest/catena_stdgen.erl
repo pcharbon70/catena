@@ -1440,7 +1440,7 @@ gen_json_unsafe() ->
 -spec gen_json_string() -> catena_gen:generator(binary()).
 gen_json_string() ->
     catena_gen:gen_map(fun(Str) -> list_to_binary(Str) end,
-        gen_string(catena_range:range_constant({1, 10}), gen_char_alpha()))).
+        gen_string(catena_range:range_constant({1, 10}), gen_char_alpha())).
 
 
 %% Type for JSON values.

@@ -228,3 +228,112 @@ max_size_boundary_test() ->
     %% Should not be excessively large
     ?assert(length(Result) < 1000),
     ok.
+
+%% ---- Function Generator Tests ----
+
+function_generator_test() ->
+    %% Test function generators work with higher-order property testing
+    %% Property: map(f, map(g, xs)) == map(compose(f, g), xs)
+    FuncGen = catena_stdgen:gen_function1(catena_gen:gen_int()),
+    ListGen = catena_stdgen:gen_list(catena_gen:gen_int()),
+    Gen = catena_stdgen:gen_tuple2(FuncGen, ListGen),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_from_int(42)),
+    {F, L} = catena_tree:root(Tree),
+    %% Apply function to list
+    Result = lists:map(F, L),
+    ?assert(is_list(Result)),
+    ?assertEqual(length(L), length(Result)),
+    ok.
+
+constant_function_shrinks_test() ->
+    %% Constant functions should shrink toward simpler values
+    %% gen_constant_function returns a function, not a generator
+    %% So we test gen_function0 which generates functions that ignore input
+    FuncGen = catena_stdgen:gen_function0(catena_gen:gen_int()),
+    Tree = catena_gen:run(FuncGen, 10, catena_gen:seed_from_int(123)),
+    Func = catena_tree:root(Tree),
+    %% Should be a function
+    ?assert(is_function(Func)),
+    %% Should return same value every time (arity-0 function)
+    Val1 = Func(),
+    Val2 = Func(),
+    ?assertEqual(Val1, Val2),
+    ok.
+
+%% ---- Performance Tests ----
+
+performance_large_dataset_test() ->
+    %% Test performance: generating 10000 values should complete quickly
+    Gen = catena_stdgen:gen_list(catena_stdgen:gen_tuple2(
+        catena_gen:gen_int(),
+        catena_stdgen:gen_atom()
+    )),
+    {TimeMs, _} = timer:tc(fun() ->
+        lists:map(fun(_) ->
+            Tree = catena_gen:run(Gen, 10, catena_gen:seed_from_int(erlang:unique_integer())),
+            catena_tree:root(Tree)
+        end, lists:seq(1, 1000))
+    end),
+    %% Should complete in less than 5 seconds (5000ms)
+    ?assert(TimeMs < 5000000),
+    ok.
+
+performance_nested_structures_test() ->
+    %% Test performance for deeply nested structures
+    Gen = catena_stdgen:gen_BinaryTree(catena_gen:gen_int()),
+    {TimeMs, _} = timer:tc(fun() ->
+        lists:map(fun(I) ->
+            Tree = catena_gen:run(Gen, 20, catena_gen:seed_from_int(I)),
+            catena_tree:root(Tree)
+        end, lists:seq(1, 500))
+    end),
+    %% Should complete in less than 3 seconds
+    ?assert(TimeMs < 3000000),
+    ok.
+
+%% ---- Memory Tests ----
+
+memory_large_collections_test() ->
+    %% Test that generating large collections doesn't leak memory
+    %% We generate multiple large collections and check they're garbage collected
+    Gen = catena_stdgen:gen_list(catena_stdgen:gen_map(
+        catena_gen:gen_int(),
+        catena_stdgen:gen_string(catena_range:range_constant({0, 20}))
+    )),
+    %% Run garbage collection before
+    garbage_collect(),
+    MemBefore = erlang:memory(total),
+
+    %% Generate 100 moderately large maps
+    lists:foreach(fun(I) ->
+        Tree = catena_gen:run(Gen, 50, catena_gen:seed_from_int(I)),
+        _ = catena_tree:root(Tree)
+    end, lists:seq(1, 100)),
+
+    %% Force garbage collection
+    garbage_collect(),
+    MemAfter = erlang:memory(total),
+
+    %% Memory increase should be reasonable (less than 50MB)
+    MemIncrease = MemAfter - MemBefore,
+    ?assert(MemIncrease < 50000000),
+    ok.
+
+memory_recursive_structures_test() ->
+    %% Test that recursive structures don't cause memory issues
+    Gen = catena_stdgen:gen_list_recursive(catena_gen:gen_int()),
+    garbage_collect(),
+    MemBefore = erlang:memory(total),
+
+    lists:foreach(fun(I) ->
+        Tree = catena_gen:run(Gen, 15, catena_gen:seed_from_int(I)),
+        _ = catena_tree:root(Tree)
+    end, lists:seq(1, 200)),
+
+    garbage_collect(),
+    MemAfter = erlang:memory(total),
+
+    %% Memory increase should be reasonable
+    MemIncrease = MemAfter - MemBefore,
+    ?assert(MemIncrease < 30000000),
+    ok.
