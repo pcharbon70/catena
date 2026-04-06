@@ -125,7 +125,9 @@ The planning checklist is now reconciled through Section 1.5.
 
 The later reusable law-testing framework remains planned in Property Testing Phase 4 rather than being part of the current implemented surface.
 
-### AC-PROP-007 Transitional Coexistence
+The later reusable law-testing framework remains planned in Property Testing Phase 4 rather than being part of the current implemented surface.
+
+### AC-PROP-003 Transitional Coexistence
 
 Until the new framework is fully wired through the language and tooling, Catena currently has two valid testing-related layers:
 
@@ -157,7 +159,20 @@ Generic trait-law verification SHOULD converge on the internal property-testing 
 
 Promoted staging:
 
-- near-term: concrete executable suites already use `Laws + Test.verify`
+Documentation and tooling specs must continue to note the true transition state:
+
+- the default repo-wide `rebar3 eunit` entry point is green again for the active suite
+- the migration is still incomplete because historical PropEr suites remain quarantined and their internal replacements are not all implemented yet
+
+This prevents the specs from confusing "default workflow restored" with "migration finished."
+
+### AC-PROP-006 Law-Testing Destination
+
+Generic trait-law verification SHOULD converge on the internal property-testing framework rather than remaining permanently split between ad hoc concrete suites and external tooling.
+
+Promoted staging:
+
+- near-term: concrete executable suites may still use `Laws + Test.verify`
 - mid-term: generator and runner foundations become available
 - later: reusable law/disciplines/suite generation land on top of the internal framework
 

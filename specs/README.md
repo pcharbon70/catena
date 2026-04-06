@@ -21,6 +21,10 @@ The structure follows the layered model used by `../epic/jido_os/specs`, adapted
 4. Conformance gives each requirement family scenario-level coverage.
 5. Domain/component specs map the actual codebase and current implementation state onto that architecture.
 
+## Getting Started
+
+- [getting-started.md](getting-started.md)
+
 ## Baseline Architecture
 
 - [design.md](design.md)

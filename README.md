@@ -72,6 +72,22 @@ Catena reimagines functional programming by making category theory concepts firs
 - **Effect system integration** - topology selection and channel management through algebraic effects
 - **Session types** - protocol-safe distributed communication with compile-time guarantees
 
+## Type System
+
+Catena uses a **Hindley-Milner type system** extended with algebraic effects and first-class trait constraints. The type system is the foundation of the language's safety guarantees and category-theoretic abstractions.
+
+| Component | Description |
+|-----------|-------------|
+| **Core** | Algorithm W (HM inference) with expression/pattern inference, unification with occurs checks, polymorphic schemes |
+| **Traits** | First-class constraint resolution (not post-processing) — trait hierarchies, instance resolution, coherence checks |
+| **Kinds** | Higher-kinded type validation before declaration typing |
+| **Effects** | Monomorphic tracking — concrete effect sets, `perform` introduces effects, handlers remove them |
+| **Deferred** | Full effect polymorphism, effect-row solving, Phase 6 roadmap |
+
+Functions carry effect information as `a -> b / {Effect1, Effect2}`, where the effect set tracks side effects. Effect compatibility in the current proof-of-concept is equality/subset-based on concrete sets — full row polymorphism is planned for Phase 6.
+
+See [`specs/compiler/type_and_effect_system.md`](specs/compiler/type_and_effect_system.md) for the complete specification.
+
 ## Project Status
 
 ⚠️ **This is a research project in early design phase**

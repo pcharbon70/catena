@@ -14,6 +14,7 @@ Promoted status: materially implemented and compiler-relevant today, with Phase 
 - [Section 1.5.1 summary](../../notes/summaries/section-1.5.1-stdlib-compilation-complete.md)
 - [Section 1.5.2 summary](../../notes/summaries/section-1.5.2-trait-instance-resolution.md)
 - [Section 1.5.3 summary](../../notes/summaries/section-1.5.3-hkt-validation.md)
+- [Section 1.5.4 law verification summary](../../notes/summaries/section-1.5.4-law-verification.md)
 - [Section 1.5.5 summary](../../notes/summaries/section-1.5.5-do-notation.md)
 - [Section 1.5.6 summary](../../notes/summaries/section-1.5.6-effect-integration.md)
 - `lib/catena/stdlib/prelude.cat`
@@ -27,6 +28,7 @@ Promoted status: materially implemented and compiler-relevant today, with Phase 
 - Category-theoretic abstractions are intentionally expressed in library code and traits before becoming compiler intrinsics.
 - The `Prelude`, `Test`, `Laws`, and effect modules are the main promoted stdlib surfaces today.
 - Minimal import support exists largely to unblock stdlib use and validation.
+- Law verification is currently staged: the repo already has pure law definitions in `Laws` and `Test.verify` as the current wrapper surface, but generic property-based law verification remains future work.
 
 ## Acceptance Criteria
 
@@ -66,6 +68,13 @@ The promoted current stdlib-validation status is:
 
 This reconciled status supersedes the stale raw checklist until the planning note is updated.
 
+For `1.5.4`, "partial" specifically means:
+
+- pure law transforms exist in `Laws`
+- `Test.verify` is the intended current wrapper surface
+- structural tests validate those definitions
+- executable concrete suites and generic generator-backed law suites are still staged follow-on work
+
 ### AC-STDLIB-005 Importable And Compiler-Visible
 
 The standard library must remain importable through the current module-loader path so compiler tests, interactive use, and future module work can rely on a stable library boundary.
@@ -73,6 +82,16 @@ The standard library must remain importable through the current module-loader pa
 ### AC-STDLIB-006 Minimal Core Means Minimal Core
 
 Changes to Catena's syntax or compiler core should prefer extending the library surface over introducing new hard-coded keywords or special forms, unless a compelling implementation reason is captured in a new ADR.
+
+### AC-STDLIB-007 Staged Law Verification
+
+The promoted law-verification path for Catena is staged:
+
+1. express laws as pure standard-library definitions
+2. execute concrete reusable suites through `Test.verify`
+3. migrate generic trait-law verification onto the internal property-testing framework
+
+Until later stages land, Catena MUST NOT claim that law verification is already fully generic or universally property-based.
 
 ## Out Of Scope
 

@@ -19,8 +19,8 @@ Based on `notes/planning/`, `notes/summaries/`, `notes/reviews/`, and the codeba
 ## Immediate Targets
 
 - reconcile canonical specs and planning state around the implemented compiler/runtime/library surfaces
-- continue the property-testing framework track with basic shrinking infrastructure now that the range layer is in place
-- decide whether to reconcile the remaining mostly-implemented Phase 1.5.6 work further or move directly into the property-testing roadmap
+- finish the remaining Phase 1.5 library-validation gaps
+- decide whether to resume the proof-of-concept track or continue the property-testing framework track next
 - continue migrating historical PropEr coverage into the internal property-testing architecture now that the repo-wide `rebar3 eunit` path is green again
 
 ## Medium-Term Targets

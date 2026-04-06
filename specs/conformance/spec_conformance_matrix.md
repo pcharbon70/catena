@@ -23,4 +23,4 @@ This matrix ties Catena's requirement families and promoted component specs to s
 | `specs/runtime/repl_runtime.md` | `REQ-RT-*`, `REQ-OBS-*` | `SCN-005`, `SCN-007` |
 | `specs/stdlib/standard_library_surface.md` | `REQ-STDLIB-*`, `REQ-COMP-*` | `SCN-002`, `SCN-003`, `SCN-007`, `SCN-010` |
 | `specs/stdlib/property_testing_framework.md` | `REQ-STDLIB-*`, `REQ-TEST-*` | `SCN-008`, `SCN-009`, `SCN-010` |
-| `specs/tooling/build_and_test_tooling.md` | `REQ-TEST-*`, `REQ-OBS-*` | `SCN-001`, `SCN-009`, `SCN-010` |
+| `specs/tooling/build_and_test_tooling.md` | `REQ-TEST-*`, `REQ-OBS-*` | `SCN-001`, `SCN-009` |
