@@ -53,12 +53,18 @@
     gen_set_of/2
 ]).
 
--export_type([
-    float_range/0,
-    char_set/0
+%% Section 2.4: Recursive Structure Support
+-export([
+    gen_BinaryTree/1,
+    gen_maybe/1,
+    gen_result/2,
+    gen_list_recursive/1,
+    gen_recursive/2
 ]).
 
--type char_set() :: ascii | alpha | digit | alphanumeric | unicode.
+-export_type([
+    float_range/0
+]).
 
 -include_lib("eunit/include/eunit.hrl").
 
@@ -697,6 +703,153 @@ gen_set_shrink(Set, ElementGen, Size) ->
     RemoveShrinks.
 
 %%====================================================================
+%% Section 2.4: Recursive Structure Support
+%%====================================================================
+
+%% ---- Binary Tree Generator ----
+
+%% @doc Generate a binary tree with leaf nodes containing values.
+%%
+%% Trees shrink toward leaves and smaller values.
+%% Represents {leaf, Value} | {node, Left, Right}.
+-spec gen_BinaryTree(catena_gen:generator(A)) -> catena_gen:generator({leaf, A} | {node, _, _}).
+gen_BinaryTree(ValueGen) ->
+    gen_recursive(10, fun() -> gen_BinaryTree_unsafe(ValueGen) end).
+
+%% @private Generate binary tree without size limit (internal use).
+-spec gen_BinaryTree_unsafe(catena_gen:generator(_)) -> catena_gen:generator({leaf, _} | {node, _, _}).
+gen_BinaryTree_unsafe(ValueGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        %% Use size to determine if we should create a leaf or node
+        {Word, Seed1} = catena_gen:seed_next(Seed),
+        Threshold = max(10, Size),
+        IsLeaf = (Word rem Threshold) < (Threshold div 2),
+
+        case IsLeaf of
+            true ->
+                %% Create a leaf
+                LeafTree = catena_gen:run(ValueGen, Size, Seed1),
+                LeafValue = catena_tree:root(LeafTree),
+                catena_tree:tree({leaf, LeafValue}, fun() ->
+                    %% Shrink toward smaller leaf values
+                    LeafChildren = catena_tree:children(LeafTree),
+                    case LeafChildren of
+                        [] -> [];
+                        _ -> [catena_tree:map(fun(V) -> {leaf, V} end, C) || C <- LeafChildren]
+                    end
+                end);
+            false ->
+                %% Create a node with two subtrees
+                {Seed2, Seed3} = catena_gen:seed_split(Seed1),
+                LeftTree = catena_gen:run(gen_BinaryTree_unsafe(ValueGen), Size div 2, Seed2),
+                RightTree = catena_gen:run(gen_BinaryTree_unsafe(ValueGen), Size div 2, Seed3),
+                Left = catena_tree:root(LeftTree),
+                Right = catena_tree:root(RightTree),
+                catena_tree:tree({node, Left, Right}, fun() ->
+                    %% Shrink by replacing subtrees with leaves or shrinking subtrees
+                    LeftChildren = catena_tree:children(LeftTree),
+                    RightChildren = catena_tree:children(RightTree),
+                    LeftShrinks = case LeftChildren of
+                        [] -> [];
+                        _ -> [catena_tree:map(fun(L) -> {node, L, Right} end, C) || C <- LeftChildren]
+                    end,
+                    RightShrinks = case RightChildren of
+                        [] -> [];
+                        _ -> [catena_tree:map(fun(R) -> {node, Left, R} end, C) || C <- RightChildren]
+                    end,
+                    %% Also provide shrinks toward leaves
+                    LeafShrinks = case {Left, Right} of
+                        {{leaf, _}, _} -> [];
+                        {_, {leaf, _}} -> [];
+                        _ -> [catena_tree:singleton({leaf, catena_tree:root(LeftTree)})]
+                    end,
+                    LeftShrinks ++ RightShrinks ++ LeafShrinks
+                end)
+        end
+    end).
+
+%% ---- Maybe/Option Generator ----
+
+%% @doc Generate a Maybe/Option type: none | {some, Value}.
+-spec gen_maybe(catena_gen:generator(A)) -> catena_gen:generator(none | {some, A}).
+gen_maybe(ValueGen) ->
+    catena_gen:gen_frequency([
+        {1, catena_gen:constant(none)},
+        {3, catena_gen:gen_map(fun(V) -> {some, V} end, ValueGen)}
+    ]).
+
+%% ---- Result/Either Generator ----
+
+%% @doc Generate a Result type: {ok, Value} | {error, Error}.
+-spec gen_result(catena_gen:generator(A), catena_gen:generator(B)) -> catena_gen:generator({ok, A} | {error, B}).
+gen_result(OkGen, ErrorGen) ->
+    catena_gen:gen_frequency([
+        {3, catena_gen:gen_map(fun(V) -> {ok, V} end, OkGen)},
+        {1, catena_gen:gen_map(fun(E) -> {error, E} end, ErrorGen)}
+    ]).
+
+%% ---- Recursive List Generator ----
+
+%% @doc Generate nested lists (lists containing lists or elements).
+%%
+%% Depth is controlled by size parameter.
+-spec gen_list_recursive(catena_gen:generator(_)) -> catena_gen:generator(list()).
+gen_list_recursive(ElementGen) ->
+    gen_recursive(15, fun() -> gen_list_recursive_unsafe(ElementGen) end).
+
+%% @private Generate recursive list without size limit.
+-spec gen_list_recursive_unsafe(catena_gen:generator(_)) -> catena_gen:generator(list()).
+gen_list_recursive_unsafe(ElementGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        {Word, Seed1} = catena_gen:seed_next(Seed),
+        Threshold = max(5, Size),
+        %% Decide: generate element or nested list
+        MakeNested = (Word rem Threshold) > (Threshold div 2),
+
+        case MakeNested of
+            true ->
+                %% Generate a nested list
+                NestedGen = gen_list(ElementGen),
+                NestedTree = catena_gen:run(NestedGen, Size div 2, Seed1),
+                NestedList = catena_tree:root(NestedTree),
+                catena_tree:tree(NestedList, fun() ->
+                    %% Shrink by simplifying the nested list
+                    NestedChildren = catena_tree:children(NestedTree),
+                    case NestedChildren of
+                        [] -> [];
+                        _ -> [catena_tree:map(fun(L) -> L end, C) || C <- NestedChildren]
+                    end
+                end);
+            false ->
+                %% Generate a simple element list
+                SimpleGen = gen_list(ElementGen),
+                catena_gen:run(SimpleGen, Size, Seed1)
+        end
+    end).
+
+%% ---- Generic Recursive Generator ----
+
+%% @doc Generate recursive structures with size control.
+%%
+%% Takes a maximum depth and a thunk that returns the generator.
+%% Reduces size as depth increases to prevent infinite recursion.
+-spec gen_recursive(pos_integer(), fun(() -> catena_gen:generator(A))) -> catena_gen:generator(A).
+gen_recursive(MaxDepth, GenThunk) ->
+    catena_gen:new(fun(Size, Seed) ->
+        {Word, Seed1} = catena_gen:seed_next(Seed),
+        %% Scale effective size by depth
+        EffectiveSize = max(1, Size div MaxDepth),
+        %% Occasionally use smaller size to create base cases
+        UseSmaller = (Word rem 5) =:= 0,
+        ActualSize = case UseSmaller of
+            true -> max(1, EffectiveSize div 2);
+            false -> EffectiveSize
+        end,
+        Gen = GenThunk(),
+        catena_gen:run(Gen, ActualSize, Seed1)
+    end).
+
+%%====================================================================
 %% Internal Helpers
 %%====================================================================
 
@@ -848,3 +1001,8 @@ gen_bool_atom_returns_true_or_false_test() ->
     Atom = catena_tree:root(Tree),
     ?assert(Atom =:= true orelse Atom =:= false),
     ok.
+
+%%====================================================================
+%% Unit Tests - Section 2.4
+%%====================================================================
+%% Tests are in catena_stdgen_recursive_tests.erl
