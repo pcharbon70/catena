@@ -61,7 +61,7 @@ The promoted current stdlib-validation status is:
 - 1.5.1 compilation: complete
 - 1.5.2 trait instance resolution: complete
 - 1.5.3 HKT validation: complete
-- 1.5.4 law verification through the test module: partial
+- 1.5.4 law verification through the test module: implemented for concrete suites
 - 1.5.5 do-notation desugaring: implemented
 - 1.5.6 effect integration with Kleisli arrows: mostly implemented
 - 1.5.7 operator desugaring: implemented

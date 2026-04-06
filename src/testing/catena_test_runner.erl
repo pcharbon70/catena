@@ -18,6 +18,12 @@
     run_tests/2,
     run_test/2,
     run_test/3,
+    run_test_value/1,
+    run_test_value/2,
+    run_suite_value/1,
+    run_suite_value/2,
+    build_runtime_env/1,
+    build_runtime_env/2,
     collect_tests/1,
     format_results/1,
     format_result/1
@@ -71,20 +77,7 @@ run_tests(Declarations, Opts) ->
         Tests
     ),
 
-    {Passed, Failed} = lists:foldl(
-        fun({pass, _}, {P, F}) -> {P + 1, F};
-           ({fail, _, _}, {P, F}) -> {P, F + 1}
-        end,
-        {0, 0},
-        Results
-    ),
-
-    #{
-        passed => Passed,
-        failed => Failed,
-        total => length(Results),
-        results => Results
-    }.
+    aggregate_results(Results).
 
 %% @doc Run a single test declaration
 %% Returns {pass, Name} or {fail, Name, Reason}
@@ -99,6 +92,61 @@ run_test({test_decl, Name, Body, _Loc}, Env, _Opts) ->
 run_test({property_decl, Name, Body, _Loc}, Env, Opts) ->
     Iterations = maps:get(property_iterations, Opts, ?DEFAULT_PROPERTY_ITERATIONS),
     run_property_test(Name, Body, Env, Iterations).
+
+%% @doc Run a first-class Catena Test value produced by stdlib `Test.verify`/`Test.unit`
+-spec run_test_value(map()) -> test_result().
+run_test_value(TestValue) ->
+    run_test_value(TestValue, #{}).
+
+-spec run_test_value(map(), map()) -> test_result().
+run_test_value(TestValue, _Opts) when is_map(TestValue) ->
+    Name = maps:get(name, TestValue, "<anonymous test>"),
+    case maps:get(run, TestValue, undefined) of
+        undefined ->
+            {fail, Name, missing_run_function};
+        Run ->
+            try
+                case apply_function(Run, [unit_value()]) of
+                    passed -> {pass, Name};
+                    true -> {pass, Name};
+                    ok -> {pass, Name};
+                    {failed, Message} -> {fail, Name, Message};
+                    {skipped, Message} -> {fail, Name, {skipped, Message}};
+                    false -> {fail, Name, {expected_true, false}};
+                    Other -> {fail, Name, {unexpected_result, Other}}
+                end
+            catch
+                throw:{assertion_failed, Details} ->
+                    {fail, Name, {assertion_failed, Details}};
+                error:Error:Stacktrace ->
+                    {fail, Name, {error, Error, Stacktrace}};
+                Class:Error ->
+                    {fail, Name, {exception, Class, Error}}
+            end
+    end.
+
+%% @doc Run a first-class Catena Suite value and aggregate its results.
+-spec run_suite_value(map()) -> test_results().
+run_suite_value(SuiteValue) ->
+    run_suite_value(SuiteValue, #{}).
+
+-spec run_suite_value(map(), map()) -> test_results().
+run_suite_value(SuiteValue, Opts) when is_map(SuiteValue) ->
+    Tests = maps:get(tests, SuiteValue, []),
+    Results = [run_test_value(TestValue, Opts) || TestValue <- Tests],
+    aggregate_results(Results).
+
+%% @doc Build a runtime environment from Catena declarations.
+%%
+%% This is used by the Stage 2 law-verification path to execute stdlib
+%% `Test` and `Laws` modules directly from semantic declarations.
+-spec build_runtime_env([term()]) -> map().
+build_runtime_env(Declarations) ->
+    build_runtime_env(Declarations, #{}).
+
+-spec build_runtime_env([term()], map()) -> map().
+build_runtime_env(Declarations, BaseEnv) ->
+    lists:foldl(fun add_runtime_decl_to_env/2, BaseEnv, Declarations).
 
 %% @doc Collect all test and property declarations from a list of declarations
 -spec collect_tests([term()]) -> [term()].
@@ -211,6 +259,10 @@ wrap_generated_value(Value) ->
 evaluate_expr({literal, Value, _Type, _Loc}, _Env) ->
     Value;
 
+evaluate_expr({var, true, _Loc}, _Env) ->
+    true;
+evaluate_expr({var, false, _Loc}, _Env) ->
+    false;
 evaluate_expr({var, Name, _Loc}, Env) ->
     case maps:get(Name, Env, undefined) of
         undefined ->
@@ -247,18 +299,7 @@ evaluate_expr({let_expr, [{pat_var, Name, _}, Value], Body, _Loc}, Env) ->
     evaluate_expr(Body, NewEnv);
 
 evaluate_expr({lambda, Params, Body, _Loc}, Env) ->
-    %% Create a closure
-    fun(Args) ->
-        %% Bind parameters to arguments
-        ParamNames = [N || {pat_var, N, _} <- Params],
-        Bindings = lists:zip(ParamNames, Args),
-        NewEnv = lists:foldl(
-            fun({N, V}, E) -> maps:put(N, {value, V}, E) end,
-            Env,
-            Bindings
-        ),
-        evaluate_expr(Body, NewEnv)
-    end;
+    make_lambda(Params, Body, Env);
 
 evaluate_expr({match_expr, Scrutinee, Clauses, _Loc}, Env) ->
     Val = case Scrutinee of
@@ -303,18 +344,28 @@ apply_binary_op(Op, _L, _R) -> throw({unsupported_operator, Op}).
 
 %% @doc Apply a function to arguments
 -spec apply_function(term(), [term()]) -> term().
-apply_function(Fun, Args) when is_function(Fun) ->
+apply_function({Fun, _Arity, _Type}, Args) when is_function(Fun) ->
+    apply_function(Fun, Args);
+apply_function(Fun, []) when is_function(Fun) ->
     case erlang:fun_info(Fun, arity) of
-        {arity, 1} when length(Args) == 1 ->
-            Fun(hd(Args));
-        {arity, N} when N == length(Args) ->
-            erlang:apply(Fun, Args);
-        {arity, N} when N > length(Args) ->
-            %% Partial application
-            fun(MoreArgs) -> apply_function(Fun, Args ++ MoreArgs) end;
-        _ ->
-            %% Try curried application
-            lists:foldl(fun(Arg, F) -> F(Arg) end, Fun, Args)
+        {arity, 0} -> Fun();
+        _ -> Fun
+    end;
+apply_function(Fun, [Arg | Rest]) when is_function(Fun) ->
+    case erlang:fun_info(Fun, arity) of
+        {arity, 0} ->
+            apply_function(Fun(), [Arg | Rest]);
+        {arity, 1} ->
+            apply_applied_result(Fun(Arg), Rest);
+        {arity, N} ->
+            Args = [Arg | Rest],
+            case length(Args) >= N of
+                true ->
+                    {CallArgs, Remaining} = lists:split(N, Args),
+                    apply_applied_result(erlang:apply(Fun, CallArgs), Remaining);
+                false ->
+                    make_partial_fun(Fun, Args)
+            end
     end;
 apply_function(Other, _Args) ->
     throw({not_a_function, Other}).
@@ -333,6 +384,14 @@ evaluate_match(Val, [{match_clause, Pattern, _Guard, Body, _Loc} | Rest], Env) -
 %% @doc Try to match a pattern against a value
 match_pattern({pat_wildcard, _Loc}, _Val, Env) ->
     {ok, Env};
+match_pattern({pat_var, true, _Loc}, true, Env) ->
+    {ok, Env};
+match_pattern({pat_var, false, _Loc}, false, Env) ->
+    {ok, Env};
+match_pattern({pat_var, true, _Loc}, _Val, _Env) ->
+    nomatch;
+match_pattern({pat_var, false, _Loc}, _Val, _Env) ->
+    nomatch;
 match_pattern({pat_var, Name, _Loc}, Val, Env) ->
     {ok, maps:put(Name, {value, Val}, Env)};
 match_pattern({pat_literal, LitVal, _Type, _Loc}, Val, Env) when LitVal =:= Val ->
@@ -406,6 +465,8 @@ format_failure_reason({assertion_failed, Msg}) when is_list(Msg) ->
     io_lib:format("Assertion failed: ~s", [Msg]);
 format_failure_reason({assertion_failed, Details}) ->
     io_lib:format("Assertion failed: ~p", [Details]);
+format_failure_reason({skipped, Msg}) ->
+    io_lib:format("Skipped: ~s", [Msg]);
 format_failure_reason({counterexample, Iteration, Values}) ->
     ValueStrs = [io_lib:format("    ~p = ~p", [K, get_value(V)]) || {K, V} <- maps:to_list(Values)],
     io_lib:format("Property failed after ~B iterations.~n  Counterexample:~n~s",
@@ -416,9 +477,168 @@ format_failure_reason({exception, Class, Error}) ->
     io_lib:format("Exception ~p: ~p", [Class, Error]);
 format_failure_reason({unexpected_result, Result}) ->
     io_lib:format("Unexpected result: ~p (expected true or false)", [Result]);
+format_failure_reason(Reason) when is_list(Reason) ->
+    Reason;
 format_failure_reason(Other) ->
     io_lib:format("~p", [Other]).
 
 %% @doc Extract value from wrapped form
 get_value({value, V}) -> V;
 get_value(V) -> V.
+
+%%====================================================================
+%% Runtime Environment Construction
+%%====================================================================
+
+add_runtime_decl_to_env({type_decl, _Name, _Params, Constructors, _Derives, _Loc}, Env) ->
+    lists:foldl(fun add_constructor_binding/2, Env, Constructors);
+add_runtime_decl_to_env({transform_decl, Name, _TypeSig, Clauses, _Loc}, Env) ->
+    maps:put(Name, {make_transform_fun(Clauses, Env), transform_arity(Clauses), runtime}, Env);
+add_runtime_decl_to_env(_Decl, Env) ->
+    Env.
+
+add_constructor_binding({constructor, Name, ArgTypes, _Loc}, Env) ->
+    maps:put(Name, make_constructor_binding(Name, ArgTypes), Env).
+
+make_constructor_binding(Name, []) ->
+    runtime_nullary_constructor(Name);
+make_constructor_binding(Name, ArgTypes) ->
+    {make_constructor_fun(Name, ArgTypes), length(ArgTypes), runtime}.
+
+make_constructor_fun(Name, ArgTypes) ->
+    make_curried_constructor(Name, ArgTypes, []).
+
+make_curried_constructor(Name, ArgTypes, BoundArgs) ->
+    fun(Arg) ->
+        NewArgs = BoundArgs ++ [Arg],
+        case length(NewArgs) of
+            Arity when Arity =:= length(ArgTypes) ->
+                runtime_constructor(Name, NewArgs, ArgTypes);
+            _ ->
+                make_curried_constructor(Name, ArgTypes, NewArgs)
+        end
+    end.
+
+runtime_nullary_constructor('Passed') -> passed;
+runtime_nullary_constructor('None') -> none;
+runtime_nullary_constructor('LT') -> lt;
+runtime_nullary_constructor('EQ') -> eq;
+runtime_nullary_constructor('GT') -> gt;
+runtime_nullary_constructor(Name) -> normalize_constructor_tag(Name).
+
+runtime_constructor(_Name, [RecordValue], [{type_record, _, _, _}]) ->
+    RecordValue;
+runtime_constructor('Some', [Value], _ArgTypes) ->
+    {some, Value};
+runtime_constructor('Ok', [Value], _ArgTypes) ->
+    {ok, Value};
+runtime_constructor('Err', [Value], _ArgTypes) ->
+    {err, Value};
+runtime_constructor('Left', [Value], _ArgTypes) ->
+    {left, Value};
+runtime_constructor('Right', [Value], _ArgTypes) ->
+    {right, Value};
+runtime_constructor('Failed', [Message], _ArgTypes) ->
+    {failed, Message};
+runtime_constructor('Skipped', [Message], _ArgTypes) ->
+    {skipped, Message};
+runtime_constructor(Name, [Value], _ArgTypes) ->
+    {normalize_constructor_tag(Name), Value};
+runtime_constructor(Name, Values, _ArgTypes) ->
+    list_to_tuple([normalize_constructor_tag(Name) | Values]).
+
+normalize_constructor_tag(Name) ->
+    list_to_atom(string:lowercase(atom_to_list(Name))).
+
+transform_arity([{transform_clause, Patterns, _Guards, _Body, _Loc} | _]) ->
+    length(Patterns);
+transform_arity([]) ->
+    0.
+
+make_transform_fun(Clauses, Env) ->
+    Arity = transform_arity(Clauses),
+    case Arity of
+        0 ->
+            fun() -> evaluate_transform_clauses(Clauses, [], Env) end;
+        _ ->
+            make_curried_transform(Clauses, Env, [], Arity)
+    end.
+
+make_curried_transform(Clauses, Env, BoundArgs, Arity) ->
+    fun(Arg) ->
+        NewArgs = BoundArgs ++ [Arg],
+        case length(NewArgs) of
+            Arity ->
+                evaluate_transform_clauses(Clauses, NewArgs, Env);
+            _ ->
+                make_curried_transform(Clauses, Env, NewArgs, Arity)
+        end
+    end.
+
+evaluate_transform_clauses([], Args, _Env) ->
+    throw({no_matching_transform_clause, Args});
+evaluate_transform_clauses([{transform_clause, Patterns, Guards, Body, _Loc} | Rest], Args, Env) ->
+    case length(Patterns) =:= length(Args) of
+        false ->
+            evaluate_transform_clauses(Rest, Args, Env);
+        true ->
+            case match_patterns(Patterns, Args, Env) of
+                {ok, Env1} ->
+                    case guards_match(Guards, Env1) of
+                        true -> evaluate_expr(Body, Env1);
+                        false -> evaluate_transform_clauses(Rest, Args, Env)
+                    end;
+                nomatch ->
+                    evaluate_transform_clauses(Rest, Args, Env)
+            end
+    end.
+
+guards_match(undefined, _Env) ->
+    true;
+guards_match([], _Env) ->
+    true;
+guards_match(Guards, Env) ->
+    lists:all(fun(Guard) -> evaluate_expr(Guard, Env) =:= true end, Guards).
+
+aggregate_results(Results) ->
+    {Passed, Failed} = lists:foldl(
+        fun({pass, _}, {P, F}) -> {P + 1, F};
+           ({fail, _, _}, {P, F}) -> {P, F + 1}
+        end,
+        {0, 0},
+        Results
+    ),
+    #{
+        passed => Passed,
+        failed => Failed,
+        total => length(Results),
+        results => Results
+    }.
+
+unit_value() ->
+    {unit}.
+
+make_lambda([], Body, Env) ->
+    fun() -> evaluate_expr(Body, Env) end;
+make_lambda([Pattern | Rest], Body, Env) ->
+    fun(Arg) ->
+        case match_pattern(Pattern, Arg, Env) of
+            {ok, Env1} ->
+                case Rest of
+                    [] -> evaluate_expr(Body, Env1);
+                    _ -> make_lambda(Rest, Body, Env1)
+                end;
+            nomatch ->
+                throw({lambda_pattern_match_failed, Pattern, Arg})
+        end
+    end.
+
+apply_applied_result(Result, []) ->
+    Result;
+apply_applied_result(Result, RemainingArgs) ->
+    apply_function(Result, RemainingArgs).
+
+make_partial_fun(Fun, BoundArgs) ->
+    fun(NextArg) ->
+        apply_function(Fun, BoundArgs ++ [NextArg])
+    end.

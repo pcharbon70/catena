@@ -7,14 +7,14 @@ Based on `notes/planning/`, `notes/summaries/`, `notes/reviews/`, and the codeba
 - Proof-of-concept Phase 1 Sections 1.1 through 1.4 are materially implemented.
 - Proof-of-concept Phase 1.5 is partially reconciled:
   - 1.5.1, 1.5.2, and 1.5.3 are complete.
-  - 1.5.4 is partial.
+  - 1.5.4 is implemented for concrete suites.
   - 1.5.5 is implemented through do-notation parsing/desugaring.
   - 1.5.6 is mostly implemented through effect/Kleisli integration work.
   - 1.5.7 operator desugaring is implemented.
 - Phase 2 work exists in code and summaries for the REPL, prelude, testing framework, and integration tests.
 - Phase 3 work exists in code and summaries for advanced patterns, decision trees, exhaustiveness/redundancy checking, and pattern integration tests.
 - Phase 4 is not complete, but a minimal import-resolution bridge exists.
-- The internal property-testing framework has completed the rose-tree foundation for Phase 1.1; the next major step is generator/seed management.
+- The internal property-testing framework has completed the rose-tree foundation for Phase 1.1, the generator/seed/size layer for Phase 1.2, the categorical generator layer for Phase 1.3, the primitive generator layer for Phase 1.4, and the range layer for Phase 1.5; the next major step is basic shrinking infrastructure.
 
 ## Immediate Targets
 

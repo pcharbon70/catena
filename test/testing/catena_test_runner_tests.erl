@@ -266,3 +266,106 @@ eval_comparison_operators_test() ->
         end,
         Tests
     ).
+
+eval_lambda_application_test() ->
+    Loc = {line, 1},
+    TestDecl = {test_decl, "lambda application",
+        {binary_op, eq,
+            {app,
+                {lambda,
+                    [{pat_var, x, Loc}],
+                    {binary_op, plus,
+                        {var, x, Loc},
+                        {literal, 1, integer, Loc},
+                        Loc},
+                    Loc},
+                [{literal, 41, integer, Loc}],
+                Loc},
+            {literal, 42, integer, Loc},
+            Loc},
+        Loc},
+    Result = catena_test_runner:run_test(TestDecl, #{}),
+    ?assertEqual({pass, "lambda application"}, Result).
+
+eval_partial_application_test() ->
+    Loc = {line, 1},
+    Env = #{
+        add => {fun(A, B) -> A + B end, 2, runtime}
+    },
+    TestDecl = {test_decl, "partial application",
+        {binary_op, eq,
+            {app,
+                {app,
+                    {var, add, Loc},
+                    [{literal, 1, integer, Loc}],
+                    Loc},
+                [{literal, 41, integer, Loc}],
+                Loc},
+            {literal, 42, integer, Loc},
+            Loc},
+        Loc},
+    Result = catena_test_runner:run_test(TestDecl, Env),
+    ?assertEqual({pass, "partial application"}, Result).
+
+%%====================================================================
+%% Runtime Declaration Execution Tests
+%%====================================================================
+
+build_runtime_env_exposes_constructors_and_transforms_test() ->
+    Loc = {line, 1},
+    Decls = [
+        {type_decl, 'Maybe', [],
+            [
+                {constructor, 'None', [], Loc},
+                {constructor, 'Some', [{type_con, 'Int', Loc}], Loc}
+            ],
+            [],
+            Loc},
+        {transform_decl, id, undefined,
+            [
+                {transform_clause,
+                    [{pat_var, x, Loc}],
+                    undefined,
+                    {var, x, Loc},
+                    Loc}
+            ],
+            Loc}
+    ],
+    Env = catena_test_runner:build_runtime_env(Decls),
+    ?assertEqual(none, maps:get('None', Env)),
+    {SomeFun, 1, runtime} = maps:get('Some', Env),
+    ?assertEqual({some, 42}, SomeFun(42)),
+    {IdFun, 1, runtime} = maps:get(id, Env),
+    ?assertEqual(42, IdFun(42)).
+
+run_test_value_passes_test() ->
+    TestValue = #{
+        name => "law passes",
+        run => fun(_Unit) -> passed end
+    },
+    ?assertEqual({pass, "law passes"}, catena_test_runner:run_test_value(TestValue)).
+
+run_test_value_fails_with_message_test() ->
+    TestValue = #{
+        name => "law fails",
+        run => fun(_Unit) -> {failed, "Law verification failed"} end
+    },
+    ?assertEqual(
+        {fail, "law fails", "Law verification failed"},
+        catena_test_runner:run_test_value(TestValue)
+    ).
+
+run_suite_value_aggregates_results_test() ->
+    SuiteValue = #{
+        name => "Law Suite",
+        tests => [
+            #{name => "identity", run => fun(_Unit) -> passed end},
+            #{name => "associativity", run => fun(_Unit) -> {failed, "Law verification failed"} end}
+        ]
+    },
+    Results = catena_test_runner:run_suite_value(SuiteValue),
+    ?assertEqual(1, maps:get(passed, Results)),
+    ?assertEqual(1, maps:get(failed, Results)),
+    ?assertEqual(2, maps:get(total, Results)),
+    ?assert(lists:member({pass, "identity"}, maps:get(results, Results))),
+    ?assert(lists:member({fail, "associativity", "Law verification failed"}, maps:get(results, Results))).

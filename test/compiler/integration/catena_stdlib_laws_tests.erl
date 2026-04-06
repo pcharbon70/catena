@@ -1,6 +1,7 @@
 %% @doc Standard Library Law Verification Tests
 %% Tests for Section 1.5.4 of Phase 1.
-%% Validates that trait law verification functions compile correctly.
+%% Validates that trait law verification functions compile correctly and
+%% that concrete law suites execute end-to-end through the current runtime path.
 
 -module(catena_stdlib_laws_tests).
 
@@ -13,6 +14,149 @@ load_laws_decls() ->
     {ok, AST} = catena_parser:parse(Tokens),
     {ok, {module, _, _, _, Decls, _}} = catena_semantic:analyze(AST),
     Decls.
+
+load_semantic_module(ModuleName) ->
+    SearchPaths = catena_module_loader:get_default_search_paths(),
+    {ok, AST} = catena_module_loader:load_module(ModuleName, SearchPaths),
+    {ok, SemanticModule} = catena_semantic:analyze(AST),
+    SemanticModule.
+
+analyze_source_module(Source) ->
+    {ok, Tokens} = catena_test_helpers:tokenize_source(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+    {ok, SemanticModule} = catena_semantic:analyze(AST),
+    SemanticModule.
+
+collect_imported_decls([], Seen) ->
+    {[], Seen};
+collect_imported_decls([{import, ModuleName, _ImportLoc} | Rest], Seen0) ->
+    case sets:is_element(ModuleName, Seen0) of
+        true ->
+            collect_imported_decls(Rest, Seen0);
+        false ->
+            {module, _Name, _Exports, Imports, Decls, _ModuleLoc} =
+                load_semantic_module(ModuleName),
+            Seen1 = sets:add_element(ModuleName, Seen0),
+            {ImportedDecls, Seen2} = collect_imported_decls(Imports, Seen1),
+            {RestDecls, Seen3} = collect_imported_decls(Rest, Seen2),
+            {ImportedDecls ++ Decls ++ RestDecls, Seen3}
+    end.
+
+runtime_env_for_source(Source, BaseEnv) ->
+    {module, _Name, _Exports, Imports, LocalDecls, _Loc} = analyze_source_module(Source),
+    {ImportedDecls, _Seen} = collect_imported_decls(Imports, sets:new()),
+    catena_test_runner:build_runtime_env(ImportedDecls ++ LocalDecls, BaseEnv).
+
+run_named_suite(Source, SuiteName, BaseEnv) ->
+    Env = runtime_env_for_source(Source, BaseEnv),
+    {SuiteFun, 0, runtime} = maps:get(SuiteName, Env),
+    SuiteValue = SuiteFun(),
+    catena_test_runner:run_suite_value(SuiteValue).
+
+maybe_law_env() ->
+    #{
+        id => {fun(X) -> X end, 1, runtime},
+        map => {fun(_F, none) -> none;
+                   (F, {some, X}) -> {some, F(X)}
+                end, 2, runtime},
+        pure => {fun(X) -> {some, X} end, 1, runtime},
+        chain => {fun(_F, none) -> none;
+                     (F, {some, X}) -> F(X)
+                  end, 2, runtime},
+        equals => {fun(A, B) -> A =:= B end, 2, runtime}
+    }.
+
+broken_maybe_law_env() ->
+    maps:put(pure, {fun(_X) -> none end, 1, runtime}, maybe_law_env()).
+
+either_law_env() ->
+    #{
+        id => {fun(X) -> X end, 1, runtime},
+        map => {fun(_F, {left, Error}) -> {left, Error};
+                   (F, {right, X}) -> {right, F(X)}
+                end, 2, runtime},
+        pure => {fun(X) -> {right, X} end, 1, runtime},
+        chain => {fun(_F, {left, Error}) -> {left, Error};
+                     (F, {right, X}) -> F(X)
+                  end, 2, runtime},
+        equals => {fun(A, B) -> A =:= B end, 2, runtime}
+    }.
+
+list_law_env() ->
+    #{
+        id => {fun(X) -> X end, 1, runtime},
+        map => {fun(F, Xs) -> lists:map(F, Xs) end, 2, runtime},
+        pure => {fun(X) -> [X] end, 1, runtime},
+        chain => {fun(F, Xs) -> lists:flatmap(F, Xs) end, 2, runtime},
+        equals => {fun(A, B) -> A =:= B end, 2, runtime},
+        combine => {fun(A, B) -> A ++ B end, 2, runtime}
+    }.
+
+maybe_suite_source() ->
+    "module MaybeLawSuite\n"
+    "export transform maybeSuite\n"
+    "import Prelude\n"
+    "import Test\n"
+    "import Laws\n"
+    "transform inc x = x + 1\n"
+    "transform double x = x * 2\n"
+    "transform wrapInc x = Some (x + 1)\n"
+    "transform wrapDouble x = Some (x * 2)\n"
+    "transform maybeSuite = suite \"Maybe Laws\" [\n"
+    "  verify \"mapper identity\" (fn u -> mapperIdentityLaw (Some 42)),\n"
+    "  verify \"mapper composition\" (fn u -> mapperCompositionLaw inc double (Some 5)),\n"
+    "  verify \"pipeline left identity\" (fn u -> pipelineLeftIdentityLaw 42 wrapInc),\n"
+    "  verify \"pipeline right identity\" (fn u -> pipelineRightIdentityLaw (Some 42)),\n"
+    "  verify \"pipeline associativity\" (fn u -> pipelineAssociativityLaw (Some 5) wrapInc wrapDouble)\n"
+    "]\n".
+
+either_suite_source() ->
+    "module EitherLawSuite\n"
+    "export transform eitherSuite\n"
+    "import Prelude\n"
+    "import Test\n"
+    "import Laws\n"
+    "transform inc x = x + 1\n"
+    "transform double x = x * 2\n"
+    "transform rightInc x = Right (x + 1)\n"
+    "transform rightDouble x = Right (x * 2)\n"
+    "transform eitherSuite = suite \"Either Laws\" [\n"
+    "  verify \"mapper identity\" (fn u -> mapperIdentityLaw (Right 42)),\n"
+    "  verify \"mapper composition\" (fn u -> mapperCompositionLaw inc double (Right 5)),\n"
+    "  verify \"pipeline left identity\" (fn u -> pipelineLeftIdentityLaw 42 rightInc),\n"
+    "  verify \"pipeline right identity\" (fn u -> pipelineRightIdentityLaw (Right 42)),\n"
+    "  verify \"pipeline associativity\" (fn u -> pipelineAssociativityLaw (Right 5) rightInc rightDouble)\n"
+    "]\n".
+
+list_suite_source() ->
+    "module ListLawSuite\n"
+    "export transform listSuite\n"
+    "import Prelude\n"
+    "import Test\n"
+    "import Laws\n"
+    "transform inc x = x + 1\n"
+    "transform double x = x * 2\n"
+    "transform wrapInc x = [x + 1]\n"
+    "transform wrapDouble x = [x * 2, x * 3]\n"
+    "transform listSuite = suite \"List Laws\" [\n"
+    "  verify \"mapper identity\" (fn u -> mapperIdentityLaw [1, 2, 3]),\n"
+    "  verify \"mapper composition\" (fn u -> mapperCompositionLaw inc double [1, 2, 3]),\n"
+    "  verify \"pipeline left identity\" (fn u -> pipelineLeftIdentityLaw 42 wrapInc),\n"
+    "  verify \"pipeline right identity\" (fn u -> pipelineRightIdentityLaw [1, 2, 3]),\n"
+    "  verify \"pipeline associativity\" (fn u -> pipelineAssociativityLaw [1, 2] wrapInc wrapDouble),\n"
+    "  verify \"combiner associativity\" (fn u -> combinerAssociativityLaw [1] [2] [3])\n"
+    "]\n".
+
+broken_maybe_suite_source() ->
+    "module BrokenMaybeLawSuite\n"
+    "export transform brokenMaybeSuite\n"
+    "import Prelude\n"
+    "import Test\n"
+    "import Laws\n"
+    "transform wrapInc x = Some (x + 1)\n"
+    "transform brokenMaybeSuite = suite \"Broken Maybe Laws\" [\n"
+    "  verify \"pipeline left identity\" (fn u -> pipelineLeftIdentityLaw 42 wrapInc)\n"
+    "]\n".
 
 %% =============================================================================
 %% Section 1.5.4 - Law Verification via Test Module
@@ -74,6 +218,42 @@ all_laws_present_test() ->
     %% All should be transform_decl
     TransformDecls = [D || D = {transform_decl, _, _, _, _} <- Decls],
     ?assertEqual(8, length(TransformDecls)).
+
+%% =============================================================================
+%% Stage 2 - Executable Concrete Law Suites
+%% =============================================================================
+
+maybe_law_suite_executes_test() ->
+    Results = run_named_suite(maybe_suite_source(), maybeSuite, maybe_law_env()),
+    ?assertEqual(5, maps:get(total, Results)),
+    ?assertEqual(5, maps:get(passed, Results)),
+    ?assertEqual(0, maps:get(failed, Results)).
+
+either_law_suite_executes_test() ->
+    Results = run_named_suite(either_suite_source(), eitherSuite, either_law_env()),
+    ?assertEqual(5, maps:get(total, Results)),
+    ?assertEqual(5, maps:get(passed, Results)),
+    ?assertEqual(0, maps:get(failed, Results)).
+
+list_law_suite_executes_test() ->
+    Results = run_named_suite(list_suite_source(), listSuite, list_law_env()),
+    ?assertEqual(6, maps:get(total, Results)),
+    ?assertEqual(6, maps:get(passed, Results)),
+    ?assertEqual(0, maps:get(failed, Results)).
+
+broken_fixture_reports_law_failure_test() ->
+    Results = run_named_suite(
+        broken_maybe_suite_source(),
+        brokenMaybeSuite,
+        broken_maybe_law_env()
+    ),
+    ?assertEqual(1, maps:get(total, Results)),
+    ?assertEqual(0, maps:get(passed, Results)),
+    ?assertEqual(1, maps:get(failed, Results)),
+    ?assertEqual(
+        [{fail, "pipeline left identity", "Law verification failed"}],
+        maps:get(results, Results)
+    ).
 
 %% =============================================================================
 %% Section 1.5.4.4 - Type Signature Verification for Law Functions
