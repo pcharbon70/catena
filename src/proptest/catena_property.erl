@@ -42,7 +42,8 @@
 -export([
     property/2,
     new/3,
-    default_config/0
+    default_config/0,
+    with_seed/2
 ]).
 
 %% API exports - Section 3.1.2: Forall Syntax
@@ -247,6 +248,29 @@ with_label(Label, Property) ->
 classify(Label, ClassFun, Property) ->
     Config = Property#property.config,
     NewConfig = Config#property_config{classify_fun = {Label, ClassFun}},
+    Property#property{config = NewConfig}.
+
+%% @doc Set a specific seed for reproducible test execution.
+%%
+%% Setting a seed ensures that the same sequence of test cases will be
+%% generated every time the property is run, which is essential for
+%% debugging failing properties.
+%%
+%% == Example ==
+%%
+%% ```
+%% Prop = property("my_prop", fun() ->
+%%     forall(gen_int(), fun(N) -> N rem 2 =:= 0 end)
+%% end),
+%% ReproducibleProp = with_seed(12345, Prop).
+%% ```
+%%
+-spec with_seed(non_neg_integer() | catena_gen:seed(), property()) -> property().
+with_seed(SeedInt, Property) when is_integer(SeedInt) ->
+    with_seed(catena_gen:seed_from_int(SeedInt), Property);
+with_seed(Seed, Property) ->
+    Config = Property#property.config,
+    NewConfig = Config#property_config{seed = Seed},
     Property#property{config = NewConfig}.
 
 %%====================================================================
