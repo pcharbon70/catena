@@ -24,6 +24,7 @@
     run_ci_batch/2,
     check_laws/2,
     generate_report/1,
+    compliance_badge/1,
     to_junit/2
 ]).
 
@@ -59,10 +60,13 @@
 -spec run_with_seed(atom() | binary(), map(), non_neg_integer()) -> ci_result().
 run_with_seed(ModuleName, Config, Seed) ->
     StartTime = erlang:monotonic_time(millisecond),
-    ConfigWithSeed = maps:merge(Config, #{options => #{
+    %% Merge options properly with the existing options
+    ExistingOptions = maps:get(options, Config, #{}),
+    NewOptions = maps:merge(ExistingOptions, #{
         seed => Seed,
-        num_tests => maps:get(num_tests, maps:get(options, Config, #{}), 100)
-    }}),
+        num_tests => maps:get(num_tests, ExistingOptions, 100)
+    }),
+    ConfigWithSeed = Config#{options => NewOptions},
     Result = catena_law_tests:run_law_tests(ModuleName, ConfigWithSeed),
     EndTime = erlang:monotonic_time(millisecond),
 
