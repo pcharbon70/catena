@@ -39,6 +39,20 @@
     gen_bool_atom/0
 ]).
 
+%% Section 2.3: Collection Generators
+-export([
+    gen_list/1,
+    gen_list_of/2,
+    gen_list_of_length/2,
+    gen_tuple2/2,
+    gen_tuple3/3,
+    gen_tuple4/4,
+    gen_map/2,
+    gen_map_of/3,
+    gen_set/1,
+    gen_set_of/2
+]).
+
 -export_type([
     float_range/0,
     char_set/0
@@ -420,6 +434,267 @@ gen_bool_atom() ->
         end,
         catena_tree:singleton(Atom)
     end).
+
+%%====================================================================
+%% Section 2.3: Collection Generators
+%%====================================================================
+
+%% ---- List Generators ----
+
+%% @doc Generate a list with elements from the given generator.
+%%
+%% The size parameter controls the maximum list length.
+-spec gen_list(catena_gen:generator(A)) -> catena_gen:generator([A]).
+gen_list(ElementGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        {LengthWord, Seed1} = catena_gen:seed_next(Seed),
+        MaxLen = max(Size, 1),
+        Length = LengthWord rem (MaxLen + 1),
+        gen_list_tree(Length, ElementGen, Size, Seed1)
+    end).
+
+%% @doc Generate a list with length from a Range.
+-spec gen_list_of(catena_range:range(), catena_gen:generator(A)) -> catena_gen:generator([A]).
+gen_list_of(LengthRange, ElementGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        {LengthWord, Seed1} = catena_gen:seed_next(Seed),
+        {Min, Max} = catena_range:range_bounds(LengthRange, Size),
+        Length = Min + (LengthWord rem (Max - Min + 1)),
+        gen_list_tree(Length, ElementGen, Size, Seed1)
+    end).
+
+%% @doc Generate a list with exact length.
+-spec gen_list_of_length(non_neg_integer(), catena_gen:generator(A)) -> catena_gen:generator([A]).
+gen_list_of_length(0, _ElementGen) ->
+    catena_gen:constant([]);
+gen_list_of_length(Len, ElementGen) when Len > 0 ->
+    catena_gen:new(fun(Size, Seed) ->
+        gen_list_tree(Len, ElementGen, Size, Seed)
+    end).
+
+%% @private Build a list tree with exact length.
+-spec gen_list_tree(non_neg_integer(), catena_gen:generator(A), catena_gen:size(), catena_gen:seed()) -> catena_tree:tree([A]).
+gen_list_tree(0, _ElementGen, _Size, _Seed) ->
+    catena_tree:singleton([]);
+gen_list_tree(Len, ElementGen, Size, Seed) when Len > 0 ->
+    {Elements, _} = lists:mapfoldl(
+        fun(_, AccSeed) ->
+            {S1, S2} = catena_gen:seed_split(AccSeed),
+            Tree = catena_gen:run(ElementGen, Size, S1),
+            {catena_tree:root(Tree), S2}
+        end,
+        Seed,
+        lists:seq(1, Len)
+    ),
+    catena_tree:tree(Elements, fun() ->
+        %% Shrink by removing elements
+        gen_list_shrink(Elements, ElementGen, Size)
+    end).
+
+%% ---- Tuple Generators ----
+
+%% @doc Generate a 2-tuple (pair).
+-spec gen_tuple2(catena_gen:generator(A), catena_gen:generator(B)) -> catena_gen:generator({A, B}).
+gen_tuple2(GenA, GenB) ->
+    catena_gen:new(fun(Size, Seed) ->
+        {Seed1, Seed2} = catena_gen:seed_split(Seed),
+        TreeA = catena_gen:run(GenA, Size, Seed1),
+        TreeB = catena_gen:run(GenB, Size, Seed2),
+        {A, B} = {catena_tree:root(TreeA), catena_tree:root(TreeB)},
+        catena_tree:tree({A, B}, fun() ->
+            %% Shrink by shrinking each element
+            ChildrenA = [catena_tree:map(fun(A2) -> {A2, B} end, Child) || Child <- catena_tree:children(TreeA)],
+            ChildrenB = [catena_tree:map(fun(B2) -> {A, B2} end, Child) || Child <- catena_tree:children(TreeB)],
+            ChildrenA ++ ChildrenB
+        end)
+    end).
+
+%% @doc Generate a 3-tuple (triple).
+-spec gen_tuple3(catena_gen:generator(A), catena_gen:generator(B), catena_gen:generator(C)) -> catena_gen:generator({A, B, C}).
+gen_tuple3(GenA, GenB, GenC) ->
+    catena_gen:new(fun(Size, Seed) ->
+        {Seed1, Seed2} = catena_gen:seed_split(Seed),
+        {Seed3, _} = catena_gen:seed_split(Seed2),
+        TreeA = catena_gen:run(GenA, Size, Seed1),
+        TreeB = catena_gen:run(GenB, Size, Seed2),
+        TreeC = catena_gen:run(GenC, Size, Seed3),
+        {A, B, C} = {catena_tree:root(TreeA), catena_tree:root(TreeB), catena_tree:root(TreeC)},
+        catena_tree:tree({A, B, C}, fun() ->
+            %% Shrink by shrinking each element
+            ChildrenA = [catena_tree:map(fun(A2) -> {A2, B, C} end, Child) || Child <- catena_tree:children(TreeA)],
+            ChildrenB = [catena_tree:map(fun(B2) -> {A, B2, C} end, Child) || Child <- catena_tree:children(TreeB)],
+            ChildrenC = [catena_tree:map(fun(C2) -> {A, B, C2} end, Child) || Child <- catena_tree:children(TreeC)],
+            ChildrenA ++ ChildrenB ++ ChildrenC
+        end)
+    end).
+
+%% @doc Generate a 4-tuple (quadruple).
+-spec gen_tuple4(catena_gen:generator(A), catena_gen:generator(B), catena_gen:generator(C), catena_gen:generator(D)) -> catena_gen:generator({A, B, C, D}).
+gen_tuple4(GenA, GenB, GenC, GenD) ->
+    catena_gen:new(fun(Size, Seed) ->
+        {Seed1, Seed2} = catena_gen:seed_split(Seed),
+        {Seed3, Seed4} = catena_gen:seed_split(Seed2),
+        TreeA = catena_gen:run(GenA, Size, Seed1),
+        TreeB = catena_gen:run(GenB, Size, Seed2),
+        TreeC = catena_gen:run(GenC, Size, Seed3),
+        TreeD = catena_gen:run(GenD, Size, Seed4),
+        {A, B, C, D} = {catena_tree:root(TreeA), catena_tree:root(TreeB), catena_tree:root(TreeC), catena_tree:root(TreeD)},
+        catena_tree:tree({A, B, C, D}, fun() ->
+            %% Shrink by shrinking each element
+            ChildrenA = [catena_tree:map(fun(A2) -> {A2, B, C, D} end, Child) || Child <- catena_tree:children(TreeA)],
+            ChildrenB = [catena_tree:map(fun(B2) -> {A, B2, C, D} end, Child) || Child <- catena_tree:children(TreeB)],
+            ChildrenC = [catena_tree:map(fun(C2) -> {A, B, C2, D} end, Child) || Child <- catena_tree:children(TreeC)],
+            ChildrenD = [catena_tree:map(fun(D2) -> {A, B, C, D2} end, Child) || Child <- catena_tree:children(TreeD)],
+            ChildrenA ++ ChildrenB ++ ChildrenC ++ ChildrenD
+        end)
+    end).
+
+%% ---- Map Generators ----
+
+%% @doc Generate a map with keys and values from the given generators.
+-spec gen_map(catena_gen:generator(_), catena_gen:generator(_)) -> catena_gen:generator(map()).
+gen_map(KeyGen, ValueGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        {LengthWord, Seed1} = catena_gen:seed_next(Seed),
+        MaxLen = max(Size div 3, 0),
+        Length = LengthWord rem (MaxLen + 1),
+        gen_map_tree(Length, KeyGen, ValueGen, Size, Seed1)
+    end).
+
+%% @doc Generate a map with size from a Range.
+-spec gen_map_of(catena_range:range(), catena_gen:generator(_), catena_gen:generator(_)) -> catena_gen:generator(map()).
+gen_map_of(LengthRange, KeyGen, ValueGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        {LengthWord, Seed1} = catena_gen:seed_next(Seed),
+        {Min, Max} = catena_range:range_bounds(LengthRange, Size),
+        Length = Min + (LengthWord rem (Max - Min + 1)),
+        gen_map_tree(Length, KeyGen, ValueGen, Size, Seed1)
+    end).
+
+%% @private Build a map tree with exact length.
+-spec gen_map_tree(non_neg_integer(), catena_gen:generator(_), catena_gen:generator(_), catena_gen:size(), catena_gen:seed()) -> catena_tree:tree(map()).
+gen_map_tree(0, _KeyGen, _ValueGen, _Size, _Seed) ->
+    catena_tree:singleton(#{});
+gen_map_tree(Len, KeyGen, ValueGen, Size, Seed) when Len > 0 ->
+    {Entries, _} = lists:mapfoldl(
+        fun(_, AccSeed) ->
+            {SeedK, SeedV} = catena_gen:seed_split(AccSeed),
+            KeyTree = catena_gen:run(KeyGen, Size, SeedK),
+            ValTree = catena_gen:run(ValueGen, Size, SeedV),
+            {{catena_tree:root(KeyTree), catena_tree:root(ValTree)}, SeedV}
+        end,
+        Seed,
+        lists:seq(1, Len)
+    ),
+    %% Remove duplicates by keeping the last occurrence of each key
+    Map = lists:foldl(fun({K, V}, Acc) -> maps:put(K, V, Acc) end, #{}, Entries),
+    catena_tree:tree(Map, fun() ->
+        %% Shrink by removing entries
+        gen_map_shrink(maps:to_list(Map), KeyGen, ValueGen, Size)
+    end).
+
+%% ---- Set Generators ----
+
+%% @doc Generate a set (represented as a unique-element list) from the given generator.
+-spec gen_set(catena_gen:generator(A)) -> catena_gen:generator([A]).
+gen_set(ElementGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        {LengthWord, Seed1} = catena_gen:seed_next(Seed),
+        MaxLen = max(Size, 1),
+        Length = LengthWord rem (MaxLen + 1),
+        gen_set_tree(Length, ElementGen, Size, Seed1)
+    end).
+
+%% @doc Generate a set with size from a Range.
+-spec gen_set_of(catena_range:range(), catena_gen:generator(A)) -> catena_gen:generator([A]).
+gen_set_of(LengthRange, ElementGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        {LengthWord, Seed1} = catena_gen:seed_next(Seed),
+        {Min, Max} = catena_range:range_bounds(LengthRange, Size),
+        Length = Min + (LengthWord rem (Max - Min + 1)),
+        gen_set_tree(Length, ElementGen, Size, Seed1)
+    end).
+
+%% @private Build a set tree with exact length.
+-spec gen_set_tree(non_neg_integer(), catena_gen:generator(A), catena_gen:size(), catena_gen:seed()) -> catena_tree:tree([A]).
+gen_set_tree(0, _ElementGen, _Size, _Seed) ->
+    catena_tree:singleton([]);
+gen_set_tree(Len, ElementGen, Size, Seed) when Len > 0 ->
+    {Elements, _} = lists:mapfoldl(
+        fun(_, AccSeed) ->
+            {S1, S2} = catena_gen:seed_split(AccSeed),
+            Tree = catena_gen:run(ElementGen, Size, S1),
+            {catena_tree:root(Tree), S2}
+        end,
+        Seed,
+        lists:seq(1, Len)
+    ),
+    %% Remove duplicates while preserving order
+    UniqueElements = lists:usort(Elements),
+    catena_tree:tree(UniqueElements, fun() ->
+        %% Shrink by removing elements
+        gen_set_shrink(UniqueElements, ElementGen, Size)
+    end).
+
+%%====================================================================
+%% Internal Helpers - Collections
+%%====================================================================
+
+%% @doc Shrink a list by removing elements and shrinking individual elements.
+-spec gen_list_shrink([A], catena_gen:generator(A), catena_gen:size()) -> [catena_tree:tree([A])].
+gen_list_shrink([], _ElementGen, _Size) ->
+    [];
+gen_list_shrink(List, ElementGen, Size) ->
+    %% Shrink by removing elements from the end
+    RemoveShrinks = case length(List) > 1 of
+        true -> [lists:sublist(List, length(List) - 1)];
+        false -> [[]]
+    end,
+    %% Also provide empty list shrink
+    RemoveShrinks2 = case List of
+        [] -> [];
+        _ -> [[] | RemoveShrinks]
+    end,
+    lists:map(fun(L) ->
+        catena_tree:tree(L, fun() -> gen_list_shrink(L, ElementGen, Size) end)
+    end, lists:usort(RemoveShrinks2)).
+
+%% @doc Shrink a map by removing entries.
+-spec gen_map_shrink([{_, _}], catena_gen:generator(_), catena_gen:generator(_), catena_gen:size()) -> [catena_tree:tree(map())].
+gen_map_shrink([], _KeyGen, _ValueGen, _Size) ->
+    [];
+gen_map_shrink(Entries, KeyGen, ValueGen, Size) ->
+    %% Shrink by removing one entry at a time
+    case length(Entries) > 1 of
+        true ->
+            lists:map(fun(N) ->
+                {Before, [_ | After]} = lists:split(N - 1, Entries),
+                Map = maps:from_list(Before ++ After),
+                catena_tree:tree(Map, fun() -> gen_map_shrink(maps:to_list(Map), KeyGen, ValueGen, Size) end)
+            end, lists:seq(1, length(Entries)));
+        false ->
+            %% Always provide empty map shrink
+            [catena_tree:singleton(#{})]
+    end.
+
+%% @doc Shrink a set by removing elements.
+-spec gen_set_shrink([A], catena_gen:generator(A), catena_gen:size()) -> [catena_tree:tree([A])].
+gen_set_shrink([], _ElementGen, _Size) ->
+    [];
+gen_set_shrink(Set, ElementGen, Size) ->
+    %% Shrink by removing one element at a time
+    RemoveShrinks = case length(Set) > 1 of
+        true ->
+            lists:map(fun(N) ->
+                {Before, [_ | After]} = lists:split(N - 1, Set),
+                NewSet = Before ++ After,
+                catena_tree:tree(NewSet, fun() -> gen_set_shrink(NewSet, ElementGen, Size) end)
+            end, lists:seq(1, length(Set)));
+        false ->
+            %% Always provide empty set shrink
+            [catena_tree:singleton([])]
+    end,
+    RemoveShrinks.
 
 %%====================================================================
 %% Internal Helpers
