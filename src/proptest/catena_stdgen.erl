@@ -24,9 +24,27 @@
     gen_number/0
 ]).
 
--export_type([
-    float_range/0
+%% Section 2.2: Text and Binary Generators
+-export([
+    gen_char/0,
+    gen_char_alpha/0,
+    gen_char_digit/0,
+    gen_char_alphanumeric/0,
+    gen_string/1,
+    gen_string/2,
+    gen_string_nonempty/1,
+    gen_binary/1,
+    gen_bitstring/1,
+    gen_atom/0,
+    gen_bool_atom/0
 ]).
+
+-export_type([
+    float_range/0,
+    char_set/0
+]).
+
+-type char_set() :: ascii | alpha | digit | alphanumeric | unicode.
 
 -include_lib("eunit/include/eunit.hrl").
 
@@ -209,4 +227,349 @@ gen_float_negative_range_test() ->
     Tree = catena_gen:run(Gen, 50, catena_gen:seed_new()),
     Value = catena_tree:root(Tree),
     ?assert(Value >= -100.0 andalso Value =< -10.0),
+    ok.
+
+%%====================================================================
+%% Section 2.2: Text and Binary Generators
+%%====================================================================
+
+%% ---- Character Generators ----
+
+%% @doc Generate any printable ASCII character (32-126).
+-spec gen_char() -> catena_gen:generator(char()).
+gen_char() ->
+    catena_gen:new(fun(_Size, Seed) ->
+        {Word, _} = catena_gen:seed_next(Seed),
+        %% Printable ASCII: 32-126
+        CharCode = 32 + (Word rem 95),
+        catena_tree:tree(CharCode, fun() ->
+            %% Shrink toward space (32)
+            [gen_char_shrink(CharCode) || CharCode > 32]
+        end)
+    end).
+
+%% @doc Generate an alphabetic character (a-z, A-Z).
+-spec gen_char_alpha() -> catena_gen:generator(char()).
+gen_char_alpha() ->
+    catena_gen:new(fun(_Size, Seed) ->
+        {Word, _} = catena_gen:seed_next(Seed),
+        %% 52 letters (26 lower + 26 upper)
+        AlphaOffset = Word rem 52,
+        CharCode = case AlphaOffset < 26 of
+            true -> $a + AlphaOffset;  %% lowercase
+            false -> $A + (AlphaOffset - 26) %% uppercase
+        end,
+        catena_tree:tree(CharCode, fun() ->
+            %% Shrink toward 'a'
+            [gen_char_shrink_alpha(CharCode) || CharCode > $a]
+        end)
+    end).
+
+%% @doc Generate a digit character (0-9).
+-spec gen_char_digit() -> catena_gen:generator(char()).
+gen_char_digit() ->
+    catena_gen:new(fun(_Size, Seed) ->
+        {Word, _} = catena_gen:seed_next(Seed),
+        CharCode = $0 + (Word rem 10),
+        catena_tree:tree(CharCode, fun() ->
+            %% Shrink toward 0
+            [CharCode - 1 || CharCode > $0]
+        end)
+    end).
+
+%% @doc Generate an alphanumeric character (a-z, A-Z, 0-9).
+-spec gen_char_alphanumeric() -> catena_gen:generator(char()).
+gen_char_alphanumeric() ->
+    catena_gen:new(fun(_Size, Seed) ->
+        {Word, _} = catena_gen:seed_next(Seed),
+        %% 62 alphanumeric chars: 26 lower + 26 upper + 10 digits
+        Offset = Word rem 62,
+        CharCode = if
+            Offset < 26 -> $a + Offset;  %% lowercase
+            Offset < 52 -> $A + (Offset - 26);  %% uppercase
+            true -> $0 + (Offset - 52)  %% digit
+        end,
+        catena_tree:tree(CharCode, fun() ->
+            %% Shrink toward 'a' or '0'
+            case CharCode of
+                C when C >= $a andalso C =< $z ->
+                    [$a, gen_char_shrink_alpha(C)];
+                C when C >= $A andalso C < $Z ->
+                    [$A, gen_char_shrink_alpha(C)];
+                C when C >= $0 andalso C =< $9 ->
+                    [gen_char_shrink_alpha(C)];
+                _ -> []
+            end
+        end)
+    end).
+
+%% ---- String Generators ----
+
+%% @doc Generate a string with length from a Range.
+-spec gen_string(catena_range:range()) -> catena_gen:generator(string()).
+gen_string(LengthRange) ->
+    gen_string(LengthRange, gen_char()).
+
+%% @doc Generate a string using the specified character generator.
+-spec gen_string(catena_range:range(), catena_gen:generator(char())) -> catena_gen:generator(string()).
+gen_string(LengthRange, CharGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        %% Get the length
+        {LengthWord, Seed1} = catena_gen:seed_next(Seed),
+        {Min, Max} = catena_range:range_bounds(LengthRange, Size),
+        Length = Min + (LengthWord rem (Max - Min + 1)),
+        gen_string_of_length(Length, CharGen, Size, Seed1)
+    end).
+
+%% @doc Generate a non-empty string.
+-spec gen_string_nonempty(catena_range:range()) -> catena_gen:generator(string()).
+gen_string_nonempty(LengthRange) ->
+    %% Ensure at least length 1
+    MinLen = case catena_range:range_bounds(LengthRange, 0) of
+        {Min, _} when Min < 1 -> catena_range:range_constant({1, 20});
+        _ -> LengthRange
+    end,
+    gen_string(MinLen, gen_char()).
+
+%% @doc Generate a string with exact length using the character generator.
+%% Returns a tree directly when all parameters are provided.
+-spec gen_string_of_length(non_neg_integer(), catena_gen:generator(char()), catena_gen:size(), catena_gen:seed()) -> catena_tree:tree(string()).
+gen_string_of_length(0, _CharGen, _Size, _Seed) ->
+    catena_tree:singleton("");
+gen_string_of_length(Len, CharGen, Size, Seed) when is_integer(Len), Len > 0 ->
+    %% Generate Len characters by splitting seeds
+    {Chars, _} = lists:mapfoldl(
+        fun(_, AccSeed) ->
+            {S1, S2} = catena_gen:seed_split(AccSeed),
+            CharTree = catena_gen:run(CharGen, Size div max(Len, 1), S1),
+            {catena_tree:root(CharTree), S2}
+        end,
+        Seed,
+        lists:seq(1, Len)
+    ),
+    String = lists:filter(fun(C) -> is_integer(C) andalso C >= 0 end, Chars),
+    catena_tree:tree(String, fun() ->
+        %% Shrink by removing characters
+        [gen_string_shrink(String, CharGen, Size) || String =/= ""]
+    end).
+
+%% ---- Binary Generators ----
+
+%% @doc Generate a binary with length from a Range.
+-spec gen_binary(catena_range:range()) -> catena_gen:generator(binary()).
+gen_binary(LengthRange) ->
+    catena_gen:new(fun(Size, Seed) ->
+        %% Get the length
+        {LengthWord, Seed1} = catena_gen:seed_next(Seed),
+        {Min, Max} = catena_range:range_bounds(LengthRange, Size),
+        Length = Min + (LengthWord rem (Max - Min + 1)),
+        %% Run the binary generator with determined length
+        catena_gen:run(gen_binary_of_length(Length), Size, Seed1)
+    end).
+
+%% @doc Generate a binary with exact length.
+-spec gen_binary_of_length(non_neg_integer()) -> catena_gen:generator(binary()).
+gen_binary_of_length(0) ->
+    catena_gen:constant(<<>>);
+gen_binary_of_length(Len) when is_integer(Len), Len > 0 ->
+    catena_gen:new(fun(Size, Seed) ->
+        %% Generate Len bytes by splitting seeds
+        {Bytes, _} = lists:mapfoldl(
+            fun(_, AccSeed) ->
+                {S1, S2} = catena_gen:seed_split(AccSeed),
+                {Word, _} = catena_gen:seed_next(S1),
+                Byte = Word rem 256,
+                {Byte, S2}
+            end,
+            Seed,
+            lists:seq(1, Len)
+        ),
+        Binary = iolist_to_binary([<<B:8>> || B <- Bytes]),
+        catena_tree:tree(Binary, fun() ->
+            %% Shrink by removing bytes
+            [gen_binary_shrink(Binary, Size) || byte_size(Binary) > 0]
+        end)
+    end).
+
+%% @doc Generate a bitstring (may not be byte-aligned).
+-spec gen_bitstring(catena_range:range()) -> catena_gen:generator(bitstring()).
+gen_bitstring(LengthRange) ->
+    %% For simplicity, generate byte-aligned bitstrings
+    gen_binary(LengthRange).
+
+%% ---- Atom Generators ----
+
+%% @doc Generate an atom from a predefined pool.
+%%
+%% Using a predefined pool avoids atom table exhaustion.
+-spec gen_atom() -> catena_gen:generator(atom()).
+gen_atom() ->
+    AtomPool = [foo, bar, baz, qux, quux, corge, grault, garply, waldo, fred,
+        bob, alice, charlie, test, data, value, key, item, element,
+        result, state, status, error, ok],
+    catena_gen:element(AtomPool).
+
+%% @doc Generate a boolean atom (true or false).
+-spec gen_bool_atom() -> catena_gen:generator(atom()).
+gen_bool_atom() ->
+    catena_gen:new(fun(_Size, Seed) ->
+        {Word, _} = catena_gen:seed_next(Seed),
+        Atom = case Word rem 2 of
+            0 -> true;
+            1 -> false
+        end,
+        catena_tree:singleton(Atom)
+    end).
+
+%%====================================================================
+%% Internal Helpers
+%%====================================================================
+
+%% @doc Shrink a character toward space (32).
+-spec gen_char_shrink(char()) -> [char()].
+gen_char_shrink(CharCode) when CharCode =< 33 ->
+    [];
+gen_char_shrink(CharCode) ->
+    [CharCode - 1].
+
+%% @doc Shrink an alpha character toward 'a' or 'A'.
+-spec gen_char_shrink_alpha(char()) -> [char()].
+gen_char_shrink_alpha(CharCode) when CharCode >= $a andalso CharCode =< $z ->
+    [$a, CharCode - 1];
+gen_char_shrink_alpha(CharCode) when CharCode >= $A andalso CharCode < $Z ->
+    [$A, CharCode - 1];
+gen_char_shrink_alpha(_) ->
+    [].
+
+%% @doc Shrink a string by removing characters and simplifying.
+-spec gen_string_shrink(string(), catena_gen:generator(char()), catena_gen:size()) -> [catena_tree:tree(string())].
+gen_string_shrink("", _CharGen, _Size) ->
+    [];
+gen_string_shrink(String, CharGen, Size) ->
+    %% Shrink by removing last character
+    Shrink1 = case length(String) > 1 of
+        true -> [lists:sublist(String, length(String) - 1)];
+        false -> [""]
+    end,
+    %% Shrink toward 'a' for first char if alphabetic
+    Shrink2 = case String of
+        [First | _] when First >= $a, First =< $z -> ["a" ++ tl(String)];
+        [First | _] when First >= $A, First < $Z -> ["A" ++ tl(String)];
+        _ -> []
+    end,
+    lists:map(fun(S) ->
+        case S of
+            "" -> catena_tree:singleton("");
+            Str -> catena_tree:tree(Str, fun() ->
+                gen_string_shrink(Str, CharGen, Size)
+            end)
+        end
+    end, lists:usort(Shrink1 ++ Shrink2)).
+
+%% @doc Shrink a binary by removing bytes.
+-spec gen_binary_shrink(binary(), catena_gen:size()) -> [catena_tree:tree(binary())].
+gen_binary_shrink(<<>>, _Size) ->
+    [];
+gen_binary_shrink(Binary, Size) ->
+    %% Remove one byte
+    case byte_size(Binary) of
+        1 -> [catena_tree:singleton(<<>>)];
+        Len ->
+            <<Byte:8, Rest/binary>> = Binary,
+            [catena_tree:tree(Rest, fun() ->
+                gen_binary_shrink(Rest, Size)
+            end)]
+    end.
+
+%%====================================================================
+%% Unit Tests - Section 2.2
+%%====================================================================
+
+gen_char_printable_test() ->
+    Gen = catena_stdgen:gen_char(),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
+    Char = catena_tree:root(Tree),
+    ?assert(Char >= 32 andalso Char =< 127),
+    ok.
+
+gen_char_alpha_produces_letter_test() ->
+    Gen = catena_stdgen:gen_char_alpha(),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
+    Char = catena_tree:root(Tree),
+    ?assert((Char >= $a andalso Char =< $z) orelse (Char >= $A andalso Char =< $Z)),
+    ok.
+
+gen_char_digit_produces_0_to_9_test() ->
+    Gen = catena_stdgen:gen_char_digit(),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
+    Digit = catena_tree:root(Tree),
+    ?assert(Digit >= $0 andalso Digit =< $9),
+    ok.
+
+gen_char_alphanumeric_test() ->
+    Gen = catena_stdgen:gen_char_alphanumeric(),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
+    Char = catena_tree:root(Tree),
+    IsAlpha = (Char >= $a andalso Char =< $z) orelse (Char >= $A andalso Char =< $Z),
+    IsDigit = Char >= $0 andalso Char =< $9,
+    ?assert(IsAlpha orelse IsDigit),
+    ok.
+
+gen_string_respects_length_test() ->
+    Range = catena_range:range_linear(0, 20),
+    Gen = catena_stdgen:gen_string(Range),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
+    String = catena_tree:root(Tree),
+    ?assert(is_list(String) andalso is_integer(length(String))),
+    ?assert(length(String) =< 20),
+    ok.
+
+gen_string_shrinks_by_removing_chars_test() ->
+    Gen = catena_stdgen:gen_string(catena_range:range_constant({10, 10})),
+    Tree = catena_gen:run(Gen, 50, catena_gen:seed_new()),
+    String = catena_tree:root(Tree),
+    ?assert(length(String) =:= 10),
+    %% Should have shrinks
+    Children = catena_tree:children(Tree),
+    ?assert(length(Children) > 0),
+    ok.
+
+gen_string_nonempty_is_nonempty_test() ->
+    Gen = catena_stdgen:gen_string_nonempty(catena_range:range_constant({0, 10})),
+    Tree = catena_gen:run(Gen, 50, catena_gen:seed_new()),
+    String = catena_tree:root(Tree),
+    ?assert(length(String) >= 1),
+    ok.
+
+gen_binary_respects_length_test() ->
+    Range = catena_range:range_linear(0, 100),
+    Gen = catena_stdgen:gen_binary(Range),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
+    Binary = catena_tree:root(Tree),
+    ?assert(is_binary(Binary)),
+    ?assert(byte_size(Binary) =< 100),
+    ok.
+
+gen_binary_shrinks_by_removing_bytes_test() ->
+    Gen = catena_stdgen:gen_binary(catena_range:range_constant({10, 10})),
+    Tree = catena_gen:run(Gen, 50, catena_gen:seed_new()),
+    Binary = catena_tree:root(Tree),
+    ?assert(byte_size(Binary) =:= 10),
+    %% Should have shrinks
+    Children = catena_tree:children(Tree),
+    ?assert(length(Children) > 0),
+    ok.
+
+gen_atom_returns_valid_atom_test() ->
+    Gen = catena_stdgen:gen_atom(),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
+    Atom = catena_tree:root(Tree),
+    ?assert(is_atom(Atom)),
+    ok.
+
+gen_bool_atom_returns_true_or_false_test() ->
+    Gen = catena_stdgen:gen_bool_atom(),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
+    Atom = catena_tree:root(Tree),
+    ?assert(Atom =:= true orelse Atom =:= false),
     ok.
