@@ -121,14 +121,14 @@ run_property(Property, #run_options{} = RunOpts) ->
 
 %% @private Run property with normalized options.
 -spec run_property_with_opts(catena_property:property(), run_options()) -> run_result().
-run_property_with_opts(_Property, RunOpts) ->
+run_property_with_opts(Property, RunOpts) ->
     %% Run options take precedence over property config
     NumTests = RunOpts#run_options.num_tests,
-    _MaxShrinks = RunOpts#run_options.max_shrinks,
+    MaxShrinks = RunOpts#run_options.max_shrinks,
     Seed = RunOpts#run_options.seed,
 
     %% Run the test loop
-    case run_test_loop(_Property, NumTests, 0, 0, Seed, 1, []) of
+    case run_test_loop(Property, NumTests, 0, 0, Seed, 1, []) of
         {ok, TestsRun, Discards, SeedUsed} ->
             Result = #property_result{
                 kind = success,
@@ -143,20 +143,38 @@ run_property_with_opts(_Property, RunOpts) ->
                 output = <<>>
             },
             {passed, Result};
-        {failure, Counterexample, TestsRun, Discards, Shrinks, SeedUsed, ShrinkHistory} ->
-            Result = #property_result{
-                kind = failure,
-                tests_run = TestsRun,
-                tests_discarded = Discards,
-                shrinks_attempted = Shrinks,
-                seed = SeedUsed,
-                original_counterexample = Counterexample,
-                shrunk_counterexample = Counterexample,
-                shrink_history = ShrinkHistory,
-                labels = [],
-                output = <<>>
-            },
-            {failed, Result};
+        {failure, Counterexample, Tree, TestsRun, Discards, SeedUsed} ->
+            %% Attempt to shrink the counterexample
+            case shrink_counterexample(Property, Counterexample, Tree, MaxShrinks) of
+                {found, Shrunk, ShrinkHistory} ->
+                    Result = #property_result{
+                        kind = failure,
+                        tests_run = TestsRun,
+                        tests_discarded = Discards,
+                        shrinks_attempted = length(ShrinkHistory),
+                        seed = SeedUsed,
+                        original_counterexample = Counterexample,
+                        shrunk_counterexample = Shrunk,
+                        shrink_history = ShrinkHistory,
+                        labels = [],
+                        output = <<>>
+                    },
+                    {failed, Result};
+                {no_shrink, _} ->
+                    Result = #property_result{
+                        kind = failure,
+                        tests_run = TestsRun,
+                        tests_discarded = Discards,
+                        shrinks_attempted = 0,
+                        seed = SeedUsed,
+                        original_counterexample = Counterexample,
+                        shrunk_counterexample = Counterexample,
+                        shrink_history = [],
+                        labels = [],
+                        output = <<>>
+                    },
+                    {failed, Result}
+            end;
         {error, Reason, TestsRun, SeedUsed} ->
             Result = #property_result{
                 kind = error,
@@ -197,7 +215,7 @@ run_property_with_opts(_Property, RunOpts) ->
     pos_integer(),
     [term()]
 ) -> {ok, non_neg_integer(), non_neg_integer(), catena_gen:seed()} |
-    {failure, term(), non_neg_integer(), non_neg_integer(), non_neg_integer(), catena_gen:seed(), [term()]} |
+    {failure, term(), catena_tree:tree(term()), non_neg_integer(), non_neg_integer(), catena_gen:seed()} |
     {error, term(), non_neg_integer(), catena_gen:seed()} |
     {discarded, non_neg_integer(), non_neg_integer(), catena_gen:seed()}.
 run_test_loop(_Property, TargetTests, TestsRun, Discards, Seed, _Size, _History)
@@ -216,8 +234,8 @@ run_test_loop(Property, TargetTests, TestsRun, Discards, Seed, Size, History) ->
     case run_test_case(Property, CurrentSize, Seed) of
         {pass, NewSeed} ->
             run_test_loop(Property, TargetTests, TestsRun + 1, Discards, NewSeed, Size + 1, History);
-        {fail, Counterexample, NewSeed} ->
-            {failure, Counterexample, TestsRun + 1, Discards, 0, NewSeed, lists:reverse([Counterexample | History])};
+        {fail, Counterexample, Tree, NewSeed} ->
+            {failure, Counterexample, Tree, TestsRun + 1, Discards, Seed};
         {discard, NewSeed} ->
             run_test_loop(Property, TargetTests, TestsRun, Discards + 1, NewSeed, Size + 1, History);
         {error, Reason, NewSeed} ->
@@ -231,7 +249,7 @@ run_test_loop(Property, TargetTests, TestsRun, Discards, Seed, Size, History) ->
 %%
 -spec run_test_case(catena_property:property(), pos_integer(), catena_gen:seed()) ->
     {pass, catena_gen:seed()} |
-    {fail, term(), catena_gen:seed()} |
+    {fail, term(), catena_tree:tree(term()), catena_gen:seed()} |
     {discard, catena_gen:seed()} |
     {error, term(), catena_gen:seed()}.
 run_test_case(Property, Size, Seed) ->
@@ -253,11 +271,24 @@ run_test_case(Property, Size, Seed) ->
             {discard, _} ->
                 {discard, NextSeed};
             false ->
-                {fail, Value, NextSeed}
+                {fail, Value, Tree, NextSeed}
         end
     catch
         Kind:Reason:Stack ->
             {error, {Kind, Reason, Stack}, NextSeed}
+    end.
+
+%% @private Shrink a counterexample to find minimal failing value.
+-spec shrink_counterexample(catena_property:property(), term(), catena_tree:tree(term()), non_neg_integer()) ->
+    {found, term(), [term()]} | {no_shrink, term()}.
+shrink_counterexample(Property, Counterexample, Tree, MaxShrinks) ->
+    Predicate = Property#property.predicate,
+    %% Use catena_shrink to find minimal failure
+    case catena_shrink:find_minimal(Predicate, Tree, #{max_attempts => MaxShrinks}) of
+        {found, MinValue, Path} ->
+            {found, MinValue, lists:reverse(Path)};
+        {no_shrink, _} ->
+            {no_shrink, Counterexample}
     end.
 
 %% @private Apply predicate to value, handling discard markers.
