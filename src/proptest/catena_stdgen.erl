@@ -1139,6 +1139,8 @@ gen_frequency(WeightedGens) ->
         {Word, Seed1} = catena_gen:seed_next(Seed),
         %% Select which generator to use based on weight
         Selector = Word rem TotalWeight,
+        %% Initialize with first generator and its weight
+        [{FirstWeight, FirstGen} | Rest] = WeightedGens,
         {SelectedGen, _} = lists:foldl(fun
             ({Weight, Gen}, {AccGen, AccWeight}) ->
                 case Selector < AccWeight + Weight of
@@ -1146,8 +1148,8 @@ gen_frequency(WeightedGens) ->
                     false -> {AccGen, AccWeight + Weight}
                 end
             end,
-            {hd(WeightedGens), 0},
-            tl(WeightedGens)
+            {FirstGen, FirstWeight},
+            Rest
         ),
         catena_gen:run(SelectedGen, Size, Seed1)
     end).
