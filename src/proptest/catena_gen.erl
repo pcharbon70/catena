@@ -94,6 +94,13 @@
     gen_such_that/2
 ]).
 
+%% API exports - Section 1.4.6: Custom Shrinking
+-export([
+    with_shrink/2,
+    no_shrink/1,
+    shrink_map/2
+]).
+
 %% API exports - Section 1.4.5: Sample and Debug
 -export([
     sample/1,
@@ -468,6 +475,97 @@ gen_such_that(Predicate, Generator) ->
     gen_filter(Predicate, Generator).
 
 %%====================================================================
+%% API Functions - Section 1.4.6: Custom Shrinking
+%%====================================================================
+
+%% @doc Add a custom shrink function to a generator.
+%%
+%% Replaces the generator's default shrink tree with one produced by
+%% `ShrinkFn`. The shrink function takes a value and returns a list of
+%% candidate "simpler" values.
+%%
+%% == Use Cases ==
+%%
+%% - Domain-specific shrinking that knows about value invariants
+%% - Shrinking toward specific targets (e.g., powers of 2, round numbers)
+%% - Shrinking that respects custom data structure constraints
+%%
+%% == Example ==
+%%
+%% ```
+%% %% Shrink integers toward multiples of 10
+%% Gen = catena_gen:gen_int(),
+%% RoundGen = catena_gen:with_shrink(Gen, fun(N) ->
+%%     [N - rem(N, 10) | catena_shrink:shrink_towards(N, 0)]
+%% end).
+%% ```
+-spec with_shrink(generator(A), fun((A) -> [A])) -> generator(A).
+with_shrink(Generator, ShrinkFn) when is_function(ShrinkFn, 1) ->
+    new(fun(Size, Seed) ->
+        Tree = run(Generator, Size, Seed),
+        Root = catena_tree:root(Tree),
+        catena_tree:tree(Root, fun() ->
+            [catena_tree:tree(Shrink, fun() ->
+                %% For each shrink, recursively apply the shrink function
+                [catena_tree:tree(S, fun() -> [] end) || S <- ShrinkFn(Shrink)]
+            end) || Shrink <- ShrinkFn(Root)]
+        end)
+    end).
+
+%% @doc Disable shrinking for a generator.
+%%
+%% Creates a generator that produces the same values as `Generator` but
+%% with no shrink candidates. The resulting rose tree is always a leaf.
+%%
+%% == Use Cases ==
+%%
+%% - Values that shouldn't be shrunk (e.g., IDs, fixed constants)
+%% - Debugging shrinking behavior
+%% - Performance optimization when shrinking isn't needed
+%%
+%% == Example ==
+%%
+%% ```
+%% %% Generate a UUID that won't be shrunk
+%% UuidGen = catena_gen:no_shrink(gen_uuid()).
+%% ```
+-spec no_shrink(generator(A)) -> generator(A).
+no_shrink(Generator) ->
+    new(fun(Size, Seed) ->
+        Tree = run(Generator, Size, Seed),
+        Root = catena_tree:root(Tree),
+        catena_tree:singleton(Root)
+    end).
+
+%% @doc Transform both generated values and their shrinks.
+%%
+%% Unlike `gen_map/2` which only transforms the root value, `shrink_map/2`
+%% ensures that the transformation is applied consistently to all values
+%% in the shrink tree. This is important when the transformation needs
+%% to maintain invariants across the entire tree.
+%%
+%% == Use Cases ==
+%%
+%% - Wrapping generated values in containers (e.g., `{ok, Value}`)
+%% - Encoding/decoding transformations where shrinks must also be valid
+%% - Ensuring transformed shrinks satisfy the same predicates
+%%
+%% == Example ==
+%%
+%% ```
+%% %% Generate tagged integers where both value and shrinks are tagged
+%% Gen = catena_gen:gen_int(),
+%% TaggedGen = catena_gen:shrink_map(Gen, fun(N) -> {int, N} end).
+%% ```
+-spec shrink_map(fun((A) -> B), generator(A)) -> generator(B).
+shrink_map(F, Generator) when is_function(F, 1) ->
+    new(fun(Size, Seed) ->
+        %% Transform the entire tree, not just the root
+        Tree = run(Generator, Size, Seed),
+        map_tree(F, Tree)
+    end).
+
+%%====================================================================
 %% API Functions - Section 1.4.5
 %%====================================================================
 
@@ -650,3 +748,14 @@ format_tree(Tree, Depth) ->
     RootLine = io_lib:format("~s~p~n", [Indent, catena_tree:root(Tree)]),
     ChildLines = [format_tree(Child, Depth + 1) || Child <- catena_tree:children(Tree)],
     [RootLine | ChildLines].
+
+%% @doc Map a function over all nodes in a rose tree.
+%% Unlike catena_tree:map/2 which preserves structure, this ensures
+%% the function is applied to every node in the tree for shrink_map.
+-spec map_tree(fun((A) -> B), catena_tree:tree(A)) -> catena_tree:tree(B).
+map_tree(F, Tree) ->
+    Root = catena_tree:root(Tree),
+    catena_tree:tree(
+        F(Root),
+        fun() -> [map_tree(F, Child) || Child <- catena_tree:children(Tree)] end
+    ).
