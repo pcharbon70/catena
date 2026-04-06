@@ -71,7 +71,8 @@
     gen_identity_function/0,
     gen_projection_first/0,
     gen_projection_second/0,
-    gen_k_combinator/1
+    gen_k_combinator/1,
+    gen_frequency/1
 ]).
 
 -export_type([
@@ -1101,6 +1102,30 @@ gen_projection_second() ->
 -spec gen_k_combinator(_) -> function().
 gen_k_combinator(X) ->
     fun(_) -> X end.
+
+%% @doc Choose a generator based on frequency weights.
+%%
+%% Takes a list of {Weight, Generator} pairs and selects one generator
+%% based on the weights. Higher weights are more likely to be selected.
+-spec gen_frequency([{pos_integer(), catena_gen:generator(_)}]) -> catena_gen:generator(_).
+gen_frequency(WeightedGens) ->
+    TotalWeight = lists:sum([W || {W, _} <- WeightedGens]),
+    catena_gen:new(fun(Size, Seed) ->
+        {Word, Seed1} = catena_gen:seed_next(Seed),
+        %% Select which generator to use based on weight
+        Selector = Word rem TotalWeight,
+        {SelectedGen, _} = lists:foldl(fun
+            ({Weight, Gen}, {AccGen, AccWeight}) ->
+                case Selector < AccWeight + Weight of
+                    true -> {Gen, AccWeight + Weight};
+                    false -> {AccGen, AccWeight + Weight}
+                end
+            end,
+            {hd(WeightedGens), 0},
+            tl(WeightedGens)
+        ),
+        catena_gen:run(SelectedGen, Size, Seed1)
+    end).
 
 %%====================================================================
 %% Unit Tests - Section 2.4
