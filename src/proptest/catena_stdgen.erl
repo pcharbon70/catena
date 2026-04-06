@@ -21,7 +21,11 @@
     gen_float_special/0,
     gen_float_normal/1,
     gen_bigint/1,
-    gen_number/0
+    gen_number/0,
+    range_float/2,
+    range_unit/0,
+    range_percent/0,
+    range_byte/0
 ]).
 
 %% Section 2.2: Text and Binary Generators
@@ -196,6 +200,40 @@ is_finite_float(F) when is_float(F) ->
 is_finite_float(_) ->
     false.
 
+%% @doc Create a float range {Min, Max} for use with gen_float/1.
+%%
+%% Provides a convenient constructor for float ranges, ensuring
+%% Min <= Max and both are floats.
+-spec range_float(float(), float()) -> {float(), float()}.
+range_float(Min, Max) when is_float(Min), is_float(Max), Min =< Max ->
+    {Min, Max};
+range_float(Min, Max) when is_number(Min), is_number(Max), Min =< Max ->
+    {float(Min), float(Max)};
+range_float(Min, Max) ->
+    erlang:error({badarg, {range_float, {Min, Max}}}).
+
+%% @doc Create a unit range {0.0, 1.0} for normalized values.
+%%
+%% Useful for generating percentages, probabilities, and normalized
+%% measurements.
+-spec range_unit() -> {float(), float()}.
+range_unit() ->
+    {0.0, 1.0}.
+
+%% @doc Create a percent range {0, 100} for percentage values.
+%%
+%% Returns an integer range suitable for percentage calculations.
+-spec range_percent() -> {integer(), integer()}.
+range_percent() ->
+    {0, 100}.
+
+%% @doc Create a byte range {0, 255} for byte values.
+%%
+%% Returns an integer range suitable for generating bytes.
+-spec range_byte() -> {integer(), integer()}.
+range_byte() ->
+    {0, 255}.
+
 %%====================================================================
 %% Unit Tests - Section 2.1
 %%====================================================================
@@ -261,6 +299,42 @@ gen_float_negative_range_test() ->
     Tree = catena_gen:run(Gen, 50, catena_gen:seed_new()),
     Value = catena_tree:root(Tree),
     ?assert(Value >= -100.0 andalso Value =< -10.0),
+    ok.
+
+range_float_creates_valid_range_test() ->
+    Range = catena_stdgen:range_float(-1.0, 1.0),
+    ?assertEqual({-1.0, 1.0}, Range),
+    ok.
+
+range_float_converts_numbers_test() ->
+    Range = catena_stdgen:range_float(-10, 10),
+    ?assertEqual({-10.0, 10.0}, Range),
+    ok.
+
+range_float_rejects_invalid_test() ->
+    ?assertError({badarg, _}, catena_stdgen:range_float(10.0, 1.0)),
+    ok.
+
+range_unit_returns_correct_range_test() ->
+    Range = catena_stdgen:range_unit(),
+    ?assertEqual({0.0, 1.0}, Range),
+    ok.
+
+range_percent_returns_correct_range_test() ->
+    Range = catena_stdgen:range_percent(),
+    ?assertEqual({0, 100}, Range),
+    ok.
+
+range_byte_returns_correct_range_test() ->
+    Range = catena_stdgen:range_byte(),
+    ?assertEqual({0, 255}, Range),
+    ok.
+
+gen_float_with_range_unit_test() ->
+    Gen = catena_stdgen:gen_float(catena_stdgen:range_unit()),
+    Tree = catena_gen:run(Gen, 50, catena_gen:seed_new()),
+    Value = catena_tree:root(Tree),
+    ?assert(Value >= 0.0 andalso Value =< 1.0),
     ok.
 
 %%====================================================================
