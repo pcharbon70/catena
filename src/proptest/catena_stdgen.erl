@@ -52,14 +52,19 @@
     gen_list/1,
     gen_list_of/2,
     gen_list_of_length/2,
+    gen_nonempty_list/1,
     gen_tuple/1,
     gen_tuple2/2,
     gen_tuple3/3,
     gen_tuple4/4,
+    gen_pair/2,
     gen_map/2,
     gen_map_of/3,
+    gen_map_fixed/1,
     gen_set/1,
-    gen_set_of/2
+    gen_set_of/2,
+    gen_ordset/1,
+    gen_gb_set/1
 ]).
 
 %% Section 2.4: Recursive Structure Support
@@ -947,6 +952,86 @@ gen_set_shrink(Set, ElementGen, Size) ->
     end,
     RemoveShrinks.
 
+%% @doc Generate a non-empty list (at least one element).
+%%
+%% Similar to gen_list/1 but guarantees at least one element.
+-spec gen_nonempty_list(catena_gen:generator(A)) -> catena_gen:generator([A]).
+gen_nonempty_list(ElementGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        {LengthWord, Seed1} = catena_gen:seed_next(Seed),
+        MinLen = 1,
+        MaxLen = max(Size, 1),
+        Length = MinLen + (LengthWord rem (MaxLen - MinLen + 1)),
+        gen_list_tree(Length, ElementGen, Size, Seed1)
+    end).
+
+%% @doc Generate a pair (2-tuple).
+%%
+%% Alias for gen_tuple2/2 for more idiomatic code.
+-spec gen_pair(catena_gen:generator(A), catena_gen:generator(B)) -> catena_gen:generator({A, B}).
+gen_pair(GenA, GenB) ->
+    gen_tuple2(GenA, GenB).
+
+%% @doc Generate a map from a fixed list of key-value generator pairs.
+%%
+%% Takes a list of {KeyGen, ValueGen} pairs and generates a map
+%% with those exact keys. Useful for structured records.
+-spec gen_map_fixed([{catena_gen:generator(K), catena_gen:generator(V)}]) -> catena_gen:generator(#{K => V}).
+gen_map_fixed(KVGenerators) ->
+    catena_gen:new(fun(Size, Seed) ->
+        %% Generate each key-value pair
+        {Map, _, _} = lists:foldl(fun
+            ({KeyGen, ValueGen}, {AccMap, AccSeed, AccIndex}) ->
+                {Seed1, Seed2} = catena_gen:seed_split(AccSeed),
+                KeyTree = catena_gen:run(KeyGen, Size div length(KVGenerators), Seed1),
+                ValueTree = catena_gen:run(ValueGen, Size div length(KVGenerators), Seed2),
+                Key = catena_tree:root(KeyTree),
+                Value = catena_tree:root(ValueTree),
+                {AccMap#{Key => Value}, Seed2, AccIndex + 1}
+        end,
+        {#{}, Seed, 0},
+        KVGenerators),
+        catena_tree:tree(Map, fun() -> [] end)  %% No shrinks for fixed maps
+    end).
+
+%% @doc Generate an ordered set (as a sorted list).
+%%
+%% Uses Erlang's ordset module (lists for uniqueness with order).
+-spec gen_ordset(catena_gen:generator(A)) -> catena_gen:generator([A]).
+gen_ordset(ElementGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        %% Generate a list then remove duplicates
+        ListGen = gen_list(ElementGen),
+        ListTree = catena_gen:run(ListGen, Size, Seed),
+        List = catena_tree:root(ListTree),
+        %% Remove duplicates while preserving order
+        OrdSet = ordsets:from_list(List),
+        catena_tree:tree(ordsets:to_list(OrdSet), fun() ->
+            %% Shrink by removing elements
+            [catena_tree:tree(ordsets:to_list(ordsets:less(Element, OrdSet)), fun() -> [] end)
+             || Element <- ordsets:to_list(OrdSet)]
+        end)
+    end).
+
+%% @doc Generate a gb_set.
+%%
+%% Uses Erlang's gb_set module for functional set operations.
+-spec gen_gb_set(catena_gen:generator(_)) -> catena_gen:generator(term()).
+gen_gb_set(ElementGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        %% Generate a list then convert to gb_set
+        ListGen = gen_list(ElementGen),
+        ListTree = catena_gen:run(ListGen, Size, Seed),
+        List = catena_tree:root(ListTree),
+        GbSet = gb_sets:from_list(List),
+        catena_tree:tree(GbSet, fun() ->
+            %% Shrink by removing elements
+            ToList = gb_sets:to_list(GbSet),
+            [catena_tree:tree(gb_sets:from_list([E || E <- ToList, E =/= Element]), fun() -> [] end)
+             || Element <- ToList]
+        end)
+    end).
+
 %%====================================================================
 %% Section 2.4: Recursive Structure Support
 %%====================================================================
@@ -1105,7 +1190,7 @@ gen_char_shrink(CharCode) when CharCode =< 33 ->
 gen_char_shrink(CharCode) ->
     [CharCode - 1].
 
-%% @doc Shrink an alpha character toward 'a' or 'A'.
+%% @doc Shrink an alpha character toward a and A.
 -spec gen_char_shrink_alpha(char()) -> [char()].
 gen_char_shrink_alpha(CharCode) when CharCode >= $a andalso CharCode =< $z ->
     [$a, CharCode - 1];
