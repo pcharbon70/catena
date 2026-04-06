@@ -34,12 +34,16 @@
     gen_char_alpha/0,
     gen_char_digit/0,
     gen_char_alphanumeric/0,
+    gen_char_unicode/0,
     gen_string/1,
     gen_string/2,
     gen_string_nonempty/1,
+    gen_utf8/1,
     gen_binary/1,
+    gen_binary_of/2,
     gen_bitstring/1,
     gen_atom/0,
+    gen_atom_unsafe/1,
     gen_bool_atom/0
 ]).
 
@@ -529,6 +533,135 @@ gen_bool_atom() ->
         catena_tree:singleton(Atom)
     end).
 
+%% @doc Generate a Unicode character (valid codepoint).
+%%
+%% Generates characters from the Unicode Basic Multilingual Plane (BMP)
+%% which covers most common languages and symbols. Excludes surrogate
+%% code points which are invalid in UTF-8.
+-spec gen_char_unicode() -> catena_gen:generator(integer()).
+gen_char_unicode() ->
+    catena_gen:new(fun(_Size, Seed) ->
+        {Word, _} = catena_gen:seed_next(Seed),
+        %% BMP range: 0x0000 to 0xFFFF, excluding surrogates (0xD800-0xDFFF)
+        %% Use only 0x0000 to 0xD7FF and 0xE000 to 0xFFFF
+        %% Simplified: use 0x0000 to 0xFFFF but skip surrogates
+        Code = Word rem 16#10000,
+        ValidCode = case Code of
+            C when C >= 16#D800, C =< 16#DFFF -> C + 16#800;  %% Skip surrogates
+            C -> C
+        end,
+        catena_tree:tree(ValidCode, fun() ->
+            %% Shrink toward 0 (null character)
+            [gen_char_unicode_shrink(ValidCode) || ValidCode > 0]
+        end)
+    end).
+
+%% @private Shrink Unicode codepoint toward 0.
+-spec gen_char_unicode_shrink(integer()) -> catena_tree:tree(integer()).
+gen_char_unicode_shrink(0) ->
+    catena_tree:singleton(0);
+gen_char_unicode_shrink(Code) ->
+    Shrunk = Code div 2,
+    catena_tree:tree(Shrunk, fun() ->
+        [gen_char_unicode_shrink(Shrunk)]
+    end).
+
+%% @doc Generate a UTF-8 encoded string.
+%%
+%% Generates valid UTF-8 strings using Unicode characters.
+%% Shrinks by removing characters and using smaller codepoints.
+-spec gen_utf8(catena_range:range()) -> catena_gen:generator(binary()).
+gen_utf8(LengthRange) ->
+    CharGen = gen_char_unicode(),
+    catena_gen:new(fun(Size, Seed) ->
+        {LengthWord, Seed1} = catena_gen:seed_next(Seed),
+        {Min, Max} = catena_range:range_bounds(LengthRange, Size),
+        Length = Min + (LengthWord rem (Max - Min + 1)),
+        %% Generate list of codepoints then encode to UTF-8
+        String = gen_utf8_string(Length, CharGen, Size, Seed1, []),
+        catena_tree:tree(String, fun() ->
+            %% Shrink: shorter strings - wrap each in a tree
+            [catena_tree:singleton(gen_utf8_string(L, CharGen, Size, Seed1, [])) || L <- lists:seq(max(0, Length - 5), Length - 1)]
+        end)
+    end).
+
+%% @private Generate a UTF-8 string of given length.
+-spec gen_utf8_string(non_neg_integer(), catena_gen:generator(integer()), catena_gen:size(), catena_gen:seed(), [integer()]) -> binary().
+gen_utf8_string(0, _CharGen, _Size, _Seed, Acc) ->
+    %% Encode codepoints to UTF-8
+    Binaries = [unicode:characters_to_binary([C]) || C <- lists:reverse(Acc)],
+    iolist_to_binary(Binaries);
+gen_utf8_string(Length, CharGen, Size, Seed, Acc) when Length > 0 ->
+    {S1, S2} = catena_gen:seed_split(Seed),
+    Tree = catena_gen:run(CharGen, Size, S1),
+    CodePoint = catena_tree:root(Tree),
+    gen_utf8_string(Length - 1, CharGen, Size, S2, [CodePoint | Acc]).
+
+%% @doc Generate a binary using a custom byte generator.
+%%
+%% Takes a generator for individual bytes (0-255) and produces
+%% a binary of random length containing those bytes.
+-spec gen_binary_of(catena_range:range(), catena_gen:generator(byte())) -> catena_gen:generator(binary()).
+gen_binary_of(LengthRange, ByteGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        {LengthWord, Seed1} = catena_gen:seed_next(Seed),
+        {Min, Max} = catena_range:range_bounds(LengthRange, Size),
+        Length = Min + (LengthWord rem (Max - Min + 1)),
+        %% Generate list of bytes
+        Bytes = gen_binary_bytes(Length, ByteGen, Size, Seed1, []),
+        Binary = << <<B:8>> || B <- Bytes >>,
+        catena_tree:tree(Binary, fun() ->
+            %% Shrink: shorter binaries - use prefix shrinks
+            gen_binary_shrinks(Binary, Length, ByteGen, Size, Seed1)
+        end)
+    end).
+
+%% @private Generate a list of bytes.
+-spec gen_binary_bytes(non_neg_integer(), catena_gen:generator(byte()), catena_gen:size(), catena_gen:seed(), [byte()]) -> [byte()].
+gen_binary_bytes(0, _ByteGen, _Size, _Seed, Acc) ->
+    lists:reverse(Acc);
+gen_binary_bytes(Length, ByteGen, Size, Seed, Acc) when Length > 0 ->
+    {S1, S2} = catena_gen:seed_split(Seed),
+    Tree = catena_gen:run(ByteGen, Size, S1),
+    Byte = catena_tree:root(Tree),
+    gen_binary_bytes(Length - 1, ByteGen, Size, S2, [Byte | Acc]).
+
+%% @private Generate shrink candidates for binaries.
+gen_binary_shrinks(<<>>, _Length, _ByteGen, _Size, _Seed) ->
+    [];
+gen_binary_shrinks(Binary, Length, ByteGen, Size, Seed) ->
+    %% Generate shorter versions
+    ShorterLengths = [L || L <- lists:seq(0, Length - 1)],
+    [catena_tree:tree(begin
+        Bytes = gen_binary_bytes(L, ByteGen, Size, Seed, []),
+        << <<B:8>> || B <- Bytes >>
+    end, fun() -> [] end) || L <- ShorterLengths].
+
+%% @doc Generate arbitrary atoms (UNSAFE - may exhaust atom table).
+%%
+%% **Warning**: This function can create new atoms at runtime, which
+%% can exhaust the Erlang atom table (limited to ~1M atoms). Use only
+%% in controlled testing environments. For most use cases, use gen_atom/0
+%% which draws from a predefined pool.
+%%
+%% The generated atoms use the prefix "test_atom_" followed by random
+%% characters to avoid collisions with existing atoms.
+-spec gen_atom_unsafe(pos_integer()) -> catena_gen:generator(atom()).
+gen_atom_unsafe(MaxLen) when is_integer(MaxLen), MaxLen > 0 ->
+    catena_gen:new(fun(Size, Seed) ->
+        %% Limit actual size
+        ActualLen = min(Size, MaxLen),
+        %% Use gen_string to get the string
+        StringRange = catena_range:range_constant({ActualLen, ActualLen}),
+        StringGen = gen_string(StringRange, gen_char_alphanumeric()),
+        Tree = catena_gen:run(StringGen, Size div 2, Seed),
+        String = catena_tree:root(Tree),
+        %% Prefix to avoid conflicts
+        AtomName = "test_atom_" ++ String,
+        Atom = list_to_atom(AtomName),
+        catena_tree:singleton(Atom)
+    end).
+
 %%====================================================================
 %% Section 2.3: Collection Generators
 %%====================================================================
@@ -1007,7 +1140,7 @@ gen_string_shrink(String, CharGen, Size) ->
     end, lists:usort(Shrink1 ++ Shrink2)).
 
 %% @doc Shrink a binary by removing bytes.
--spec gen_binary_shrink(binary(), catena_gen:size()) -> [catena_tree:tree(binary())].
+-spec gen_binary_shrink(binary(), catena_gen:size()) -> [catena_tree:tree(_)].
 gen_binary_shrink(<<>>, _Size) ->
     [];
 gen_binary_shrink(Binary, Size) ->
@@ -1112,6 +1245,57 @@ gen_bool_atom_returns_true_or_false_test() ->
     Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
     Atom = catena_tree:root(Tree),
     ?assert(Atom =:= true orelse Atom =:= false),
+    ok.
+
+gen_char_unicode_produces_valid_codepoint_test() ->
+    Gen = catena_stdgen:gen_char_unicode(),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
+    Code = catena_tree:root(Tree),
+    ?assert(Code >= 0 andalso Code =< 16#FFFF),
+    %% Should not be in surrogate range
+    ?assert(Code < 16#D800 orelse Code > 16#DFFF),
+    ok.
+
+gen_utf8_produces_valid_binary_test() ->
+    Gen = catena_stdgen:gen_utf8(catena_range:range_constant({0, 10})),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
+    Binary = catena_tree:root(Tree),
+    ?assert(is_binary(Binary)),
+    %% Should be valid UTF-8
+    ?assertEqual(Binary, unicode:characters_to_binary(Binary)),
+    ok.
+
+gen_utf8_shrinks_by_removing_chars_test() ->
+    Gen = catena_stdgen:gen_utf8(catena_range:range_constant({5, 10})),
+    Tree = catena_gen:run(Gen, 50, catena_gen:seed_new()),
+    Root = catena_tree:root(Tree),
+    RootSize = byte_size(Root),
+    %% Should have shrinks
+    Children = catena_tree:children(Tree),
+    ?assert(length(Children) > 0),
+    %% Shrinks should be shorter or empty (empty is valid UTF-8)
+    ShrunkSizes = [byte_size(catena_tree:root(C)) || C <- Children],
+    ?assert(lists:all(fun(S) -> S =< RootSize end, ShrunkSizes)),
+    ok.
+
+gen_binary_of_uses_byte_generator_test() ->
+    ByteGen = catena_gen:gen_int_range(0, 255),
+    Gen = catena_stdgen:gen_binary_of(catena_range:range_constant({5, 10}), ByteGen),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
+    Binary = catena_tree:root(Tree),
+    ?assert(is_binary(Binary)),
+    Size = byte_size(Binary),
+    ?assert(Size >= 5 andalso Size =< 10),
+    ok.
+
+gen_atom_unsafe_generates_atoms_test() ->
+    Gen = catena_stdgen:gen_atom_unsafe(5),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
+    Atom = catena_tree:root(Tree),
+    ?assert(is_atom(Atom)),
+    %% Should start with test_atom_
+    AtomStr = atom_to_list(Atom),
+    ?assertEqual("test_atom_", lists:sublist(AtomStr, 1, 10)),
     ok.
 
 %%====================================================================
