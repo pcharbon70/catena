@@ -71,9 +71,8 @@ The canonical direction is internal property testing with integrated shrinking, 
 
 Documentation and tooling specs must continue to note the true transition state:
 
-- the default repo-wide `rebar3 eunit` entry point is no longer blocked by legacy PropEr compile contamination
+- the default repo-wide `rebar3 eunit` entry point is green again for the active suite
 - the migration is still incomplete because historical PropEr suites remain quarantined and their internal replacements are not all implemented yet
-- the repo-wide active suite still has unrelated failing tests, so resolving the PropEr transition does not by itself make the whole repository green
 
 This prevents the specs from confusing "default workflow restored" with "migration finished."
 

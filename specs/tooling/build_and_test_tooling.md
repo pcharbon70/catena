@@ -2,7 +2,7 @@
 
 ## Status
 
-Promoted status: implemented with generated lexer/parser hooks, multiple test entry points, subsystem-organized coverage, and a default `rebar3 eunit` path that is no longer blocked by legacy PropEr compile contamination.
+Promoted status: implemented with generated lexer/parser hooks, multiple test entry points, subsystem-organized coverage, and a clean repo-wide `rebar3 eunit` path for the active test surface.
 
 ## Design Anchors
 
@@ -21,7 +21,7 @@ Promoted status: implemented with generated lexer/parser hooks, multiple test en
 - Lexer and parser generation are part of the normal build path rather than a manual pre-step.
 - Tests are organized by subsystem across compiler, runtime, integration, REPL, stdlib, testing, and property-testing areas.
 - Legacy PropEr-oriented suites are preserved under `test_legacy/proper/` and intentionally excluded from the default compile path while the internal replacement work continues.
-- The repo-wide `rebar3 eunit` entry point now reaches active suite execution without the old PropEr compile failure, but unrelated active-test failures still exist elsewhere in the suite.
+- The repo-wide `rebar3 eunit` entry point completes successfully across the active suite.
 
 ## Acceptance Criteria
 
@@ -42,13 +42,13 @@ Promoted docs should describe the scope of each entry point rather than implying
 
 The test tree must remain organized by subsystem so implementation work can be validated in focused slices, including the existing families for compiler components, runtime, integration, REPL, stdlib, testing, and proptest.
 
-### AC-TOOL-004 Default Test Entry Point Is Unblocked
+### AC-TOOL-004 Default Full-Test Path Is Clean
 
 The following is part of the current promoted repo status:
 
-- `rebar3 eunit` reaches active repo test execution without compiling the quarantined legacy PropEr suites
+- `rebar3 eunit` completes successfully without compiling the quarantined legacy PropEr suites
 
-This criterion exists so the specs state the PropEr fix precisely rather than implying either that the old compile-path failure still exists or that the entire active suite is already green.
+This criterion exists so the specs record both the quarantine and the restored green default workflow precisely.
 
 ### AC-TOOL-005 Coverage And Analysis Boundaries
 
