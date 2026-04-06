@@ -44,6 +44,7 @@
     gen_list/1,
     gen_list_of/2,
     gen_list_of_length/2,
+    gen_tuple/1,
     gen_tuple2/2,
     gen_tuple3/3,
     gen_tuple4/4,
@@ -567,6 +568,30 @@ gen_tuple4(GenA, GenB, GenC, GenD) ->
             ChildrenA ++ ChildrenB ++ ChildrenC ++ ChildrenD
         end)
     end).
+
+%% @doc Generate a tuple from a tuple of generators.
+%%
+%% Takes a tuple of generators and returns a generator that produces
+%% tuples with values from each generator. Supports tuples of arity 2-4.
+%%
+%% == Example ==
+%%
+%% ```
+%% %% Generate {Int, Bool, Int} tuples
+%% Gen = gen_tuple({gen_int(), gen_bool(), gen_int()})
+%% ```
+-spec gen_tuple({catena_gen:generator(_), catena_gen:generator(_)}) ->
+    catena_gen:generator({_, _});
+             ({catena_gen:generator(_), catena_gen:generator(_), catena_gen:generator(_)}) ->
+    catena_gen:generator({_, _, _});
+             ({catena_gen:generator(_), catena_gen:generator(_), catena_gen:generator(_), catena_gen:generator(_)}) ->
+    catena_gen:generator({_, _, _, _}).
+gen_tuple({GenA, GenB}) ->
+    gen_tuple2(GenA, GenB);
+gen_tuple({GenA, GenB, GenC}) ->
+    gen_tuple3(GenA, GenB, GenC);
+gen_tuple({GenA, GenB, GenC, GenD}) ->
+    gen_tuple4(GenA, GenB, GenC, GenD).
 
 %% ---- Map Generators ----
 
