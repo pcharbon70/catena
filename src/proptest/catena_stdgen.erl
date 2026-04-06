@@ -62,6 +62,18 @@
     gen_recursive/2
 ]).
 
+%% Section 2.5: Function Generators
+-export([
+    gen_function0/1,
+    gen_function1/1,
+    gen_function2/1,
+    gen_constant_function/1,
+    gen_identity_function/0,
+    gen_projection_first/0,
+    gen_projection_second/0,
+    gen_k_combinator/1
+]).
+
 -export_type([
     float_range/0
 ]).
@@ -1001,6 +1013,94 @@ gen_bool_atom_returns_true_or_false_test() ->
     Atom = catena_tree:root(Tree),
     ?assert(Atom =:= true orelse Atom =:= false),
     ok.
+
+%%====================================================================
+%% Section 2.5: Function Generators
+%%====================================================================
+
+%% ---- Simple Function Generators ----
+
+%% @doc Generate a nullary function (arity 0) that returns values from ValueGen.
+%%
+%% The generated function is deterministic - it always returns the same value.
+-spec gen_function0(catena_gen:generator(_)) -> catena_gen:generator(function()).
+gen_function0(ValueGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        ValueTree = catena_gen:run(ValueGen, Size, Seed),
+        Value = catena_tree:root(ValueTree),
+        %% Create a function that captures and returns the value
+        Fun = fun() -> Value end,
+        catena_tree:tree(Fun, fun() ->
+            %% Shrink by shrinking the captured value
+            [catena_tree:map(fun(V) -> fun() -> V end end, C) || C <- catena_tree:children(ValueTree)]
+        end)
+    end).
+
+%% @doc Generate a unary function (arity 1) that returns values from ValueGen.
+%%
+%% The generated function is deterministic - given the same input, it returns
+%% the same output. The function ignores its input and returns the captured value.
+-spec gen_function1(catena_gen:generator(_)) -> catena_gen:generator(function()).
+gen_function1(ValueGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        ValueTree = catena_gen:run(ValueGen, Size, Seed),
+        Value = catena_tree:root(ValueTree),
+        %% Create a function that ignores input and returns the captured value
+        Fun = fun(_) -> Value end,
+        catena_tree:tree(Fun, fun() ->
+            %% Shrink by shrinking the captured value
+            [catena_tree:map(fun(V) -> fun(_) -> V end end, C) || C <- catena_tree:children(ValueTree)]
+        end)
+    end).
+
+%% @doc Generate a binary function (arity 2) that returns values from ValueGen.
+%%
+%% The generated function is deterministic and ignores its inputs.
+-spec gen_function2(catena_gen:generator(_)) -> catena_gen:generator(function()).
+gen_function2(ValueGen) ->
+    catena_gen:new(fun(Size, Seed) ->
+        ValueTree = catena_gen:run(ValueGen, Size, Seed),
+        Value = catena_tree:root(ValueTree),
+        %% Create a function that ignores inputs and returns the captured value
+        Fun = fun(_, _) -> Value end,
+        catena_tree:tree(Fun, fun() ->
+            %% Shrink by shrinking the captured value
+            [catena_tree:map(fun(V) -> fun(_, _) -> V end end, C) || C <- catena_tree:children(ValueTree)]
+        end)
+    end).
+
+%% ---- Special Functions ----
+
+%% @doc Generate a constant function that always returns the given value.
+%%
+%% The function accepts any number of arguments and always returns Value.
+-spec gen_constant_function(_) -> function().
+gen_constant_function(Value) ->
+    fun() -> Value end.
+
+%% @doc Generate the identity function.
+%%
+%% Returns its input unchanged.
+-spec gen_identity_function() -> function().
+gen_identity_function() ->
+    fun(X) -> X end.
+
+%% @doc Generate a function that returns the first element of a tuple.
+-spec gen_projection_first() -> function().
+gen_projection_first() ->
+    fun({X, _}) -> X end.
+
+%% @doc Generate a function that returns the second element of a tuple.
+-spec gen_projection_second() -> function().
+gen_projection_second() ->
+    fun({_, X}) -> X end.
+
+%% @doc Generate the K-combinator (const function).
+%%
+%% K x = \y -> x (a function that ignores its argument and returns x).
+-spec gen_k_combinator(_) -> function().
+gen_k_combinator(X) ->
+    fun(_) -> X end.
 
 %%====================================================================
 %% Unit Tests - Section 2.4
