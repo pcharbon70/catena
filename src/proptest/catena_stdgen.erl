@@ -73,7 +73,10 @@
     gen_maybe/1,
     gen_result/2,
     gen_list_recursive/1,
-    gen_recursive/2
+    gen_recursive/2,
+    gen_lazy/1,
+    gen_delay/1,
+    gen_json/0
 ]).
 
 %% Section 2.5: Function Generators
@@ -1382,6 +1385,66 @@ gen_atom_unsafe_generates_atoms_test() ->
     AtomStr = atom_to_list(Atom),
     ?assertEqual("test_atom_", lists:sublist(AtomStr, 1, 10)),
     ok.
+
+%% ---- Lazy Generator Support ----
+
+%% @doc Defer generator construction until runtime.
+%%
+%% Takes a function that produces a generator and wraps it so the
+%% generator is only constructed when needed. This is useful for
+%% recursive and self-referential generator definitions.
+-spec gen_lazy(fun(() -> catena_gen:generator(A))) -> catena_gen:generator(A).
+gen_lazy(GenThunk) when is_function(GenThunk, 0) ->
+    catena_gen:new(fun(Size, Seed) ->
+        Generator = GenThunk(),
+        catena_gen:run(Generator, Size, Seed)
+    end).
+
+%% @doc Create a generator that can reference itself.
+%%
+%% Takes a generator that may reference the result. This allows for
+%% self-referential and mutually recursive generator definitions.
+%% The generator is evaluated lazily to avoid infinite loops.
+-spec gen_delay(catena_gen:generator(A)) -> catena_gen:generator(A).
+gen_delay(Generator) ->
+    gen_lazy(fun() -> Generator end).
+
+%% ---- JSON Generator ----
+
+%% @doc Generate JSON-compatible data structures.
+%%
+%% Generates values that can be encoded to JSON: null, booleans,
+%% numbers, strings, arrays, and objects. Arrays and objects can
+%% contain other JSON values recursively.
+-spec gen_json() -> catena_gen:generator(json_value()).
+gen_json() ->
+    gen_recursive(10, fun() -> gen_json_unsafe() end).
+
+%% @private Generate JSON values without depth limit.
+-spec gen_json_unsafe() -> catena_gen:generator(json_value()).
+gen_json_unsafe() ->
+    catena_gen:new(fun(Size, Seed) ->
+        {Word, _} = catena_gen:seed_next(Seed),
+        case Word rem 6 of
+            0 -> catena_gen:run(catena_gen:constant(null), Size, Seed);
+            1 -> catena_gen:run(catena_gen:gen_bool(), Size, Seed);
+            2 -> catena_gen:run(catena_gen:gen_int(), Size, Seed);
+            3 -> catena_gen:run(gen_string(catena_range:range_constant({0, 20}), gen_char()), Size, Seed);
+            4 -> catena_gen:run(gen_list(catena_gen:constant(null)), Size, Seed);  %% array
+            5 -> catena_gen:run(gen_map(gen_json_string(), catena_gen:constant(null)), Size, Seed)  %% object
+        end
+    end).
+
+
+%% @private Generate a JSON string key.
+-spec gen_json_string() -> catena_gen:generator(binary()).
+gen_json_string() ->
+    catena_gen:gen_map(fun(Str) -> list_to_binary(Str) end,
+        gen_string(catena_range:range_constant({1, 10}), gen_char_alpha()))).
+
+
+%% Type for JSON values.
+-type json_value() :: null | boolean() | integer() | float() | term() | [json_value()] | #{binary() => json_value()}.
 
 %%====================================================================
 %% Section 2.5: Function Generators
