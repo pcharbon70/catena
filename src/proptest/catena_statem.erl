@@ -120,6 +120,17 @@
 ]).
 
 %%====================================================================
+%% Section 5.4: Concrete Execution
+%%====================================================================
+
+-export([
+    execute_command/3,
+    execute_commands/4,
+    run_parallel_tracks/3,
+    check_postconditions/3
+]).
+
+%%====================================================================
 %% Type Exports
 %%====================================================================
 
@@ -533,3 +544,123 @@ collect_postconditions_loop(Module, State, [Cmd | Rest], Vars, Index, Acc) ->
             NewState = Module:next_state(State, Vars, Cmd),
             collect_postconditions_loop(Module, NewState, Rest, Vars, Index + 1, [{Index, PostCond} | Acc])
     end.
+
+%%====================================================================
+%% Section 5.4: Concrete Execution
+%%====================================================================
+
+%% @doc Execute a single command against a real system.
+%%
+%% Returns {ok, Result, NewBindings} on success, {error, Reason} on failure.
+-spec execute_command(system(), var_bindings(), symbolic_command()) ->
+    {ok, command_result(), var_bindings()} | {error, term()}.
+execute_command(_System, Vars, {call, Module, Name, Args}) ->
+    %% Substitute variables in arguments
+    ConcreteArgs = substitute_vars(Args, Vars),
+    %% Call the actual command using apply to handle variable arity
+    try apply(Module, Name, ConcreteArgs) of
+        Result ->
+            %% Create a new variable binding for this result
+            VarIndex = length(Vars) + 1,
+            Var = new_var(VarIndex),
+            NewBindings = bind_var(Var, Result, Vars),
+            {ok, Result, NewBindings}
+    catch
+        Error:Reason:Stack ->
+            {error, {Error, Reason, Stack}}
+    end.
+
+%% @doc Execute a sequence of commands against a real system.
+%%
+%% Returns {ok, Results, FinalBindings} on success, {error, Reason, PartialResults} on failure.
+-spec execute_commands(system(), state(), command_seq(), module()) ->
+    {ok, [command_result()], var_bindings()} | {error, term(), [command_result()]}.
+execute_commands(System, InitialState, Commands, Module) ->
+    execute_commands_loop(System, InitialState, Commands, Module, [], []).
+
+execute_commands_loop(_System, _State, [], _Module, ResultsAcc, Bindings) ->
+    {ok, lists:reverse(ResultsAcc), Bindings};
+execute_commands_loop(System, State, [Cmd | Rest], Module, ResultsAcc, Bindings) ->
+    %% Check precondition
+    case Module:precondition(State, Cmd) of
+        false ->
+            %% Skip this command
+            NewState = Module:next_state(State, Bindings, Cmd),
+            execute_commands_loop(System, NewState, Rest, Module, ResultsAcc, Bindings);
+        true ->
+            case execute_command(System, Bindings, Cmd) of
+                {ok, Result, NewBindings} ->
+                    %% Check postcondition
+                    case Module:postcondition(State, Cmd, Result) of
+                        true ->
+                            NewState = Module:next_state(State, Bindings, Cmd),
+                            execute_commands_loop(System, NewState, Rest, Module, [Result | ResultsAcc], NewBindings);
+                        false ->
+                            {error, {postcondition_failed, Cmd, State, Result}, lists:reverse(ResultsAcc)}
+                    end;
+                {error, Reason} ->
+                    {error, {command_failed, Cmd, Reason}, lists:reverse(ResultsAcc)}
+            end
+    end.
+
+%% @doc Run command sequences in parallel tracks for shrinking.
+%%
+%% Each track is an alternative command sequence to try.
+-spec run_parallel_tracks(system(), state(), [[symbolic_command()]]) ->
+    {ok, {command_seq(), [command_result()], var_bindings()}} | {error, term()}.
+run_parallel_tracks(System, InitialState, Tracks) when is_list(Tracks) ->
+    run_parallel_tracks_loop(System, InitialState, Tracks, none).
+
+run_parallel_tracks_loop(_System, _State, [], BestResult) ->
+    BestResult;
+run_parallel_tracks_loop(System, InitialState, [Track | Rest], none) ->
+    %% Assume first module in first command
+    {call, Module, _, _} = hd(Track),
+    case execute_commands(System, InitialState, Track, Module) of
+        {ok, Results, Bindings} ->
+            %% This track passed, return it
+            {ok, {Track, Results, Bindings}};
+        {error, _, _} ->
+            %% Try next track
+            run_parallel_tracks_loop(System, InitialState, Rest, none)
+    end;
+run_parallel_tracks_loop(System, InitialState, [Track | Rest], {ok, _Best} = CurrentBest) ->
+    {call, Module, _, _} = hd(Track),
+    case execute_commands(System, InitialState, Track, Module) of
+        {ok, Results, Bindings} ->
+            %% Track passed - prefer shorter tracks
+            {ok, {PrevTrack, _, _}} = CurrentBest,
+            case length(Track) < length(PrevTrack) of
+                true -> {ok, {Track, Results, Bindings}};
+                false -> CurrentBest
+            end;
+        {error, _, _} ->
+            run_parallel_tracks_loop(System, InitialState, Rest, CurrentBest)
+    end.
+
+%% @doc Check collected postconditions against execution results.
+%%
+%% Returns ok if all postconditions pass, {error, failed_index} otherwise.
+-spec check_postconditions([{pos_integer(), fun((command_result()) -> boolean())}], [command_result()], state()) ->
+    ok | {error, {postcondition_failed, pos_integer(), state()}}.
+check_postconditions(PostConds, Results, State) ->
+    check_postconditions_loop(PostConds, Results, State, 1).
+
+check_postconditions_loop([], _Results, _State, _Index) ->
+    ok;
+check_postconditions_loop([{PCIndex, Fun} | Rest], Results, State, Index) when PCIndex =:= Index ->
+    case lists:member(Index, lists:seq(1, length(Results))) of
+        true ->
+            Result = lists:nth(Index, Results),
+            case Fun(Result) of
+                true ->
+                    check_postconditions_loop(Rest, Results, State, Index + 1);
+                false ->
+                    {error, {postcondition_failed, Index, State}}
+            end;
+        false ->
+            %% Result not available (command was skipped)
+            check_postconditions_loop(Rest, Results, State, Index + 1)
+    end;
+check_postconditions_loop(PostConds, Results, State, Index) ->
+    check_postconditions_loop(PostConds, Results, State, Index + 1).
