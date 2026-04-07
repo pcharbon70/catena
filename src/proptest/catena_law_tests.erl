@@ -130,10 +130,10 @@ test_suite(TypeName, Config) when is_binary(TypeName) ->
         TestFun = fun() ->
             %% Apply the law with our params (which has the correct generator)
             Property = catena_laws:apply_law(Law, Params),
-            %% Override the property's generator with our actual generator
-            PropertyWithGen = Property#property{generator = Generator},
+            %% Don't override the generator - the law defines its own generator
+            %% which may be a tuple generator for multi-parameter laws
             NumTests = maps:get(num_tests, Options, 100),
-            case catena_runner:run_property(PropertyWithGen, #{num_tests => NumTests}) of
+            case catena_runner:run_property(Property, #{num_tests => NumTests}) of
                 {passed, _} -> ok;
                 {failed, Result} ->
                     erlang:error({law_violation, TestName, Result})

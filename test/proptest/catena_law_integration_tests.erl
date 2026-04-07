@@ -303,16 +303,14 @@ repl_quick_check_returns_ok_test() ->
     ok.
 
 repl_quick_check_detects_failure_test() ->
+    %% Use a broken equals function that always returns false
     Adapter = #{
-        map => fun(_F, X) -> X end,  %% OK
-        equals => fun(A, B) -> A =:= B end
+        map => fun(_F, X) -> X end,
+        equals => fun(_A, _B) -> false end  %% Always false - breaks reflexivity
     },
 
-    %% But use a broken generator that always fails
     Config = #{
-        generator => catena_gen:gen_bind(catena_gen:gen_int(), fun(_) ->
-            catena_gen:constant(broken)
-        end),
+        generator => fun() -> catena_stdgen:gen_list(catena_gen:gen_int()) end,
         adapter => Adapter,
         traits => [setoid]
     },

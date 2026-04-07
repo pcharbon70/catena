@@ -292,14 +292,47 @@ shrink_counterexample(Property, Counterexample, Tree, MaxShrinks) ->
     end.
 
 %% @private Apply predicate to value, handling discard markers.
--spec apply_predicate(fun((_) -> boolean()), term()) -> boolean() | {discard, term()}.
+%%
+%% Supports both single-argument predicates (fun(A) -> ...) and
+%% multi-argument predicates where Value is a tuple (fun(A, B, C) -> ...).
+%% For multi-argument predicates, the tuple elements are applied as arguments.
+%% Lists are always passed as single arguments (for list generators).
+-spec apply_predicate(fun(), term()) -> boolean() | {discard, term()}.
 apply_predicate(Predicate, Value) ->
-    try Predicate(Value) of
-        discard -> {discard, Value};
-        Result -> Result
+    try
+        {arity, Arity} = erlang:fun_info(Predicate, arity),
+        case Arity of
+            1 ->
+                %% Single argument - apply directly (handles lists and other values)
+                apply_predicate_result(Predicate(Value), Value);
+            _ when is_tuple(Value) ->
+                %% Multi-argument predicate - apply tuple elements as arguments
+                Args = tuple_to_list(Value),
+                case length(Args) of
+                    Arity ->
+                        apply_predicate_result(apply(Predicate, Args), Value);
+                    _ ->
+                        %% Arity mismatch - error
+                        false
+                end;
+            _ ->
+                %% Predicate expects multiple args but Value isn't a tuple
+                %% (e.g., Value is a list but Arity > 1)
+                %% Try to apply anyway - will fail if wrong arity
+                apply_predicate_result(Predicate(Value), Value)
+        end
     catch
-        _:_:_ -> false
+        error:undef ->
+            %% Function clause mismatch - predicate doesn't accept this value
+            false;
+        _:_:_ ->
+            false
     end.
+
+%% @private Helper to handle predicate results including discard markers.
+-spec apply_predicate_result(boolean() | discard, term()) -> boolean() | {discard, term()}.
+apply_predicate_result(discard, Value) -> {discard, Value};
+apply_predicate_result(Result, _Value) -> Result.
 
 %%====================================================================
 %% Section 3.2.3: Test Orchestration
