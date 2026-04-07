@@ -107,6 +107,19 @@
 ]).
 
 %%====================================================================
+%% Section 5.3: Symbolic Execution
+%%====================================================================
+
+-export([
+    new_var/1,
+    bind_var/3,
+    lookup_var/2,
+    substitute_vars/2,
+    symbolic_next_state/3,
+    collect_postconditions/3
+]).
+
+%%====================================================================
 %% Type Exports
 %%====================================================================
 
@@ -445,3 +458,78 @@ shrink_one_at_a_time([_Single]) ->
 shrink_one_at_a_time(Commands) ->
     Len = length(Commands),
     [lists:sublist(Commands, I - 1) ++ lists:nthtail(I, Commands) || I <- lists:seq(1, Len)].
+
+%%====================================================================
+%% Section 5.3: Symbolic Execution
+%%====================================================================
+
+%% @doc Create a new symbolic variable with a given index.
+-spec new_var(pos_integer()) -> symbolic_var().
+new_var(Index) ->
+    {var, Index}.
+
+%% @doc Bind a symbolic variable to a concrete result.
+-spec bind_var(symbolic_var(), command_result(), var_bindings()) -> var_bindings().
+bind_var(Var, Result, Bindings) ->
+    [{Var, Result} | Bindings].
+
+%% @doc Look up a symbolic variable in the bindings.
+%%
+%% Returns {ok, Value} if found, error otherwise.
+-spec lookup_var(symbolic_var(), var_bindings()) -> {ok, command_result()} | error.
+lookup_var(Var, Bindings) ->
+    case lists:keysearch(Var, 1, Bindings) of
+        {value, {Var, Value}} -> {ok, Value};
+        false -> error
+    end.
+
+%% @doc Substitute symbolic variables in arguments with concrete values.
+%%
+%% Replaces any {var, N} references with their bound values from the bindings.
+-spec substitute_vars([symbolic_arg()], var_bindings()) -> [term()].
+substitute_vars(Args, Bindings) ->
+    lists:map(fun
+        ({var, _} = Var) ->
+            case lookup_var(Var, Bindings) of
+                {ok, Value} -> Value;
+                error -> Var  %% Keep unbound variable as-is
+            end;
+        (Literal) ->
+            Literal
+    end, Args).
+
+%% @doc Compute the next abstract state after a symbolic command.
+%%
+%% Unlike simulate_state which doesn't track variables, this properly
+%% updates state based on symbolic execution semantics.
+-spec symbolic_next_state(state(), var_bindings(), symbolic_command()) -> state().
+symbolic_next_state(State, Vars, {call, Module, Name, Args}) ->
+    %% Extract concrete args by substituting variables
+    ConcreteArgs = substitute_vars(Args, Vars),
+    %% Create the actual command tuple that next_state expects
+    ActualCmd = {call, Module, Name, ConcreteArgs},
+    Module:next_state(State, Vars, ActualCmd).
+
+%% @doc Collect all postconditions for a command sequence.
+%%
+%% Returns a list of {CommandIndex, PostconditionFun} tuples that can be
+%% checked during concrete execution.
+-spec collect_postconditions(state_machine(), state(), command_seq()) -> [{pos_integer(), fun()}].
+collect_postconditions(#state_machine{module = Module}, InitialState, Commands) ->
+    collect_postconditions_loop(Module, InitialState, Commands, [], 1, []).
+
+collect_postconditions_loop(_Module, _State, [], _Vars, _Index, Acc) ->
+    lists:reverse(Acc);
+collect_postconditions_loop(Module, State, [Cmd | Rest], Vars, Index, Acc) ->
+    %% Check precondition
+    case Module:precondition(State, Cmd) of
+        false ->
+            %% Skip this command, don't increment index for postconditions
+            collect_postconditions_loop(Module, State, Rest, Vars, Index, Acc);
+        true ->
+            %% Add postcondition check
+            PostCond = fun(Result) -> Module:postcondition(State, Cmd, Result) end,
+            %% Update state
+            NewState = Module:next_state(State, Vars, Cmd),
+            collect_postconditions_loop(Module, NewState, Rest, Vars, Index + 1, [{Index, PostCond} | Acc])
+    end.
