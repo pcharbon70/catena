@@ -4,6 +4,7 @@
 -include_lib("eunit/include/eunit.hrl").
 -include("../../src/proptest/catena_process.hrl").
 -include("../../src/proptest/catena_gen.hrl").
+-include("../../src/proptest/catena_concurrency.hrl").
 
 %%====================================================================
 %% Section 6.3.1: Deterministic Scheduling

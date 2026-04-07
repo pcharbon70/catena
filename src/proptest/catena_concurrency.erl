@@ -17,7 +17,7 @@
 -export([random_interleaving/2,
          systematic_interleaving/1,
          bounded_interleaving/3,
-         priority_interleaving/2]).
+         priority_interleaving/1]).
 
 %% Race Condition Detection
 -export([track_operation/4,
@@ -39,38 +39,16 @@
 
 -include("catena_process.hrl").
 -include("catena_gen.hrl").
+-include("catena_concurrency.hrl").
 
 %%====================================================================
-%% Additional Records for Concurrency Testing
+%% Types
 %%====================================================================
-
--record(step, {
-    process :: pid(),
-    action :: atom(),
-    args :: [term()]
-}).
-
--record(race_info, {
-    operations :: [operation()],
-    shared_state :: [term()]
-}).
-
--record(operation, {
-    id :: reference(),
-    process :: pid(),
-    type :: atom(),
-    target :: term(),
-    timestamp :: integer()
-}).
-
--record(lock_info, {
-    locks :: #{term() => pid()},
-    wait_graph :: #{pid() => [term()]}
-}).
 
 -type operation() :: #operation{}.
 -type race_info() :: #race_info{}.
 -type lock_info() :: #lock_info{}.
+-type schedule() :: #schedule{}.
 
 %%====================================================================
 %% Deterministic Scheduling
@@ -104,7 +82,7 @@ schedule_step(Pid, Action, Args) ->
 %% @doc Execute a schedule on a set of processes.
 -spec execute_schedule([pid()], schedule()) -> {ok, [term()]} | {error, term()}.
 execute_schedule(Pids, Schedule) ->
-    execute_schedule_acc(Pids, Schedule#schedule{current = 0}, []).
+    execute_schedule_acc(Pids, Schedule#schedule{current = 0}, 0, []).
 
 execute_schedule_acc(_Pids, #schedule{steps = []}, _Current, Acc) ->
     {ok, lists:reverse(Acc)};
@@ -155,7 +133,10 @@ systematic_interleaving(Funs) when is_list(Funs) ->
     case length(Funs) of
         0 -> [];
         1 -> [[Funs]];
-        2 -> [[A, B], [B, A]] || A <- Funs, B <- Funs, A =/= B];
+        2 ->
+            %% Generate permutations for 2 functions
+            [Fun1, Fun2] = Funs,
+            [[Fun1, Fun2], [Fun2, Fun1]];
         _ -> [[Funs]]  %% For now, just return the original order for more than 2
     end.
 
@@ -281,7 +262,7 @@ await_any(Pids) ->
     Monitors = [{Pid, monitor(process, Pid)} || Pid <- Pids],
     receive
         {'DOWN', _, process, Pid, _} ->
-            lists:foreach(fun({P, M} -> demonitor(M, [flush]) end, Monitors),
+            lists:foreach(fun({P, M}) -> demonitor(M, [flush]) end, Monitors),
             {ok, Pid}
     end.
 
