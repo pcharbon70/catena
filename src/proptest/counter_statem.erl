@@ -10,6 +10,14 @@
 %% Callbacks
 %%====================================================================
 
+-export([
+    initial_state/0,
+    command/1,
+    precondition/2,
+    next_state/3,
+    postcondition/3
+]).
+
 initial_state() -> #{count => 0}.
 
 command(_State) ->

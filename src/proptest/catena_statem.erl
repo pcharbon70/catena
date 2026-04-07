@@ -94,6 +94,19 @@
 ]).
 
 %%====================================================================
+%% Section 5.2: Command Generation
+%%====================================================================
+
+-export([
+    generate_command/2,
+    generate_commands/3,
+    weight_select/1,
+    filter_valid_commands/2,
+    shrink_command_seq/2,
+    simulate_state/2
+]).
+
+%%====================================================================
 %% Type Exports
 %%====================================================================
 
@@ -143,6 +156,12 @@
 
 %% @doc Precondition function - checks if command is valid in current state.
 -type precondition() :: fun((state()) -> boolean()).
+
+%% @doc Command sequence for testing.
+-type command_seq() :: [symbolic_command()].
+
+%% @doc Command generator result.
+-type gen_result(T) :: {T, catena_gen:seed()} | {error, term()}.
 
 %%====================================================================
 %% Section 5.1.1: State Machine Type Definition
@@ -293,3 +312,136 @@ default_options() ->
         timeout = 5000,
         parallel_tracks = 2
     }.
+
+%%====================================================================
+%% Section 5.2: Command Generation
+%%====================================================================
+
+%% @doc Generate a single command from the state machine specification.
+%%
+%% Selects a command based on weights and generates its arguments.
+-spec generate_command(state_machine(), state()) -> symbolic_command().
+generate_command(#state_machine{module = Module}, State) ->
+    CommandSpecs = Module:command(State),
+    ValidSpecs = filter_valid_commands(CommandSpecs, State),
+    Selected = weight_select(ValidSpecs),
+    #command_gen{name = Name, args_gen = ArgsGen} = Selected,
+    %% Run the generator with default size and random seed
+    Tree = catena_gen:run(ArgsGen, 10, catena_gen:seed_new()),
+    Args = catena_tree:root(Tree),
+    {call, Module, Name, Args}.
+
+%% @doc Generate a sequence of commands for testing.
+%%
+%% @param StateMachine The state machine specification
+%% @param NumCommands Number of commands to generate
+%% @param InitialSeed Random seed for generation (integer or seed record)
+-spec generate_commands(state_machine(), pos_integer(), catena_gen:seed() | integer()) -> {command_seq(), catena_gen:seed()}.
+generate_commands(StateMachine, NumCommands, Seed) when is_integer(Seed) ->
+    SeedRec = catena_gen:seed_from_int(Seed),
+    generate_commands(StateMachine, NumCommands, SeedRec, []);
+generate_commands(StateMachine, NumCommands, Seed) ->
+    generate_commands(StateMachine, NumCommands, Seed, []).
+
+generate_commands(_StateMachine, 0, Seed, Acc) ->
+    {lists:reverse(Acc), Seed};
+generate_commands(#state_machine{module = Module} = SM, NumCommands, Seed, Acc) ->
+    %% Get current state by simulating through accumulated commands
+    State = simulate_state(SM, Acc),
+    CommandSpecs = Module:command(State),
+    ValidSpecs = filter_valid_commands(CommandSpecs, State),
+    case ValidSpecs of
+        [] ->
+            %% No valid commands available, stop generation
+            {lists:reverse(Acc), Seed};
+        _ ->
+            Selected = weight_select(ValidSpecs),
+            #command_gen{name = Name, args_gen = ArgsGen} = Selected,
+            {_Word, NewSeed} = catena_gen:seed_next(Seed),
+            Tree = catena_gen:run(ArgsGen, 10, Seed),
+            Args = catena_tree:root(Tree),
+            Command = {call, Module, Name, Args},
+            generate_commands(SM, NumCommands - 1, NewSeed, [Command | Acc])
+    end.
+
+%% @doc Select a command specification based on weights.
+%%
+%% Commands with higher weights are more likely to be selected.
+-spec weight_select([command_spec()]) -> command_spec().
+weight_select([]) ->
+    error(no_commands_available);
+weight_select(CommandSpecs) ->
+    TotalWeight = lists:foldl(
+        fun(#command_gen{weight = W}, Acc) when is_integer(W), W > 0 -> Acc + W;
+           (#command_gen{}, Acc) -> Acc + 1  %% Default weight
+        end, 0, CommandSpecs),
+    Random = rand:uniform(TotalWeight),
+    select_by_weight(CommandSpecs, Random, 0).
+
+select_by_weight([#command_gen{weight = W} = Spec | Rest], Target, Acc) when is_integer(W) ->
+    NewAcc = Acc + W,
+    if NewAcc >= Target -> Spec;
+       true -> select_by_weight(Rest, Target, NewAcc)
+    end;
+select_by_weight([#command_gen{} = Spec | _Rest], _Target, _Acc) ->
+    %% Default weight of 1
+    Spec.
+
+%% @doc Filter command specifications to those with valid preconditions.
+-spec filter_valid_commands([command_spec()], state()) -> [command_spec()].
+filter_valid_commands(CommandSpecs, State) ->
+    lists:filter(fun(#command_gen{precondition = undefined}) -> true;
+                    (#command_gen{precondition = Precond}) -> Precond(State)
+                 end, CommandSpecs).
+
+%% @doc Simulate state by walking through command sequence.
+%%
+%% Used to determine the abstract state at any point in a command sequence.
+-spec simulate_state(state_machine(), command_seq()) -> state().
+simulate_state(#state_machine{module = Module, initial_state = InitialState}, Commands) ->
+    Module:initial_state(),
+    simulate_state_loop(Module, InitialState, Commands, []).
+
+simulate_state_loop(_Module, State, [], _Vars) ->
+    State;
+simulate_state_loop(Module, State, [Cmd | Rest], Vars) ->
+    NewState = Module:next_state(State, Vars, Cmd),
+    %% Update Vars - in full implementation we'd extract variable bindings
+    simulate_state_loop(Module, NewState, Rest, Vars).
+
+%% @doc Shrink a command sequence while preserving failure.
+%%
+%% Returns a list of shrunk sequences to try.
+-spec shrink_command_seq(command_seq(), state_machine()) -> [command_seq()].
+shrink_command_seq(Commands, _StateMachine) ->
+    %% Basic shrinking strategies:
+    %% 1. Remove commands from the end
+    %% 2. Remove individual commands
+    %% 3. Shrink command arguments (future enhancement)
+    Shrunk1 = shrink_from_end(Commands),
+    Shrunk2 = shrink_one_at_a_time(Commands),
+    lists:usort(Shrunk1 ++ Shrunk2).
+
+%% @private Shrink by removing commands from the end.
+shrink_from_end([]) ->
+    [];
+shrink_from_end([_Single]) ->
+    [[]];  %% Only empty list for single element
+shrink_from_end(Commands) ->
+    %% Generate all prefixes shorter than the original
+    shrink_from_end(Commands, length(Commands) - 1, []).
+
+shrink_from_end(_Commands, 0, Acc) ->
+    [[] | Acc];  %% Include empty list as a shrink option
+shrink_from_end(Commands, N, Acc) when N > 0 ->
+    Prefix = lists:sublist(Commands, N),
+    shrink_from_end(Commands, N - 1, [Prefix | Acc]).
+
+%% @private Shrink by removing one command at a time.
+shrink_one_at_a_time([]) ->
+    [];
+shrink_one_at_a_time([_Single]) ->
+    [];  %% Removing one from single element list leaves empty list
+shrink_one_at_a_time(Commands) ->
+    Len = length(Commands),
+    [lists:sublist(Commands, I - 1) ++ lists:nthtail(I, Commands) || I <- lists:seq(1, Len)].
