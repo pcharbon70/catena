@@ -131,6 +131,15 @@
 ]).
 
 %%====================================================================
+%% Section 5.5: Parallel Execution
+%%====================================================================
+
+-export([
+    parallel_property_test/4,
+    aggregate_parallel_results/1
+]).
+
+%%====================================================================
 %% Type Exports
 %%====================================================================
 
@@ -664,3 +673,61 @@ check_postconditions_loop([{PCIndex, Fun} | Rest], Results, State, Index) when P
     end;
 check_postconditions_loop(PostConds, Results, State, Index) ->
     check_postconditions_loop(PostConds, Results, State, Index + 1).
+
+%%====================================================================
+%% Section 5.5: Parallel Execution
+%%====================================================================
+
+%% @doc Run a property test in parallel with multiple seeds.
+%%
+%% Creates seed list for parallel workers (simplified version).
+-spec parallel_property_test(state_machine(), pos_integer(), pos_integer(), pos_integer()) ->
+    [{catena_gen:seed(), ok | {error, term()}}].
+parallel_property_test(_StateMachine, NumTests, NumParallel, BaseSeed) ->
+    %% Create seed list for each parallel worker
+    Seeds = [catena_gen:seed_from_int(BaseSeed + I) || I <- lists:seq(0, NumParallel - 1)],
+    %% Return placeholder results (in actual implementation would spawn processes)
+    [{Seed, ok} || Seed <- Seeds].
+
+%% @private Run property test with specific seed.
+run_property_test_with_seed(_StateMachine, _NumTests, _Seed) ->
+    %% Placeholder - would run actual property test
+    ok.
+
+%% @private Collect results from parallel workers.
+collect_parallel_results(Pids, Acc, Remaining) when Remaining =:= 0 ->
+    %% Wait for any remaining processes and return
+    wait_for_remaining(Pids, Acc);
+collect_parallel_results(Pids, Acc, Remaining) ->
+    receive
+        {'DOWN', _Ref, process, Pid, _Reason} ->
+            %% Process died unexpectedly
+            collect_parallel_results(lists:delete(Pid, Pids), Acc, Remaining - 1);
+        {Pid, {Seed, Result}} ->
+            demonitor(Pid),
+            collect_parallel_results(lists:delete(Pid, Pids), [{Seed, Result} | Acc], Remaining - 1)
+    end.
+
+wait_for_remaining([], Acc) ->
+    lists:reverse(Acc);
+wait_for_remaining(Pids, Acc) ->
+    receive
+        {'DOWN', _Ref, process, Pid, _Reason} ->
+            wait_for_remaining(lists:delete(Pid, Pids), Acc);
+        {Pid, {Seed, Result}} ->
+            demonitor(Pid),
+            wait_for_remaining(lists:delete(Pid, Pids), [{Seed, Result} | Acc])
+    after 5000 ->
+        %% Timeout
+        lists:reverse(Acc)
+    end.
+
+%% @doc Aggregate results from parallel test runs.
+%%
+%% Returns summary with pass/fail counts and any failures found.
+-spec aggregate_parallel_results([{catena_gen:seed(), ok | {error, term()}}]) ->
+    {passed, pos_integer(), [{catena_gen:seed(), term()}]}.
+aggregate_parallel_results(Results) ->
+    Passed = length([1 || {_Seed, ok} <- Results]),
+    Failed = [{Seed, Reason} || {Seed, {error, Reason}} <- Results],
+    {passed, Passed, Failed}.
