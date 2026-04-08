@@ -163,19 +163,19 @@ Each phase includes:
 
 | Phase | Duration | Week Range | Status |
 |-------|----------|------------|--------|
-| Phase 1 | 6.5 weeks | Weeks 1-6.5 | ❌ Not Started |
+| Phase 1 | 6.5 weeks | Weeks 1-6.5 | ✅ Complete |
 | Phase 2 | 3.5 weeks | Weeks 7-10.5 | ❌ Not Started |
 | Phase 3 | 3.5 weeks | Weeks 11-14.5 | ❌ Not Started |
 | Phase 4 | 2.5 weeks | Weeks 15-17 | ❌ Not Started |
 | Phase 5 | 3.5 weeks | Weeks 18-21.5 | ❌ Not Started |
-| **PoC Total** | **~12 weeks** | **3 months** | **0% Complete** |
+| **PoC Total** | **~12 weeks** | **3 months** | **~17% Complete** |
 
 ### Post-PoC Completion (5 weeks)
 
 | Phase | Duration | Week Range | Status |
 |-------|----------|------------|--------|
 | Phase 6 | 5 weeks | Weeks 22-26 | ❌ Not Started |
-| **Total All Phases** | **~17 weeks** | **4.25 months** | **0% Complete** |
+| **Total All Phases** | **~17 weeks** | **4.25 months** | **~17% Complete** |
 
 **Note**: Timeline is approximate. Phase 6 is post-PoC and implements advanced effect features deferred from the initial demonstration. Phases 1-5 constitute the complete proof-of-concept demonstrating minimal viable algebraic effects on BEAM.
 
