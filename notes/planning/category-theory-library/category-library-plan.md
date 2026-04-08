@@ -1,10 +1,16 @@
 # Category Theory Library Plan
 
+> **NOTE**: This plan has been integrated into **[Phase 7: Category Theory Library](../proof-of-concept/phase-07-category-theory-library.md)** in the main phase navigation. This document is preserved for historical reference but should not be used for active planning.
+
 ## Overview
 
 This planning document outlines the implementation of a comprehensive category theory library for Catena that exposes traditional mathematical terminology alongside the pragmatic names. The library provides `Functor`, `Monad`, `Applicative`, and other category theory abstractions as aliases to the core pragmatic traits (`Mapper`, `Pipeline`, `Applicator`), allowing developers familiar with category theory to use conventional terminology.
 
 **Total Duration**: 7.5 weeks
+
+**Status**: ✅ **INTEGRATED INTO PHASE 7** - See [phase-07-category-theory-library.md](../proof-of-concept/phase-07-category-theory-library.md) for the active planning document.
+
+---
 
 ## Phase Navigation
 

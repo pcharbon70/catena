@@ -102,10 +102,25 @@ Completes the effect system with effect polymorphism, expanded effect library, o
 
 ---
 
+### [Phase 7: Category Theory Library](phase-07-category-theory-library.md) (Weeks 27-34.5)
+**Traditional mathematical terminology and complete category theory abstractions**
+
+Implements traditional mathematical terminology for Catena's category theory abstractions, providing aliases to the pragmatic names used in the prelude. Exposes `Functor`, `Monad`, `Applicative`, `Setoid`, `Semigroup`, `Monoid`, and other standard category theory names alongside the pragmatic `Mapper`, `Pipeline`, `Applicator`, `Comparable`, `Combiner`, and `Accumulator` traits. Also adds advanced abstractions not in the pragmatic prelude: Contravariant, Bifunctor, Profunctor, Alternative, MonadPlus, MonadFail, MonadTrans, Category, Arrow, Comonad, and Group.
+
+**Key Deliverables:**
+- Traditional mathematical name aliases (Setoid=Comparable, Functor=Mapper, Monad=Pipeline, etc.)
+- Advanced category theory traits (Contravariant, Bifunctor, Profunctor, Arrow, Comonad, Alternative)
+- Monad transformers (MaybeT, EitherT, ReaderT, StateT)
+- Complete operator suite (30+ operators) with consistent precedence
+- Law documentation with property-based test templates
+- Category library module structure (8 files in lib/catena/stdlib/category/)
+
+---
+
 ## Quick Links
 
 **By Development Stage:**
-- [Foundation + Effects](phase-01.md) → [Development Tools + Effect REPL](phase-02.md) → [Language Features](phase-03.md) → [Organization + Effect Propagation](phase-04.md) → [Actor-Effect Unification](phase-05.md) → [Effect Completion](phase-06-effect-completion.md)
+- [Foundation + Effects](phase-01.md) → [Development Tools + Effect REPL](phase-02.md) → [Language Features](phase-03.md) → [Organization + Effect Propagation](phase-04.md) → [Actor-Effect Unification](phase-05.md) → [Effect Completion](phase-06-effect-completion.md) → [Category Theory Library](phase-07-category-theory-library.md)
 
 **By Topic:**
 - **Compilation + Effects**: [Phase 1](phase-01.md) - Lexer, Parser, Type-and-Effect System, Effect Runtime, Code Generation
@@ -114,6 +129,7 @@ Completes the effect system with effect polymorphism, expanded effect library, o
 - **Architecture**: [Phase 4](phase-04.md) - Modules, Imports, Effect Propagation, Interface Files
 - **Concurrency**: [Phase 5](phase-05.md) - Actors as Effect Handlers, Supervision, Process Effect
 - **Advanced Effects**: [Phase 6](phase-06-effect-completion.md) - Effect Polymorphism, Effect Library, Optimizations
+- **Category Theory**: [Phase 7](phase-07-category-theory-library.md) - Traditional Names, Advanced Abstractions, Operators, Laws
 
 **Back to:**
 - [Proof-of-Concept Overview](proof-of-concept.md)
@@ -135,10 +151,12 @@ Phase 4 (Modules + Effect Propagation)       │← Needs prelude with effects
 Phase 5 (Actors + Effect Unification)        │← Builds on all, unifies with effects
    ↓                                         │
 Phase 6 (Effect System Completion)           │← Post-PoC, builds on effect foundation
+   ↓                                         │
+Phase 7 (Category Theory Library)            │← Adds traditional names and advanced CT
    └──────────────────────────────────────────┘
 ```
 
-Each phase builds incrementally on previous work. Phase 1 establishes minimal viable effects that grow through Phases 2-5, culminating in full effect system in Phase 6.
+Each phase builds incrementally on previous work. Phase 1 establishes minimal viable effects that grow through Phases 2-5, culminating in full effect system in Phase 6. Phase 7 provides traditional mathematical terminology and completes the category theory library.
 
 ---
 
@@ -170,14 +188,15 @@ Each phase includes:
 | Phase 5 | 3.5 weeks | Weeks 18-21.5 | ❌ Not Started (0%) | Actor Model Integration |
 | **PoC Total** | **~12 weeks** | **3 months** | **~38% Complete** | |
 
-### Post-PoC Completion (5 weeks)
+### Post-PoC Completion (12.5 weeks)
 
 | Phase | Duration | Week Range | Status |
 |-------|----------|------------|--------|
 | Phase 6 | 5 weeks | Weeks 22-26 | ❌ Not Started | Effect System Completion |
-| **Total All Phases** | **~17 weeks** | **4.25 months** | **~30% Complete** | |
+| Phase 7 | 7.5 weeks | Weeks 27-34.5 | ❌ Not Started | Category Theory Library |
+| **Total All Phases** | **~29 weeks** | **7.25 months** | **~30% Complete** | |
 
-**Note**: Timeline is approximate. Phase 6 is post-PoC and implements advanced effect features deferred from the initial demonstration. Phases 1-5 constitute the complete proof-of-concept demonstrating minimal viable algebraic effects on BEAM.
+**Note**: Timeline is approximate. Phase 6 is post-PoC and implements advanced effect features. Phase 7 provides traditional mathematical terminology and completes the category theory library. Phases 1-5 constitute the complete proof-of-concept demonstrating minimal viable algebraic effects on BEAM.
 
 ---
 
