@@ -2,11 +2,37 @@
 
 ## Overview
 
-This phase implements traditional mathematical terminology for Catena's category theory abstractions, providing aliases to the pragmatic names used in the prelude. The library exposes `Functor`, `Monad`, `Applicative`, `Setoid`, `Semigroup`, `Monoid`, and other standard category theory names alongside the pragmatic `Mapper`, `Pipeline`, `Applicator`, `Comparable`, `Combiner`, and `Accumulator` traits.
+This phase implements traditional mathematical terminology for Catena's category theory abstractions, providing aliases to the pragmatic names used in the prelude. The library provides dual naming: developer-friendly pragmatic names alongside traditional mathematical names.
 
 This enables developers familiar with category theory to use conventional terminology while maintaining Catena's pragmatic naming for everyday use. The library provides complete trait aliases, all operators (both traditional and pragmatic), comprehensive law documentation, and property-based test templates.
 
 This phase runs for **7.5 weeks** and focuses on mathematical completeness and interoperability. By the end, Catena will have a fully-featured category theory library matching Haskell's `base`, PureScript's `prelude`, and other established FP languages.
+
+## Naming Convention
+
+| Pragmatic Name | Traditional Name | Status |
+|----------------|------------------|--------|
+| `Comparable` | Setoid | ✅ Exists |
+| `Combiner` | Semigroup | ✅ Exists |
+| `Accumulator` | Monoid | ✅ Exists |
+| `Invertible` | Group | 🆕 New |
+| `Mapper` | Functor | ✅ Exists |
+| `ReverseMapper` | Contravariant | 🆕 New |
+| `DualMapper` | Bifunctor | 🆕 New |
+| `Relation` | Profunctor | 🆕 New |
+| `Applicator` | Applicative | ✅ Exists |
+| `Choice` | Alternative | 🆕 New |
+| `Chainable` | Chain | ✅ Exists |
+| `Pipeline` | Monad | ✅ Exists |
+| `Choiceful` | MonadPlus | 🆕 New |
+| `Fallible` | MonadFail | 🆕 New |
+| `Nested` | MonadTrans | 🆕 New (trait for transformers) |
+| `Extractor` | Comonad | ✅ Exists |
+| `Composable` | Category | 🆕 New |
+| `Circuit` | Arrow | 🆕 New |
+| `Foldable` | Foldable | ✅ Exists |
+| `Traversable` | Traversable | ✅ Exists |
+| `Orderable` | Ord | ✅ Exists |
 
 ---
 
@@ -48,14 +74,14 @@ Monoid extends Semigroup with an identity element. Implemented as an alias to `A
 - [ ] 7.1.3.3 Document Monoid laws: left identity, right identity
 - [ ] 7.1.3.4 Verify instances for `String`, `List`, `Natural` (addition), `Natural` (multiplication)
 
-### 7.1.4 Group
+### 7.1.4 Invertible (Group)
 - [ ] **Task 7.1.4 Complete**
 
-Group extends Monoid with inverses. This is a new trait not in the pragmatic prelude.
+Invertible (traditionally called Group) extends Monoid with inverses. This is a new trait not in the pragmatic prelude. The name emphasizes the key feature: elements can be inverted/reversed.
 
-- [ ] 7.1.4.1 Define `Group` trait extending `Monoid` with `invert : a -> a`
+- [ ] 7.1.4.1 Define `Invertible` trait (alias `Group`) extending `Monoid` with `invert : a -> a`
 - [ ] 7.1.4.2 Implement `minus` as `x <> (invert y)`
-- [ ] 7.1.4.3 Document Group laws: left inverse, right inverse
+- [ ] 7.1.4.3 Document Invertible laws: left inverse, right inverse
 - [ ] 7.1.4.4 Provide instance for `Integer` (integers under addition)
 
 ### Unit Tests - Section 7.1
@@ -63,7 +89,7 @@ Group extends Monoid with inverses. This is a new trait not in the pragmatic pre
 - [ ] Test Setoid laws for all instances
 - [ ] Test Semigroup associativity with property-based testing
 - [ ] Test Monoid identity laws for all instances
-- [ ] Test Group inverse laws for Integer instance
+- [ ] Test Invertible inverse laws for Integer instance
 - [ ] Test operator definitions produce correct results
 
 ---
@@ -86,45 +112,45 @@ Functor is the fundamental abstraction for mapping functions over structures. Im
 - [ ] 7.2.1.5 Implement `void` to replace contents with Unit
 - [ ] 7.2.1.6 Document Functor laws: identity, composition
 
-### 7.2.2 Contravariant
+### 7.2.2 ReverseMapper (Contravariant)
 - [ ] **Task 7.2.2 Complete**
 
-Contravariant functors reverse the direction of mapping. This is a new trait.
+ReverseMapper (traditionally called Contravariant) reverses the direction of mapping. Maps "backwards" (input transformation) vs Mapper's output. This is a new trait.
 
-- [ ] 7.2.2.1 Define `Contravariant` trait with `contramap : (b -> a) -> f a -> f b`
+- [ ] 7.2.2.1 Define `ReverseMapper` trait (alias `Contravariant`) with `contramap : (b -> a) -> f a -> f b`
 - [ ] 7.2.2.2 Define `>$<` operator as infix version of `contramap`
 - [ ] 7.2.2.3 Implement `>$` (contravariant replace)
-- [ ] 7.2.2.4 Document Contravariant laws: identity, composition
+- [ ] 7.2.2.4 Document ReverseMapper laws: identity, composition
 - [ ] 7.2.2.5 Provide instance for `Predicate a = Predicate (a -> Bool)`
 
-### 7.2.3 Bifunctor
+### 7.2.3 DualMapper (Bifunctor)
 - [ ] **Task 7.2.3 Complete**
 
-Bifunctors are functors over two type parameters. This is a new trait.
+DualMapper (traditionally called Bifunctor) maps over two type parameters simultaneously (dual-sided mapping). This is a new trait.
 
-- [ ] 7.2.3.1 Define `Bifunctor` trait with `bimap : (a -> c) -> (b -> d) -> f a b -> f c d`
+- [ ] 7.2.3.1 Define `DualMapper` trait (alias `Bifunctor`) with `bimap : (a -> c) -> (b -> d) -> f a b -> f c d`
 - [ ] 7.2.3.2 Implement `first : (a -> c) -> f a b -> f c b` as `bimap f id`
 - [ ] 7.2.3.3 Implement `second : (b -> d) -> f a b -> f a d` as `bimap id g`
-- [ ] 7.2.3.4 Document Bifunctor laws: identity, composition
+- [ ] 7.2.3.4 Document DualMapper laws: identity, composition
 - [ ] 7.2.3.5 Provide instances for `Tuple`, `Either`, `Result`
 
-### 7.2.4 Profunctor
+### 7.2.4 Relation (Profunctor)
 - [ ] **Task 7.2.4 Complete**
 
-Profunctors are bifunctors contravariant in first argument, covariant in second. This is a new trait.
+Relation (traditionally called Profunctor) represents relationships/transformations between types. Profunctors are bifunctors contravariant in first argument, covariant in second. This is a new trait.
 
-- [ ] 7.2.4.1 Define `Profunctor` trait with `dimap : (c -> a) -> (b -> d) -> p a b -> p c d`
+- [ ] 7.2.4.1 Define `Relation` trait (alias `Profunctor`) with `dimap : (c -> a) -> (b -> d) -> p a b -> p c d`
 - [ ] 7.2.4.2 Implement `lmap : (c -> a) -> p a b -> p c b` as `dimap f id`
 - [ ] 7.2.4.3 Implement `rmap : (b -> d) -> p a b -> p a d` as `dimap id g`
-- [ ] 7.2.4.4 Document Profunctor laws: identity, composition
+- [ ] 7.2.4.4 Document Relation laws: identity, composition
 - [ ] 7.2.4.5 Provide instance for function type `(->)`
 
 ### Unit Tests - Section 7.2
 - [ ] **Unit Tests 7.2 Complete**
 - [ ] Test Functor laws for Maybe, List, Either with property-based testing
-- [ ] Test Contravariant laws for Predicate type
-- [ ] Test Bifunctor laws for Tuple and Either
-- [ ] Test Profunctor laws for function type
+- [ ] Test ReverseMapper laws for Predicate type
+- [ ] Test DualMapper laws for Tuple and Either
+- [ ] Test Relation laws for function type
 - [ ] Test all operators produce correct results
 
 ---
@@ -148,17 +174,17 @@ Applicative extends Functor with ability to apply functions within a context. Im
 - [ ] 7.3.1.6 Implement `liftA3` for three arguments
 - [ ] 7.3.1.7 Document Applicative laws: identity, composition, homomorphism, interchange
 
-### 7.3.2 Alternative
+### 7.3.2 Choice (Alternative)
 - [ ] **Task 7.3.2 Complete**
 
-Alternative extends Applicative with choice and failure. This is a new trait.
+Choice (traditionally called Alternative) extends Applicative with choice and failure. The name "Choice" clearly conveys selecting between alternatives. This is a new trait.
 
-- [ ] 7.3.2.1 Define `Alternative` trait extending `Applicative` with `empty : f a` and `alt : f a -> f a -> f a`
+- [ ] 7.3.2.1 Define `Choice` trait (alias `Alternative`) extending `Applicative` with `empty : f a` and `alt : f a -> f a -> f a`
 - [ ] 7.3.2.2 Define `<|>` operator mapping to `alt` function
 - [ ] 7.3.2.3 Implement `some : f a -> f (List a)` (one or more)
 - [ ] 7.3.2.4 Implement `many : f a -> f (List a)` (zero or more)
 - [ ] 7.3.2.5 Implement `optional : f a -> f (Maybe a)`
-- [ ] 7.3.2.6 Document Alternative laws: monoid laws, distributivity
+- [ ] 7.3.2.6 Document Choice laws: monoid laws, distributivity
 - [ ] 7.3.2.7 Provide instances for `Maybe`, `List`
 
 ### 7.3.3 Monad
@@ -174,24 +200,24 @@ Monad extends Applicative with sequential composition. Implemented as an alias t
 - [ ] 7.3.3.6 Implement `join : m (m a) -> m a` as `ma >>= id`
 - [ ] 7.3.3.7 Document Monad laws: left identity, right identity, associativity
 
-### 7.3.4 MonadPlus and MonadFail
+### 7.3.4 Choiceful and Fallible
 - [ ] **Task 7.3.4 Complete**
 
 Additional monad utilities for choice and failure handling.
 
-- [ ] 7.3.4.1 Define `MonadPlus` trait extending `Monad` and `Alternative` (no new methods)
-- [ ] 7.3.4.2 Implement `mfilter : (a -> Bool) -> m a -> m a` for MonadPlus
-- [ ] 7.3.4.3 Implement `guard : Bool -> m Unit` for MonadPlus
-- [ ] 7.3.4.4 Define `MonadFail` trait with `fail : String -> m a`
-- [ ] 7.3.4.5 Document MonadPlus laws: left zero, left distribution
+- [ ] 7.3.4.1 Define `Choiceful` trait (alias `MonadPlus`) extending `Monad` and `Choice` (no new methods)
+- [ ] 7.3.4.2 Implement `mfilter : (a -> Bool) -> m a -> m a` for Choiceful
+- [ ] 7.3.4.3 Implement `guard : Bool -> m Unit` for Choiceful
+- [ ] 7.3.4.4 Define `Fallible` trait (alias `MonadFail`) with `fail : String -> m a`
+- [ ] 7.3.4.5 Document Choiceful laws: left zero, left distribution
 - [ ] 7.3.4.6 Provide instances for `Maybe`, `List`
 
-### 7.3.5 Monad Transformers
+### 7.3.5 Nested Transformers
 - [ ] **Task 7.3.5 Complete**
 
-Monad transformers allow stacking monadic effects.
+Nested (traditionally called MonadTrans) allow stacking monadic effects. The name describes the structure: one monad nested inside another.
 
-- [ ] 7.3.5.1 Define `MonadTrans` trait with `lift : m a -> t m a`
+- [ ] 7.3.5.1 Define `Nested` trait (alias `MonadTrans`) with `lift : m a -> t m a`
 - [ ] 7.3.5.2 Implement `MaybeT m a` transformer
 - [ ] 7.3.5.3 Implement `EitherT e m a` transformer (also called ExceptT)
 - [ ] 7.3.5.4 Implement `ReaderT r m a` transformer
@@ -206,25 +232,25 @@ Kleisli arrows compose effectful functions.
 - [ ] 7.3.6.1 Define `>=>` operator (left-to-right Kleisli)
 - [ ] 7.3.6.2 Define `<=<` operator (right-to-left Kleisli)
 - [ ] 7.3.6.3 Implement `Kleisli` newtype wrapper
-- [ ] 7.3.6.4 Provide `Category` instance for `Kleisli m`
+- [ ] 7.3.6.4 Provide `Composable` instance for `Kleisli m`
 - [ ] 7.3.6.5 Document Kleisli composition laws
 
 ### Unit Tests - Section 7.3
 - [ ] **Unit Tests 7.3 Complete**
 - [ ] Test Applicative laws for Maybe, List, Either with property-based testing
-- [ ] Test Alternative laws for Maybe and List
+- [ ] Test Choice laws for Maybe and List
 - [ ] Test Monad laws for Maybe, List, Either, Result
-- [ ] Test MonadPlus laws for Maybe and List
-- [ ] Test monad transformers correctly compose effects
+- [ ] Test Choiceful laws for Maybe and List
+- [ ] Test nested transformers correctly compose effects
 - [ ] Test Kleisli composition satisfies category laws
 
 ---
 
-## 7.4 Comonad and Arrow
+## 7.4 Extractor and Circuit
 
 **Duration**: 1.5 weeks (Weeks 6.5-7.5)
 
-This phase implements comonads (dual of monads) and arrows (generalized functions).
+This phase implements comonads (dual of monads) and circuits (generalized functions).
 
 ### 7.4.1 Comonad
 - [ ] **Task 7.4.1 Complete**
@@ -249,49 +275,49 @@ Implement standard comonad instances.
 - [ ] 7.4.2.5 Implement `Traced m a` comonad (value with monoidal trace)
 - [ ] 7.4.2.6 Provide accessor functions: `pos`, `peek`, `ask`, `trace`
 
-### 7.4.3 Category and Arrow
+### 7.4.3 Composable (Category)
 - [ ] **Task 7.4.3 Complete**
 
-Arrows generalize functions to structured computations.
+Composable (traditionally called Category) defines composition and identity. The name mirrors `Pipeline` for Monad, emphasizing the key operation: things that can be composed.
 
-- [ ] 7.4.3.1 Define `Category` trait with `id : cat a a` and `compose : cat b c -> cat a b -> cat a c`
+- [ ] 7.4.3.1 Define `Composable` trait (alias `Category`) with `id : cat a a` and `compose : cat b c -> cat a b -> cat a c`
 - [ ] 7.4.3.2 Define `>>>` operator (left-to-right)
 - [ ] 7.4.3.3 Define `<<<` operator (right-to-left)
-- [ ] 7.4.3.4 Document Category laws: left identity, right identity, associativity
+- [ ] 7.4.3.4 Document Composable laws: left identity, right identity, associativity
 - [ ] 7.4.3.5 Provide instance for function type `(->)`
 
-### 7.4.4 Arrow
+### 7.4.4 Circuit (Arrow)
 - [ ] **Task 7.4.4 Complete**
 
-Arrow extends Category with lifting and product operations.
+Circuit (traditionally called Arrow) extends Category with lifting and product operations. The name represents computation circuits/streams, which is intuitive for data flow.
 
-- [ ] 7.4.4.1 Define `Arrow` trait extending `Category` with `arr : (a -> b) -> arr a b` and `first : arr a b -> arr (a, c) (b, c)`
+- [ ] 7.4.4.1 Define `Circuit` trait (alias `Arrow`) extending `Composable` with `arr : (a -> b) -> arr a b` and `first : arr a b -> arr (a, c) (b, c)`
 - [ ] 7.4.4.2 Implement `second : arr a b -> arr (c, a) (c, b)` using `first` and `arr swap`
 - [ ] 7.4.4.3 Define `***` operator (parallel)
 - [ ] 7.4.4.4 Define `&&&` operator (fanout)
-- [ ] 7.4.4.5 Document Arrow laws
+- [ ] 7.4.4.5 Document Circuit laws
 - [ ] 7.4.4.6 Provide instance for function type
 
-### 7.4.5 ArrowChoice and ArrowApply
+### 7.4.5 CircuitChoice and CircuitApply
 - [ ] **Task 7.4.5 Complete**
 
-Additional arrow operations for branching and application.
+Additional circuit operations for branching and application.
 
-- [ ] 7.4.5.1 Define `ArrowChoice` extending `Arrow` with `left : arr a b -> arr (Either a c) (Either b c)`
+- [ ] 7.4.5.1 Define `CircuitChoice` trait (alias `ArrowChoice`) extending `Circuit` with `left : arr a b -> arr (Either a c) (Either b c)`
 - [ ] 7.4.5.2 Implement `right : arr a b -> arr (Either c a) (Either c b)`
 - [ ] 7.4.5.3 Define `+++` operator (sum parallel)
 - [ ] 7.4.5.4 Define `|||` operator (fanin)
-- [ ] 7.4.5.5 Define `ArrowApply` with `app : arr (arr a b, a) b`
-- [ ] 7.4.5.6 Document ArrowChoice and ArrowApply laws
+- [ ] 7.4.5.5 Define `CircuitApply` trait (alias `ArrowApply`) with `app : arr (arr a b, a) b`
+- [ ] 7.4.5.6 Document CircuitChoice and CircuitApply laws
 
 ### Unit Tests - Section 7.4
 - [ ] **Unit Tests 7.4 Complete**
 - [ ] Test Comonad laws for all instances with property-based testing
 - [ ] Test `extract` and `extend` correctly
-- [ ] Test Category laws for function and Kleisli instances
-- [ ] Test Arrow laws with property-based testing
+- [ ] Test Composable laws for function and Kleisli instances
+- [ ] Test Circuit laws with property-based testing
 - [ ] Test `***` and `&&&` correctly handle pairs
-- [ ] Test ArrowChoice correctly routes Either values
+- [ ] Test CircuitChoice correctly routes Either values
 
 ---
 
@@ -353,8 +379,10 @@ Consolidate all operators into a central module.
 - [ ] 7.6.1.4 Document Functor operators: `<$>`, `<$`, `$>`
 - [ ] 7.6.1.5 Document Applicative operators: `<*>`, `<*`, `*>`
 - [ ] 7.6.1.6 Document Monad operators: `>>=`, `>>`, `=<<`
-- [ ] 7.6.1.7 Document Arrow operators: `>>>`, `<<<`, `***`, `&&&`
+- [ ] 7.6.1.7 Document Circuit operators: `>>>`, `<<<`, `***`, `&&&`
 - [ ] 7.6.1.8 Document Comonad operators: `=>>`, `<<=`
+- [ ] 7.6.1.9 Document Choice operator: `<|>`
+- [ ] 7.6.1.10 Document ReverseMapper operators: `>$<`, `>$`
 
 ### 7.6.2 Operator Precedence
 - [ ] **Task 7.6.2 Complete**
@@ -379,8 +407,10 @@ Provide comprehensive law documentation with test templates.
 - [ ] 7.6.3.4 Document Applicative laws with examples
 - [ ] 7.6.3.5 Document Monad laws with examples
 - [ ] 7.6.3.6 Document Comonad laws with examples
-- [ ] 7.6.3.7 Document Category and Arrow laws with examples
+- [ ] 7.6.3.7 Document Composable and Circuit laws with examples
 - [ ] 7.6.3.8 Document Foldable and Traversable laws with examples
+- [ ] 7.6.3.9 Document Invertible laws with examples
+- [ ] 7.6.3.10 Document ReverseMapper, DualMapper, and Relation laws with examples
 
 ### 7.6.4 Property-Based Test Templates
 - [ ] **Task 7.6.4 Complete**
@@ -394,7 +424,9 @@ Provide reusable test templates for law verification.
 - [ ] 7.6.4.5 Create `checkMonadLaws` test generator
 - [ ] 7.6.4.6 Create `checkComonadLaws` test generator
 - [ ] 7.6.4.7 Create `checkTraversableLaws` test generator
-- [ ] 7.6.4.8 Document how to use test generators for custom instances
+- [ ] 7.6.4.8 Create `checkInvertibleLaws` test generator
+- [ ] 7.6.4.9 Create `checkChoiceLaws` test generator
+- [ ] 7.6.4.10 Document how to use test generators for custom instances
 
 ### Unit Tests - Section 7.6
 - [ ] **Unit Tests 7.6 Complete**
@@ -409,33 +441,34 @@ Provide reusable test templates for law verification.
 ## Success Criteria
 
 1. **Trait Aliases**: All traditional category theory names available as aliases to pragmatic traits
-2. **Interoperability**: Both naming conventions work seamlessly together
-3. **Complete Operators**: 30+ operators with consistent precedence and associativity
-4. **Law Documentation**: Every abstraction has documented laws with examples
-5. **Test Templates**: Property-based test generators for all trait laws
-6. **Module Organization**: 8 library files in `lib/catena/stdlib/category/`
+2. **Dual Naming**: Both pragmatic and traditional names work seamlessly together
+3. **Developer-Friendly**: New abstractions use intuitive names (Invertible, Choice, Circuit, etc.)
+4. **Complete Operators**: 30+ operators with consistent precedence and associativity
+5. **Law Documentation**: Every abstraction has documented laws with examples
+6. **Test Templates**: Property-based test generators for all trait laws
+7. **Module Organization**: 8 library files in `lib/catena/stdlib/category/`
 
 ## Provides Foundation
 
 This phase establishes the infrastructure for:
 - **Advanced Type System Features**: Higher-kinded types, type families
-- **Effect System Integration**: Monad transformers for algebraic effects
+- **Effect System Integration**: Nested transformers for algebraic effects
 - **Optimization Passes**: Functor fusion, deforestation, rewrite rules
-- **Optics Library**: Lenses and prisms built on Profunctor
-- **Parser Combinators**: Built on Applicative and Alternative
-- **Streaming Libraries**: Built on Comonad and Arrow
+- **Optics Library**: Lenses and prisms built on Relation (Profunctor)
+- **Parser Combinators**: Built on Applicative and Choice (Alternative)
+- **Streaming Libraries**: Built on Comonad and Circuit (Arrow)
 - **Formal Verification**: Law-based reasoning and equational proofs
 
 ## Key Outputs
 
 - **8 library files** in `lib/catena/stdlib/category/`:
   - `core.cat` - Trait aliases and re-exports
-  - `algebraic.cat` - Setoid, Semigroup, Monoid, Group
-  - `functor.cat` - Functor, Contravariant, Bifunctor, Profunctor
-  - `applicative.cat` - Applicative and Alternative
-  - `monad.cat` - Monad, MonadPlus, MonadFail, transformers
+  - `algebraic.cat` - Setoid, Semigroup, Monoid, Invertible (Group)
+  - `functor.cat` - Functor, ReverseMapper, DualMapper, Relation
+  - `applicative.cat` - Applicative and Choice
+  - `monad.cat` - Monad, Choiceful, Fallible, transformers
   - `comonad.cat` - Comonad instances
-  - `arrow.cat` - Category and Arrow
+  - `circuit.cat` - Composable and Circuit
   - `operators.cat` - All operators
 - **Comprehensive operator suite** with 30+ operators
 - **Law documentation** for all abstractions

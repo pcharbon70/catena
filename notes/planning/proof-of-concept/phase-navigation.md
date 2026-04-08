@@ -105,12 +105,13 @@ Completes the effect system with effect polymorphism, expanded effect library, o
 ### [Phase 7: Category Theory Library](phase-07-category-theory-library.md) (Weeks 27-34.5)
 **Traditional mathematical terminology and complete category theory abstractions**
 
-Implements traditional mathematical terminology for Catena's category theory abstractions, providing aliases to the pragmatic names used in the prelude. Exposes `Functor`, `Monad`, `Applicative`, `Setoid`, `Semigroup`, `Monoid`, and other standard category theory names alongside the pragmatic `Mapper`, `Pipeline`, `Applicator`, `Comparable`, `Combiner`, and `Accumulator` traits. Also adds advanced abstractions not in the pragmatic prelude: Contravariant, Bifunctor, Profunctor, Alternative, MonadPlus, MonadFail, MonadTrans, Category, Arrow, Comonad, and Group.
+Implements traditional mathematical terminology for Catena's category theory abstractions, providing aliases to the pragmatic names used in the prelude. Exposes `Functor`, `Monad`, `Applicative`, `Setoid`, `Semigroup`, `Monoid`, and other standard category theory names alongside the pragmatic `Mapper`, `Pipeline`, `Applicator`, `Comparable`, `Combiner`, and `Accumulator` traits. Also adds advanced abstractions with developer-friendly names: `Invertible` (Group), `ReverseMapper` (Contravariant), `DualMapper` (Bifunctor), `Relation` (Profunctor), `Choice` (Alternative), `Choiceful` (MonadPlus), `Fallible` (MonadFail), `Nested` (MonadTrans), `Composable` (Category), and `Circuit` (Arrow).
 
 **Key Deliverables:**
 - Traditional mathematical name aliases (Setoid=Comparable, Functor=Mapper, Monad=Pipeline, etc.)
-- Advanced category theory traits (Contravariant, Bifunctor, Profunctor, Arrow, Comonad, Alternative)
-- Monad transformers (MaybeT, EitherT, ReaderT, StateT)
+- Developer-friendly names for new abstractions (Invertible, Choice, Circuit, etc.)
+- Advanced category theory traits (ReverseMapper, DualMapper, Relation, Circuit, Comonad, Choice)
+- Monad transformers (MaybeT, EitherT, ReaderT, StateT) as `Nested` trait
 - Complete operator suite (30+ operators) with consistent precedence
 - Law documentation with property-based test templates
 - Category library module structure (8 files in lib/catena/stdlib/category/)
