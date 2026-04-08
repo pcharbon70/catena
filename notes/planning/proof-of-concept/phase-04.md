@@ -11,12 +11,12 @@ This phase runs for **2.5 weeks** and prioritizes clean semantics and developer 
 ---
 
 ## 4.1 Module Structure
-- [ ] **Section 4.1 Complete**
+- [x] **Section 4.1 Complete**
 
 Module definitions establish boundaries between code units. Each module declares its name, exports (public API), and imports (dependencies). The module body contains type definitions (shapes), function definitions (flows), and trait implementations. Private definitions (not exported) provide internal implementation details. Module structure determines what code is visible where, enabling information hiding and abstraction.
 
 ### 4.1.1 Module Declaration Syntax
-- [ ] **Task 4.1.1 Complete**
+- [x] **Task 4.1.1 Complete**
 
 Module declarations specify the module name and what it exports. Syntax: `module Data.List exports (List, map, filter) where ... end`. The export list can include types, functions, or entire submodules. Module names use hierarchical dot notation (Java-style). We parse module declarations, build module objects holding metadata, and validate that all exported names are defined.
 
@@ -26,7 +26,7 @@ Module declarations specify the module name and what it exports. Syntax: `module
 - [ ] 4.1.1.4 Implement module metadata construction storing exports, imports, and definitions
 
 ### 4.1.2 Export System
-- [ ] **Task 4.1.2 Complete**
+- [x] **Task 4.1.2 Complete**
 
 The export system determines a module's public API. We support exporting types (with or without constructors), functions, and trait instances. **Exported functions include effect signatures** in their type information. Selective constructor export allows hiding internal representation—exporting type name but not constructors creates abstract types. Re-exports enable module facades that aggregate multiple modules. Export validation ensures all exported names exist and have correct kinds (type vs value).
 
@@ -36,7 +36,7 @@ The export system determines a module's public API. We support exporting types (
 - [ ] 4.1.2.4 Implement export validation checking all exported names exist and are correctly qualified
 
 ### 4.1.3 Visibility Control
-- [ ] **Task 4.1.3 Complete**
+- [x] **Task 4.1.3 Complete**
 
 Visibility annotations (private, export) control access to definitions. Default is private—visible only within the module. Marking definitions with `export` or including them in export lists makes them public. We implement visibility checking that prevents access to private definitions from outside. This enables information hiding and allows implementations to change without breaking clients.
 
@@ -46,7 +46,7 @@ Visibility annotations (private, export) control access to definitions. Default 
 - [ ] 4.1.3.4 Implement visibility error messages explaining access violations with suggestions
 
 ### 4.1.4 Module Compilation
-- [ ] **Task 4.1.4 Complete**
+- [x] **Task 4.1.4 Complete**
 
 Each Catena module compiles to a BEAM module with the same name (hierarchical names become atoms with dots). We generate module attributes storing type information for cross-module type checking. The export list becomes BEAM exports with correct arities. Private functions don't appear in exports. Module initialization code runs when the module loads, though most Catena modules have no side effects.
 
@@ -65,12 +65,12 @@ Each Catena module compiles to a BEAM module with the same name (hierarchical na
 ---
 
 ## 4.2 Import System
-- [ ] **Section 4.2 Complete**
+- [x] **Section 4.2 Complete**
 
 The import system brings definitions from other modules into scope. We support multiple import styles: qualified (using module prefix), selective (importing specific names), and aliased (renaming modules). Import resolution happens during name resolution phase, mapping imported names to their defining modules. Circular imports are forbidden—we detect cycles and report errors. Unused imports generate warnings to keep code clean.
 
 ### 4.2.1 Qualified Imports
-- [ ] **Task 4.2.1 Complete**
+- [x] **Task 4.2.1 Complete**
 
 Qualified imports bring a module's exports into scope with a prefix. Syntax: `import qualified Data.List as L`. Usage: `L.map`, `L.filter`. This avoids naming conflicts and documents where functions come from. The import introduces the alias name in the namespace, and all access goes through the alias. We validate that qualified names resolve correctly and that the module exists.
 
