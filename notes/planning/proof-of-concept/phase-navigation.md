@@ -163,12 +163,12 @@ Each phase includes:
 
 | Phase | Duration | Week Range | Status | Notes |
 |-------|----------|------------|--------|-------|
-| Phase 1 | 6.5 weeks | Weeks 1-6.5 | ✅ Complete | Core Language Infrastructure |
-| Phase 2 | 3.5 weeks | Weeks 7-10.5 | 🟡 Partial | REPL and Basic Runtime (~47%) |
-| Phase 3 | 3.5 weeks | Weeks 11-14.5 | ❓ Unknown | Pattern Matching Engine |
-| Phase 4 | 2.5 weeks | Weeks 15-17 | ❓ Unknown | Module System |
-| Phase 5 | 3.5 weeks | Weeks 18-21.5 | ❌ Not Started | Actor Model Integration |
-| **PoC Total** | **~12 weeks** | **3 months** | **~30% Complete** | |
+| Phase 1 | 6.5 weeks | Weeks 1-6.5 | ✅ Complete (80%) | Core Language Infrastructure |
+| Phase 2 | 3.5 weeks | Weeks 7-10.5 | 🟡 Partial (47%) | REPL and Basic Runtime |
+| Phase 3 | 3.5 weeks | Weeks 11-14.5 | 🟡 Partial (57%) | Pattern Matching Engine |
+| Phase 4 | 2.5 weeks | Weeks 15-17 | 🟡 Minimal (6%) | Module System (parsing only) |
+| Phase 5 | 3.5 weeks | Weeks 18-21.5 | ❌ Not Started (0%) | Actor Model Integration |
+| **PoC Total** | **~12 weeks** | **3 months** | **~38% Complete** | |
 
 ### Post-PoC Completion (5 weeks)
 
