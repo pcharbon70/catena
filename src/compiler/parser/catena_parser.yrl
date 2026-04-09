@@ -271,15 +271,29 @@ declaration -> test_decl : '$1'.
 declaration -> property_decl : '$1'.
 declaration -> import_decl : '$1'.
 
-%% Import declarations (parsed as declarations, extracted to module imports field)
+%%----------------------------------------------------------------------------
+%% Import Declarations
+%%----------------------------------------------------------------------------
+
+%% Simple import: import Module
 import_decl -> import upper_ident :
-    {import_decl, extract_atom('$2'), extract_location('$1')}.
+    {import, extract_atom('$2'), all, false, undefined, extract_location('$1')}.
 
 %% Dotted import: import Effect.IO
 import_decl -> import upper_ident dot upper_ident :
-    {import_decl,
-        list_to_atom(atom_to_list(extract_atom('$2')) ++ "." ++ atom_to_list(extract_atom('$4'))),
-        extract_location('$1')}.
+    ModuleName = list_to_atom(atom_to_list(extract_atom('$2')) ++ "." ++
+                               atom_to_list(extract_atom('$4'))),
+    {import, ModuleName, all, false, undefined, extract_location('$1')}.
+
+%% Qualified import: import qualified Module as Alias
+import_decl -> import qualified upper_ident as upper_ident :
+    {import, extract_atom('$3'), all, true, extract_atom('$5'), extract_location('$1')}.
+
+%% Qualified dotted import: import qualified Effect.IO as IO
+import_decl -> import qualified upper_ident dot upper_ident as upper_ident :
+    ModuleName = list_to_atom(atom_to_list(extract_atom('$3')) ++ "." ++
+                               atom_to_list(extract_atom('$5'))),
+    {import, ModuleName, all, true, extract_atom('$7'), extract_location('$1')}.
 
 %% Error recovery: skip malformed declaration and continue with next
 declaration -> error type :
@@ -1209,11 +1223,11 @@ extract_trait_constraint(TypeExpr) ->
 %% @doc Extract import declarations from a list of declarations
 %% Returns list of {import, ModuleName, Loc} tuples
 extract_imports(Decls) ->
-    [{import, Name, Loc} || {import_decl, Name, Loc} <- Decls].
+    [Import || {import, _, _, _, _, _} = Import <- Decls].
 
 %% @doc Filter out import declarations from a list of declarations
 %% Returns all non-import declarations
 filter_imports(Decls) ->
-    [D || D <- Decls, element(1, D) =/= import_decl].
+    [D || D <- Decls, element(1, D) =/= import].
 
 
