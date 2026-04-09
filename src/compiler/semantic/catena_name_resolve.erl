@@ -77,8 +77,8 @@
 %% @return A symbol table map with module information
 -spec build_symbol_table(tuple()) -> symbol_table().
 build_symbol_table({module, Name, Exports, Imports, Declarations, _Location}) ->
-    %% Build export list
-    ExportList = extract_exports(Exports, Declarations),
+    %% Build export list - parser returns list of export items directly
+    ExportList = extract_exports(Exports),
 
     %% Build definitions map
     Definitions = build_definitions(Declarations, Name),
@@ -92,14 +92,13 @@ build_symbol_table({module, Name, Exports, Imports, Declarations, _Location}) ->
         }
     }.
 
-%% @doc Extract export list from export declarations and declarations
--spec extract_exports(term(), [term()]) -> [atom()].
-extract_exports(ExportDecl, _Declarations) ->
-    %% Extract from explicit export declaration
-    case ExportDecl of
-        {export_decl, ExportList} -> extract_export_items(ExportList);
-        _ -> []
-    end.
+%% @doc Extract export list from export items.
+%% Parser returns list of {export_type, Name} tuples directly.
+-spec extract_exports(term()) -> [atom()].
+extract_exports(Exports) when is_list(Exports) ->
+    [extract_export_name(Item) || Item <- Exports];
+extract_exports(_) ->
+    [].
 
 %% @doc Extract export items from export list
 extract_export_items({export_list, Items}) ->
