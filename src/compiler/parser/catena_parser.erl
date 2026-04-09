@@ -3,7 +3,7 @@
 -module(catena_parser).
 -file("src/compiler/parser/catena_parser.erl", 4).
 -export([parse/1, parse_and_scan/1, format_error/1]).
--file("src/compiler/parser/catena_parser.yrl", 1175).
+-file("src/compiler/parser/catena_parser.yrl", 1213).
 
 %% @doc Extract atom from token
 %% Delegates to catena_compiler_utils to avoid code duplication
@@ -40,12 +40,12 @@ extract_trait_constraint(TypeExpr) ->
 %% @doc Extract import declarations from a list of declarations
 %% Returns list of {import, ModuleName, Loc} tuples
 extract_imports(Decls) ->
-    [{import, Name, Loc} || {import_decl, Name, Loc} <- Decls].
+    [Import || {import, _, _, _, _, _} = Import <- Decls].
 
 %% @doc Filter out import declarations from a list of declarations
 %% Returns all non-import declarations
 filter_imports(Decls) ->
-    [D || D <- Decls, element(1, D) =/= import_decl].
+    [D || D <- Decls, element(1, D) =/= import].
 
 
 
@@ -1041,20 +1041,20 @@ yeccpars2(397=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_397(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(398=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_398(S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccpars2(399=S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_399(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(399=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_399(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(400=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_400(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(401=S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_401(S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccpars2(402=S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_402(S, Cat, Ss, Stack, T, Ts, Tzr);
+ yeccpars2_398(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(402=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_402(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(403=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_403(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(404=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_404(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(405=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_405(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(405=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_398(S, Cat, Ss, Stack, T, Ts, Tzr);
 %% yeccpars2(406=S, Cat, Ss, Stack, T, Ts, Tzr) ->
 %%  yeccpars2_406(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(407=S, Cat, Ss, Stack, T, Ts, Tzr) ->
@@ -1062,27 +1062,27 @@ yeccpars2(407=S, Cat, Ss, Stack, T, Ts, Tzr) ->
 yeccpars2(408=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_408(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(409=S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_40(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(410=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_410(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(411=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_411(S, Cat, Ss, Stack, T, Ts, Tzr);
+ yeccpars2_409(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(410=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_410(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(411=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_411(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(412=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_412(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(413=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_413(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(414=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_414(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(413=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_413(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(414=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_398(S, Cat, Ss, Stack, T, Ts, Tzr);
 %% yeccpars2(415=S, Cat, Ss, Stack, T, Ts, Tzr) ->
 %%  yeccpars2_415(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(416=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_416(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(416=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_416(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(417=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_417(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(418=S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_418(S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccpars2(419=S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_419(S, Cat, Ss, Stack, T, Ts, Tzr);
+ yeccpars2_398(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(419=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_419(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(420=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_420(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(421=S, Cat, Ss, Stack, T, Ts, Tzr) ->
@@ -1095,10 +1095,10 @@ yeccpars2(424=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_424(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(425=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_425(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(426=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_426(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(427=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_427(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(426=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_426(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(427=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_427(S, Cat, Ss, Stack, T, Ts, Tzr);
 %% yeccpars2(428=S, Cat, Ss, Stack, T, Ts, Tzr) ->
 %%  yeccpars2_428(S, Cat, Ss, Stack, T, Ts, Tzr);
 %% yeccpars2(429=S, Cat, Ss, Stack, T, Ts, Tzr) ->
@@ -1107,22 +1107,68 @@ yeccpars2(430=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_430(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(431=S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_431(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(432=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_432(S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccpars2(433=S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_149(S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccpars2(434=S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_149(S, Cat, Ss, Stack, T, Ts, Tzr);
-%% yeccpars2(435=S, Cat, Ss, Stack, T, Ts, Tzr) ->
-%%  yeccpars2_435(S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccpars2(436=S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_149(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(432=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_40(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(433=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_433(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(434=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_434(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(435=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_435(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(436=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_436(S, Cat, Ss, Stack, T, Ts, Tzr);
 %% yeccpars2(437=S, Cat, Ss, Stack, T, Ts, Tzr) ->
 %%  yeccpars2_437(S, Cat, Ss, Stack, T, Ts, Tzr);
 %% yeccpars2(438=S, Cat, Ss, Stack, T, Ts, Tzr) ->
 %%  yeccpars2_438(S, Cat, Ss, Stack, T, Ts, Tzr);
 %% yeccpars2(439=S, Cat, Ss, Stack, T, Ts, Tzr) ->
 %%  yeccpars2_439(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(440=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_440(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(441=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_441(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(442=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_442(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(443=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_443(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(444=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_444(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(445=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_445(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(446=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_446(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(447=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_447(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(448=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_448(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(449=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_449(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(450=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_450(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(451=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_451(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(452=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_452(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(453=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_453(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(454=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_454(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(455=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_455(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(456=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_149(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(457=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_149(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(458=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_458(S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccpars2(459=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_149(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(460=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_460(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(461=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_461(S, Cat, Ss, Stack, T, Ts, Tzr);
+%% yeccpars2(462=S, Cat, Ss, Stack, T, Ts, Tzr) ->
+%%  yeccpars2_462(S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccpars2(Other, _, _, _, _, _, _) ->
  erlang:error({yecc_bug,"1.4",{missing_state_in_action_table, Other}}).
 
@@ -1140,7 +1186,7 @@ yeccpars2_1(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
 -dialyzer({nowarn_function, yeccpars2_2/7}).
 -compile({nowarn_unused_function,  yeccpars2_2/7}).
 yeccpars2_2(S, 'transform', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 430, Ss, Stack, T, Ts, Tzr);
+ yeccpars1(S, 453, Ss, Stack, T, Ts, Tzr);
 yeccpars2_2(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_2_(Stack),
  yeccgoto_transform_decl(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
@@ -1195,7 +1241,7 @@ yeccpars2_7(_, _, _, _, T, _, _) ->
 -dialyzer({nowarn_function, yeccpars2_8/7}).
 -compile({nowarn_unused_function,  yeccpars2_8/7}).
 yeccpars2_8(S, 'export', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 417, Ss, Stack, T, Ts, Tzr);
+ yeccpars1(S, 440, Ss, Stack, T, Ts, Tzr);
 yeccpars2_8(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_8_(Stack),
  yeccgoto_module_header(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
@@ -1258,31 +1304,33 @@ yeccpars2_14(_, _, _, _, T, _, _) ->
 -dialyzer({nowarn_function, yeccpars2_15/7}).
 -compile({nowarn_unused_function,  yeccpars2_15/7}).
 yeccpars2_15(S, 'error', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 403, Ss, Stack, T, Ts, Tzr);
+ yeccpars1(S, 426, Ss, Stack, T, Ts, Tzr);
 yeccpars2_15(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 404, Ss, Stack, T, Ts, Tzr);
+ yeccpars1(S, 427, Ss, Stack, T, Ts, Tzr);
 yeccpars2_15(_, _, _, _, T, _, _) ->
  yeccerror(T).
 
 -dialyzer({nowarn_function, yeccpars2_16/7}).
 -compile({nowarn_unused_function,  yeccpars2_16/7}).
 yeccpars2_16(S, 'effect', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 398, Ss, Stack, T, Ts, Tzr);
+ yeccpars1(S, 421, Ss, Stack, T, Ts, Tzr);
 yeccpars2_16(S, 'instance', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 399, Ss, Stack, T, Ts, Tzr);
+ yeccpars1(S, 422, Ss, Stack, T, Ts, Tzr);
 yeccpars2_16(S, 'trait', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 400, Ss, Stack, T, Ts, Tzr);
+ yeccpars1(S, 423, Ss, Stack, T, Ts, Tzr);
 yeccpars2_16(S, 'transform', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 401, Ss, Stack, T, Ts, Tzr);
+ yeccpars1(S, 424, Ss, Stack, T, Ts, Tzr);
 yeccpars2_16(S, 'type', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 402, Ss, Stack, T, Ts, Tzr);
+ yeccpars1(S, 425, Ss, Stack, T, Ts, Tzr);
 yeccpars2_16(_, _, _, _, T, _, _) ->
  yeccerror(T).
 
 -dialyzer({nowarn_function, yeccpars2_17/7}).
 -compile({nowarn_unused_function,  yeccpars2_17/7}).
-yeccpars2_17(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_17(S, 'qualified', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 395, Ss, Stack, T, Ts, Tzr);
+yeccpars2_17(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 396, Ss, Stack, T, Ts, Tzr);
 yeccpars2_17(_, _, _, _, T, _, _) ->
  yeccerror(T).
 
@@ -6818,260 +6866,243 @@ yeccpars2_394(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
 
 -dialyzer({nowarn_function, yeccpars2_395/7}).
 -compile({nowarn_unused_function,  yeccpars2_395/7}).
-yeccpars2_395(S, 'dot', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 396, Ss, Stack, T, Ts, Tzr);
-yeccpars2_395(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
- NewStack = yeccpars2_395_(Stack),
- yeccgoto_import_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+yeccpars2_395(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 408, Ss, Stack, T, Ts, Tzr);
+yeccpars2_395(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 -dialyzer({nowarn_function, yeccpars2_396/7}).
 -compile({nowarn_unused_function,  yeccpars2_396/7}).
-yeccpars2_396(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_396(S, 'dot', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 397, Ss, Stack, T, Ts, Tzr);
-yeccpars2_396(_, _, _, _, T, _, _) ->
- yeccerror(T).
+yeccpars2_396(S, 'lparen', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 398, Ss, Stack, T, Ts, Tzr);
+yeccpars2_396(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_|Nss] = Ss,
+ NewStack = yeccpars2_396_(Stack),
+ yeccgoto_import_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_397/7}).
 -compile({nowarn_unused_function,  yeccpars2_397/7}).
-yeccpars2_397(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_,_,_|Nss] = Ss,
- NewStack = yeccpars2_397_(Stack),
- yeccgoto_import_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+yeccpars2_397(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 404, Ss, Stack, T, Ts, Tzr);
+yeccpars2_397(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 -dialyzer({nowarn_function, yeccpars2_398/7}).
 -compile({nowarn_unused_function,  yeccpars2_398/7}).
-yeccpars2_398(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
- NewStack = yeccpars2_398_(Stack),
- yeccgoto_declaration(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+yeccpars2_398(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 400, Ss, Stack, T, Ts, Tzr);
+yeccpars2_398(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 -dialyzer({nowarn_function, yeccpars2_399/7}).
 -compile({nowarn_unused_function,  yeccpars2_399/7}).
-yeccpars2_399(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
- NewStack = yeccpars2_399_(Stack),
- yeccgoto_declaration(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+yeccpars2_399(S, 'rparen', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 403, Ss, Stack, T, Ts, Tzr);
+yeccpars2_399(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 -dialyzer({nowarn_function, yeccpars2_400/7}).
 -compile({nowarn_unused_function,  yeccpars2_400/7}).
+yeccpars2_400(S, 'comma', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 401, Ss, Stack, T, Ts, Tzr);
 yeccpars2_400(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
  NewStack = yeccpars2_400_(Stack),
- yeccgoto_declaration(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+ yeccgoto_import_items(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
--dialyzer({nowarn_function, yeccpars2_401/7}).
--compile({nowarn_unused_function,  yeccpars2_401/7}).
-yeccpars2_401(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
- NewStack = yeccpars2_401_(Stack),
- yeccgoto_declaration(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+%% yeccpars2_401: see yeccpars2_398
 
 -dialyzer({nowarn_function, yeccpars2_402/7}).
 -compile({nowarn_unused_function,  yeccpars2_402/7}).
 yeccpars2_402(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
+ [_,_|Nss] = Ss,
  NewStack = yeccpars2_402_(Stack),
- yeccgoto_declaration(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+ yeccgoto_import_items(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_403/7}).
 -compile({nowarn_unused_function,  yeccpars2_403/7}).
 yeccpars2_403(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
+ [_,_,_,_|Nss] = Ss,
  NewStack = yeccpars2_403_(Stack),
- yeccgoto_effect_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+ yeccgoto_import_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_404/7}).
 -compile({nowarn_unused_function,  yeccpars2_404/7}).
-yeccpars2_404(S, 'operation', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 407, Ss, Stack, T, Ts, Tzr);
+yeccpars2_404(S, 'lparen', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 405, Ss, Stack, T, Ts, Tzr);
 yeccpars2_404(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_,_,_|Nss] = Ss,
  NewStack = yeccpars2_404_(Stack),
- yeccpars2_405(405, Cat, [404 | Ss], NewStack, T, Ts, Tzr).
+ yeccgoto_import_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
--dialyzer({nowarn_function, yeccpars2_405/7}).
--compile({nowarn_unused_function,  yeccpars2_405/7}).
-yeccpars2_405(S, 'end', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 412, Ss, Stack, T, Ts, Tzr);
-yeccpars2_405(_, _, _, _, T, _, _) ->
- yeccerror(T).
+%% yeccpars2_405: see yeccpars2_398
 
 -dialyzer({nowarn_function, yeccpars2_406/7}).
 -compile({nowarn_unused_function,  yeccpars2_406/7}).
-yeccpars2_406(S, 'operation', Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_406(S, 'rparen', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 407, Ss, Stack, T, Ts, Tzr);
-yeccpars2_406(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- NewStack = yeccpars2_406_(Stack),
- yeccpars2_411(_S, Cat, [406 | Ss], NewStack, T, Ts, Tzr).
+yeccpars2_406(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 -dialyzer({nowarn_function, yeccpars2_407/7}).
 -compile({nowarn_unused_function,  yeccpars2_407/7}).
-yeccpars2_407(S, 'lower_ident', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 408, Ss, Stack, T, Ts, Tzr);
-yeccpars2_407(_, _, _, _, T, _, _) ->
- yeccerror(T).
+yeccpars2_407(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_,_,_,_,_,_|Nss] = Ss,
+ NewStack = yeccpars2_407_(Stack),
+ yeccgoto_import_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_408/7}).
 -compile({nowarn_unused_function,  yeccpars2_408/7}).
-yeccpars2_408(S, 'colon', Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_408(S, 'as', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 409, Ss, Stack, T, Ts, Tzr);
-yeccpars2_408(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
- NewStack = yeccpars2_408_(Stack),
- yeccgoto_effect_operation(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+yeccpars2_408(S, 'dot', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 410, Ss, Stack, T, Ts, Tzr);
+yeccpars2_408(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
-%% yeccpars2_409: see yeccpars2_40
+-dialyzer({nowarn_function, yeccpars2_409/7}).
+-compile({nowarn_unused_function,  yeccpars2_409/7}).
+yeccpars2_409(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 417, Ss, Stack, T, Ts, Tzr);
+yeccpars2_409(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 -dialyzer({nowarn_function, yeccpars2_410/7}).
 -compile({nowarn_unused_function,  yeccpars2_410/7}).
-yeccpars2_410(S, 'arrow', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 55, Ss, Stack, T, Ts, Tzr);
-yeccpars2_410(S, 'constrain', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 56, Ss, Stack, T, Ts, Tzr);
-yeccpars2_410(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_,_,_|Nss] = Ss,
- NewStack = yeccpars2_410_(Stack),
- yeccgoto_effect_operation(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+yeccpars2_410(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 411, Ss, Stack, T, Ts, Tzr);
+yeccpars2_410(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 -dialyzer({nowarn_function, yeccpars2_411/7}).
 -compile({nowarn_unused_function,  yeccpars2_411/7}).
-yeccpars2_411(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
- NewStack = yeccpars2_411_(Stack),
- yeccgoto_effect_operations(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+yeccpars2_411(S, 'as', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 412, Ss, Stack, T, Ts, Tzr);
+yeccpars2_411(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 -dialyzer({nowarn_function, yeccpars2_412/7}).
 -compile({nowarn_unused_function,  yeccpars2_412/7}).
-yeccpars2_412(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_,_,_|Nss] = Ss,
- NewStack = yeccpars2_412_(Stack),
- yeccgoto_effect_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+yeccpars2_412(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 413, Ss, Stack, T, Ts, Tzr);
+yeccpars2_412(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 -dialyzer({nowarn_function, yeccpars2_413/7}).
 -compile({nowarn_unused_function,  yeccpars2_413/7}).
+yeccpars2_413(S, 'lparen', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 414, Ss, Stack, T, Ts, Tzr);
 yeccpars2_413(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
+ [_,_,_,_,_,_|Nss] = Ss,
  NewStack = yeccpars2_413_(Stack),
- yeccgoto_declarations(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+ yeccgoto_import_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
--dialyzer({nowarn_function, yeccpars2_414/7}).
--compile({nowarn_unused_function,  yeccpars2_414/7}).
-yeccpars2_414(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- NewStack = yeccpars2_414_(Stack),
- yeccgoto_export_decl(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
+%% yeccpars2_414: see yeccpars2_398
 
 -dialyzer({nowarn_function, yeccpars2_415/7}).
 -compile({nowarn_unused_function,  yeccpars2_415/7}).
-yeccpars2_415(S, 'export', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 417, Ss, Stack, T, Ts, Tzr);
-yeccpars2_415(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- NewStack = yeccpars2_415_(Stack),
- yeccgoto_export_list(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
+yeccpars2_415(S, 'rparen', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 416, Ss, Stack, T, Ts, Tzr);
+yeccpars2_415(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 -dialyzer({nowarn_function, yeccpars2_416/7}).
 -compile({nowarn_unused_function,  yeccpars2_416/7}).
 yeccpars2_416(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
+ [_,_,_,_,_,_,_,_,_|Nss] = Ss,
  NewStack = yeccpars2_416_(Stack),
- yeccgoto_module_header(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+ yeccgoto_import_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_417/7}).
 -compile({nowarn_unused_function,  yeccpars2_417/7}).
-yeccpars2_417(S, 'effect', Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_417(S, 'lparen', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 418, Ss, Stack, T, Ts, Tzr);
-yeccpars2_417(S, 'trait', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 419, Ss, Stack, T, Ts, Tzr);
-yeccpars2_417(S, 'transform', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 420, Ss, Stack, T, Ts, Tzr);
-yeccpars2_417(S, 'type', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 421, Ss, Stack, T, Ts, Tzr);
-yeccpars2_417(_, _, _, _, T, _, _) ->
- yeccerror(T).
+yeccpars2_417(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_,_,_,_|Nss] = Ss,
+ NewStack = yeccpars2_417_(Stack),
+ yeccgoto_import_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
--dialyzer({nowarn_function, yeccpars2_418/7}).
--compile({nowarn_unused_function,  yeccpars2_418/7}).
-yeccpars2_418(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 425, Ss, Stack, T, Ts, Tzr);
-yeccpars2_418(_, _, _, _, T, _, _) ->
- yeccerror(T).
+%% yeccpars2_418: see yeccpars2_398
 
 -dialyzer({nowarn_function, yeccpars2_419/7}).
 -compile({nowarn_unused_function,  yeccpars2_419/7}).
-yeccpars2_419(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 424, Ss, Stack, T, Ts, Tzr);
+yeccpars2_419(S, 'rparen', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 420, Ss, Stack, T, Ts, Tzr);
 yeccpars2_419(_, _, _, _, T, _, _) ->
  yeccerror(T).
 
 -dialyzer({nowarn_function, yeccpars2_420/7}).
 -compile({nowarn_unused_function,  yeccpars2_420/7}).
-yeccpars2_420(S, 'lower_ident', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 423, Ss, Stack, T, Ts, Tzr);
-yeccpars2_420(_, _, _, _, T, _, _) ->
- yeccerror(T).
+yeccpars2_420(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_,_,_,_,_,_,_|Nss] = Ss,
+ NewStack = yeccpars2_420_(Stack),
+ yeccgoto_import_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_421/7}).
 -compile({nowarn_unused_function,  yeccpars2_421/7}).
-yeccpars2_421(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 422, Ss, Stack, T, Ts, Tzr);
-yeccpars2_421(_, _, _, _, T, _, _) ->
- yeccerror(T).
+yeccpars2_421(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_|Nss] = Ss,
+ NewStack = yeccpars2_421_(Stack),
+ yeccgoto_declaration(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_422/7}).
 -compile({nowarn_unused_function,  yeccpars2_422/7}).
 yeccpars2_422(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_,_|Nss] = Ss,
+ [_|Nss] = Ss,
  NewStack = yeccpars2_422_(Stack),
- yeccgoto_export_item(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+ yeccgoto_declaration(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_423/7}).
 -compile({nowarn_unused_function,  yeccpars2_423/7}).
 yeccpars2_423(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_,_|Nss] = Ss,
+ [_|Nss] = Ss,
  NewStack = yeccpars2_423_(Stack),
- yeccgoto_export_item(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+ yeccgoto_declaration(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_424/7}).
 -compile({nowarn_unused_function,  yeccpars2_424/7}).
 yeccpars2_424(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_,_|Nss] = Ss,
+ [_|Nss] = Ss,
  NewStack = yeccpars2_424_(Stack),
- yeccgoto_export_item(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+ yeccgoto_declaration(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_425/7}).
 -compile({nowarn_unused_function,  yeccpars2_425/7}).
 yeccpars2_425(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_,_|Nss] = Ss,
+ [_|Nss] = Ss,
  NewStack = yeccpars2_425_(Stack),
- yeccgoto_export_item(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+ yeccgoto_declaration(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_426/7}).
 -compile({nowarn_unused_function,  yeccpars2_426/7}).
 yeccpars2_426(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_|Nss] = Ss,
  NewStack = yeccpars2_426_(Stack),
- yeccgoto_export_list(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+ yeccgoto_effect_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_427/7}).
 -compile({nowarn_unused_function,  yeccpars2_427/7}).
+yeccpars2_427(S, 'operation', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 430, Ss, Stack, T, Ts, Tzr);
 yeccpars2_427(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
  NewStack = yeccpars2_427_(Stack),
- yeccgoto_catena_module(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+ yeccpars2_428(428, Cat, [427 | Ss], NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_428/7}).
 -compile({nowarn_unused_function,  yeccpars2_428/7}).
-yeccpars2_428(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_|Nss] = Ss,
- NewStack = yeccpars2_428_(Stack),
- yeccgoto_transform_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+yeccpars2_428(S, 'end', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 435, Ss, Stack, T, Ts, Tzr);
+yeccpars2_428(_, _, _, _, T, _, _) ->
+ yeccerror(T).
 
 -dialyzer({nowarn_function, yeccpars2_429/7}).
 -compile({nowarn_unused_function,  yeccpars2_429/7}).
-yeccpars2_429(S, 'transform', Ss, Stack, T, Ts, Tzr) ->
+yeccpars2_429(S, 'operation', Ss, Stack, T, Ts, Tzr) ->
  yeccpars1(S, 430, Ss, Stack, T, Ts, Tzr);
 yeccpars2_429(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  NewStack = yeccpars2_429_(Stack),
- yeccgoto_transform_clauses(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
+ yeccpars2_434(_S, Cat, [429 | Ss], NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_430/7}).
 -compile({nowarn_unused_function,  yeccpars2_430/7}).
@@ -7082,157 +7113,326 @@ yeccpars2_430(_, _, _, _, T, _, _) ->
 
 -dialyzer({nowarn_function, yeccpars2_431/7}).
 -compile({nowarn_unused_function,  yeccpars2_431/7}).
-yeccpars2_431(S, 'float', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 98, Ss, Stack, T, Ts, Tzr);
-yeccpars2_431(S, 'integer', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 99, Ss, Stack, T, Ts, Tzr);
-yeccpars2_431(S, 'lbrace', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 100, Ss, Stack, T, Ts, Tzr);
-yeccpars2_431(S, 'lbracket', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 101, Ss, Stack, T, Ts, Tzr);
-yeccpars2_431(S, 'lower_ident', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 102, Ss, Stack, T, Ts, Tzr);
-yeccpars2_431(S, 'lparen', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 103, Ss, Stack, T, Ts, Tzr);
-yeccpars2_431(S, 'string', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 104, Ss, Stack, T, Ts, Tzr);
-yeccpars2_431(S, 'underscore', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 105, Ss, Stack, T, Ts, Tzr);
-yeccpars2_431(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 106, Ss, Stack, T, Ts, Tzr);
+yeccpars2_431(S, 'colon', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 432, Ss, Stack, T, Ts, Tzr);
 yeccpars2_431(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_|Nss] = Ss,
  NewStack = yeccpars2_431_(Stack),
- yeccpars2_432(432, Cat, [431 | Ss], NewStack, T, Ts, Tzr).
+ yeccgoto_effect_operation(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
--dialyzer({nowarn_function, yeccpars2_432/7}).
--compile({nowarn_unused_function,  yeccpars2_432/7}).
-yeccpars2_432(S, 'equals', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 433, Ss, Stack, T, Ts, Tzr);
-yeccpars2_432(S, 'when', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 434, Ss, Stack, T, Ts, Tzr);
-yeccpars2_432(_, _, _, _, T, _, _) ->
- yeccerror(T).
+%% yeccpars2_432: see yeccpars2_40
 
-%% yeccpars2_433: see yeccpars2_149
+-dialyzer({nowarn_function, yeccpars2_433/7}).
+-compile({nowarn_unused_function,  yeccpars2_433/7}).
+yeccpars2_433(S, 'arrow', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 55, Ss, Stack, T, Ts, Tzr);
+yeccpars2_433(S, 'constrain', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 56, Ss, Stack, T, Ts, Tzr);
+yeccpars2_433(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_,_,_|Nss] = Ss,
+ NewStack = yeccpars2_433_(Stack),
+ yeccgoto_effect_operation(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
-%% yeccpars2_434: see yeccpars2_149
+-dialyzer({nowarn_function, yeccpars2_434/7}).
+-compile({nowarn_unused_function,  yeccpars2_434/7}).
+yeccpars2_434(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_|Nss] = Ss,
+ NewStack = yeccpars2_434_(Stack),
+ yeccgoto_effect_operations(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_435/7}).
 -compile({nowarn_unused_function,  yeccpars2_435/7}).
-yeccpars2_435(S, 'equals', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 436, Ss, Stack, T, Ts, Tzr);
-yeccpars2_435(_, _, _, _, T, _, _) ->
- yeccerror(T).
+yeccpars2_435(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_,_,_|Nss] = Ss,
+ NewStack = yeccpars2_435_(Stack),
+ yeccgoto_effect_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
-%% yeccpars2_436: see yeccpars2_149
+-dialyzer({nowarn_function, yeccpars2_436/7}).
+-compile({nowarn_unused_function,  yeccpars2_436/7}).
+yeccpars2_436(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_|Nss] = Ss,
+ NewStack = yeccpars2_436_(Stack),
+ yeccgoto_declarations(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_437/7}).
 -compile({nowarn_unused_function,  yeccpars2_437/7}).
-yeccpars2_437(S, 'and', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 182, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'ap', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 183, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'bind', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 184, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'cons', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 186, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'eq', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 187, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'fmap', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 188, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'gt', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 189, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'gte', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 190, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'kleisli', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 191, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'lt', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 192, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'lte', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 193, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'mappend', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 194, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'minus', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 195, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'neq', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 196, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'or', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 197, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'pipe_right', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 198, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'plus', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 199, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'plus_plus', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 200, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'setoid_eq', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 201, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'setoid_neq', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 202, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'slash', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 203, Ss, Stack, T, Ts, Tzr);
-yeccpars2_437(S, 'star', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 204, Ss, Stack, T, Ts, Tzr);
 yeccpars2_437(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_,_,_,_,_,_|Nss] = Ss,
  NewStack = yeccpars2_437_(Stack),
- yeccgoto_transform_clause(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+ yeccgoto_export_decl(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_438/7}).
 -compile({nowarn_unused_function,  yeccpars2_438/7}).
-yeccpars2_438(S, 'and', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 182, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'ap', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 183, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'bind', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 184, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'cons', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 186, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'eq', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 187, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'fmap', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 188, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'gt', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 189, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'gte', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 190, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'kleisli', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 191, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'lt', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 192, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'lte', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 193, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'mappend', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 194, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'minus', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 195, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'neq', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 196, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'or', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 197, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'pipe_right', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 198, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'plus', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 199, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'plus_plus', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 200, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'setoid_eq', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 201, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'setoid_neq', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 202, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'slash', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 203, Ss, Stack, T, Ts, Tzr);
-yeccpars2_438(S, 'star', Ss, Stack, T, Ts, Tzr) ->
- yeccpars1(S, 204, Ss, Stack, T, Ts, Tzr);
+yeccpars2_438(S, 'export', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 440, Ss, Stack, T, Ts, Tzr);
 yeccpars2_438(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- [_,_,_,_|Nss] = Ss,
  NewStack = yeccpars2_438_(Stack),
- yeccgoto_transform_clause(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+ yeccgoto_export_list(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccpars2_439/7}).
 -compile({nowarn_unused_function,  yeccpars2_439/7}).
 yeccpars2_439(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  [_|Nss] = Ss,
  NewStack = yeccpars2_439_(Stack),
+ yeccgoto_module_header(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccpars2_440/7}).
+-compile({nowarn_unused_function,  yeccpars2_440/7}).
+yeccpars2_440(S, 'effect', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 441, Ss, Stack, T, Ts, Tzr);
+yeccpars2_440(S, 'trait', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 442, Ss, Stack, T, Ts, Tzr);
+yeccpars2_440(S, 'transform', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 443, Ss, Stack, T, Ts, Tzr);
+yeccpars2_440(S, 'type', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 444, Ss, Stack, T, Ts, Tzr);
+yeccpars2_440(_, _, _, _, T, _, _) ->
+ yeccerror(T).
+
+-dialyzer({nowarn_function, yeccpars2_441/7}).
+-compile({nowarn_unused_function,  yeccpars2_441/7}).
+yeccpars2_441(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 448, Ss, Stack, T, Ts, Tzr);
+yeccpars2_441(_, _, _, _, T, _, _) ->
+ yeccerror(T).
+
+-dialyzer({nowarn_function, yeccpars2_442/7}).
+-compile({nowarn_unused_function,  yeccpars2_442/7}).
+yeccpars2_442(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 447, Ss, Stack, T, Ts, Tzr);
+yeccpars2_442(_, _, _, _, T, _, _) ->
+ yeccerror(T).
+
+-dialyzer({nowarn_function, yeccpars2_443/7}).
+-compile({nowarn_unused_function,  yeccpars2_443/7}).
+yeccpars2_443(S, 'lower_ident', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 446, Ss, Stack, T, Ts, Tzr);
+yeccpars2_443(_, _, _, _, T, _, _) ->
+ yeccerror(T).
+
+-dialyzer({nowarn_function, yeccpars2_444/7}).
+-compile({nowarn_unused_function,  yeccpars2_444/7}).
+yeccpars2_444(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 445, Ss, Stack, T, Ts, Tzr);
+yeccpars2_444(_, _, _, _, T, _, _) ->
+ yeccerror(T).
+
+-dialyzer({nowarn_function, yeccpars2_445/7}).
+-compile({nowarn_unused_function,  yeccpars2_445/7}).
+yeccpars2_445(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_,_|Nss] = Ss,
+ NewStack = yeccpars2_445_(Stack),
+ yeccgoto_export_item(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccpars2_446/7}).
+-compile({nowarn_unused_function,  yeccpars2_446/7}).
+yeccpars2_446(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_,_|Nss] = Ss,
+ NewStack = yeccpars2_446_(Stack),
+ yeccgoto_export_item(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccpars2_447/7}).
+-compile({nowarn_unused_function,  yeccpars2_447/7}).
+yeccpars2_447(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_,_|Nss] = Ss,
+ NewStack = yeccpars2_447_(Stack),
+ yeccgoto_export_item(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccpars2_448/7}).
+-compile({nowarn_unused_function,  yeccpars2_448/7}).
+yeccpars2_448(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_,_|Nss] = Ss,
+ NewStack = yeccpars2_448_(Stack),
+ yeccgoto_export_item(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccpars2_449/7}).
+-compile({nowarn_unused_function,  yeccpars2_449/7}).
+yeccpars2_449(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_|Nss] = Ss,
+ NewStack = yeccpars2_449_(Stack),
+ yeccgoto_export_list(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccpars2_450/7}).
+-compile({nowarn_unused_function,  yeccpars2_450/7}).
+yeccpars2_450(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_|Nss] = Ss,
+ NewStack = yeccpars2_450_(Stack),
+ yeccgoto_catena_module(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccpars2_451/7}).
+-compile({nowarn_unused_function,  yeccpars2_451/7}).
+yeccpars2_451(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_|Nss] = Ss,
+ NewStack = yeccpars2_451_(Stack),
+ yeccgoto_transform_decl(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccpars2_452/7}).
+-compile({nowarn_unused_function,  yeccpars2_452/7}).
+yeccpars2_452(S, 'transform', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 453, Ss, Stack, T, Ts, Tzr);
+yeccpars2_452(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ NewStack = yeccpars2_452_(Stack),
+ yeccgoto_transform_clauses(hd(Ss), Cat, Ss, NewStack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccpars2_453/7}).
+-compile({nowarn_unused_function,  yeccpars2_453/7}).
+yeccpars2_453(S, 'lower_ident', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 454, Ss, Stack, T, Ts, Tzr);
+yeccpars2_453(_, _, _, _, T, _, _) ->
+ yeccerror(T).
+
+-dialyzer({nowarn_function, yeccpars2_454/7}).
+-compile({nowarn_unused_function,  yeccpars2_454/7}).
+yeccpars2_454(S, 'float', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 98, Ss, Stack, T, Ts, Tzr);
+yeccpars2_454(S, 'integer', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 99, Ss, Stack, T, Ts, Tzr);
+yeccpars2_454(S, 'lbrace', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 100, Ss, Stack, T, Ts, Tzr);
+yeccpars2_454(S, 'lbracket', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 101, Ss, Stack, T, Ts, Tzr);
+yeccpars2_454(S, 'lower_ident', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 102, Ss, Stack, T, Ts, Tzr);
+yeccpars2_454(S, 'lparen', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 103, Ss, Stack, T, Ts, Tzr);
+yeccpars2_454(S, 'string', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 104, Ss, Stack, T, Ts, Tzr);
+yeccpars2_454(S, 'underscore', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 105, Ss, Stack, T, Ts, Tzr);
+yeccpars2_454(S, 'upper_ident', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 106, Ss, Stack, T, Ts, Tzr);
+yeccpars2_454(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ NewStack = yeccpars2_454_(Stack),
+ yeccpars2_455(455, Cat, [454 | Ss], NewStack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccpars2_455/7}).
+-compile({nowarn_unused_function,  yeccpars2_455/7}).
+yeccpars2_455(S, 'equals', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 456, Ss, Stack, T, Ts, Tzr);
+yeccpars2_455(S, 'when', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 457, Ss, Stack, T, Ts, Tzr);
+yeccpars2_455(_, _, _, _, T, _, _) ->
+ yeccerror(T).
+
+%% yeccpars2_456: see yeccpars2_149
+
+%% yeccpars2_457: see yeccpars2_149
+
+-dialyzer({nowarn_function, yeccpars2_458/7}).
+-compile({nowarn_unused_function,  yeccpars2_458/7}).
+yeccpars2_458(S, 'equals', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 459, Ss, Stack, T, Ts, Tzr);
+yeccpars2_458(_, _, _, _, T, _, _) ->
+ yeccerror(T).
+
+%% yeccpars2_459: see yeccpars2_149
+
+-dialyzer({nowarn_function, yeccpars2_460/7}).
+-compile({nowarn_unused_function,  yeccpars2_460/7}).
+yeccpars2_460(S, 'and', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 182, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'ap', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 183, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'bind', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 184, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'cons', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 186, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'eq', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 187, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'fmap', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 188, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'gt', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 189, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'gte', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 190, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'kleisli', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 191, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'lt', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 192, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'lte', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 193, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'mappend', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 194, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'minus', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 195, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'neq', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 196, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'or', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 197, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'pipe_right', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 198, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'plus', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 199, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'plus_plus', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 200, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'setoid_eq', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 201, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'setoid_neq', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 202, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'slash', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 203, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(S, 'star', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 204, Ss, Stack, T, Ts, Tzr);
+yeccpars2_460(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_,_,_,_,_,_|Nss] = Ss,
+ NewStack = yeccpars2_460_(Stack),
+ yeccgoto_transform_clause(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccpars2_461/7}).
+-compile({nowarn_unused_function,  yeccpars2_461/7}).
+yeccpars2_461(S, 'and', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 182, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'ap', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 183, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'bind', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 184, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'cons', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 186, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'eq', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 187, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'fmap', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 188, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'gt', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 189, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'gte', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 190, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'kleisli', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 191, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'lt', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 192, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'lte', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 193, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'mappend', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 194, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'minus', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 195, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'neq', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 196, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'or', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 197, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'pipe_right', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 198, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'plus', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 199, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'plus_plus', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 200, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'setoid_eq', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 201, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'setoid_neq', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 202, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'slash', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 203, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(S, 'star', Ss, Stack, T, Ts, Tzr) ->
+ yeccpars1(S, 204, Ss, Stack, T, Ts, Tzr);
+yeccpars2_461(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_,_,_,_|Nss] = Ss,
+ NewStack = yeccpars2_461_(Stack),
+ yeccgoto_transform_clause(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccpars2_462/7}).
+-compile({nowarn_unused_function,  yeccpars2_462/7}).
+yeccpars2_462(_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ [_|Nss] = Ss,
+ NewStack = yeccpars2_462_(Stack),
  yeccgoto_transform_clauses(hd(Nss), Cat, Nss, NewStack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_catena_module/7}).
@@ -7279,9 +7479,9 @@ yeccgoto_declaration(13, Cat, Ss, Stack, T, Ts, Tzr) ->
 yeccgoto_declarations(0=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_12(_S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_declarations(7=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_427(_S, Cat, Ss, Stack, T, Ts, Tzr);
+ yeccpars2_450(_S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_declarations(13=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_413(_S, Cat, Ss, Stack, T, Ts, Tzr).
+ yeccpars2_436(_S, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_do_expr/7}).
 -compile({nowarn_unused_function,  yeccgoto_do_expr/7}).
@@ -7389,11 +7589,11 @@ yeccgoto_do_expr(361=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_160(_S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_do_expr(379=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_160(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_do_expr(433=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_do_expr(456=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_160(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_do_expr(434=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_do_expr(457=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_160(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_do_expr(436=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_do_expr(459=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_160(_S, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_do_statement/7}).
@@ -7428,36 +7628,36 @@ yeccgoto_effect_list_nonempty(75=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
 
 -dialyzer({nowarn_function, yeccgoto_effect_operation/7}).
 -compile({nowarn_unused_function,  yeccgoto_effect_operation/7}).
-yeccgoto_effect_operation(404, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_406(406, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_effect_operation(406, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_406(406, Cat, Ss, Stack, T, Ts, Tzr).
+yeccgoto_effect_operation(427, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_429(429, Cat, Ss, Stack, T, Ts, Tzr);
+yeccgoto_effect_operation(429, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_429(429, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_effect_operations/7}).
 -compile({nowarn_unused_function,  yeccgoto_effect_operations/7}).
-yeccgoto_effect_operations(404, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_405(405, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_effect_operations(406=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_411(_S, Cat, Ss, Stack, T, Ts, Tzr).
+yeccgoto_effect_operations(427, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_428(428, Cat, Ss, Stack, T, Ts, Tzr);
+yeccgoto_effect_operations(429=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_434(_S, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_export_decl/7}).
 -compile({nowarn_unused_function,  yeccgoto_export_decl/7}).
 yeccgoto_export_decl(8=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_416(_S, Cat, Ss, Stack, T, Ts, Tzr).
+ yeccpars2_439(_S, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_export_item/7}).
 -compile({nowarn_unused_function,  yeccgoto_export_item/7}).
 yeccgoto_export_item(8, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_415(415, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_export_item(415, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_415(415, Cat, Ss, Stack, T, Ts, Tzr).
+ yeccpars2_438(438, Cat, Ss, Stack, T, Ts, Tzr);
+yeccgoto_export_item(438, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_438(438, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_export_list/7}).
 -compile({nowarn_unused_function,  yeccgoto_export_list/7}).
 yeccgoto_export_list(8=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_414(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_export_list(415=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_426(_S, Cat, Ss, Stack, T, Ts, Tzr).
+ yeccpars2_437(_S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccgoto_export_list(438=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_449(_S, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_expr/7}).
 -compile({nowarn_unused_function,  yeccgoto_expr/7}).
@@ -7559,12 +7759,12 @@ yeccgoto_expr(361, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_362(362, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_expr(379, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_380(380, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_expr(433, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_438(438, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_expr(434, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_expr(456, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_461(461, Cat, Ss, Stack, T, Ts, Tzr);
+yeccgoto_expr(457, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_159(159, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_expr(436, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_437(437, Cat, Ss, Stack, T, Ts, Tzr).
+yeccgoto_expr(459, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_460(460, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_expr_app/7}).
 -compile({nowarn_unused_function,  yeccgoto_expr_app/7}).
@@ -7666,11 +7866,11 @@ yeccgoto_expr_app(361, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_158(158, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_expr_app(379, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_158(158, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_expr_app(433, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_expr_app(456, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_158(158, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_expr_app(434, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_expr_app(457, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_158(158, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_expr_app(436, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_expr_app(459, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_158(158, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_expr_list/7}).
@@ -7793,11 +7993,11 @@ yeccgoto_expr_primary(361=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_157(_S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_expr_primary(379=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_157(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_expr_primary(433=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_expr_primary(456=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_157(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_expr_primary(434=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_expr_primary(457=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_157(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_expr_primary(436=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_expr_primary(459=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_157(_S, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_guard/7}).
@@ -7808,7 +8008,7 @@ yeccgoto_guard(236, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_156(156, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_guard(316, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_156(156, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_guard(434, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_guard(457, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_156(156, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_guards/7}).
@@ -7819,8 +8019,8 @@ yeccgoto_guards(236, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_237(237, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_guards(316=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_317(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_guards(434, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_435(435, Cat, Ss, Stack, T, Ts, Tzr).
+yeccgoto_guards(457, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_458(458, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_handler_clause/7}).
 -compile({nowarn_unused_function,  yeccgoto_handler_clause/7}).
@@ -7844,6 +8044,19 @@ yeccgoto_import_decl(7=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_10(_S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_import_decl(13=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_10(_S, Cat, Ss, Stack, T, Ts, Tzr).
+
+-dialyzer({nowarn_function, yeccgoto_import_items/7}).
+-compile({nowarn_unused_function,  yeccgoto_import_items/7}).
+yeccgoto_import_items(398, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_399(399, Cat, Ss, Stack, T, Ts, Tzr);
+yeccgoto_import_items(401=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_402(_S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccgoto_import_items(405, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_406(406, Cat, Ss, Stack, T, Ts, Tzr);
+yeccgoto_import_items(414, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_415(415, Cat, Ss, Stack, T, Ts, Tzr);
+yeccgoto_import_items(418, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_419(419, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_instance_constraints/7}).
 -compile({nowarn_unused_function,  yeccgoto_instance_constraints/7}).
@@ -7996,11 +8209,11 @@ yeccgoto_literal(361=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_154(_S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_literal(379=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_154(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_literal(433=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_literal(456=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_154(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_literal(434=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_literal(457=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_154(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_literal(436=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_literal(459=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_154(_S, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_match_clause/7}).
@@ -8091,7 +8304,7 @@ yeccgoto_pattern(335, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_96(96, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_pattern(377, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_96(96, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_pattern(431, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_pattern(454, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_96(96, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_pattern_list/7}).
@@ -8106,8 +8319,8 @@ yeccgoto_pattern_list(112, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_115(115, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_pattern_list(377, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_378(378, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_pattern_list(431, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_432(432, Cat, Ss, Stack, T, Ts, Tzr).
+yeccgoto_pattern_list(454, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_455(455, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_pattern_list_comma/7}).
 -compile({nowarn_unused_function,  yeccgoto_pattern_list_comma/7}).
@@ -8134,7 +8347,7 @@ yeccgoto_pattern_list_nonempty(335, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_336(336, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_pattern_list_nonempty(377=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_94(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_pattern_list_nonempty(431=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_pattern_list_nonempty(454=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_94(_S, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_pattern_primary/7}).
@@ -8250,11 +8463,11 @@ yeccgoto_perform_expr(361=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_153(_S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_perform_expr(379=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_153(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_perform_expr(433=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_perform_expr(456=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_153(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_perform_expr(434=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_perform_expr(457=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_153(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_perform_expr(436=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_perform_expr(459=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_153(_S, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_property_binding/7}).
@@ -8370,16 +8583,16 @@ yeccgoto_trait_members(342=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
 -dialyzer({nowarn_function, yeccgoto_transform_clause/7}).
 -compile({nowarn_unused_function,  yeccgoto_transform_clause/7}).
 yeccgoto_transform_clause(2, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_429(429, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_transform_clause(429, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_429(429, Cat, Ss, Stack, T, Ts, Tzr).
+ yeccpars2_452(452, Cat, Ss, Stack, T, Ts, Tzr);
+yeccgoto_transform_clause(452, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_452(452, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_transform_clauses/7}).
 -compile({nowarn_unused_function,  yeccgoto_transform_clauses/7}).
 yeccgoto_transform_clauses(2=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_428(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_transform_clauses(429=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_439(_S, Cat, Ss, Stack, T, Ts, Tzr).
+ yeccpars2_451(_S, Cat, Ss, Stack, T, Ts, Tzr);
+yeccgoto_transform_clauses(452=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_462(_S, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_transform_decl/7}).
 -compile({nowarn_unused_function,  yeccgoto_transform_decl/7}).
@@ -8505,11 +8718,11 @@ yeccgoto_try_with_expr(361=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_152(_S, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_try_with_expr(379=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_152(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_try_with_expr(433=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_try_with_expr(456=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_152(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_try_with_expr(434=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_try_with_expr(457=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_152(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_try_with_expr(436=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_try_with_expr(459=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_152(_S, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_tuple_expr_list/7}).
@@ -8560,8 +8773,8 @@ yeccgoto_type_expr(97, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_148(148, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_type_expr(337, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_338(338, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_type_expr(409, Cat, Ss, Stack, T, Ts, Tzr) ->
- yeccpars2_410(410, Cat, Ss, Stack, T, Ts, Tzr).
+yeccgoto_type_expr(432, Cat, Ss, Stack, T, Ts, Tzr) ->
+ yeccpars2_433(433, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_type_expr_app/7}).
 -compile({nowarn_unused_function,  yeccgoto_type_expr_app/7}).
@@ -8593,7 +8806,7 @@ yeccgoto_type_expr_app(337, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_43(43, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_type_expr_app(393=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_57(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_type_expr_app(409, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_type_expr_app(432, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_43(43, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_type_expr_list/7}).
@@ -8651,7 +8864,7 @@ yeccgoto_type_expr_primary(387, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_387(387, Cat, Ss, Stack, T, Ts, Tzr);
 yeccgoto_type_expr_primary(393=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_42(_S, Cat, Ss, Stack, T, Ts, Tzr);
-yeccgoto_type_expr_primary(409=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
+yeccgoto_type_expr_primary(432=_S, Cat, Ss, Stack, T, Ts, Tzr) ->
  yeccpars2_42(_S, Cat, Ss, Stack, T, Ts, Tzr).
 
 -dialyzer({nowarn_function, yeccgoto_type_expr_primary_list/7}).
@@ -8714,7 +8927,7 @@ yeccpars2_1_(__Stack0) ->
 -compile({inline,yeccpars2_2_/1}).
 -dialyzer({nowarn_function, yeccpars2_2_/1}).
 -compile({nowarn_unused_function,  yeccpars2_2_/1}).
--file("src/compiler/parser/catena_parser.yrl", 560).
+-file("src/compiler/parser/catena_parser.yrl", 598).
 yeccpars2_2_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -8832,7 +9045,7 @@ yeccpars2_13_(__Stack0) ->
 -compile({inline,yeccpars2_25_/1}).
 -dialyzer({nowarn_function, yeccpars2_25_/1}).
 -compile({nowarn_unused_function,  yeccpars2_25_/1}).
--file("src/compiler/parser/catena_parser.yrl", 309).
+-file("src/compiler/parser/catena_parser.yrl", 347).
 yeccpars2_25_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -8843,7 +9056,7 @@ yeccpars2_25_(__Stack0) ->
 -compile({inline,yeccpars2_26_/1}).
 -dialyzer({nowarn_function, yeccpars2_26_/1}).
 -compile({nowarn_unused_function,  yeccpars2_26_/1}).
--file("src/compiler/parser/catena_parser.yrl", 312).
+-file("src/compiler/parser/catena_parser.yrl", 350).
 yeccpars2_26_(__Stack0) ->
  [begin
                          
@@ -8853,7 +9066,7 @@ yeccpars2_26_(__Stack0) ->
 -compile({inline,yeccpars2_27_/1}).
 -dialyzer({nowarn_function, yeccpars2_27_/1}).
 -compile({nowarn_unused_function,  yeccpars2_27_/1}).
--file("src/compiler/parser/catena_parser.yrl", 314).
+-file("src/compiler/parser/catena_parser.yrl", 352).
 yeccpars2_27_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -8864,7 +9077,7 @@ yeccpars2_27_(__Stack0) ->
 -compile({inline,yeccpars2_29_/1}).
 -dialyzer({nowarn_function, yeccpars2_29_/1}).
 -compile({nowarn_unused_function,  yeccpars2_29_/1}).
--file("src/compiler/parser/catena_parser.yrl", 317).
+-file("src/compiler/parser/catena_parser.yrl", 355).
 yeccpars2_29_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -8875,7 +9088,7 @@ yeccpars2_29_(__Stack0) ->
 -compile({inline,yeccpars2_30_/1}).
 -dialyzer({nowarn_function, yeccpars2_30_/1}).
 -compile({nowarn_unused_function,  yeccpars2_30_/1}).
--file("src/compiler/parser/catena_parser.yrl", 319).
+-file("src/compiler/parser/catena_parser.yrl", 357).
 yeccpars2_30_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -8886,7 +9099,7 @@ yeccpars2_30_(__Stack0) ->
 -compile({inline,yeccpars2_32_/1}).
 -dialyzer({nowarn_function, yeccpars2_32_/1}).
 -compile({nowarn_unused_function,  yeccpars2_32_/1}).
--file("src/compiler/parser/catena_parser.yrl", 307).
+-file("src/compiler/parser/catena_parser.yrl", 345).
 yeccpars2_32_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -8897,7 +9110,7 @@ yeccpars2_32_(__Stack0) ->
 -compile({inline,yeccpars2_33_/1}).
 -dialyzer({nowarn_function, yeccpars2_33_/1}).
 -compile({nowarn_unused_function,  yeccpars2_33_/1}).
--file("src/compiler/parser/catena_parser.yrl", 296).
+-file("src/compiler/parser/catena_parser.yrl", 334).
 yeccpars2_33_(__Stack0) ->
  [___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -8913,7 +9126,7 @@ yeccpars2_33_(__Stack0) ->
 -compile({inline,yeccpars2_34_/1}).
 -dialyzer({nowarn_function, yeccpars2_34_/1}).
 -compile({nowarn_unused_function,  yeccpars2_34_/1}).
--file("src/compiler/parser/catena_parser.yrl", 322).
+-file("src/compiler/parser/catena_parser.yrl", 360).
 yeccpars2_34_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -8924,7 +9137,7 @@ yeccpars2_34_(__Stack0) ->
 -compile({inline,yeccpars2_35_/1}).
 -dialyzer({nowarn_function, yeccpars2_35_/1}).
 -compile({nowarn_unused_function,  yeccpars2_35_/1}).
--file("src/compiler/parser/catena_parser.yrl", 327).
+-file("src/compiler/parser/catena_parser.yrl", 365).
 yeccpars2_35_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -8938,7 +9151,7 @@ yeccpars2_35_(__Stack0) ->
 -compile({inline,yeccpars2_36_/1}).
 -dialyzer({nowarn_function, yeccpars2_36_/1}).
 -compile({nowarn_unused_function,  yeccpars2_36_/1}).
--file("src/compiler/parser/catena_parser.yrl", 339).
+-file("src/compiler/parser/catena_parser.yrl", 377).
 yeccpars2_36_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -8949,7 +9162,7 @@ yeccpars2_36_(__Stack0) ->
 -compile({inline,yeccpars2_37_/1}).
 -dialyzer({nowarn_function, yeccpars2_37_/1}).
 -compile({nowarn_unused_function,  yeccpars2_37_/1}).
--file("src/compiler/parser/catena_parser.yrl", 333).
+-file("src/compiler/parser/catena_parser.yrl", 371).
 yeccpars2_37_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -8963,7 +9176,7 @@ yeccpars2_37_(__Stack0) ->
 -compile({inline,yeccpars2_39_/1}).
 -dialyzer({nowarn_function, yeccpars2_39_/1}).
 -compile({nowarn_unused_function,  yeccpars2_39_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1114).
+-file("src/compiler/parser/catena_parser.yrl", 1152).
 yeccpars2_39_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -8974,7 +9187,7 @@ yeccpars2_39_(__Stack0) ->
 -compile({inline,yeccpars2_41_/1}).
 -dialyzer({nowarn_function, yeccpars2_41_/1}).
 -compile({nowarn_unused_function,  yeccpars2_41_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1117).
+-file("src/compiler/parser/catena_parser.yrl", 1155).
 yeccpars2_41_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -8985,7 +9198,7 @@ yeccpars2_41_(__Stack0) ->
 -compile({inline,yeccpars2_42_/1}).
 -dialyzer({nowarn_function, yeccpars2_42_/1}).
 -compile({nowarn_unused_function,  yeccpars2_42_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1103).
+-file("src/compiler/parser/catena_parser.yrl", 1141).
 yeccpars2_42_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -8996,7 +9209,7 @@ yeccpars2_42_(__Stack0) ->
 -compile({inline,yeccpars2_43_/1}).
 -dialyzer({nowarn_function, yeccpars2_43_/1}).
 -compile({nowarn_unused_function,  yeccpars2_43_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1077).
+-file("src/compiler/parser/catena_parser.yrl", 1115).
 yeccpars2_43_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9006,7 +9219,7 @@ yeccpars2_43_(__Stack0) ->
 -compile({inline,yeccpars2_45_/1}).
 -dialyzer({nowarn_function, yeccpars2_45_/1}).
 -compile({nowarn_unused_function,  yeccpars2_45_/1}).
--file("src/compiler/parser/catena_parser.yrl", 312).
+-file("src/compiler/parser/catena_parser.yrl", 350).
 yeccpars2_45_(__Stack0) ->
  [begin
                          
@@ -9016,7 +9229,7 @@ yeccpars2_45_(__Stack0) ->
 -compile({inline,yeccpars2_46_/1}).
 -dialyzer({nowarn_function, yeccpars2_46_/1}).
 -compile({nowarn_unused_function,  yeccpars2_46_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1114).
+-file("src/compiler/parser/catena_parser.yrl", 1152).
 yeccpars2_46_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9027,7 +9240,7 @@ yeccpars2_46_(__Stack0) ->
 -compile({inline,yeccpars2_47_/1}).
 -dialyzer({nowarn_function, yeccpars2_47_/1}).
 -compile({nowarn_unused_function,  yeccpars2_47_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1117).
+-file("src/compiler/parser/catena_parser.yrl", 1155).
 yeccpars2_47_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9038,7 +9251,7 @@ yeccpars2_47_(__Stack0) ->
 -compile({inline,yeccpars2_48_/1}).
 -dialyzer({nowarn_function, yeccpars2_48_/1}).
 -compile({nowarn_unused_function,  yeccpars2_48_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1090).
+-file("src/compiler/parser/catena_parser.yrl", 1128).
 yeccpars2_48_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9052,7 +9265,7 @@ yeccpars2_48_(__Stack0) ->
 -compile({inline,yeccpars2_49_/1}).
 -dialyzer({nowarn_function, yeccpars2_49_/1}).
 -compile({nowarn_unused_function,  yeccpars2_49_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1108).
+-file("src/compiler/parser/catena_parser.yrl", 1146).
 yeccpars2_49_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9063,7 +9276,7 @@ yeccpars2_49_(__Stack0) ->
 -compile({inline,yeccpars2_50_/1}).
 -dialyzer({nowarn_function, yeccpars2_50_/1}).
 -compile({nowarn_unused_function,  yeccpars2_50_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1110).
+-file("src/compiler/parser/catena_parser.yrl", 1148).
 yeccpars2_50_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9074,7 +9287,7 @@ yeccpars2_50_(__Stack0) ->
 -compile({inline,yeccpars2_51_/1}).
 -dialyzer({nowarn_function, yeccpars2_51_/1}).
 -compile({nowarn_unused_function,  yeccpars2_51_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1097).
+-file("src/compiler/parser/catena_parser.yrl", 1135).
 yeccpars2_51_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9088,7 +9301,7 @@ yeccpars2_51_(__Stack0) ->
 -compile({inline,yeccpars2_54_/1}).
 -dialyzer({nowarn_function, yeccpars2_54_/1}).
 -compile({nowarn_unused_function,  yeccpars2_54_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1048).
+-file("src/compiler/parser/catena_parser.yrl", 1086).
 yeccpars2_54_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9099,7 +9312,7 @@ yeccpars2_54_(__Stack0) ->
 -compile({inline,yeccpars2_57_/1}).
 -dialyzer({nowarn_function, yeccpars2_57_/1}).
 -compile({nowarn_unused_function,  yeccpars2_57_/1}).
--file("src/compiler/parser/catena_parser.yrl", 405).
+-file("src/compiler/parser/catena_parser.yrl", 443).
 yeccpars2_57_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9110,7 +9323,7 @@ yeccpars2_57_(__Stack0) ->
 -compile({inline,yeccpars2_58_/1}).
 -dialyzer({nowarn_function, yeccpars2_58_/1}).
 -compile({nowarn_unused_function,  yeccpars2_58_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1074).
+-file("src/compiler/parser/catena_parser.yrl", 1112).
 yeccpars2_58_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9121,7 +9334,7 @@ yeccpars2_58_(__Stack0) ->
 -compile({inline,yeccpars2_59_/1}).
 -dialyzer({nowarn_function, yeccpars2_59_/1}).
 -compile({nowarn_unused_function,  yeccpars2_59_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1080).
+-file("src/compiler/parser/catena_parser.yrl", 1118).
 yeccpars2_59_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9132,7 +9345,7 @@ yeccpars2_59_(__Stack0) ->
 -compile({inline,yeccpars2_61_/1}).
 -dialyzer({nowarn_function, yeccpars2_61_/1}).
 -compile({nowarn_unused_function,  yeccpars2_61_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1082).
+-file("src/compiler/parser/catena_parser.yrl", 1120).
 yeccpars2_61_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9143,7 +9356,7 @@ yeccpars2_61_(__Stack0) ->
 -compile({inline,yeccpars2_62_/1}).
 -dialyzer({nowarn_function, yeccpars2_62_/1}).
 -compile({nowarn_unused_function,  yeccpars2_62_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1045).
+-file("src/compiler/parser/catena_parser.yrl", 1083).
 yeccpars2_62_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9154,7 +9367,7 @@ yeccpars2_62_(__Stack0) ->
 -compile({inline,yeccpars2_64_/1}).
 -dialyzer({nowarn_function, yeccpars2_64_/1}).
 -compile({nowarn_unused_function,  yeccpars2_64_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1121).
+-file("src/compiler/parser/catena_parser.yrl", 1159).
 yeccpars2_64_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9165,7 +9378,7 @@ yeccpars2_64_(__Stack0) ->
 -compile({inline,yeccpars2_66_/1}).
 -dialyzer({nowarn_function, yeccpars2_66_/1}).
 -compile({nowarn_unused_function,  yeccpars2_66_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1136).
+-file("src/compiler/parser/catena_parser.yrl", 1174).
 yeccpars2_66_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9176,7 +9389,7 @@ yeccpars2_66_(__Stack0) ->
 -compile({inline,yeccpars2_68_/1}).
 -dialyzer({nowarn_function, yeccpars2_68_/1}).
 -compile({nowarn_unused_function,  yeccpars2_68_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1138).
+-file("src/compiler/parser/catena_parser.yrl", 1176).
 yeccpars2_68_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9187,7 +9400,7 @@ yeccpars2_68_(__Stack0) ->
 -compile({inline,yeccpars2_69_/1}).
 -dialyzer({nowarn_function, yeccpars2_69_/1}).
 -compile({nowarn_unused_function,  yeccpars2_69_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1126).
+-file("src/compiler/parser/catena_parser.yrl", 1164).
 yeccpars2_69_(__Stack0) ->
  [___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9198,7 +9411,7 @@ yeccpars2_69_(__Stack0) ->
 -compile({inline,yeccpars2_73_/1}).
 -dialyzer({nowarn_function, yeccpars2_73_/1}).
 -compile({nowarn_unused_function,  yeccpars2_73_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1067).
+-file("src/compiler/parser/catena_parser.yrl", 1105).
 yeccpars2_73_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9209,7 +9422,7 @@ yeccpars2_73_(__Stack0) ->
 -compile({inline,yeccpars2_74_/1}).
 -dialyzer({nowarn_function, yeccpars2_74_/1}).
 -compile({nowarn_unused_function,  yeccpars2_74_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1162).
+-file("src/compiler/parser/catena_parser.yrl", 1200).
 yeccpars2_74_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9220,7 +9433,7 @@ yeccpars2_74_(__Stack0) ->
 -compile({inline,yeccpars2_76_/1}).
 -dialyzer({nowarn_function, yeccpars2_76_/1}).
 -compile({nowarn_unused_function,  yeccpars2_76_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1164).
+-file("src/compiler/parser/catena_parser.yrl", 1202).
 yeccpars2_76_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9231,7 +9444,7 @@ yeccpars2_76_(__Stack0) ->
 -compile({inline,yeccpars2_77_/1}).
 -dialyzer({nowarn_function, yeccpars2_77_/1}).
 -compile({nowarn_unused_function,  yeccpars2_77_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1070).
+-file("src/compiler/parser/catena_parser.yrl", 1108).
 yeccpars2_77_(__Stack0) ->
  [___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9242,7 +9455,7 @@ yeccpars2_77_(__Stack0) ->
 -compile({inline,yeccpars2_79_/1}).
 -dialyzer({nowarn_function, yeccpars2_79_/1}).
 -compile({nowarn_unused_function,  yeccpars2_79_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1148).
+-file("src/compiler/parser/catena_parser.yrl", 1186).
 yeccpars2_79_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9253,7 +9466,7 @@ yeccpars2_79_(__Stack0) ->
 -compile({inline,yeccpars2_81_/1}).
 -dialyzer({nowarn_function, yeccpars2_81_/1}).
 -compile({nowarn_unused_function,  yeccpars2_81_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1129).
+-file("src/compiler/parser/catena_parser.yrl", 1167).
 yeccpars2_81_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9264,7 +9477,7 @@ yeccpars2_81_(__Stack0) ->
 -compile({inline,yeccpars2_83_/1}).
 -dialyzer({nowarn_function, yeccpars2_83_/1}).
 -compile({nowarn_unused_function,  yeccpars2_83_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1153).
+-file("src/compiler/parser/catena_parser.yrl", 1191).
 yeccpars2_83_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9275,7 +9488,7 @@ yeccpars2_83_(__Stack0) ->
 -compile({inline,yeccpars2_85_/1}).
 -dialyzer({nowarn_function, yeccpars2_85_/1}).
 -compile({nowarn_unused_function,  yeccpars2_85_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1150).
+-file("src/compiler/parser/catena_parser.yrl", 1188).
 yeccpars2_85_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9286,7 +9499,7 @@ yeccpars2_85_(__Stack0) ->
 -compile({inline,yeccpars2_86_/1}).
 -dialyzer({nowarn_function, yeccpars2_86_/1}).
 -compile({nowarn_unused_function,  yeccpars2_86_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1132).
+-file("src/compiler/parser/catena_parser.yrl", 1170).
 yeccpars2_86_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9297,7 +9510,7 @@ yeccpars2_86_(__Stack0) ->
 -compile({inline,yeccpars2_87_/1}).
 -dialyzer({nowarn_function, yeccpars2_87_/1}).
 -compile({nowarn_unused_function,  yeccpars2_87_/1}).
--file("src/compiler/parser/catena_parser.yrl", 341).
+-file("src/compiler/parser/catena_parser.yrl", 379).
 yeccpars2_87_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9308,7 +9521,7 @@ yeccpars2_87_(__Stack0) ->
 -compile({inline,yeccpars2_89_/1}).
 -dialyzer({nowarn_function, yeccpars2_89_/1}).
 -compile({nowarn_unused_function,  yeccpars2_89_/1}).
--file("src/compiler/parser/catena_parser.yrl", 324).
+-file("src/compiler/parser/catena_parser.yrl", 362).
 yeccpars2_89_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9319,7 +9532,7 @@ yeccpars2_89_(__Stack0) ->
 -compile({inline,yeccpars2_91_/1}).
 -dialyzer({nowarn_function, yeccpars2_91_/1}).
 -compile({nowarn_unused_function,  yeccpars2_91_/1}).
--file("src/compiler/parser/catena_parser.yrl", 305).
+-file("src/compiler/parser/catena_parser.yrl", 343).
 yeccpars2_91_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9330,7 +9543,7 @@ yeccpars2_91_(__Stack0) ->
 -compile({inline,yeccpars2_92_/1}).
 -dialyzer({nowarn_function, yeccpars2_92_/1}).
 -compile({nowarn_unused_function,  yeccpars2_92_/1}).
--file("src/compiler/parser/catena_parser.yrl", 587).
+-file("src/compiler/parser/catena_parser.yrl", 625).
 yeccpars2_92_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9341,7 +9554,7 @@ yeccpars2_92_(__Stack0) ->
 -compile({inline,yeccpars2_93_/1}).
 -dialyzer({nowarn_function, yeccpars2_93_/1}).
 -compile({nowarn_unused_function,  yeccpars2_93_/1}).
--file("src/compiler/parser/catena_parser.yrl", 654).
+-file("src/compiler/parser/catena_parser.yrl", 692).
 yeccpars2_93_(__Stack0) ->
  [begin
                           
@@ -9351,7 +9564,7 @@ yeccpars2_93_(__Stack0) ->
 -compile({inline,yeccpars2_94_/1}).
 -dialyzer({nowarn_function, yeccpars2_94_/1}).
 -compile({nowarn_unused_function,  yeccpars2_94_/1}).
--file("src/compiler/parser/catena_parser.yrl", 656).
+-file("src/compiler/parser/catena_parser.yrl", 694).
 yeccpars2_94_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9362,7 +9575,7 @@ yeccpars2_94_(__Stack0) ->
 -compile({inline,yeccpars2_96_/1}).
 -dialyzer({nowarn_function, yeccpars2_96_/1}).
 -compile({nowarn_unused_function,  yeccpars2_96_/1}).
--file("src/compiler/parser/catena_parser.yrl", 659).
+-file("src/compiler/parser/catena_parser.yrl", 697).
 yeccpars2_96_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9373,7 +9586,7 @@ yeccpars2_96_(__Stack0) ->
 -compile({inline,yeccpars2_98_/1}).
 -dialyzer({nowarn_function, yeccpars2_98_/1}).
 -compile({nowarn_unused_function,  yeccpars2_98_/1}).
--file("src/compiler/parser/catena_parser.yrl", 719).
+-file("src/compiler/parser/catena_parser.yrl", 757).
 yeccpars2_98_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9384,7 +9597,7 @@ yeccpars2_98_(__Stack0) ->
 -compile({inline,yeccpars2_99_/1}).
 -dialyzer({nowarn_function, yeccpars2_99_/1}).
 -compile({nowarn_unused_function,  yeccpars2_99_/1}).
--file("src/compiler/parser/catena_parser.yrl", 716).
+-file("src/compiler/parser/catena_parser.yrl", 754).
 yeccpars2_99_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9395,7 +9608,7 @@ yeccpars2_99_(__Stack0) ->
 -compile({inline,yeccpars2_102_/1}).
 -dialyzer({nowarn_function, yeccpars2_102_/1}).
 -compile({nowarn_unused_function,  yeccpars2_102_/1}).
--file("src/compiler/parser/catena_parser.yrl", 672).
+-file("src/compiler/parser/catena_parser.yrl", 710).
 yeccpars2_102_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9406,7 +9619,7 @@ yeccpars2_102_(__Stack0) ->
 -compile({inline,yeccpars2_104_/1}).
 -dialyzer({nowarn_function, yeccpars2_104_/1}).
 -compile({nowarn_unused_function,  yeccpars2_104_/1}).
--file("src/compiler/parser/catena_parser.yrl", 722).
+-file("src/compiler/parser/catena_parser.yrl", 760).
 yeccpars2_104_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9417,7 +9630,7 @@ yeccpars2_104_(__Stack0) ->
 -compile({inline,yeccpars2_105_/1}).
 -dialyzer({nowarn_function, yeccpars2_105_/1}).
 -compile({nowarn_unused_function,  yeccpars2_105_/1}).
--file("src/compiler/parser/catena_parser.yrl", 675).
+-file("src/compiler/parser/catena_parser.yrl", 713).
 yeccpars2_105_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9428,7 +9641,7 @@ yeccpars2_105_(__Stack0) ->
 -compile({inline,yeccpars2_106_/1}).
 -dialyzer({nowarn_function, yeccpars2_106_/1}).
 -compile({nowarn_unused_function,  yeccpars2_106_/1}).
--file("src/compiler/parser/catena_parser.yrl", 678).
+-file("src/compiler/parser/catena_parser.yrl", 716).
 yeccpars2_106_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9439,7 +9652,7 @@ yeccpars2_106_(__Stack0) ->
 -compile({inline,yeccpars2_107_/1}).
 -dialyzer({nowarn_function, yeccpars2_107_/1}).
 -compile({nowarn_unused_function,  yeccpars2_107_/1}).
--file("src/compiler/parser/catena_parser.yrl", 685).
+-file("src/compiler/parser/catena_parser.yrl", 723).
 yeccpars2_107_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9450,7 +9663,7 @@ yeccpars2_107_(__Stack0) ->
 -compile({inline,yeccpars2_108_/1}).
 -dialyzer({nowarn_function, yeccpars2_108_/1}).
 -compile({nowarn_unused_function,  yeccpars2_108_/1}).
--file("src/compiler/parser/catena_parser.yrl", 702).
+-file("src/compiler/parser/catena_parser.yrl", 740).
 yeccpars2_108_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9461,7 +9674,7 @@ yeccpars2_108_(__Stack0) ->
 -compile({inline,yeccpars2_109_/1}).
 -dialyzer({nowarn_function, yeccpars2_109_/1}).
 -compile({nowarn_unused_function,  yeccpars2_109_/1}).
--file("src/compiler/parser/catena_parser.yrl", 699).
+-file("src/compiler/parser/catena_parser.yrl", 737).
 yeccpars2_109_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9472,7 +9685,7 @@ yeccpars2_109_(__Stack0) ->
 -compile({inline,yeccpars2_111_/1}).
 -dialyzer({nowarn_function, yeccpars2_111_/1}).
 -compile({nowarn_unused_function,  yeccpars2_111_/1}).
--file("src/compiler/parser/catena_parser.yrl", 693).
+-file("src/compiler/parser/catena_parser.yrl", 731).
 yeccpars2_111_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9483,7 +9696,7 @@ yeccpars2_111_(__Stack0) ->
 -compile({inline,yeccpars2_112_/1}).
 -dialyzer({nowarn_function, yeccpars2_112_/1}).
 -compile({nowarn_unused_function,  yeccpars2_112_/1}).
--file("src/compiler/parser/catena_parser.yrl", 654).
+-file("src/compiler/parser/catena_parser.yrl", 692).
 yeccpars2_112_(__Stack0) ->
  [begin
                           
@@ -9493,7 +9706,7 @@ yeccpars2_112_(__Stack0) ->
 -compile({inline,yeccpars2_113_/1}).
 -dialyzer({nowarn_function, yeccpars2_113_/1}).
 -compile({nowarn_unused_function,  yeccpars2_113_/1}).
--file("src/compiler/parser/catena_parser.yrl", 705).
+-file("src/compiler/parser/catena_parser.yrl", 743).
 yeccpars2_113_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9504,7 +9717,7 @@ yeccpars2_113_(__Stack0) ->
 -compile({inline,yeccpars2_114_/1}).
 -dialyzer({nowarn_function, yeccpars2_114_/1}).
 -compile({nowarn_unused_function,  yeccpars2_114_/1}).
--file("src/compiler/parser/catena_parser.yrl", 696).
+-file("src/compiler/parser/catena_parser.yrl", 734).
 yeccpars2_114_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9515,7 +9728,7 @@ yeccpars2_114_(__Stack0) ->
 -compile({inline,yeccpars2_117_/1}).
 -dialyzer({nowarn_function, yeccpars2_117_/1}).
 -compile({nowarn_unused_function,  yeccpars2_117_/1}).
--file("src/compiler/parser/catena_parser.yrl", 661).
+-file("src/compiler/parser/catena_parser.yrl", 699).
 yeccpars2_117_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9526,7 +9739,7 @@ yeccpars2_117_(__Stack0) ->
 -compile({inline,yeccpars2_120_/1}).
 -dialyzer({nowarn_function, yeccpars2_120_/1}).
 -compile({nowarn_unused_function,  yeccpars2_120_/1}).
--file("src/compiler/parser/catena_parser.yrl", 708).
+-file("src/compiler/parser/catena_parser.yrl", 746).
 yeccpars2_120_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9536,7 +9749,7 @@ yeccpars2_120_(__Stack0) ->
 -compile({inline,yeccpars2_121_/1}).
 -dialyzer({nowarn_function, yeccpars2_121_/1}).
 -compile({nowarn_unused_function,  yeccpars2_121_/1}).
--file("src/compiler/parser/catena_parser.yrl", 741).
+-file("src/compiler/parser/catena_parser.yrl", 779).
 yeccpars2_121_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9547,7 +9760,7 @@ yeccpars2_121_(__Stack0) ->
 -compile({inline,yeccpars2_122_/1}).
 -dialyzer({nowarn_function, yeccpars2_122_/1}).
 -compile({nowarn_unused_function,  yeccpars2_122_/1}).
--file("src/compiler/parser/catena_parser.yrl", 746).
+-file("src/compiler/parser/catena_parser.yrl", 784).
 yeccpars2_122_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9558,7 +9771,7 @@ yeccpars2_122_(__Stack0) ->
 -compile({inline,yeccpars2_123_/1}).
 -dialyzer({nowarn_function, yeccpars2_123_/1}).
 -compile({nowarn_unused_function,  yeccpars2_123_/1}).
--file("src/compiler/parser/catena_parser.yrl", 681).
+-file("src/compiler/parser/catena_parser.yrl", 719).
 yeccpars2_123_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9569,7 +9782,7 @@ yeccpars2_123_(__Stack0) ->
 -compile({inline,yeccpars2_125_/1}).
 -dialyzer({nowarn_function, yeccpars2_125_/1}).
 -compile({nowarn_unused_function,  yeccpars2_125_/1}).
--file("src/compiler/parser/catena_parser.yrl", 710).
+-file("src/compiler/parser/catena_parser.yrl", 748).
 yeccpars2_125_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9580,7 +9793,7 @@ yeccpars2_125_(__Stack0) ->
 -compile({inline,yeccpars2_126_/1}).
 -dialyzer({nowarn_function, yeccpars2_126_/1}).
 -compile({nowarn_unused_function,  yeccpars2_126_/1}).
--file("src/compiler/parser/catena_parser.yrl", 713).
+-file("src/compiler/parser/catena_parser.yrl", 751).
 yeccpars2_126_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9591,7 +9804,7 @@ yeccpars2_126_(__Stack0) ->
 -compile({inline,yeccpars2_127_/1}).
 -dialyzer({nowarn_function, yeccpars2_127_/1}).
 -compile({nowarn_unused_function,  yeccpars2_127_/1}).
--file("src/compiler/parser/catena_parser.yrl", 689).
+-file("src/compiler/parser/catena_parser.yrl", 727).
 yeccpars2_127_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9602,7 +9815,7 @@ yeccpars2_127_(__Stack0) ->
 -compile({inline,yeccpars2_133_/1}).
 -dialyzer({nowarn_function, yeccpars2_133_/1}).
 -compile({nowarn_unused_function,  yeccpars2_133_/1}).
--file("src/compiler/parser/catena_parser.yrl", 752).
+-file("src/compiler/parser/catena_parser.yrl", 790).
 yeccpars2_133_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9613,7 +9826,7 @@ yeccpars2_133_(__Stack0) ->
 -compile({inline,yeccpars2_134_/1}).
 -dialyzer({nowarn_function, yeccpars2_134_/1}).
 -compile({nowarn_unused_function,  yeccpars2_134_/1}).
--file("src/compiler/parser/catena_parser.yrl", 750).
+-file("src/compiler/parser/catena_parser.yrl", 788).
 yeccpars2_134_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9624,7 +9837,7 @@ yeccpars2_134_(__Stack0) ->
 -compile({inline,yeccpars2_135_/1}).
 -dialyzer({nowarn_function, yeccpars2_135_/1}).
 -compile({nowarn_unused_function,  yeccpars2_135_/1}).
--file("src/compiler/parser/catena_parser.yrl", 731).
+-file("src/compiler/parser/catena_parser.yrl", 769).
 yeccpars2_135_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9635,7 +9848,7 @@ yeccpars2_135_(__Stack0) ->
 -compile({inline,yeccpars2_137_/1}).
 -dialyzer({nowarn_function, yeccpars2_137_/1}).
 -compile({nowarn_unused_function,  yeccpars2_137_/1}).
--file("src/compiler/parser/catena_parser.yrl", 725).
+-file("src/compiler/parser/catena_parser.yrl", 763).
 yeccpars2_137_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9646,7 +9859,7 @@ yeccpars2_137_(__Stack0) ->
 -compile({inline,yeccpars2_138_/1}).
 -dialyzer({nowarn_function, yeccpars2_138_/1}).
 -compile({nowarn_unused_function,  yeccpars2_138_/1}).
--file("src/compiler/parser/catena_parser.yrl", 728).
+-file("src/compiler/parser/catena_parser.yrl", 766).
 yeccpars2_138_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9657,7 +9870,7 @@ yeccpars2_138_(__Stack0) ->
 -compile({inline,yeccpars2_140_/1}).
 -dialyzer({nowarn_function, yeccpars2_140_/1}).
 -compile({nowarn_unused_function,  yeccpars2_140_/1}).
--file("src/compiler/parser/catena_parser.yrl", 756).
+-file("src/compiler/parser/catena_parser.yrl", 794).
 yeccpars2_140_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9668,7 +9881,7 @@ yeccpars2_140_(__Stack0) ->
 -compile({inline,yeccpars2_142_/1}).
 -dialyzer({nowarn_function, yeccpars2_142_/1}).
 -compile({nowarn_unused_function,  yeccpars2_142_/1}).
--file("src/compiler/parser/catena_parser.yrl", 734).
+-file("src/compiler/parser/catena_parser.yrl", 772).
 yeccpars2_142_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9679,7 +9892,7 @@ yeccpars2_142_(__Stack0) ->
 -compile({inline,yeccpars2_144_/1}).
 -dialyzer({nowarn_function, yeccpars2_144_/1}).
 -compile({nowarn_unused_function,  yeccpars2_144_/1}).
--file("src/compiler/parser/catena_parser.yrl", 761).
+-file("src/compiler/parser/catena_parser.yrl", 799).
 yeccpars2_144_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9690,7 +9903,7 @@ yeccpars2_144_(__Stack0) ->
 -compile({inline,yeccpars2_146_/1}).
 -dialyzer({nowarn_function, yeccpars2_146_/1}).
 -compile({nowarn_unused_function,  yeccpars2_146_/1}).
--file("src/compiler/parser/catena_parser.yrl", 758).
+-file("src/compiler/parser/catena_parser.yrl", 796).
 yeccpars2_146_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9701,7 +9914,7 @@ yeccpars2_146_(__Stack0) ->
 -compile({inline,yeccpars2_147_/1}).
 -dialyzer({nowarn_function, yeccpars2_147_/1}).
 -compile({nowarn_unused_function,  yeccpars2_147_/1}).
--file("src/compiler/parser/catena_parser.yrl", 737).
+-file("src/compiler/parser/catena_parser.yrl", 775).
 yeccpars2_147_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9712,7 +9925,7 @@ yeccpars2_147_(__Stack0) ->
 -compile({inline,yeccpars2_148_/1}).
 -dialyzer({nowarn_function, yeccpars2_148_/1}).
 -compile({nowarn_unused_function,  yeccpars2_148_/1}).
--file("src/compiler/parser/catena_parser.yrl", 592).
+-file("src/compiler/parser/catena_parser.yrl", 630).
 yeccpars2_148_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9723,7 +9936,7 @@ yeccpars2_148_(__Stack0) ->
 -compile({inline,yeccpars2_150_/1}).
 -dialyzer({nowarn_function, yeccpars2_150_/1}).
 -compile({nowarn_unused_function,  yeccpars2_150_/1}).
--file("src/compiler/parser/catena_parser.yrl", 585).
+-file("src/compiler/parser/catena_parser.yrl", 623).
 yeccpars2_150_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9734,7 +9947,7 @@ yeccpars2_150_(__Stack0) ->
 -compile({inline,yeccpars2_152_/1}).
 -dialyzer({nowarn_function, yeccpars2_152_/1}).
 -compile({nowarn_unused_function,  yeccpars2_152_/1}).
--file("src/compiler/parser/catena_parser.yrl", 897).
+-file("src/compiler/parser/catena_parser.yrl", 935).
 yeccpars2_152_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9744,7 +9957,7 @@ yeccpars2_152_(__Stack0) ->
 -compile({inline,yeccpars2_153_/1}).
 -dialyzer({nowarn_function, yeccpars2_153_/1}).
 -compile({nowarn_unused_function,  yeccpars2_153_/1}).
--file("src/compiler/parser/catena_parser.yrl", 895).
+-file("src/compiler/parser/catena_parser.yrl", 933).
 yeccpars2_153_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9754,7 +9967,7 @@ yeccpars2_153_(__Stack0) ->
 -compile({inline,yeccpars2_154_/1}).
 -dialyzer({nowarn_function, yeccpars2_154_/1}).
 -compile({nowarn_unused_function,  yeccpars2_154_/1}).
--file("src/compiler/parser/catena_parser.yrl", 863).
+-file("src/compiler/parser/catena_parser.yrl", 901).
 yeccpars2_154_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9764,7 +9977,7 @@ yeccpars2_154_(__Stack0) ->
 -compile({inline,yeccpars2_156_/1}).
 -dialyzer({nowarn_function, yeccpars2_156_/1}).
 -compile({nowarn_unused_function,  yeccpars2_156_/1}).
--file("src/compiler/parser/catena_parser.yrl", 768).
+-file("src/compiler/parser/catena_parser.yrl", 806).
 yeccpars2_156_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9775,7 +9988,7 @@ yeccpars2_156_(__Stack0) ->
 -compile({inline,yeccpars2_157_/1}).
 -dialyzer({nowarn_function, yeccpars2_157_/1}).
 -compile({nowarn_unused_function,  yeccpars2_157_/1}).
--file("src/compiler/parser/catena_parser.yrl", 860).
+-file("src/compiler/parser/catena_parser.yrl", 898).
 yeccpars2_157_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9785,7 +9998,7 @@ yeccpars2_157_(__Stack0) ->
 -compile({inline,yeccpars2_158_/1}).
 -dialyzer({nowarn_function, yeccpars2_158_/1}).
 -compile({nowarn_unused_function,  yeccpars2_158_/1}).
--file("src/compiler/parser/catena_parser.yrl", 851).
+-file("src/compiler/parser/catena_parser.yrl", 889).
 yeccpars2_158_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9795,7 +10008,7 @@ yeccpars2_158_(__Stack0) ->
 -compile({inline,yeccpars2_159_/1}).
 -dialyzer({nowarn_function, yeccpars2_159_/1}).
 -compile({nowarn_unused_function,  yeccpars2_159_/1}).
--file("src/compiler/parser/catena_parser.yrl", 773).
+-file("src/compiler/parser/catena_parser.yrl", 811).
 yeccpars2_159_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9805,7 +10018,7 @@ yeccpars2_159_(__Stack0) ->
 -compile({inline,yeccpars2_160_/1}).
 -dialyzer({nowarn_function, yeccpars2_160_/1}).
 -compile({nowarn_unused_function,  yeccpars2_160_/1}).
--file("src/compiler/parser/catena_parser.yrl", 899).
+-file("src/compiler/parser/catena_parser.yrl", 937).
 yeccpars2_160_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9815,7 +10028,7 @@ yeccpars2_160_(__Stack0) ->
 -compile({inline,yeccpars2_162_/1}).
 -dialyzer({nowarn_function, yeccpars2_162_/1}).
 -compile({nowarn_unused_function,  yeccpars2_162_/1}).
--file("src/compiler/parser/catena_parser.yrl", 950).
+-file("src/compiler/parser/catena_parser.yrl", 988).
 yeccpars2_162_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9826,7 +10039,7 @@ yeccpars2_162_(__Stack0) ->
 -compile({inline,yeccpars2_165_/1}).
 -dialyzer({nowarn_function, yeccpars2_165_/1}).
 -compile({nowarn_unused_function,  yeccpars2_165_/1}).
--file("src/compiler/parser/catena_parser.yrl", 947).
+-file("src/compiler/parser/catena_parser.yrl", 985).
 yeccpars2_165_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9837,7 +10050,7 @@ yeccpars2_165_(__Stack0) ->
 -compile({inline,yeccpars2_169_/1}).
 -dialyzer({nowarn_function, yeccpars2_169_/1}).
 -compile({nowarn_unused_function,  yeccpars2_169_/1}).
--file("src/compiler/parser/catena_parser.yrl", 865).
+-file("src/compiler/parser/catena_parser.yrl", 903).
 yeccpars2_169_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9848,7 +10061,7 @@ yeccpars2_169_(__Stack0) ->
 -compile({inline,yeccpars2_173_/1}).
 -dialyzer({nowarn_function, yeccpars2_173_/1}).
 -compile({nowarn_unused_function,  yeccpars2_173_/1}).
--file("src/compiler/parser/catena_parser.yrl", 953).
+-file("src/compiler/parser/catena_parser.yrl", 991).
 yeccpars2_173_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9859,7 +10072,7 @@ yeccpars2_173_(__Stack0) ->
 -compile({inline,yeccpars2_174_/1}).
 -dialyzer({nowarn_function, yeccpars2_174_/1}).
 -compile({nowarn_unused_function,  yeccpars2_174_/1}).
--file("src/compiler/parser/catena_parser.yrl", 868).
+-file("src/compiler/parser/catena_parser.yrl", 906).
 yeccpars2_174_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9870,7 +10083,7 @@ yeccpars2_174_(__Stack0) ->
 -compile({inline,yeccpars2_178_/1}).
 -dialyzer({nowarn_function, yeccpars2_178_/1}).
 -compile({nowarn_unused_function,  yeccpars2_178_/1}).
--file("src/compiler/parser/catena_parser.yrl", 938).
+-file("src/compiler/parser/catena_parser.yrl", 976).
 yeccpars2_178_(__Stack0) ->
  [begin
                            
@@ -9880,7 +10093,7 @@ yeccpars2_178_(__Stack0) ->
 -compile({inline,yeccpars2_180_/1}).
 -dialyzer({nowarn_function, yeccpars2_180_/1}).
 -compile({nowarn_unused_function,  yeccpars2_180_/1}).
--file("src/compiler/parser/catena_parser.yrl", 940).
+-file("src/compiler/parser/catena_parser.yrl", 978).
 yeccpars2_180_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9891,7 +10104,7 @@ yeccpars2_180_(__Stack0) ->
 -compile({inline,yeccpars2_181_/1}).
 -dialyzer({nowarn_function, yeccpars2_181_/1}).
 -compile({nowarn_unused_function,  yeccpars2_181_/1}).
--file("src/compiler/parser/catena_parser.yrl", 932).
+-file("src/compiler/parser/catena_parser.yrl", 970).
 yeccpars2_181_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -9902,7 +10115,7 @@ yeccpars2_181_(__Stack0) ->
 -compile({inline,yeccpars2_205_/1}).
 -dialyzer({nowarn_function, yeccpars2_205_/1}).
 -compile({nowarn_unused_function,  yeccpars2_205_/1}).
--file("src/compiler/parser/catena_parser.yrl", 790).
+-file("src/compiler/parser/catena_parser.yrl", 828).
 yeccpars2_205_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9913,7 +10126,7 @@ yeccpars2_205_(__Stack0) ->
 -compile({inline,yeccpars2_206_/1}).
 -dialyzer({nowarn_function, yeccpars2_206_/1}).
 -compile({nowarn_unused_function,  yeccpars2_206_/1}).
--file("src/compiler/parser/catena_parser.yrl", 793).
+-file("src/compiler/parser/catena_parser.yrl", 831).
 yeccpars2_206_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9924,7 +10137,7 @@ yeccpars2_206_(__Stack0) ->
 -compile({inline,'yeccpars2_207_$end'/1}).
 -dialyzer({nowarn_function, 'yeccpars2_207_$end'/1}).
 -compile({nowarn_unused_function,  'yeccpars2_207_$end'/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 'yeccpars2_207_$end'(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9935,7 +10148,7 @@ yeccpars2_206_(__Stack0) ->
 -compile({inline,yeccpars2_207_and/1}).
 -dialyzer({nowarn_function, yeccpars2_207_and/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_and/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_and(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9946,7 +10159,7 @@ yeccpars2_207_and(__Stack0) ->
 -compile({inline,yeccpars2_207_ap/1}).
 -dialyzer({nowarn_function, yeccpars2_207_ap/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_ap/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_ap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9957,7 +10170,7 @@ yeccpars2_207_ap(__Stack0) ->
 -compile({inline,yeccpars2_207_arrow/1}).
 -dialyzer({nowarn_function, yeccpars2_207_arrow/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_arrow/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_arrow(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9968,7 +10181,7 @@ yeccpars2_207_arrow(__Stack0) ->
 -compile({inline,yeccpars2_207_bind/1}).
 -dialyzer({nowarn_function, yeccpars2_207_bind/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_bind/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_bind(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9979,7 +10192,7 @@ yeccpars2_207_bind(__Stack0) ->
 -compile({inline,yeccpars2_207_comma/1}).
 -dialyzer({nowarn_function, yeccpars2_207_comma/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_comma/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_comma(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -9990,7 +10203,7 @@ yeccpars2_207_comma(__Stack0) ->
 -compile({inline,yeccpars2_207_cons/1}).
 -dialyzer({nowarn_function, yeccpars2_207_cons/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_cons/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_cons(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10001,7 +10214,7 @@ yeccpars2_207_cons(__Stack0) ->
 -compile({inline,yeccpars2_207_do/1}).
 -dialyzer({nowarn_function, yeccpars2_207_do/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_do/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_do(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10012,7 +10225,7 @@ yeccpars2_207_do(__Stack0) ->
 -compile({inline,yeccpars2_207_dot/1}).
 -dialyzer({nowarn_function, yeccpars2_207_dot/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_dot/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_dot(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10023,7 +10236,7 @@ yeccpars2_207_dot(__Stack0) ->
 -compile({inline,yeccpars2_207_effect/1}).
 -dialyzer({nowarn_function, yeccpars2_207_effect/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_effect/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_effect(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10034,7 +10247,7 @@ yeccpars2_207_effect(__Stack0) ->
 -compile({inline,yeccpars2_207_end/1}).
 -dialyzer({nowarn_function, yeccpars2_207_end/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_end/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_end(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10045,7 +10258,7 @@ yeccpars2_207_end(__Stack0) ->
 -compile({inline,yeccpars2_207_equals/1}).
 -dialyzer({nowarn_function, yeccpars2_207_equals/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_equals/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_equals(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10056,7 +10269,7 @@ yeccpars2_207_equals(__Stack0) ->
 -compile({inline,yeccpars2_207_error/1}).
 -dialyzer({nowarn_function, yeccpars2_207_error/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_error/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_error(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10067,7 +10280,7 @@ yeccpars2_207_error(__Stack0) ->
 -compile({inline,yeccpars2_207_float/1}).
 -dialyzer({nowarn_function, yeccpars2_207_float/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_float/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_float(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10078,7 +10291,7 @@ yeccpars2_207_float(__Stack0) ->
 -compile({inline,yeccpars2_207_fmap/1}).
 -dialyzer({nowarn_function, yeccpars2_207_fmap/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_fmap/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_fmap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10089,7 +10302,7 @@ yeccpars2_207_fmap(__Stack0) ->
 -compile({inline,yeccpars2_207_fn/1}).
 -dialyzer({nowarn_function, yeccpars2_207_fn/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_fn/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_fn(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10100,7 +10313,7 @@ yeccpars2_207_fn(__Stack0) ->
 -compile({inline,yeccpars2_207_handle/1}).
 -dialyzer({nowarn_function, yeccpars2_207_handle/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_handle/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_handle(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10111,7 +10324,7 @@ yeccpars2_207_handle(__Stack0) ->
 -compile({inline,yeccpars2_207_import/1}).
 -dialyzer({nowarn_function, yeccpars2_207_import/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_import/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_import(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10122,7 +10335,7 @@ yeccpars2_207_import(__Stack0) ->
 -compile({inline,yeccpars2_207_in/1}).
 -dialyzer({nowarn_function, yeccpars2_207_in/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_in/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_in(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10133,7 +10346,7 @@ yeccpars2_207_in(__Stack0) ->
 -compile({inline,yeccpars2_207_instance/1}).
 -dialyzer({nowarn_function, yeccpars2_207_instance/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_instance/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_instance(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10144,7 +10357,7 @@ yeccpars2_207_instance(__Stack0) ->
 -compile({inline,yeccpars2_207_integer/1}).
 -dialyzer({nowarn_function, yeccpars2_207_integer/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_integer/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_integer(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10155,7 +10368,7 @@ yeccpars2_207_integer(__Stack0) ->
 -compile({inline,yeccpars2_207_kleisli/1}).
 -dialyzer({nowarn_function, yeccpars2_207_kleisli/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_kleisli/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_kleisli(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10166,7 +10379,7 @@ yeccpars2_207_kleisli(__Stack0) ->
 -compile({inline,yeccpars2_207_lbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_207_lbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_lbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_lbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10177,7 +10390,7 @@ yeccpars2_207_lbrace(__Stack0) ->
 -compile({inline,yeccpars2_207_lbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_207_lbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_lbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_lbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10188,7 +10401,7 @@ yeccpars2_207_lbracket(__Stack0) ->
 -compile({inline,yeccpars2_207_let/1}).
 -dialyzer({nowarn_function, yeccpars2_207_let/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_let/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_let(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10199,7 +10412,7 @@ yeccpars2_207_let(__Stack0) ->
 -compile({inline,yeccpars2_207_lower_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_207_lower_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_lower_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_lower_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10210,7 +10423,7 @@ yeccpars2_207_lower_ident(__Stack0) ->
 -compile({inline,yeccpars2_207_lparen/1}).
 -dialyzer({nowarn_function, yeccpars2_207_lparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_lparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_lparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10221,7 +10434,7 @@ yeccpars2_207_lparen(__Stack0) ->
 -compile({inline,yeccpars2_207_mappend/1}).
 -dialyzer({nowarn_function, yeccpars2_207_mappend/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_mappend/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_mappend(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10232,7 +10445,7 @@ yeccpars2_207_mappend(__Stack0) ->
 -compile({inline,yeccpars2_207_match/1}).
 -dialyzer({nowarn_function, yeccpars2_207_match/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_match/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_match(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10243,7 +10456,7 @@ yeccpars2_207_match(__Stack0) ->
 -compile({inline,yeccpars2_207_of/1}).
 -dialyzer({nowarn_function, yeccpars2_207_of/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_of/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_of(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10254,7 +10467,7 @@ yeccpars2_207_of(__Stack0) ->
 -compile({inline,yeccpars2_207_or/1}).
 -dialyzer({nowarn_function, yeccpars2_207_or/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_or/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_or(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10265,7 +10478,7 @@ yeccpars2_207_or(__Stack0) ->
 -compile({inline,yeccpars2_207_perform/1}).
 -dialyzer({nowarn_function, yeccpars2_207_perform/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_perform/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_perform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10276,7 +10489,7 @@ yeccpars2_207_perform(__Stack0) ->
 -compile({inline,yeccpars2_207_pipe/1}).
 -dialyzer({nowarn_function, yeccpars2_207_pipe/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_pipe/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_pipe(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10287,7 +10500,7 @@ yeccpars2_207_pipe(__Stack0) ->
 -compile({inline,yeccpars2_207_pipe_right/1}).
 -dialyzer({nowarn_function, yeccpars2_207_pipe_right/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_pipe_right/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_pipe_right(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10298,7 +10511,7 @@ yeccpars2_207_pipe_right(__Stack0) ->
 -compile({inline,yeccpars2_207_property/1}).
 -dialyzer({nowarn_function, yeccpars2_207_property/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_property/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_property(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10309,7 +10522,7 @@ yeccpars2_207_property(__Stack0) ->
 -compile({inline,yeccpars2_207_rbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_207_rbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_rbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_rbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10320,7 +10533,7 @@ yeccpars2_207_rbrace(__Stack0) ->
 -compile({inline,yeccpars2_207_rbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_207_rbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_rbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_rbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10331,7 +10544,7 @@ yeccpars2_207_rbracket(__Stack0) ->
 -compile({inline,yeccpars2_207_rparen/1}).
 -dialyzer({nowarn_function, yeccpars2_207_rparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_rparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_rparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10342,7 +10555,7 @@ yeccpars2_207_rparen(__Stack0) ->
 -compile({inline,yeccpars2_207_semicolon/1}).
 -dialyzer({nowarn_function, yeccpars2_207_semicolon/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_semicolon/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_semicolon(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10353,7 +10566,7 @@ yeccpars2_207_semicolon(__Stack0) ->
 -compile({inline,yeccpars2_207_string/1}).
 -dialyzer({nowarn_function, yeccpars2_207_string/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_string/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_string(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10364,7 +10577,7 @@ yeccpars2_207_string(__Stack0) ->
 -compile({inline,yeccpars2_207_test/1}).
 -dialyzer({nowarn_function, yeccpars2_207_test/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_test/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_test(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10375,7 +10588,7 @@ yeccpars2_207_test(__Stack0) ->
 -compile({inline,yeccpars2_207_then/1}).
 -dialyzer({nowarn_function, yeccpars2_207_then/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_then/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_then(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10386,7 +10599,7 @@ yeccpars2_207_then(__Stack0) ->
 -compile({inline,yeccpars2_207_trait/1}).
 -dialyzer({nowarn_function, yeccpars2_207_trait/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_trait/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_trait(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10397,7 +10610,7 @@ yeccpars2_207_trait(__Stack0) ->
 -compile({inline,yeccpars2_207_transform/1}).
 -dialyzer({nowarn_function, yeccpars2_207_transform/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_transform/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_transform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10408,7 +10621,7 @@ yeccpars2_207_transform(__Stack0) ->
 -compile({inline,yeccpars2_207_type/1}).
 -dialyzer({nowarn_function, yeccpars2_207_type/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_type/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_type(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10419,7 +10632,7 @@ yeccpars2_207_type(__Stack0) ->
 -compile({inline,yeccpars2_207_upper_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_207_upper_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_207_upper_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 805).
+-file("src/compiler/parser/catena_parser.yrl", 843).
 yeccpars2_207_upper_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10430,7 +10643,7 @@ yeccpars2_207_upper_ident(__Stack0) ->
 -compile({inline,'yeccpars2_208_$end'/1}).
 -dialyzer({nowarn_function, 'yeccpars2_208_$end'/1}).
 -compile({nowarn_unused_function,  'yeccpars2_208_$end'/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 'yeccpars2_208_$end'(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10441,7 +10654,7 @@ yeccpars2_207_upper_ident(__Stack0) ->
 -compile({inline,yeccpars2_208_and/1}).
 -dialyzer({nowarn_function, yeccpars2_208_and/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_and/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_and(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10452,7 +10665,7 @@ yeccpars2_208_and(__Stack0) ->
 -compile({inline,yeccpars2_208_ap/1}).
 -dialyzer({nowarn_function, yeccpars2_208_ap/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_ap/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_ap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10463,7 +10676,7 @@ yeccpars2_208_ap(__Stack0) ->
 -compile({inline,yeccpars2_208_arrow/1}).
 -dialyzer({nowarn_function, yeccpars2_208_arrow/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_arrow/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_arrow(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10474,7 +10687,7 @@ yeccpars2_208_arrow(__Stack0) ->
 -compile({inline,yeccpars2_208_bind/1}).
 -dialyzer({nowarn_function, yeccpars2_208_bind/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_bind/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_bind(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10485,7 +10698,7 @@ yeccpars2_208_bind(__Stack0) ->
 -compile({inline,yeccpars2_208_comma/1}).
 -dialyzer({nowarn_function, yeccpars2_208_comma/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_comma/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_comma(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10496,7 +10709,7 @@ yeccpars2_208_comma(__Stack0) ->
 -compile({inline,yeccpars2_208_cons/1}).
 -dialyzer({nowarn_function, yeccpars2_208_cons/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_cons/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_cons(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10507,7 +10720,7 @@ yeccpars2_208_cons(__Stack0) ->
 -compile({inline,yeccpars2_208_do/1}).
 -dialyzer({nowarn_function, yeccpars2_208_do/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_do/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_do(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10518,7 +10731,7 @@ yeccpars2_208_do(__Stack0) ->
 -compile({inline,yeccpars2_208_dot/1}).
 -dialyzer({nowarn_function, yeccpars2_208_dot/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_dot/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_dot(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10529,7 +10742,7 @@ yeccpars2_208_dot(__Stack0) ->
 -compile({inline,yeccpars2_208_effect/1}).
 -dialyzer({nowarn_function, yeccpars2_208_effect/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_effect/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_effect(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10540,7 +10753,7 @@ yeccpars2_208_effect(__Stack0) ->
 -compile({inline,yeccpars2_208_end/1}).
 -dialyzer({nowarn_function, yeccpars2_208_end/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_end/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_end(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10551,7 +10764,7 @@ yeccpars2_208_end(__Stack0) ->
 -compile({inline,yeccpars2_208_equals/1}).
 -dialyzer({nowarn_function, yeccpars2_208_equals/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_equals/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_equals(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10562,7 +10775,7 @@ yeccpars2_208_equals(__Stack0) ->
 -compile({inline,yeccpars2_208_error/1}).
 -dialyzer({nowarn_function, yeccpars2_208_error/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_error/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_error(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10573,7 +10786,7 @@ yeccpars2_208_error(__Stack0) ->
 -compile({inline,yeccpars2_208_float/1}).
 -dialyzer({nowarn_function, yeccpars2_208_float/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_float/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_float(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10584,7 +10797,7 @@ yeccpars2_208_float(__Stack0) ->
 -compile({inline,yeccpars2_208_fmap/1}).
 -dialyzer({nowarn_function, yeccpars2_208_fmap/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_fmap/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_fmap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10595,7 +10808,7 @@ yeccpars2_208_fmap(__Stack0) ->
 -compile({inline,yeccpars2_208_fn/1}).
 -dialyzer({nowarn_function, yeccpars2_208_fn/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_fn/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_fn(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10606,7 +10819,7 @@ yeccpars2_208_fn(__Stack0) ->
 -compile({inline,yeccpars2_208_handle/1}).
 -dialyzer({nowarn_function, yeccpars2_208_handle/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_handle/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_handle(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10617,7 +10830,7 @@ yeccpars2_208_handle(__Stack0) ->
 -compile({inline,yeccpars2_208_import/1}).
 -dialyzer({nowarn_function, yeccpars2_208_import/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_import/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_import(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10628,7 +10841,7 @@ yeccpars2_208_import(__Stack0) ->
 -compile({inline,yeccpars2_208_in/1}).
 -dialyzer({nowarn_function, yeccpars2_208_in/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_in/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_in(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10639,7 +10852,7 @@ yeccpars2_208_in(__Stack0) ->
 -compile({inline,yeccpars2_208_instance/1}).
 -dialyzer({nowarn_function, yeccpars2_208_instance/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_instance/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_instance(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10650,7 +10863,7 @@ yeccpars2_208_instance(__Stack0) ->
 -compile({inline,yeccpars2_208_integer/1}).
 -dialyzer({nowarn_function, yeccpars2_208_integer/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_integer/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_integer(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10661,7 +10874,7 @@ yeccpars2_208_integer(__Stack0) ->
 -compile({inline,yeccpars2_208_kleisli/1}).
 -dialyzer({nowarn_function, yeccpars2_208_kleisli/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_kleisli/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_kleisli(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10672,7 +10885,7 @@ yeccpars2_208_kleisli(__Stack0) ->
 -compile({inline,yeccpars2_208_lbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_208_lbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_lbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_lbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10683,7 +10896,7 @@ yeccpars2_208_lbrace(__Stack0) ->
 -compile({inline,yeccpars2_208_lbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_208_lbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_lbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_lbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10694,7 +10907,7 @@ yeccpars2_208_lbracket(__Stack0) ->
 -compile({inline,yeccpars2_208_let/1}).
 -dialyzer({nowarn_function, yeccpars2_208_let/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_let/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_let(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10705,7 +10918,7 @@ yeccpars2_208_let(__Stack0) ->
 -compile({inline,yeccpars2_208_lower_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_208_lower_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_lower_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_lower_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10716,7 +10929,7 @@ yeccpars2_208_lower_ident(__Stack0) ->
 -compile({inline,yeccpars2_208_lparen/1}).
 -dialyzer({nowarn_function, yeccpars2_208_lparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_lparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_lparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10727,7 +10940,7 @@ yeccpars2_208_lparen(__Stack0) ->
 -compile({inline,yeccpars2_208_mappend/1}).
 -dialyzer({nowarn_function, yeccpars2_208_mappend/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_mappend/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_mappend(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10738,7 +10951,7 @@ yeccpars2_208_mappend(__Stack0) ->
 -compile({inline,yeccpars2_208_match/1}).
 -dialyzer({nowarn_function, yeccpars2_208_match/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_match/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_match(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10749,7 +10962,7 @@ yeccpars2_208_match(__Stack0) ->
 -compile({inline,yeccpars2_208_of/1}).
 -dialyzer({nowarn_function, yeccpars2_208_of/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_of/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_of(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10760,7 +10973,7 @@ yeccpars2_208_of(__Stack0) ->
 -compile({inline,yeccpars2_208_or/1}).
 -dialyzer({nowarn_function, yeccpars2_208_or/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_or/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_or(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10771,7 +10984,7 @@ yeccpars2_208_or(__Stack0) ->
 -compile({inline,yeccpars2_208_perform/1}).
 -dialyzer({nowarn_function, yeccpars2_208_perform/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_perform/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_perform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10782,7 +10995,7 @@ yeccpars2_208_perform(__Stack0) ->
 -compile({inline,yeccpars2_208_pipe/1}).
 -dialyzer({nowarn_function, yeccpars2_208_pipe/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_pipe/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_pipe(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10793,7 +11006,7 @@ yeccpars2_208_pipe(__Stack0) ->
 -compile({inline,yeccpars2_208_pipe_right/1}).
 -dialyzer({nowarn_function, yeccpars2_208_pipe_right/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_pipe_right/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_pipe_right(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10804,7 +11017,7 @@ yeccpars2_208_pipe_right(__Stack0) ->
 -compile({inline,yeccpars2_208_property/1}).
 -dialyzer({nowarn_function, yeccpars2_208_property/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_property/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_property(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10815,7 +11028,7 @@ yeccpars2_208_property(__Stack0) ->
 -compile({inline,yeccpars2_208_rbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_208_rbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_rbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_rbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10826,7 +11039,7 @@ yeccpars2_208_rbrace(__Stack0) ->
 -compile({inline,yeccpars2_208_rbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_208_rbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_rbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_rbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10837,7 +11050,7 @@ yeccpars2_208_rbracket(__Stack0) ->
 -compile({inline,yeccpars2_208_rparen/1}).
 -dialyzer({nowarn_function, yeccpars2_208_rparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_rparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_rparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10848,7 +11061,7 @@ yeccpars2_208_rparen(__Stack0) ->
 -compile({inline,yeccpars2_208_semicolon/1}).
 -dialyzer({nowarn_function, yeccpars2_208_semicolon/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_semicolon/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_semicolon(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10859,7 +11072,7 @@ yeccpars2_208_semicolon(__Stack0) ->
 -compile({inline,yeccpars2_208_string/1}).
 -dialyzer({nowarn_function, yeccpars2_208_string/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_string/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_string(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10870,7 +11083,7 @@ yeccpars2_208_string(__Stack0) ->
 -compile({inline,yeccpars2_208_test/1}).
 -dialyzer({nowarn_function, yeccpars2_208_test/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_test/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_test(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10881,7 +11094,7 @@ yeccpars2_208_test(__Stack0) ->
 -compile({inline,yeccpars2_208_then/1}).
 -dialyzer({nowarn_function, yeccpars2_208_then/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_then/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_then(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10892,7 +11105,7 @@ yeccpars2_208_then(__Stack0) ->
 -compile({inline,yeccpars2_208_trait/1}).
 -dialyzer({nowarn_function, yeccpars2_208_trait/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_trait/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_trait(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10903,7 +11116,7 @@ yeccpars2_208_trait(__Stack0) ->
 -compile({inline,yeccpars2_208_transform/1}).
 -dialyzer({nowarn_function, yeccpars2_208_transform/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_transform/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_transform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10914,7 +11127,7 @@ yeccpars2_208_transform(__Stack0) ->
 -compile({inline,yeccpars2_208_type/1}).
 -dialyzer({nowarn_function, yeccpars2_208_type/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_type/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_type(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10925,7 +11138,7 @@ yeccpars2_208_type(__Stack0) ->
 -compile({inline,yeccpars2_208_upper_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_208_upper_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_208_upper_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 802).
+-file("src/compiler/parser/catena_parser.yrl", 840).
 yeccpars2_208_upper_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10936,7 +11149,7 @@ yeccpars2_208_upper_ident(__Stack0) ->
 -compile({inline,yeccpars2_209_/1}).
 -dialyzer({nowarn_function, yeccpars2_209_/1}).
 -compile({nowarn_unused_function,  yeccpars2_209_/1}).
--file("src/compiler/parser/catena_parser.yrl", 828).
+-file("src/compiler/parser/catena_parser.yrl", 866).
 yeccpars2_209_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10947,7 +11160,7 @@ yeccpars2_209_(__Stack0) ->
 -compile({inline,yeccpars2_210_/1}).
 -dialyzer({nowarn_function, yeccpars2_210_/1}).
 -compile({nowarn_unused_function,  yeccpars2_210_/1}).
--file("src/compiler/parser/catena_parser.yrl", 784).
+-file("src/compiler/parser/catena_parser.yrl", 822).
 yeccpars2_210_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10958,7 +11171,7 @@ yeccpars2_210_(__Stack0) ->
 -compile({inline,yeccpars2_211_/1}).
 -dialyzer({nowarn_function, yeccpars2_211_/1}).
 -compile({nowarn_unused_function,  yeccpars2_211_/1}).
--file("src/compiler/parser/catena_parser.yrl", 781).
+-file("src/compiler/parser/catena_parser.yrl", 819).
 yeccpars2_211_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10969,7 +11182,7 @@ yeccpars2_211_(__Stack0) ->
 -compile({inline,yeccpars2_212_/1}).
 -dialyzer({nowarn_function, yeccpars2_212_/1}).
 -compile({nowarn_unused_function,  yeccpars2_212_/1}).
--file("src/compiler/parser/catena_parser.yrl", 824).
+-file("src/compiler/parser/catena_parser.yrl", 862).
 yeccpars2_212_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10980,7 +11193,7 @@ yeccpars2_212_(__Stack0) ->
 -compile({inline,'yeccpars2_213_$end'/1}).
 -dialyzer({nowarn_function, 'yeccpars2_213_$end'/1}).
 -compile({nowarn_unused_function,  'yeccpars2_213_$end'/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 'yeccpars2_213_$end'(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -10991,7 +11204,7 @@ yeccpars2_212_(__Stack0) ->
 -compile({inline,yeccpars2_213_and/1}).
 -dialyzer({nowarn_function, yeccpars2_213_and/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_and/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_and(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11002,7 +11215,7 @@ yeccpars2_213_and(__Stack0) ->
 -compile({inline,yeccpars2_213_ap/1}).
 -dialyzer({nowarn_function, yeccpars2_213_ap/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_ap/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_ap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11013,7 +11226,7 @@ yeccpars2_213_ap(__Stack0) ->
 -compile({inline,yeccpars2_213_arrow/1}).
 -dialyzer({nowarn_function, yeccpars2_213_arrow/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_arrow/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_arrow(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11024,7 +11237,7 @@ yeccpars2_213_arrow(__Stack0) ->
 -compile({inline,yeccpars2_213_bind/1}).
 -dialyzer({nowarn_function, yeccpars2_213_bind/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_bind/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_bind(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11035,7 +11248,7 @@ yeccpars2_213_bind(__Stack0) ->
 -compile({inline,yeccpars2_213_comma/1}).
 -dialyzer({nowarn_function, yeccpars2_213_comma/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_comma/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_comma(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11046,7 +11259,7 @@ yeccpars2_213_comma(__Stack0) ->
 -compile({inline,yeccpars2_213_cons/1}).
 -dialyzer({nowarn_function, yeccpars2_213_cons/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_cons/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_cons(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11057,7 +11270,7 @@ yeccpars2_213_cons(__Stack0) ->
 -compile({inline,yeccpars2_213_do/1}).
 -dialyzer({nowarn_function, yeccpars2_213_do/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_do/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_do(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11068,7 +11281,7 @@ yeccpars2_213_do(__Stack0) ->
 -compile({inline,yeccpars2_213_dot/1}).
 -dialyzer({nowarn_function, yeccpars2_213_dot/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_dot/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_dot(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11079,7 +11292,7 @@ yeccpars2_213_dot(__Stack0) ->
 -compile({inline,yeccpars2_213_effect/1}).
 -dialyzer({nowarn_function, yeccpars2_213_effect/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_effect/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_effect(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11090,7 +11303,7 @@ yeccpars2_213_effect(__Stack0) ->
 -compile({inline,yeccpars2_213_end/1}).
 -dialyzer({nowarn_function, yeccpars2_213_end/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_end/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_end(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11101,7 +11314,7 @@ yeccpars2_213_end(__Stack0) ->
 -compile({inline,yeccpars2_213_equals/1}).
 -dialyzer({nowarn_function, yeccpars2_213_equals/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_equals/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_equals(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11112,7 +11325,7 @@ yeccpars2_213_equals(__Stack0) ->
 -compile({inline,yeccpars2_213_error/1}).
 -dialyzer({nowarn_function, yeccpars2_213_error/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_error/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_error(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11123,7 +11336,7 @@ yeccpars2_213_error(__Stack0) ->
 -compile({inline,yeccpars2_213_float/1}).
 -dialyzer({nowarn_function, yeccpars2_213_float/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_float/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_float(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11134,7 +11347,7 @@ yeccpars2_213_float(__Stack0) ->
 -compile({inline,yeccpars2_213_fmap/1}).
 -dialyzer({nowarn_function, yeccpars2_213_fmap/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_fmap/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_fmap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11145,7 +11358,7 @@ yeccpars2_213_fmap(__Stack0) ->
 -compile({inline,yeccpars2_213_fn/1}).
 -dialyzer({nowarn_function, yeccpars2_213_fn/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_fn/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_fn(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11156,7 +11369,7 @@ yeccpars2_213_fn(__Stack0) ->
 -compile({inline,yeccpars2_213_handle/1}).
 -dialyzer({nowarn_function, yeccpars2_213_handle/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_handle/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_handle(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11167,7 +11380,7 @@ yeccpars2_213_handle(__Stack0) ->
 -compile({inline,yeccpars2_213_import/1}).
 -dialyzer({nowarn_function, yeccpars2_213_import/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_import/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_import(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11178,7 +11391,7 @@ yeccpars2_213_import(__Stack0) ->
 -compile({inline,yeccpars2_213_in/1}).
 -dialyzer({nowarn_function, yeccpars2_213_in/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_in/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_in(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11189,7 +11402,7 @@ yeccpars2_213_in(__Stack0) ->
 -compile({inline,yeccpars2_213_instance/1}).
 -dialyzer({nowarn_function, yeccpars2_213_instance/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_instance/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_instance(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11200,7 +11413,7 @@ yeccpars2_213_instance(__Stack0) ->
 -compile({inline,yeccpars2_213_integer/1}).
 -dialyzer({nowarn_function, yeccpars2_213_integer/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_integer/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_integer(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11211,7 +11424,7 @@ yeccpars2_213_integer(__Stack0) ->
 -compile({inline,yeccpars2_213_kleisli/1}).
 -dialyzer({nowarn_function, yeccpars2_213_kleisli/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_kleisli/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_kleisli(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11222,7 +11435,7 @@ yeccpars2_213_kleisli(__Stack0) ->
 -compile({inline,yeccpars2_213_lbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_213_lbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_lbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_lbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11233,7 +11446,7 @@ yeccpars2_213_lbrace(__Stack0) ->
 -compile({inline,yeccpars2_213_lbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_213_lbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_lbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_lbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11244,7 +11457,7 @@ yeccpars2_213_lbracket(__Stack0) ->
 -compile({inline,yeccpars2_213_let/1}).
 -dialyzer({nowarn_function, yeccpars2_213_let/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_let/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_let(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11255,7 +11468,7 @@ yeccpars2_213_let(__Stack0) ->
 -compile({inline,yeccpars2_213_lower_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_213_lower_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_lower_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_lower_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11266,7 +11479,7 @@ yeccpars2_213_lower_ident(__Stack0) ->
 -compile({inline,yeccpars2_213_lparen/1}).
 -dialyzer({nowarn_function, yeccpars2_213_lparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_lparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_lparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11277,7 +11490,7 @@ yeccpars2_213_lparen(__Stack0) ->
 -compile({inline,yeccpars2_213_mappend/1}).
 -dialyzer({nowarn_function, yeccpars2_213_mappend/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_mappend/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_mappend(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11288,7 +11501,7 @@ yeccpars2_213_mappend(__Stack0) ->
 -compile({inline,yeccpars2_213_match/1}).
 -dialyzer({nowarn_function, yeccpars2_213_match/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_match/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_match(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11299,7 +11512,7 @@ yeccpars2_213_match(__Stack0) ->
 -compile({inline,yeccpars2_213_of/1}).
 -dialyzer({nowarn_function, yeccpars2_213_of/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_of/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_of(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11310,7 +11523,7 @@ yeccpars2_213_of(__Stack0) ->
 -compile({inline,yeccpars2_213_or/1}).
 -dialyzer({nowarn_function, yeccpars2_213_or/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_or/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_or(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11321,7 +11534,7 @@ yeccpars2_213_or(__Stack0) ->
 -compile({inline,yeccpars2_213_perform/1}).
 -dialyzer({nowarn_function, yeccpars2_213_perform/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_perform/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_perform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11332,7 +11545,7 @@ yeccpars2_213_perform(__Stack0) ->
 -compile({inline,yeccpars2_213_pipe/1}).
 -dialyzer({nowarn_function, yeccpars2_213_pipe/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_pipe/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_pipe(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11343,7 +11556,7 @@ yeccpars2_213_pipe(__Stack0) ->
 -compile({inline,yeccpars2_213_pipe_right/1}).
 -dialyzer({nowarn_function, yeccpars2_213_pipe_right/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_pipe_right/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_pipe_right(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11354,7 +11567,7 @@ yeccpars2_213_pipe_right(__Stack0) ->
 -compile({inline,yeccpars2_213_property/1}).
 -dialyzer({nowarn_function, yeccpars2_213_property/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_property/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_property(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11365,7 +11578,7 @@ yeccpars2_213_property(__Stack0) ->
 -compile({inline,yeccpars2_213_rbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_213_rbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_rbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_rbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11376,7 +11589,7 @@ yeccpars2_213_rbrace(__Stack0) ->
 -compile({inline,yeccpars2_213_rbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_213_rbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_rbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_rbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11387,7 +11600,7 @@ yeccpars2_213_rbracket(__Stack0) ->
 -compile({inline,yeccpars2_213_rparen/1}).
 -dialyzer({nowarn_function, yeccpars2_213_rparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_rparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_rparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11398,7 +11611,7 @@ yeccpars2_213_rparen(__Stack0) ->
 -compile({inline,yeccpars2_213_semicolon/1}).
 -dialyzer({nowarn_function, yeccpars2_213_semicolon/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_semicolon/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_semicolon(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11409,7 +11622,7 @@ yeccpars2_213_semicolon(__Stack0) ->
 -compile({inline,yeccpars2_213_string/1}).
 -dialyzer({nowarn_function, yeccpars2_213_string/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_string/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_string(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11420,7 +11633,7 @@ yeccpars2_213_string(__Stack0) ->
 -compile({inline,yeccpars2_213_test/1}).
 -dialyzer({nowarn_function, yeccpars2_213_test/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_test/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_test(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11431,7 +11644,7 @@ yeccpars2_213_test(__Stack0) ->
 -compile({inline,yeccpars2_213_then/1}).
 -dialyzer({nowarn_function, yeccpars2_213_then/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_then/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_then(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11442,7 +11655,7 @@ yeccpars2_213_then(__Stack0) ->
 -compile({inline,yeccpars2_213_trait/1}).
 -dialyzer({nowarn_function, yeccpars2_213_trait/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_trait/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_trait(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11453,7 +11666,7 @@ yeccpars2_213_trait(__Stack0) ->
 -compile({inline,yeccpars2_213_transform/1}).
 -dialyzer({nowarn_function, yeccpars2_213_transform/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_transform/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_transform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11464,7 +11677,7 @@ yeccpars2_213_transform(__Stack0) ->
 -compile({inline,yeccpars2_213_type/1}).
 -dialyzer({nowarn_function, yeccpars2_213_type/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_type/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_type(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11475,7 +11688,7 @@ yeccpars2_213_type(__Stack0) ->
 -compile({inline,yeccpars2_213_upper_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_213_upper_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_213_upper_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 799).
+-file("src/compiler/parser/catena_parser.yrl", 837).
 yeccpars2_213_upper_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11486,7 +11699,7 @@ yeccpars2_213_upper_ident(__Stack0) ->
 -compile({inline,yeccpars2_214_/1}).
 -dialyzer({nowarn_function, yeccpars2_214_/1}).
 -compile({nowarn_unused_function,  yeccpars2_214_/1}).
--file("src/compiler/parser/catena_parser.yrl", 787).
+-file("src/compiler/parser/catena_parser.yrl", 825).
 yeccpars2_214_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11497,7 +11710,7 @@ yeccpars2_214_(__Stack0) ->
 -compile({inline,yeccpars2_215_/1}).
 -dialyzer({nowarn_function, yeccpars2_215_/1}).
 -compile({nowarn_unused_function,  yeccpars2_215_/1}).
--file("src/compiler/parser/catena_parser.yrl", 845).
+-file("src/compiler/parser/catena_parser.yrl", 883).
 yeccpars2_215_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11508,7 +11721,7 @@ yeccpars2_215_(__Stack0) ->
 -compile({inline,'yeccpars2_216_$end'/1}).
 -dialyzer({nowarn_function, 'yeccpars2_216_$end'/1}).
 -compile({nowarn_unused_function,  'yeccpars2_216_$end'/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 'yeccpars2_216_$end'(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11519,7 +11732,7 @@ yeccpars2_215_(__Stack0) ->
 -compile({inline,yeccpars2_216_and/1}).
 -dialyzer({nowarn_function, yeccpars2_216_and/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_and/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_and(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11530,7 +11743,7 @@ yeccpars2_216_and(__Stack0) ->
 -compile({inline,yeccpars2_216_ap/1}).
 -dialyzer({nowarn_function, yeccpars2_216_ap/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_ap/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_ap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11541,7 +11754,7 @@ yeccpars2_216_ap(__Stack0) ->
 -compile({inline,yeccpars2_216_arrow/1}).
 -dialyzer({nowarn_function, yeccpars2_216_arrow/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_arrow/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_arrow(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11552,7 +11765,7 @@ yeccpars2_216_arrow(__Stack0) ->
 -compile({inline,yeccpars2_216_bind/1}).
 -dialyzer({nowarn_function, yeccpars2_216_bind/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_bind/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_bind(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11563,7 +11776,7 @@ yeccpars2_216_bind(__Stack0) ->
 -compile({inline,yeccpars2_216_comma/1}).
 -dialyzer({nowarn_function, yeccpars2_216_comma/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_comma/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_comma(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11574,7 +11787,7 @@ yeccpars2_216_comma(__Stack0) ->
 -compile({inline,yeccpars2_216_cons/1}).
 -dialyzer({nowarn_function, yeccpars2_216_cons/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_cons/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_cons(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11585,7 +11798,7 @@ yeccpars2_216_cons(__Stack0) ->
 -compile({inline,yeccpars2_216_do/1}).
 -dialyzer({nowarn_function, yeccpars2_216_do/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_do/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_do(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11596,7 +11809,7 @@ yeccpars2_216_do(__Stack0) ->
 -compile({inline,yeccpars2_216_dot/1}).
 -dialyzer({nowarn_function, yeccpars2_216_dot/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_dot/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_dot(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11607,7 +11820,7 @@ yeccpars2_216_dot(__Stack0) ->
 -compile({inline,yeccpars2_216_effect/1}).
 -dialyzer({nowarn_function, yeccpars2_216_effect/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_effect/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_effect(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11618,7 +11831,7 @@ yeccpars2_216_effect(__Stack0) ->
 -compile({inline,yeccpars2_216_end/1}).
 -dialyzer({nowarn_function, yeccpars2_216_end/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_end/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_end(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11629,7 +11842,7 @@ yeccpars2_216_end(__Stack0) ->
 -compile({inline,yeccpars2_216_eq/1}).
 -dialyzer({nowarn_function, yeccpars2_216_eq/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_eq/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_eq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11640,7 +11853,7 @@ yeccpars2_216_eq(__Stack0) ->
 -compile({inline,yeccpars2_216_equals/1}).
 -dialyzer({nowarn_function, yeccpars2_216_equals/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_equals/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_equals(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11651,7 +11864,7 @@ yeccpars2_216_equals(__Stack0) ->
 -compile({inline,yeccpars2_216_error/1}).
 -dialyzer({nowarn_function, yeccpars2_216_error/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_error/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_error(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11662,7 +11875,7 @@ yeccpars2_216_error(__Stack0) ->
 -compile({inline,yeccpars2_216_float/1}).
 -dialyzer({nowarn_function, yeccpars2_216_float/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_float/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_float(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11673,7 +11886,7 @@ yeccpars2_216_float(__Stack0) ->
 -compile({inline,yeccpars2_216_fmap/1}).
 -dialyzer({nowarn_function, yeccpars2_216_fmap/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_fmap/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_fmap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11684,7 +11897,7 @@ yeccpars2_216_fmap(__Stack0) ->
 -compile({inline,yeccpars2_216_fn/1}).
 -dialyzer({nowarn_function, yeccpars2_216_fn/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_fn/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_fn(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11695,7 +11908,7 @@ yeccpars2_216_fn(__Stack0) ->
 -compile({inline,yeccpars2_216_handle/1}).
 -dialyzer({nowarn_function, yeccpars2_216_handle/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_handle/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_handle(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11706,7 +11919,7 @@ yeccpars2_216_handle(__Stack0) ->
 -compile({inline,yeccpars2_216_import/1}).
 -dialyzer({nowarn_function, yeccpars2_216_import/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_import/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_import(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11717,7 +11930,7 @@ yeccpars2_216_import(__Stack0) ->
 -compile({inline,yeccpars2_216_in/1}).
 -dialyzer({nowarn_function, yeccpars2_216_in/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_in/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_in(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11728,7 +11941,7 @@ yeccpars2_216_in(__Stack0) ->
 -compile({inline,yeccpars2_216_instance/1}).
 -dialyzer({nowarn_function, yeccpars2_216_instance/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_instance/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_instance(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11739,7 +11952,7 @@ yeccpars2_216_instance(__Stack0) ->
 -compile({inline,yeccpars2_216_integer/1}).
 -dialyzer({nowarn_function, yeccpars2_216_integer/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_integer/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_integer(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11750,7 +11963,7 @@ yeccpars2_216_integer(__Stack0) ->
 -compile({inline,yeccpars2_216_kleisli/1}).
 -dialyzer({nowarn_function, yeccpars2_216_kleisli/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_kleisli/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_kleisli(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11761,7 +11974,7 @@ yeccpars2_216_kleisli(__Stack0) ->
 -compile({inline,yeccpars2_216_lbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_216_lbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_lbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_lbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11772,7 +11985,7 @@ yeccpars2_216_lbrace(__Stack0) ->
 -compile({inline,yeccpars2_216_lbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_216_lbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_lbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_lbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11783,7 +11996,7 @@ yeccpars2_216_lbracket(__Stack0) ->
 -compile({inline,yeccpars2_216_let/1}).
 -dialyzer({nowarn_function, yeccpars2_216_let/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_let/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_let(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11794,7 +12007,7 @@ yeccpars2_216_let(__Stack0) ->
 -compile({inline,yeccpars2_216_lower_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_216_lower_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_lower_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_lower_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11805,7 +12018,7 @@ yeccpars2_216_lower_ident(__Stack0) ->
 -compile({inline,yeccpars2_216_lparen/1}).
 -dialyzer({nowarn_function, yeccpars2_216_lparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_lparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_lparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11816,7 +12029,7 @@ yeccpars2_216_lparen(__Stack0) ->
 -compile({inline,yeccpars2_216_mappend/1}).
 -dialyzer({nowarn_function, yeccpars2_216_mappend/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_mappend/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_mappend(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11827,7 +12040,7 @@ yeccpars2_216_mappend(__Stack0) ->
 -compile({inline,yeccpars2_216_match/1}).
 -dialyzer({nowarn_function, yeccpars2_216_match/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_match/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_match(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11838,7 +12051,7 @@ yeccpars2_216_match(__Stack0) ->
 -compile({inline,yeccpars2_216_neq/1}).
 -dialyzer({nowarn_function, yeccpars2_216_neq/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_neq/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_neq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11849,7 +12062,7 @@ yeccpars2_216_neq(__Stack0) ->
 -compile({inline,yeccpars2_216_of/1}).
 -dialyzer({nowarn_function, yeccpars2_216_of/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_of/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_of(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11860,7 +12073,7 @@ yeccpars2_216_of(__Stack0) ->
 -compile({inline,yeccpars2_216_or/1}).
 -dialyzer({nowarn_function, yeccpars2_216_or/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_or/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_or(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11871,7 +12084,7 @@ yeccpars2_216_or(__Stack0) ->
 -compile({inline,yeccpars2_216_perform/1}).
 -dialyzer({nowarn_function, yeccpars2_216_perform/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_perform/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_perform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11882,7 +12095,7 @@ yeccpars2_216_perform(__Stack0) ->
 -compile({inline,yeccpars2_216_pipe/1}).
 -dialyzer({nowarn_function, yeccpars2_216_pipe/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_pipe/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_pipe(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11893,7 +12106,7 @@ yeccpars2_216_pipe(__Stack0) ->
 -compile({inline,yeccpars2_216_pipe_right/1}).
 -dialyzer({nowarn_function, yeccpars2_216_pipe_right/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_pipe_right/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_pipe_right(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11904,7 +12117,7 @@ yeccpars2_216_pipe_right(__Stack0) ->
 -compile({inline,yeccpars2_216_property/1}).
 -dialyzer({nowarn_function, yeccpars2_216_property/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_property/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_property(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11915,7 +12128,7 @@ yeccpars2_216_property(__Stack0) ->
 -compile({inline,yeccpars2_216_rbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_216_rbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_rbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_rbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11926,7 +12139,7 @@ yeccpars2_216_rbrace(__Stack0) ->
 -compile({inline,yeccpars2_216_rbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_216_rbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_rbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_rbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11937,7 +12150,7 @@ yeccpars2_216_rbracket(__Stack0) ->
 -compile({inline,yeccpars2_216_rparen/1}).
 -dialyzer({nowarn_function, yeccpars2_216_rparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_rparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_rparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11948,7 +12161,7 @@ yeccpars2_216_rparen(__Stack0) ->
 -compile({inline,yeccpars2_216_semicolon/1}).
 -dialyzer({nowarn_function, yeccpars2_216_semicolon/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_semicolon/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_semicolon(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11959,7 +12172,7 @@ yeccpars2_216_semicolon(__Stack0) ->
 -compile({inline,yeccpars2_216_setoid_eq/1}).
 -dialyzer({nowarn_function, yeccpars2_216_setoid_eq/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_setoid_eq/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_setoid_eq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11970,7 +12183,7 @@ yeccpars2_216_setoid_eq(__Stack0) ->
 -compile({inline,yeccpars2_216_setoid_neq/1}).
 -dialyzer({nowarn_function, yeccpars2_216_setoid_neq/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_setoid_neq/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_setoid_neq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11981,7 +12194,7 @@ yeccpars2_216_setoid_neq(__Stack0) ->
 -compile({inline,yeccpars2_216_string/1}).
 -dialyzer({nowarn_function, yeccpars2_216_string/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_string/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_string(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -11992,7 +12205,7 @@ yeccpars2_216_string(__Stack0) ->
 -compile({inline,yeccpars2_216_test/1}).
 -dialyzer({nowarn_function, yeccpars2_216_test/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_test/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_test(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12003,7 +12216,7 @@ yeccpars2_216_test(__Stack0) ->
 -compile({inline,yeccpars2_216_then/1}).
 -dialyzer({nowarn_function, yeccpars2_216_then/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_then/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_then(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12014,7 +12227,7 @@ yeccpars2_216_then(__Stack0) ->
 -compile({inline,yeccpars2_216_trait/1}).
 -dialyzer({nowarn_function, yeccpars2_216_trait/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_trait/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_trait(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12025,7 +12238,7 @@ yeccpars2_216_trait(__Stack0) ->
 -compile({inline,yeccpars2_216_transform/1}).
 -dialyzer({nowarn_function, yeccpars2_216_transform/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_transform/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_transform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12036,7 +12249,7 @@ yeccpars2_216_transform(__Stack0) ->
 -compile({inline,yeccpars2_216_type/1}).
 -dialyzer({nowarn_function, yeccpars2_216_type/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_type/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_type(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12047,7 +12260,7 @@ yeccpars2_216_type(__Stack0) ->
 -compile({inline,yeccpars2_216_upper_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_216_upper_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_216_upper_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 814).
+-file("src/compiler/parser/catena_parser.yrl", 852).
 yeccpars2_216_upper_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12058,7 +12271,7 @@ yeccpars2_216_upper_ident(__Stack0) ->
 -compile({inline,'yeccpars2_217_$end'/1}).
 -dialyzer({nowarn_function, 'yeccpars2_217_$end'/1}).
 -compile({nowarn_unused_function,  'yeccpars2_217_$end'/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 'yeccpars2_217_$end'(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12069,7 +12282,7 @@ yeccpars2_216_upper_ident(__Stack0) ->
 -compile({inline,yeccpars2_217_and/1}).
 -dialyzer({nowarn_function, yeccpars2_217_and/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_and/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_and(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12080,7 +12293,7 @@ yeccpars2_217_and(__Stack0) ->
 -compile({inline,yeccpars2_217_ap/1}).
 -dialyzer({nowarn_function, yeccpars2_217_ap/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_ap/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_ap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12091,7 +12304,7 @@ yeccpars2_217_ap(__Stack0) ->
 -compile({inline,yeccpars2_217_arrow/1}).
 -dialyzer({nowarn_function, yeccpars2_217_arrow/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_arrow/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_arrow(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12102,7 +12315,7 @@ yeccpars2_217_arrow(__Stack0) ->
 -compile({inline,yeccpars2_217_bind/1}).
 -dialyzer({nowarn_function, yeccpars2_217_bind/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_bind/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_bind(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12113,7 +12326,7 @@ yeccpars2_217_bind(__Stack0) ->
 -compile({inline,yeccpars2_217_comma/1}).
 -dialyzer({nowarn_function, yeccpars2_217_comma/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_comma/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_comma(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12124,7 +12337,7 @@ yeccpars2_217_comma(__Stack0) ->
 -compile({inline,yeccpars2_217_cons/1}).
 -dialyzer({nowarn_function, yeccpars2_217_cons/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_cons/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_cons(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12135,7 +12348,7 @@ yeccpars2_217_cons(__Stack0) ->
 -compile({inline,yeccpars2_217_do/1}).
 -dialyzer({nowarn_function, yeccpars2_217_do/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_do/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_do(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12146,7 +12359,7 @@ yeccpars2_217_do(__Stack0) ->
 -compile({inline,yeccpars2_217_dot/1}).
 -dialyzer({nowarn_function, yeccpars2_217_dot/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_dot/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_dot(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12157,7 +12370,7 @@ yeccpars2_217_dot(__Stack0) ->
 -compile({inline,yeccpars2_217_effect/1}).
 -dialyzer({nowarn_function, yeccpars2_217_effect/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_effect/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_effect(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12168,7 +12381,7 @@ yeccpars2_217_effect(__Stack0) ->
 -compile({inline,yeccpars2_217_end/1}).
 -dialyzer({nowarn_function, yeccpars2_217_end/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_end/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_end(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12179,7 +12392,7 @@ yeccpars2_217_end(__Stack0) ->
 -compile({inline,yeccpars2_217_eq/1}).
 -dialyzer({nowarn_function, yeccpars2_217_eq/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_eq/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_eq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12190,7 +12403,7 @@ yeccpars2_217_eq(__Stack0) ->
 -compile({inline,yeccpars2_217_equals/1}).
 -dialyzer({nowarn_function, yeccpars2_217_equals/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_equals/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_equals(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12201,7 +12414,7 @@ yeccpars2_217_equals(__Stack0) ->
 -compile({inline,yeccpars2_217_error/1}).
 -dialyzer({nowarn_function, yeccpars2_217_error/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_error/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_error(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12212,7 +12425,7 @@ yeccpars2_217_error(__Stack0) ->
 -compile({inline,yeccpars2_217_float/1}).
 -dialyzer({nowarn_function, yeccpars2_217_float/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_float/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_float(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12223,7 +12436,7 @@ yeccpars2_217_float(__Stack0) ->
 -compile({inline,yeccpars2_217_fmap/1}).
 -dialyzer({nowarn_function, yeccpars2_217_fmap/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_fmap/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_fmap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12234,7 +12447,7 @@ yeccpars2_217_fmap(__Stack0) ->
 -compile({inline,yeccpars2_217_fn/1}).
 -dialyzer({nowarn_function, yeccpars2_217_fn/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_fn/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_fn(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12245,7 +12458,7 @@ yeccpars2_217_fn(__Stack0) ->
 -compile({inline,yeccpars2_217_handle/1}).
 -dialyzer({nowarn_function, yeccpars2_217_handle/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_handle/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_handle(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12256,7 +12469,7 @@ yeccpars2_217_handle(__Stack0) ->
 -compile({inline,yeccpars2_217_import/1}).
 -dialyzer({nowarn_function, yeccpars2_217_import/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_import/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_import(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12267,7 +12480,7 @@ yeccpars2_217_import(__Stack0) ->
 -compile({inline,yeccpars2_217_in/1}).
 -dialyzer({nowarn_function, yeccpars2_217_in/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_in/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_in(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12278,7 +12491,7 @@ yeccpars2_217_in(__Stack0) ->
 -compile({inline,yeccpars2_217_instance/1}).
 -dialyzer({nowarn_function, yeccpars2_217_instance/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_instance/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_instance(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12289,7 +12502,7 @@ yeccpars2_217_instance(__Stack0) ->
 -compile({inline,yeccpars2_217_integer/1}).
 -dialyzer({nowarn_function, yeccpars2_217_integer/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_integer/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_integer(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12300,7 +12513,7 @@ yeccpars2_217_integer(__Stack0) ->
 -compile({inline,yeccpars2_217_kleisli/1}).
 -dialyzer({nowarn_function, yeccpars2_217_kleisli/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_kleisli/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_kleisli(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12311,7 +12524,7 @@ yeccpars2_217_kleisli(__Stack0) ->
 -compile({inline,yeccpars2_217_lbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_217_lbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_lbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_lbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12322,7 +12535,7 @@ yeccpars2_217_lbrace(__Stack0) ->
 -compile({inline,yeccpars2_217_lbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_217_lbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_lbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_lbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12333,7 +12546,7 @@ yeccpars2_217_lbracket(__Stack0) ->
 -compile({inline,yeccpars2_217_let/1}).
 -dialyzer({nowarn_function, yeccpars2_217_let/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_let/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_let(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12344,7 +12557,7 @@ yeccpars2_217_let(__Stack0) ->
 -compile({inline,yeccpars2_217_lower_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_217_lower_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_lower_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_lower_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12355,7 +12568,7 @@ yeccpars2_217_lower_ident(__Stack0) ->
 -compile({inline,yeccpars2_217_lparen/1}).
 -dialyzer({nowarn_function, yeccpars2_217_lparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_lparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_lparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12366,7 +12579,7 @@ yeccpars2_217_lparen(__Stack0) ->
 -compile({inline,yeccpars2_217_mappend/1}).
 -dialyzer({nowarn_function, yeccpars2_217_mappend/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_mappend/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_mappend(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12377,7 +12590,7 @@ yeccpars2_217_mappend(__Stack0) ->
 -compile({inline,yeccpars2_217_match/1}).
 -dialyzer({nowarn_function, yeccpars2_217_match/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_match/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_match(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12388,7 +12601,7 @@ yeccpars2_217_match(__Stack0) ->
 -compile({inline,yeccpars2_217_neq/1}).
 -dialyzer({nowarn_function, yeccpars2_217_neq/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_neq/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_neq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12399,7 +12612,7 @@ yeccpars2_217_neq(__Stack0) ->
 -compile({inline,yeccpars2_217_of/1}).
 -dialyzer({nowarn_function, yeccpars2_217_of/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_of/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_of(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12410,7 +12623,7 @@ yeccpars2_217_of(__Stack0) ->
 -compile({inline,yeccpars2_217_or/1}).
 -dialyzer({nowarn_function, yeccpars2_217_or/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_or/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_or(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12421,7 +12634,7 @@ yeccpars2_217_or(__Stack0) ->
 -compile({inline,yeccpars2_217_perform/1}).
 -dialyzer({nowarn_function, yeccpars2_217_perform/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_perform/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_perform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12432,7 +12645,7 @@ yeccpars2_217_perform(__Stack0) ->
 -compile({inline,yeccpars2_217_pipe/1}).
 -dialyzer({nowarn_function, yeccpars2_217_pipe/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_pipe/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_pipe(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12443,7 +12656,7 @@ yeccpars2_217_pipe(__Stack0) ->
 -compile({inline,yeccpars2_217_pipe_right/1}).
 -dialyzer({nowarn_function, yeccpars2_217_pipe_right/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_pipe_right/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_pipe_right(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12454,7 +12667,7 @@ yeccpars2_217_pipe_right(__Stack0) ->
 -compile({inline,yeccpars2_217_property/1}).
 -dialyzer({nowarn_function, yeccpars2_217_property/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_property/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_property(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12465,7 +12678,7 @@ yeccpars2_217_property(__Stack0) ->
 -compile({inline,yeccpars2_217_rbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_217_rbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_rbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_rbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12476,7 +12689,7 @@ yeccpars2_217_rbrace(__Stack0) ->
 -compile({inline,yeccpars2_217_rbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_217_rbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_rbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_rbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12487,7 +12700,7 @@ yeccpars2_217_rbracket(__Stack0) ->
 -compile({inline,yeccpars2_217_rparen/1}).
 -dialyzer({nowarn_function, yeccpars2_217_rparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_rparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_rparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12498,7 +12711,7 @@ yeccpars2_217_rparen(__Stack0) ->
 -compile({inline,yeccpars2_217_semicolon/1}).
 -dialyzer({nowarn_function, yeccpars2_217_semicolon/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_semicolon/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_semicolon(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12509,7 +12722,7 @@ yeccpars2_217_semicolon(__Stack0) ->
 -compile({inline,yeccpars2_217_setoid_eq/1}).
 -dialyzer({nowarn_function, yeccpars2_217_setoid_eq/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_setoid_eq/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_setoid_eq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12520,7 +12733,7 @@ yeccpars2_217_setoid_eq(__Stack0) ->
 -compile({inline,yeccpars2_217_setoid_neq/1}).
 -dialyzer({nowarn_function, yeccpars2_217_setoid_neq/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_setoid_neq/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_setoid_neq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12531,7 +12744,7 @@ yeccpars2_217_setoid_neq(__Stack0) ->
 -compile({inline,yeccpars2_217_string/1}).
 -dialyzer({nowarn_function, yeccpars2_217_string/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_string/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_string(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12542,7 +12755,7 @@ yeccpars2_217_string(__Stack0) ->
 -compile({inline,yeccpars2_217_test/1}).
 -dialyzer({nowarn_function, yeccpars2_217_test/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_test/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_test(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12553,7 +12766,7 @@ yeccpars2_217_test(__Stack0) ->
 -compile({inline,yeccpars2_217_then/1}).
 -dialyzer({nowarn_function, yeccpars2_217_then/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_then/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_then(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12564,7 +12777,7 @@ yeccpars2_217_then(__Stack0) ->
 -compile({inline,yeccpars2_217_trait/1}).
 -dialyzer({nowarn_function, yeccpars2_217_trait/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_trait/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_trait(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12575,7 +12788,7 @@ yeccpars2_217_trait(__Stack0) ->
 -compile({inline,yeccpars2_217_transform/1}).
 -dialyzer({nowarn_function, yeccpars2_217_transform/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_transform/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_transform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12586,7 +12799,7 @@ yeccpars2_217_transform(__Stack0) ->
 -compile({inline,yeccpars2_217_type/1}).
 -dialyzer({nowarn_function, yeccpars2_217_type/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_type/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_type(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12597,7 +12810,7 @@ yeccpars2_217_type(__Stack0) ->
 -compile({inline,yeccpars2_217_upper_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_217_upper_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_217_upper_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 808).
+-file("src/compiler/parser/catena_parser.yrl", 846).
 yeccpars2_217_upper_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12608,7 +12821,7 @@ yeccpars2_217_upper_ident(__Stack0) ->
 -compile({inline,yeccpars2_218_/1}).
 -dialyzer({nowarn_function, yeccpars2_218_/1}).
 -compile({nowarn_unused_function,  yeccpars2_218_/1}).
--file("src/compiler/parser/catena_parser.yrl", 848).
+-file("src/compiler/parser/catena_parser.yrl", 886).
 yeccpars2_218_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12619,7 +12832,7 @@ yeccpars2_218_(__Stack0) ->
 -compile({inline,'yeccpars2_219_$end'/1}).
 -dialyzer({nowarn_function, 'yeccpars2_219_$end'/1}).
 -compile({nowarn_unused_function,  'yeccpars2_219_$end'/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 'yeccpars2_219_$end'(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12630,7 +12843,7 @@ yeccpars2_218_(__Stack0) ->
 -compile({inline,yeccpars2_219_and/1}).
 -dialyzer({nowarn_function, yeccpars2_219_and/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_and/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_and(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12641,7 +12854,7 @@ yeccpars2_219_and(__Stack0) ->
 -compile({inline,yeccpars2_219_ap/1}).
 -dialyzer({nowarn_function, yeccpars2_219_ap/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_ap/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_ap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12652,7 +12865,7 @@ yeccpars2_219_ap(__Stack0) ->
 -compile({inline,yeccpars2_219_arrow/1}).
 -dialyzer({nowarn_function, yeccpars2_219_arrow/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_arrow/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_arrow(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12663,7 +12876,7 @@ yeccpars2_219_arrow(__Stack0) ->
 -compile({inline,yeccpars2_219_bind/1}).
 -dialyzer({nowarn_function, yeccpars2_219_bind/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_bind/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_bind(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12674,7 +12887,7 @@ yeccpars2_219_bind(__Stack0) ->
 -compile({inline,yeccpars2_219_comma/1}).
 -dialyzer({nowarn_function, yeccpars2_219_comma/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_comma/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_comma(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12685,7 +12898,7 @@ yeccpars2_219_comma(__Stack0) ->
 -compile({inline,yeccpars2_219_cons/1}).
 -dialyzer({nowarn_function, yeccpars2_219_cons/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_cons/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_cons(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12696,7 +12909,7 @@ yeccpars2_219_cons(__Stack0) ->
 -compile({inline,yeccpars2_219_do/1}).
 -dialyzer({nowarn_function, yeccpars2_219_do/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_do/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_do(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12707,7 +12920,7 @@ yeccpars2_219_do(__Stack0) ->
 -compile({inline,yeccpars2_219_dot/1}).
 -dialyzer({nowarn_function, yeccpars2_219_dot/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_dot/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_dot(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12718,7 +12931,7 @@ yeccpars2_219_dot(__Stack0) ->
 -compile({inline,yeccpars2_219_effect/1}).
 -dialyzer({nowarn_function, yeccpars2_219_effect/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_effect/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_effect(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12729,7 +12942,7 @@ yeccpars2_219_effect(__Stack0) ->
 -compile({inline,yeccpars2_219_end/1}).
 -dialyzer({nowarn_function, yeccpars2_219_end/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_end/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_end(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12740,7 +12953,7 @@ yeccpars2_219_end(__Stack0) ->
 -compile({inline,yeccpars2_219_eq/1}).
 -dialyzer({nowarn_function, yeccpars2_219_eq/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_eq/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_eq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12751,7 +12964,7 @@ yeccpars2_219_eq(__Stack0) ->
 -compile({inline,yeccpars2_219_equals/1}).
 -dialyzer({nowarn_function, yeccpars2_219_equals/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_equals/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_equals(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12762,7 +12975,7 @@ yeccpars2_219_equals(__Stack0) ->
 -compile({inline,yeccpars2_219_error/1}).
 -dialyzer({nowarn_function, yeccpars2_219_error/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_error/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_error(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12773,7 +12986,7 @@ yeccpars2_219_error(__Stack0) ->
 -compile({inline,yeccpars2_219_float/1}).
 -dialyzer({nowarn_function, yeccpars2_219_float/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_float/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_float(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12784,7 +12997,7 @@ yeccpars2_219_float(__Stack0) ->
 -compile({inline,yeccpars2_219_fmap/1}).
 -dialyzer({nowarn_function, yeccpars2_219_fmap/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_fmap/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_fmap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12795,7 +13008,7 @@ yeccpars2_219_fmap(__Stack0) ->
 -compile({inline,yeccpars2_219_fn/1}).
 -dialyzer({nowarn_function, yeccpars2_219_fn/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_fn/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_fn(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12806,7 +13019,7 @@ yeccpars2_219_fn(__Stack0) ->
 -compile({inline,yeccpars2_219_handle/1}).
 -dialyzer({nowarn_function, yeccpars2_219_handle/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_handle/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_handle(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12817,7 +13030,7 @@ yeccpars2_219_handle(__Stack0) ->
 -compile({inline,yeccpars2_219_import/1}).
 -dialyzer({nowarn_function, yeccpars2_219_import/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_import/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_import(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12828,7 +13041,7 @@ yeccpars2_219_import(__Stack0) ->
 -compile({inline,yeccpars2_219_in/1}).
 -dialyzer({nowarn_function, yeccpars2_219_in/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_in/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_in(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12839,7 +13052,7 @@ yeccpars2_219_in(__Stack0) ->
 -compile({inline,yeccpars2_219_instance/1}).
 -dialyzer({nowarn_function, yeccpars2_219_instance/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_instance/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_instance(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12850,7 +13063,7 @@ yeccpars2_219_instance(__Stack0) ->
 -compile({inline,yeccpars2_219_integer/1}).
 -dialyzer({nowarn_function, yeccpars2_219_integer/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_integer/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_integer(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12861,7 +13074,7 @@ yeccpars2_219_integer(__Stack0) ->
 -compile({inline,yeccpars2_219_kleisli/1}).
 -dialyzer({nowarn_function, yeccpars2_219_kleisli/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_kleisli/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_kleisli(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12872,7 +13085,7 @@ yeccpars2_219_kleisli(__Stack0) ->
 -compile({inline,yeccpars2_219_lbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_219_lbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_lbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_lbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12883,7 +13096,7 @@ yeccpars2_219_lbrace(__Stack0) ->
 -compile({inline,yeccpars2_219_lbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_219_lbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_lbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_lbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12894,7 +13107,7 @@ yeccpars2_219_lbracket(__Stack0) ->
 -compile({inline,yeccpars2_219_let/1}).
 -dialyzer({nowarn_function, yeccpars2_219_let/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_let/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_let(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12905,7 +13118,7 @@ yeccpars2_219_let(__Stack0) ->
 -compile({inline,yeccpars2_219_lower_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_219_lower_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_lower_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_lower_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12916,7 +13129,7 @@ yeccpars2_219_lower_ident(__Stack0) ->
 -compile({inline,yeccpars2_219_lparen/1}).
 -dialyzer({nowarn_function, yeccpars2_219_lparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_lparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_lparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12927,7 +13140,7 @@ yeccpars2_219_lparen(__Stack0) ->
 -compile({inline,yeccpars2_219_mappend/1}).
 -dialyzer({nowarn_function, yeccpars2_219_mappend/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_mappend/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_mappend(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12938,7 +13151,7 @@ yeccpars2_219_mappend(__Stack0) ->
 -compile({inline,yeccpars2_219_match/1}).
 -dialyzer({nowarn_function, yeccpars2_219_match/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_match/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_match(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12949,7 +13162,7 @@ yeccpars2_219_match(__Stack0) ->
 -compile({inline,yeccpars2_219_neq/1}).
 -dialyzer({nowarn_function, yeccpars2_219_neq/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_neq/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_neq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12960,7 +13173,7 @@ yeccpars2_219_neq(__Stack0) ->
 -compile({inline,yeccpars2_219_of/1}).
 -dialyzer({nowarn_function, yeccpars2_219_of/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_of/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_of(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12971,7 +13184,7 @@ yeccpars2_219_of(__Stack0) ->
 -compile({inline,yeccpars2_219_or/1}).
 -dialyzer({nowarn_function, yeccpars2_219_or/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_or/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_or(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12982,7 +13195,7 @@ yeccpars2_219_or(__Stack0) ->
 -compile({inline,yeccpars2_219_perform/1}).
 -dialyzer({nowarn_function, yeccpars2_219_perform/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_perform/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_perform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -12993,7 +13206,7 @@ yeccpars2_219_perform(__Stack0) ->
 -compile({inline,yeccpars2_219_pipe/1}).
 -dialyzer({nowarn_function, yeccpars2_219_pipe/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_pipe/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_pipe(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13004,7 +13217,7 @@ yeccpars2_219_pipe(__Stack0) ->
 -compile({inline,yeccpars2_219_pipe_right/1}).
 -dialyzer({nowarn_function, yeccpars2_219_pipe_right/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_pipe_right/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_pipe_right(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13015,7 +13228,7 @@ yeccpars2_219_pipe_right(__Stack0) ->
 -compile({inline,yeccpars2_219_property/1}).
 -dialyzer({nowarn_function, yeccpars2_219_property/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_property/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_property(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13026,7 +13239,7 @@ yeccpars2_219_property(__Stack0) ->
 -compile({inline,yeccpars2_219_rbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_219_rbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_rbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_rbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13037,7 +13250,7 @@ yeccpars2_219_rbrace(__Stack0) ->
 -compile({inline,yeccpars2_219_rbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_219_rbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_rbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_rbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13048,7 +13261,7 @@ yeccpars2_219_rbracket(__Stack0) ->
 -compile({inline,yeccpars2_219_rparen/1}).
 -dialyzer({nowarn_function, yeccpars2_219_rparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_rparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_rparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13059,7 +13272,7 @@ yeccpars2_219_rparen(__Stack0) ->
 -compile({inline,yeccpars2_219_semicolon/1}).
 -dialyzer({nowarn_function, yeccpars2_219_semicolon/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_semicolon/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_semicolon(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13070,7 +13283,7 @@ yeccpars2_219_semicolon(__Stack0) ->
 -compile({inline,yeccpars2_219_setoid_eq/1}).
 -dialyzer({nowarn_function, yeccpars2_219_setoid_eq/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_setoid_eq/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_setoid_eq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13081,7 +13294,7 @@ yeccpars2_219_setoid_eq(__Stack0) ->
 -compile({inline,yeccpars2_219_setoid_neq/1}).
 -dialyzer({nowarn_function, yeccpars2_219_setoid_neq/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_setoid_neq/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_setoid_neq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13092,7 +13305,7 @@ yeccpars2_219_setoid_neq(__Stack0) ->
 -compile({inline,yeccpars2_219_string/1}).
 -dialyzer({nowarn_function, yeccpars2_219_string/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_string/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_string(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13103,7 +13316,7 @@ yeccpars2_219_string(__Stack0) ->
 -compile({inline,yeccpars2_219_test/1}).
 -dialyzer({nowarn_function, yeccpars2_219_test/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_test/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_test(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13114,7 +13327,7 @@ yeccpars2_219_test(__Stack0) ->
 -compile({inline,yeccpars2_219_then/1}).
 -dialyzer({nowarn_function, yeccpars2_219_then/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_then/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_then(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13125,7 +13338,7 @@ yeccpars2_219_then(__Stack0) ->
 -compile({inline,yeccpars2_219_trait/1}).
 -dialyzer({nowarn_function, yeccpars2_219_trait/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_trait/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_trait(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13136,7 +13349,7 @@ yeccpars2_219_trait(__Stack0) ->
 -compile({inline,yeccpars2_219_transform/1}).
 -dialyzer({nowarn_function, yeccpars2_219_transform/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_transform/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_transform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13147,7 +13360,7 @@ yeccpars2_219_transform(__Stack0) ->
 -compile({inline,yeccpars2_219_type/1}).
 -dialyzer({nowarn_function, yeccpars2_219_type/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_type/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_type(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13158,7 +13371,7 @@ yeccpars2_219_type(__Stack0) ->
 -compile({inline,yeccpars2_219_upper_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_219_upper_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_219_upper_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 817).
+-file("src/compiler/parser/catena_parser.yrl", 855).
 yeccpars2_219_upper_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13169,7 +13382,7 @@ yeccpars2_219_upper_ident(__Stack0) ->
 -compile({inline,'yeccpars2_220_$end'/1}).
 -dialyzer({nowarn_function, 'yeccpars2_220_$end'/1}).
 -compile({nowarn_unused_function,  'yeccpars2_220_$end'/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 'yeccpars2_220_$end'(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13180,7 +13393,7 @@ yeccpars2_219_upper_ident(__Stack0) ->
 -compile({inline,yeccpars2_220_and/1}).
 -dialyzer({nowarn_function, yeccpars2_220_and/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_and/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_and(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13191,7 +13404,7 @@ yeccpars2_220_and(__Stack0) ->
 -compile({inline,yeccpars2_220_ap/1}).
 -dialyzer({nowarn_function, yeccpars2_220_ap/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_ap/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_ap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13202,7 +13415,7 @@ yeccpars2_220_ap(__Stack0) ->
 -compile({inline,yeccpars2_220_arrow/1}).
 -dialyzer({nowarn_function, yeccpars2_220_arrow/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_arrow/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_arrow(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13213,7 +13426,7 @@ yeccpars2_220_arrow(__Stack0) ->
 -compile({inline,yeccpars2_220_bind/1}).
 -dialyzer({nowarn_function, yeccpars2_220_bind/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_bind/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_bind(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13224,7 +13437,7 @@ yeccpars2_220_bind(__Stack0) ->
 -compile({inline,yeccpars2_220_comma/1}).
 -dialyzer({nowarn_function, yeccpars2_220_comma/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_comma/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_comma(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13235,7 +13448,7 @@ yeccpars2_220_comma(__Stack0) ->
 -compile({inline,yeccpars2_220_cons/1}).
 -dialyzer({nowarn_function, yeccpars2_220_cons/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_cons/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_cons(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13246,7 +13459,7 @@ yeccpars2_220_cons(__Stack0) ->
 -compile({inline,yeccpars2_220_do/1}).
 -dialyzer({nowarn_function, yeccpars2_220_do/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_do/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_do(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13257,7 +13470,7 @@ yeccpars2_220_do(__Stack0) ->
 -compile({inline,yeccpars2_220_dot/1}).
 -dialyzer({nowarn_function, yeccpars2_220_dot/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_dot/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_dot(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13268,7 +13481,7 @@ yeccpars2_220_dot(__Stack0) ->
 -compile({inline,yeccpars2_220_effect/1}).
 -dialyzer({nowarn_function, yeccpars2_220_effect/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_effect/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_effect(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13279,7 +13492,7 @@ yeccpars2_220_effect(__Stack0) ->
 -compile({inline,yeccpars2_220_end/1}).
 -dialyzer({nowarn_function, yeccpars2_220_end/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_end/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_end(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13290,7 +13503,7 @@ yeccpars2_220_end(__Stack0) ->
 -compile({inline,yeccpars2_220_eq/1}).
 -dialyzer({nowarn_function, yeccpars2_220_eq/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_eq/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_eq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13301,7 +13514,7 @@ yeccpars2_220_eq(__Stack0) ->
 -compile({inline,yeccpars2_220_equals/1}).
 -dialyzer({nowarn_function, yeccpars2_220_equals/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_equals/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_equals(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13312,7 +13525,7 @@ yeccpars2_220_equals(__Stack0) ->
 -compile({inline,yeccpars2_220_error/1}).
 -dialyzer({nowarn_function, yeccpars2_220_error/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_error/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_error(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13323,7 +13536,7 @@ yeccpars2_220_error(__Stack0) ->
 -compile({inline,yeccpars2_220_float/1}).
 -dialyzer({nowarn_function, yeccpars2_220_float/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_float/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_float(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13334,7 +13547,7 @@ yeccpars2_220_float(__Stack0) ->
 -compile({inline,yeccpars2_220_fmap/1}).
 -dialyzer({nowarn_function, yeccpars2_220_fmap/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_fmap/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_fmap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13345,7 +13558,7 @@ yeccpars2_220_fmap(__Stack0) ->
 -compile({inline,yeccpars2_220_fn/1}).
 -dialyzer({nowarn_function, yeccpars2_220_fn/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_fn/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_fn(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13356,7 +13569,7 @@ yeccpars2_220_fn(__Stack0) ->
 -compile({inline,yeccpars2_220_handle/1}).
 -dialyzer({nowarn_function, yeccpars2_220_handle/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_handle/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_handle(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13367,7 +13580,7 @@ yeccpars2_220_handle(__Stack0) ->
 -compile({inline,yeccpars2_220_import/1}).
 -dialyzer({nowarn_function, yeccpars2_220_import/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_import/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_import(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13378,7 +13591,7 @@ yeccpars2_220_import(__Stack0) ->
 -compile({inline,yeccpars2_220_in/1}).
 -dialyzer({nowarn_function, yeccpars2_220_in/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_in/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_in(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13389,7 +13602,7 @@ yeccpars2_220_in(__Stack0) ->
 -compile({inline,yeccpars2_220_instance/1}).
 -dialyzer({nowarn_function, yeccpars2_220_instance/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_instance/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_instance(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13400,7 +13613,7 @@ yeccpars2_220_instance(__Stack0) ->
 -compile({inline,yeccpars2_220_integer/1}).
 -dialyzer({nowarn_function, yeccpars2_220_integer/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_integer/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_integer(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13411,7 +13624,7 @@ yeccpars2_220_integer(__Stack0) ->
 -compile({inline,yeccpars2_220_kleisli/1}).
 -dialyzer({nowarn_function, yeccpars2_220_kleisli/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_kleisli/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_kleisli(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13422,7 +13635,7 @@ yeccpars2_220_kleisli(__Stack0) ->
 -compile({inline,yeccpars2_220_lbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_220_lbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_lbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_lbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13433,7 +13646,7 @@ yeccpars2_220_lbrace(__Stack0) ->
 -compile({inline,yeccpars2_220_lbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_220_lbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_lbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_lbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13444,7 +13657,7 @@ yeccpars2_220_lbracket(__Stack0) ->
 -compile({inline,yeccpars2_220_let/1}).
 -dialyzer({nowarn_function, yeccpars2_220_let/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_let/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_let(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13455,7 +13668,7 @@ yeccpars2_220_let(__Stack0) ->
 -compile({inline,yeccpars2_220_lower_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_220_lower_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_lower_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_lower_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13466,7 +13679,7 @@ yeccpars2_220_lower_ident(__Stack0) ->
 -compile({inline,yeccpars2_220_lparen/1}).
 -dialyzer({nowarn_function, yeccpars2_220_lparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_lparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_lparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13477,7 +13690,7 @@ yeccpars2_220_lparen(__Stack0) ->
 -compile({inline,yeccpars2_220_mappend/1}).
 -dialyzer({nowarn_function, yeccpars2_220_mappend/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_mappend/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_mappend(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13488,7 +13701,7 @@ yeccpars2_220_mappend(__Stack0) ->
 -compile({inline,yeccpars2_220_match/1}).
 -dialyzer({nowarn_function, yeccpars2_220_match/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_match/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_match(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13499,7 +13712,7 @@ yeccpars2_220_match(__Stack0) ->
 -compile({inline,yeccpars2_220_neq/1}).
 -dialyzer({nowarn_function, yeccpars2_220_neq/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_neq/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_neq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13510,7 +13723,7 @@ yeccpars2_220_neq(__Stack0) ->
 -compile({inline,yeccpars2_220_of/1}).
 -dialyzer({nowarn_function, yeccpars2_220_of/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_of/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_of(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13521,7 +13734,7 @@ yeccpars2_220_of(__Stack0) ->
 -compile({inline,yeccpars2_220_or/1}).
 -dialyzer({nowarn_function, yeccpars2_220_or/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_or/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_or(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13532,7 +13745,7 @@ yeccpars2_220_or(__Stack0) ->
 -compile({inline,yeccpars2_220_perform/1}).
 -dialyzer({nowarn_function, yeccpars2_220_perform/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_perform/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_perform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13543,7 +13756,7 @@ yeccpars2_220_perform(__Stack0) ->
 -compile({inline,yeccpars2_220_pipe/1}).
 -dialyzer({nowarn_function, yeccpars2_220_pipe/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_pipe/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_pipe(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13554,7 +13767,7 @@ yeccpars2_220_pipe(__Stack0) ->
 -compile({inline,yeccpars2_220_pipe_right/1}).
 -dialyzer({nowarn_function, yeccpars2_220_pipe_right/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_pipe_right/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_pipe_right(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13565,7 +13778,7 @@ yeccpars2_220_pipe_right(__Stack0) ->
 -compile({inline,yeccpars2_220_property/1}).
 -dialyzer({nowarn_function, yeccpars2_220_property/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_property/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_property(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13576,7 +13789,7 @@ yeccpars2_220_property(__Stack0) ->
 -compile({inline,yeccpars2_220_rbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_220_rbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_rbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_rbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13587,7 +13800,7 @@ yeccpars2_220_rbrace(__Stack0) ->
 -compile({inline,yeccpars2_220_rbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_220_rbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_rbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_rbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13598,7 +13811,7 @@ yeccpars2_220_rbracket(__Stack0) ->
 -compile({inline,yeccpars2_220_rparen/1}).
 -dialyzer({nowarn_function, yeccpars2_220_rparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_rparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_rparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13609,7 +13822,7 @@ yeccpars2_220_rparen(__Stack0) ->
 -compile({inline,yeccpars2_220_semicolon/1}).
 -dialyzer({nowarn_function, yeccpars2_220_semicolon/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_semicolon/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_semicolon(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13620,7 +13833,7 @@ yeccpars2_220_semicolon(__Stack0) ->
 -compile({inline,yeccpars2_220_setoid_eq/1}).
 -dialyzer({nowarn_function, yeccpars2_220_setoid_eq/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_setoid_eq/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_setoid_eq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13631,7 +13844,7 @@ yeccpars2_220_setoid_eq(__Stack0) ->
 -compile({inline,yeccpars2_220_setoid_neq/1}).
 -dialyzer({nowarn_function, yeccpars2_220_setoid_neq/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_setoid_neq/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_setoid_neq(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13642,7 +13855,7 @@ yeccpars2_220_setoid_neq(__Stack0) ->
 -compile({inline,yeccpars2_220_string/1}).
 -dialyzer({nowarn_function, yeccpars2_220_string/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_string/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_string(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13653,7 +13866,7 @@ yeccpars2_220_string(__Stack0) ->
 -compile({inline,yeccpars2_220_test/1}).
 -dialyzer({nowarn_function, yeccpars2_220_test/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_test/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_test(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13664,7 +13877,7 @@ yeccpars2_220_test(__Stack0) ->
 -compile({inline,yeccpars2_220_then/1}).
 -dialyzer({nowarn_function, yeccpars2_220_then/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_then/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_then(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13675,7 +13888,7 @@ yeccpars2_220_then(__Stack0) ->
 -compile({inline,yeccpars2_220_trait/1}).
 -dialyzer({nowarn_function, yeccpars2_220_trait/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_trait/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_trait(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13686,7 +13899,7 @@ yeccpars2_220_trait(__Stack0) ->
 -compile({inline,yeccpars2_220_transform/1}).
 -dialyzer({nowarn_function, yeccpars2_220_transform/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_transform/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_transform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13697,7 +13910,7 @@ yeccpars2_220_transform(__Stack0) ->
 -compile({inline,yeccpars2_220_type/1}).
 -dialyzer({nowarn_function, yeccpars2_220_type/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_type/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_type(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13708,7 +13921,7 @@ yeccpars2_220_type(__Stack0) ->
 -compile({inline,yeccpars2_220_upper_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_220_upper_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_220_upper_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 811).
+-file("src/compiler/parser/catena_parser.yrl", 849).
 yeccpars2_220_upper_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13719,7 +13932,7 @@ yeccpars2_220_upper_ident(__Stack0) ->
 -compile({inline,yeccpars2_221_/1}).
 -dialyzer({nowarn_function, yeccpars2_221_/1}).
 -compile({nowarn_unused_function,  yeccpars2_221_/1}).
--file("src/compiler/parser/catena_parser.yrl", 839).
+-file("src/compiler/parser/catena_parser.yrl", 877).
 yeccpars2_221_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13730,7 +13943,7 @@ yeccpars2_221_(__Stack0) ->
 -compile({inline,'yeccpars2_222_$end'/1}).
 -dialyzer({nowarn_function, 'yeccpars2_222_$end'/1}).
 -compile({nowarn_unused_function,  'yeccpars2_222_$end'/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 'yeccpars2_222_$end'(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13741,7 +13954,7 @@ yeccpars2_221_(__Stack0) ->
 -compile({inline,yeccpars2_222_and/1}).
 -dialyzer({nowarn_function, yeccpars2_222_and/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_and/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_and(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13752,7 +13965,7 @@ yeccpars2_222_and(__Stack0) ->
 -compile({inline,yeccpars2_222_ap/1}).
 -dialyzer({nowarn_function, yeccpars2_222_ap/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_ap/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_ap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13763,7 +13976,7 @@ yeccpars2_222_ap(__Stack0) ->
 -compile({inline,yeccpars2_222_arrow/1}).
 -dialyzer({nowarn_function, yeccpars2_222_arrow/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_arrow/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_arrow(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13774,7 +13987,7 @@ yeccpars2_222_arrow(__Stack0) ->
 -compile({inline,yeccpars2_222_bind/1}).
 -dialyzer({nowarn_function, yeccpars2_222_bind/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_bind/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_bind(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13785,7 +13998,7 @@ yeccpars2_222_bind(__Stack0) ->
 -compile({inline,yeccpars2_222_comma/1}).
 -dialyzer({nowarn_function, yeccpars2_222_comma/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_comma/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_comma(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13796,7 +14009,7 @@ yeccpars2_222_comma(__Stack0) ->
 -compile({inline,yeccpars2_222_cons/1}).
 -dialyzer({nowarn_function, yeccpars2_222_cons/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_cons/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_cons(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13807,7 +14020,7 @@ yeccpars2_222_cons(__Stack0) ->
 -compile({inline,yeccpars2_222_do/1}).
 -dialyzer({nowarn_function, yeccpars2_222_do/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_do/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_do(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13818,7 +14031,7 @@ yeccpars2_222_do(__Stack0) ->
 -compile({inline,yeccpars2_222_dot/1}).
 -dialyzer({nowarn_function, yeccpars2_222_dot/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_dot/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_dot(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13829,7 +14042,7 @@ yeccpars2_222_dot(__Stack0) ->
 -compile({inline,yeccpars2_222_effect/1}).
 -dialyzer({nowarn_function, yeccpars2_222_effect/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_effect/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_effect(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13840,7 +14053,7 @@ yeccpars2_222_effect(__Stack0) ->
 -compile({inline,yeccpars2_222_end/1}).
 -dialyzer({nowarn_function, yeccpars2_222_end/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_end/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_end(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13851,7 +14064,7 @@ yeccpars2_222_end(__Stack0) ->
 -compile({inline,yeccpars2_222_equals/1}).
 -dialyzer({nowarn_function, yeccpars2_222_equals/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_equals/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_equals(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13862,7 +14075,7 @@ yeccpars2_222_equals(__Stack0) ->
 -compile({inline,yeccpars2_222_error/1}).
 -dialyzer({nowarn_function, yeccpars2_222_error/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_error/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_error(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13873,7 +14086,7 @@ yeccpars2_222_error(__Stack0) ->
 -compile({inline,yeccpars2_222_float/1}).
 -dialyzer({nowarn_function, yeccpars2_222_float/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_float/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_float(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13884,7 +14097,7 @@ yeccpars2_222_float(__Stack0) ->
 -compile({inline,yeccpars2_222_fmap/1}).
 -dialyzer({nowarn_function, yeccpars2_222_fmap/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_fmap/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_fmap(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13895,7 +14108,7 @@ yeccpars2_222_fmap(__Stack0) ->
 -compile({inline,yeccpars2_222_fn/1}).
 -dialyzer({nowarn_function, yeccpars2_222_fn/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_fn/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_fn(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13906,7 +14119,7 @@ yeccpars2_222_fn(__Stack0) ->
 -compile({inline,yeccpars2_222_handle/1}).
 -dialyzer({nowarn_function, yeccpars2_222_handle/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_handle/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_handle(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13917,7 +14130,7 @@ yeccpars2_222_handle(__Stack0) ->
 -compile({inline,yeccpars2_222_import/1}).
 -dialyzer({nowarn_function, yeccpars2_222_import/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_import/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_import(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13928,7 +14141,7 @@ yeccpars2_222_import(__Stack0) ->
 -compile({inline,yeccpars2_222_in/1}).
 -dialyzer({nowarn_function, yeccpars2_222_in/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_in/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_in(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13939,7 +14152,7 @@ yeccpars2_222_in(__Stack0) ->
 -compile({inline,yeccpars2_222_instance/1}).
 -dialyzer({nowarn_function, yeccpars2_222_instance/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_instance/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_instance(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13950,7 +14163,7 @@ yeccpars2_222_instance(__Stack0) ->
 -compile({inline,yeccpars2_222_integer/1}).
 -dialyzer({nowarn_function, yeccpars2_222_integer/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_integer/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_integer(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13961,7 +14174,7 @@ yeccpars2_222_integer(__Stack0) ->
 -compile({inline,yeccpars2_222_kleisli/1}).
 -dialyzer({nowarn_function, yeccpars2_222_kleisli/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_kleisli/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_kleisli(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13972,7 +14185,7 @@ yeccpars2_222_kleisli(__Stack0) ->
 -compile({inline,yeccpars2_222_lbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_222_lbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_lbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_lbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13983,7 +14196,7 @@ yeccpars2_222_lbrace(__Stack0) ->
 -compile({inline,yeccpars2_222_lbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_222_lbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_lbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_lbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -13994,7 +14207,7 @@ yeccpars2_222_lbracket(__Stack0) ->
 -compile({inline,yeccpars2_222_let/1}).
 -dialyzer({nowarn_function, yeccpars2_222_let/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_let/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_let(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14005,7 +14218,7 @@ yeccpars2_222_let(__Stack0) ->
 -compile({inline,yeccpars2_222_lower_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_222_lower_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_lower_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_lower_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14016,7 +14229,7 @@ yeccpars2_222_lower_ident(__Stack0) ->
 -compile({inline,yeccpars2_222_lparen/1}).
 -dialyzer({nowarn_function, yeccpars2_222_lparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_lparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_lparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14027,7 +14240,7 @@ yeccpars2_222_lparen(__Stack0) ->
 -compile({inline,yeccpars2_222_mappend/1}).
 -dialyzer({nowarn_function, yeccpars2_222_mappend/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_mappend/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_mappend(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14038,7 +14251,7 @@ yeccpars2_222_mappend(__Stack0) ->
 -compile({inline,yeccpars2_222_match/1}).
 -dialyzer({nowarn_function, yeccpars2_222_match/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_match/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_match(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14049,7 +14262,7 @@ yeccpars2_222_match(__Stack0) ->
 -compile({inline,yeccpars2_222_of/1}).
 -dialyzer({nowarn_function, yeccpars2_222_of/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_of/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_of(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14060,7 +14273,7 @@ yeccpars2_222_of(__Stack0) ->
 -compile({inline,yeccpars2_222_or/1}).
 -dialyzer({nowarn_function, yeccpars2_222_or/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_or/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_or(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14071,7 +14284,7 @@ yeccpars2_222_or(__Stack0) ->
 -compile({inline,yeccpars2_222_perform/1}).
 -dialyzer({nowarn_function, yeccpars2_222_perform/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_perform/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_perform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14082,7 +14295,7 @@ yeccpars2_222_perform(__Stack0) ->
 -compile({inline,yeccpars2_222_pipe/1}).
 -dialyzer({nowarn_function, yeccpars2_222_pipe/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_pipe/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_pipe(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14093,7 +14306,7 @@ yeccpars2_222_pipe(__Stack0) ->
 -compile({inline,yeccpars2_222_pipe_right/1}).
 -dialyzer({nowarn_function, yeccpars2_222_pipe_right/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_pipe_right/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_pipe_right(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14104,7 +14317,7 @@ yeccpars2_222_pipe_right(__Stack0) ->
 -compile({inline,yeccpars2_222_property/1}).
 -dialyzer({nowarn_function, yeccpars2_222_property/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_property/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_property(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14115,7 +14328,7 @@ yeccpars2_222_property(__Stack0) ->
 -compile({inline,yeccpars2_222_rbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_222_rbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_rbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_rbrace(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14126,7 +14339,7 @@ yeccpars2_222_rbrace(__Stack0) ->
 -compile({inline,yeccpars2_222_rbracket/1}).
 -dialyzer({nowarn_function, yeccpars2_222_rbracket/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_rbracket/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_rbracket(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14137,7 +14350,7 @@ yeccpars2_222_rbracket(__Stack0) ->
 -compile({inline,yeccpars2_222_rparen/1}).
 -dialyzer({nowarn_function, yeccpars2_222_rparen/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_rparen/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_rparen(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14148,7 +14361,7 @@ yeccpars2_222_rparen(__Stack0) ->
 -compile({inline,yeccpars2_222_semicolon/1}).
 -dialyzer({nowarn_function, yeccpars2_222_semicolon/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_semicolon/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_semicolon(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14159,7 +14372,7 @@ yeccpars2_222_semicolon(__Stack0) ->
 -compile({inline,yeccpars2_222_string/1}).
 -dialyzer({nowarn_function, yeccpars2_222_string/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_string/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_string(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14170,7 +14383,7 @@ yeccpars2_222_string(__Stack0) ->
 -compile({inline,yeccpars2_222_test/1}).
 -dialyzer({nowarn_function, yeccpars2_222_test/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_test/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_test(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14181,7 +14394,7 @@ yeccpars2_222_test(__Stack0) ->
 -compile({inline,yeccpars2_222_then/1}).
 -dialyzer({nowarn_function, yeccpars2_222_then/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_then/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_then(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14192,7 +14405,7 @@ yeccpars2_222_then(__Stack0) ->
 -compile({inline,yeccpars2_222_trait/1}).
 -dialyzer({nowarn_function, yeccpars2_222_trait/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_trait/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_trait(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14203,7 +14416,7 @@ yeccpars2_222_trait(__Stack0) ->
 -compile({inline,yeccpars2_222_transform/1}).
 -dialyzer({nowarn_function, yeccpars2_222_transform/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_transform/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_transform(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14214,7 +14427,7 @@ yeccpars2_222_transform(__Stack0) ->
 -compile({inline,yeccpars2_222_type/1}).
 -dialyzer({nowarn_function, yeccpars2_222_type/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_type/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_type(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14225,7 +14438,7 @@ yeccpars2_222_type(__Stack0) ->
 -compile({inline,yeccpars2_222_upper_ident/1}).
 -dialyzer({nowarn_function, yeccpars2_222_upper_ident/1}).
 -compile({nowarn_unused_function,  yeccpars2_222_upper_ident/1}).
--file("src/compiler/parser/catena_parser.yrl", 796).
+-file("src/compiler/parser/catena_parser.yrl", 834).
 yeccpars2_222_upper_ident(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14236,7 +14449,7 @@ yeccpars2_222_upper_ident(__Stack0) ->
 -compile({inline,yeccpars2_223_/1}).
 -dialyzer({nowarn_function, yeccpars2_223_/1}).
 -compile({nowarn_unused_function,  yeccpars2_223_/1}).
--file("src/compiler/parser/catena_parser.yrl", 832).
+-file("src/compiler/parser/catena_parser.yrl", 870).
 yeccpars2_223_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14247,7 +14460,7 @@ yeccpars2_223_(__Stack0) ->
 -compile({inline,yeccpars2_224_/1}).
 -dialyzer({nowarn_function, yeccpars2_224_/1}).
 -compile({nowarn_unused_function,  yeccpars2_224_/1}).
--file("src/compiler/parser/catena_parser.yrl", 934).
+-file("src/compiler/parser/catena_parser.yrl", 972).
 yeccpars2_224_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14258,7 +14471,7 @@ yeccpars2_224_(__Stack0) ->
 -compile({inline,yeccpars2_225_/1}).
 -dialyzer({nowarn_function, yeccpars2_225_/1}).
 -compile({nowarn_unused_function,  yeccpars2_225_/1}).
--file("src/compiler/parser/catena_parser.yrl", 836).
+-file("src/compiler/parser/catena_parser.yrl", 874).
 yeccpars2_225_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14269,7 +14482,7 @@ yeccpars2_225_(__Stack0) ->
 -compile({inline,yeccpars2_226_/1}).
 -dialyzer({nowarn_function, yeccpars2_226_/1}).
 -compile({nowarn_unused_function,  yeccpars2_226_/1}).
--file("src/compiler/parser/catena_parser.yrl", 842).
+-file("src/compiler/parser/catena_parser.yrl", 880).
 yeccpars2_226_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14280,7 +14493,7 @@ yeccpars2_226_(__Stack0) ->
 -compile({inline,yeccpars2_227_/1}).
 -dialyzer({nowarn_function, yeccpars2_227_/1}).
 -compile({nowarn_unused_function,  yeccpars2_227_/1}).
--file("src/compiler/parser/catena_parser.yrl", 821).
+-file("src/compiler/parser/catena_parser.yrl", 859).
 yeccpars2_227_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14291,7 +14504,7 @@ yeccpars2_227_(__Stack0) ->
 -compile({inline,yeccpars2_228_/1}).
 -dialyzer({nowarn_function, yeccpars2_228_/1}).
 -compile({nowarn_unused_function,  yeccpars2_228_/1}).
--file("src/compiler/parser/catena_parser.yrl", 993).
+-file("src/compiler/parser/catena_parser.yrl", 1031).
 yeccpars2_228_(__Stack0) ->
  [___7,___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14306,7 +14519,7 @@ yeccpars2_228_(__Stack0) ->
 -compile({inline,yeccpars2_230_/1}).
 -dialyzer({nowarn_function, yeccpars2_230_/1}).
 -compile({nowarn_unused_function,  yeccpars2_230_/1}).
--file("src/compiler/parser/catena_parser.yrl", 618).
+-file("src/compiler/parser/catena_parser.yrl", 656).
 yeccpars2_230_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -14317,7 +14530,7 @@ yeccpars2_230_(__Stack0) ->
 -compile({inline,yeccpars2_233_/1}).
 -dialyzer({nowarn_function, yeccpars2_233_/1}).
 -compile({nowarn_unused_function,  yeccpars2_233_/1}).
--file("src/compiler/parser/catena_parser.yrl", 640).
+-file("src/compiler/parser/catena_parser.yrl", 678).
 yeccpars2_233_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -14328,7 +14541,7 @@ yeccpars2_233_(__Stack0) ->
 -compile({inline,yeccpars2_239_/1}).
 -dialyzer({nowarn_function, yeccpars2_239_/1}).
 -compile({nowarn_unused_function,  yeccpars2_239_/1}).
--file("src/compiler/parser/catena_parser.yrl", 630).
+-file("src/compiler/parser/catena_parser.yrl", 668).
 yeccpars2_239_(__Stack0) ->
  [___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14343,7 +14556,7 @@ yeccpars2_239_(__Stack0) ->
 -compile({inline,yeccpars2_240_/1}).
 -dialyzer({nowarn_function, yeccpars2_240_/1}).
 -compile({nowarn_unused_function,  yeccpars2_240_/1}).
--file("src/compiler/parser/catena_parser.yrl", 623).
+-file("src/compiler/parser/catena_parser.yrl", 661).
 yeccpars2_240_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14358,7 +14571,7 @@ yeccpars2_240_(__Stack0) ->
 -compile({inline,yeccpars2_242_/1}).
 -dialyzer({nowarn_function, yeccpars2_242_/1}).
 -compile({nowarn_unused_function,  yeccpars2_242_/1}).
--file("src/compiler/parser/catena_parser.yrl", 642).
+-file("src/compiler/parser/catena_parser.yrl", 680).
 yeccpars2_242_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14374,7 +14587,7 @@ yeccpars2_242_(__Stack0) ->
 -compile({inline,yeccpars2_245_/1}).
 -dialyzer({nowarn_function, yeccpars2_245_/1}).
 -compile({nowarn_unused_function,  yeccpars2_245_/1}).
--file("src/compiler/parser/catena_parser.yrl", 907).
+-file("src/compiler/parser/catena_parser.yrl", 945).
 yeccpars2_245_(__Stack0) ->
  [___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14385,7 +14598,7 @@ yeccpars2_245_(__Stack0) ->
 -compile({inline,yeccpars2_246_/1}).
 -dialyzer({nowarn_function, yeccpars2_246_/1}).
 -compile({nowarn_unused_function,  yeccpars2_246_/1}).
--file("src/compiler/parser/catena_parser.yrl", 620).
+-file("src/compiler/parser/catena_parser.yrl", 658).
 yeccpars2_246_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14396,7 +14609,7 @@ yeccpars2_246_(__Stack0) ->
 -compile({inline,yeccpars2_247_/1}).
 -dialyzer({nowarn_function, yeccpars2_247_/1}).
 -compile({nowarn_unused_function,  yeccpars2_247_/1}).
--file("src/compiler/parser/catena_parser.yrl", 903).
+-file("src/compiler/parser/catena_parser.yrl", 941).
 yeccpars2_247_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14407,7 +14620,7 @@ yeccpars2_247_(__Stack0) ->
 -compile({inline,yeccpars2_251_/1}).
 -dialyzer({nowarn_function, yeccpars2_251_/1}).
 -compile({nowarn_unused_function,  yeccpars2_251_/1}).
--file("src/compiler/parser/catena_parser.yrl", 871).
+-file("src/compiler/parser/catena_parser.yrl", 909).
 yeccpars2_251_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14418,7 +14631,7 @@ yeccpars2_251_(__Stack0) ->
 -compile({inline,yeccpars2_252_/1}).
 -dialyzer({nowarn_function, yeccpars2_252_/1}).
 -compile({nowarn_unused_function,  yeccpars2_252_/1}).
--file("src/compiler/parser/catena_parser.yrl", 880).
+-file("src/compiler/parser/catena_parser.yrl", 918).
 yeccpars2_252_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14429,7 +14642,7 @@ yeccpars2_252_(__Stack0) ->
 -compile({inline,yeccpars2_253_/1}).
 -dialyzer({nowarn_function, yeccpars2_253_/1}).
 -compile({nowarn_unused_function,  yeccpars2_253_/1}).
--file("src/compiler/parser/catena_parser.yrl", 878).
+-file("src/compiler/parser/catena_parser.yrl", 916).
 yeccpars2_253_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14440,7 +14653,7 @@ yeccpars2_253_(__Stack0) ->
 -compile({inline,yeccpars2_254_/1}).
 -dialyzer({nowarn_function, yeccpars2_254_/1}).
 -compile({nowarn_unused_function,  yeccpars2_254_/1}).
--file("src/compiler/parser/catena_parser.yrl", 874).
+-file("src/compiler/parser/catena_parser.yrl", 912).
 yeccpars2_254_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14451,7 +14664,7 @@ yeccpars2_254_(__Stack0) ->
 -compile({inline,yeccpars2_259_/1}).
 -dialyzer({nowarn_function, yeccpars2_259_/1}).
 -compile({nowarn_unused_function,  yeccpars2_259_/1}).
--file("src/compiler/parser/catena_parser.yrl", 883).
+-file("src/compiler/parser/catena_parser.yrl", 921).
 yeccpars2_259_(__Stack0) ->
  [___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14465,7 +14678,7 @@ yeccpars2_259_(__Stack0) ->
 -compile({inline,yeccpars2_261_/1}).
 -dialyzer({nowarn_function, yeccpars2_261_/1}).
 -compile({nowarn_unused_function,  yeccpars2_261_/1}).
--file("src/compiler/parser/catena_parser.yrl", 910).
+-file("src/compiler/parser/catena_parser.yrl", 948).
 yeccpars2_261_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14476,7 +14689,7 @@ yeccpars2_261_(__Stack0) ->
 -compile({inline,yeccpars2_262_/1}).
 -dialyzer({nowarn_function, yeccpars2_262_/1}).
 -compile({nowarn_unused_function,  yeccpars2_262_/1}).
--file("src/compiler/parser/catena_parser.yrl", 913).
+-file("src/compiler/parser/catena_parser.yrl", 951).
 yeccpars2_262_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14487,7 +14700,7 @@ yeccpars2_262_(__Stack0) ->
 -compile({inline,yeccpars2_264_/1}).
 -dialyzer({nowarn_function, yeccpars2_264_/1}).
 -compile({nowarn_unused_function,  yeccpars2_264_/1}).
--file("src/compiler/parser/catena_parser.yrl", 923).
+-file("src/compiler/parser/catena_parser.yrl", 961).
 yeccpars2_264_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -14498,7 +14711,7 @@ yeccpars2_264_(__Stack0) ->
 -compile({inline,yeccpars2_266_/1}).
 -dialyzer({nowarn_function, yeccpars2_266_/1}).
 -compile({nowarn_unused_function,  yeccpars2_266_/1}).
--file("src/compiler/parser/catena_parser.yrl", 916).
+-file("src/compiler/parser/catena_parser.yrl", 954).
 yeccpars2_266_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14509,7 +14722,7 @@ yeccpars2_266_(__Stack0) ->
 -compile({inline,yeccpars2_268_/1}).
 -dialyzer({nowarn_function, yeccpars2_268_/1}).
 -compile({nowarn_unused_function,  yeccpars2_268_/1}).
--file("src/compiler/parser/catena_parser.yrl", 928).
+-file("src/compiler/parser/catena_parser.yrl", 966).
 yeccpars2_268_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14520,7 +14733,7 @@ yeccpars2_268_(__Stack0) ->
 -compile({inline,yeccpars2_270_/1}).
 -dialyzer({nowarn_function, yeccpars2_270_/1}).
 -compile({nowarn_unused_function,  yeccpars2_270_/1}).
--file("src/compiler/parser/catena_parser.yrl", 925).
+-file("src/compiler/parser/catena_parser.yrl", 963).
 yeccpars2_270_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14531,7 +14744,7 @@ yeccpars2_270_(__Stack0) ->
 -compile({inline,yeccpars2_271_/1}).
 -dialyzer({nowarn_function, yeccpars2_271_/1}).
 -compile({nowarn_unused_function,  yeccpars2_271_/1}).
--file("src/compiler/parser/catena_parser.yrl", 919).
+-file("src/compiler/parser/catena_parser.yrl", 957).
 yeccpars2_271_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14542,7 +14755,7 @@ yeccpars2_271_(__Stack0) ->
 -compile({inline,yeccpars2_276_/1}).
 -dialyzer({nowarn_function, yeccpars2_276_/1}).
 -compile({nowarn_unused_function,  yeccpars2_276_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1009).
+-file("src/compiler/parser/catena_parser.yrl", 1047).
 yeccpars2_276_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -14553,7 +14766,7 @@ yeccpars2_276_(__Stack0) ->
 -compile({inline,yeccpars2_280_/1}).
 -dialyzer({nowarn_function, yeccpars2_280_/1}).
 -compile({nowarn_unused_function,  yeccpars2_280_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1024).
+-file("src/compiler/parser/catena_parser.yrl", 1062).
 yeccpars2_280_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -14564,7 +14777,7 @@ yeccpars2_280_(__Stack0) ->
 -compile({inline,yeccpars2_283_/1}).
 -dialyzer({nowarn_function, yeccpars2_283_/1}).
 -compile({nowarn_unused_function,  yeccpars2_283_/1}).
--file("src/compiler/parser/catena_parser.yrl", 665).
+-file("src/compiler/parser/catena_parser.yrl", 703).
 yeccpars2_283_(__Stack0) ->
  [begin
                                 
@@ -14574,7 +14787,7 @@ yeccpars2_283_(__Stack0) ->
 -compile({inline,yeccpars2_285_/1}).
 -dialyzer({nowarn_function, yeccpars2_285_/1}).
 -compile({nowarn_unused_function,  yeccpars2_285_/1}).
--file("src/compiler/parser/catena_parser.yrl", 667).
+-file("src/compiler/parser/catena_parser.yrl", 705).
 yeccpars2_285_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -14585,7 +14798,7 @@ yeccpars2_285_(__Stack0) ->
 -compile({inline,yeccpars2_286_/1}).
 -dialyzer({nowarn_function, yeccpars2_286_/1}).
 -compile({nowarn_unused_function,  yeccpars2_286_/1}).
--file("src/compiler/parser/catena_parser.yrl", 665).
+-file("src/compiler/parser/catena_parser.yrl", 703).
 yeccpars2_286_(__Stack0) ->
  [begin
                                 
@@ -14595,7 +14808,7 @@ yeccpars2_286_(__Stack0) ->
 -compile({inline,yeccpars2_287_/1}).
 -dialyzer({nowarn_function, yeccpars2_287_/1}).
 -compile({nowarn_unused_function,  yeccpars2_287_/1}).
--file("src/compiler/parser/catena_parser.yrl", 669).
+-file("src/compiler/parser/catena_parser.yrl", 707).
 yeccpars2_287_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14606,7 +14819,7 @@ yeccpars2_287_(__Stack0) ->
 -compile({inline,yeccpars2_290_/1}).
 -dialyzer({nowarn_function, yeccpars2_290_/1}).
 -compile({nowarn_unused_function,  yeccpars2_290_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1027).
+-file("src/compiler/parser/catena_parser.yrl", 1065).
 yeccpars2_290_(__Stack0) ->
  [___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14621,7 +14834,7 @@ yeccpars2_290_(__Stack0) ->
 -compile({inline,yeccpars2_291_/1}).
 -dialyzer({nowarn_function, yeccpars2_291_/1}).
 -compile({nowarn_unused_function,  yeccpars2_291_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1034).
+-file("src/compiler/parser/catena_parser.yrl", 1072).
 yeccpars2_291_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14636,7 +14849,7 @@ yeccpars2_291_(__Stack0) ->
 -compile({inline,yeccpars2_292_/1}).
 -dialyzer({nowarn_function, yeccpars2_292_/1}).
 -compile({nowarn_unused_function,  yeccpars2_292_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1022).
+-file("src/compiler/parser/catena_parser.yrl", 1060).
 yeccpars2_292_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14647,7 +14860,7 @@ yeccpars2_292_(__Stack0) ->
 -compile({inline,yeccpars2_293_/1}).
 -dialyzer({nowarn_function, yeccpars2_293_/1}).
 -compile({nowarn_unused_function,  yeccpars2_293_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1014).
+-file("src/compiler/parser/catena_parser.yrl", 1052).
 yeccpars2_293_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14661,7 +14874,7 @@ yeccpars2_293_(__Stack0) ->
 -compile({inline,yeccpars2_294_/1}).
 -dialyzer({nowarn_function, yeccpars2_294_/1}).
 -compile({nowarn_unused_function,  yeccpars2_294_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1011).
+-file("src/compiler/parser/catena_parser.yrl", 1049).
 yeccpars2_294_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14672,7 +14885,7 @@ yeccpars2_294_(__Stack0) ->
 -compile({inline,yeccpars2_295_/1}).
 -dialyzer({nowarn_function, yeccpars2_295_/1}).
 -compile({nowarn_unused_function,  yeccpars2_295_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1002).
+-file("src/compiler/parser/catena_parser.yrl", 1040).
 yeccpars2_295_(__Stack0) ->
  [___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14686,7 +14899,7 @@ yeccpars2_295_(__Stack0) ->
 -compile({inline,yeccpars2_298_/1}).
 -dialyzer({nowarn_function, yeccpars2_298_/1}).
 -compile({nowarn_unused_function,  yeccpars2_298_/1}).
--file("src/compiler/parser/catena_parser.yrl", 890).
+-file("src/compiler/parser/catena_parser.yrl", 928).
 yeccpars2_298_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14697,7 +14910,7 @@ yeccpars2_298_(__Stack0) ->
 -compile({inline,yeccpars2_300_rbrace/1}).
 -dialyzer({nowarn_function, yeccpars2_300_rbrace/1}).
 -compile({nowarn_unused_function,  yeccpars2_300_rbrace/1}).
--file("src/compiler/parser/catena_parser.yrl", 965).
+-file("src/compiler/parser/catena_parser.yrl", 1003).
 yeccpars2_300_rbrace(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -14708,7 +14921,7 @@ yeccpars2_300_rbrace(__Stack0) ->
 -compile({inline,yeccpars2_300_/1}).
 -dialyzer({nowarn_function, yeccpars2_300_/1}).
 -compile({nowarn_unused_function,  yeccpars2_300_/1}).
--file("src/compiler/parser/catena_parser.yrl", 984).
+-file("src/compiler/parser/catena_parser.yrl", 1022).
 yeccpars2_300_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -14719,7 +14932,7 @@ yeccpars2_300_(__Stack0) ->
 -compile({inline,yeccpars2_304_/1}).
 -dialyzer({nowarn_function, yeccpars2_304_/1}).
 -compile({nowarn_unused_function,  yeccpars2_304_/1}).
--file("src/compiler/parser/catena_parser.yrl", 865).
+-file("src/compiler/parser/catena_parser.yrl", 903).
 yeccpars2_304_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -14730,7 +14943,7 @@ yeccpars2_304_(__Stack0) ->
 -compile({inline,yeccpars2_306_/1}).
 -dialyzer({nowarn_function, yeccpars2_306_/1}).
 -compile({nowarn_unused_function,  yeccpars2_306_/1}).
--file("src/compiler/parser/catena_parser.yrl", 976).
+-file("src/compiler/parser/catena_parser.yrl", 1014).
 yeccpars2_306_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14741,7 +14954,7 @@ yeccpars2_306_(__Stack0) ->
 -compile({inline,yeccpars2_309_/1}).
 -dialyzer({nowarn_function, yeccpars2_309_/1}).
 -compile({nowarn_unused_function,  yeccpars2_309_/1}).
--file("src/compiler/parser/catena_parser.yrl", 980).
+-file("src/compiler/parser/catena_parser.yrl", 1018).
 yeccpars2_309_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14752,7 +14965,7 @@ yeccpars2_309_(__Stack0) ->
 -compile({inline,yeccpars2_311_/1}).
 -dialyzer({nowarn_function, yeccpars2_311_/1}).
 -compile({nowarn_unused_function,  yeccpars2_311_/1}).
--file("src/compiler/parser/catena_parser.yrl", 967).
+-file("src/compiler/parser/catena_parser.yrl", 1005).
 yeccpars2_311_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14763,7 +14976,7 @@ yeccpars2_311_(__Stack0) ->
 -compile({inline,yeccpars2_312_/1}).
 -dialyzer({nowarn_function, yeccpars2_312_/1}).
 -compile({nowarn_unused_function,  yeccpars2_312_/1}).
--file("src/compiler/parser/catena_parser.yrl", 961).
+-file("src/compiler/parser/catena_parser.yrl", 999).
 yeccpars2_312_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14774,7 +14987,7 @@ yeccpars2_312_(__Stack0) ->
 -compile({inline,yeccpars2_313_/1}).
 -dialyzer({nowarn_function, yeccpars2_313_/1}).
 -compile({nowarn_unused_function,  yeccpars2_313_/1}).
--file("src/compiler/parser/catena_parser.yrl", 854).
+-file("src/compiler/parser/catena_parser.yrl", 892).
 yeccpars2_313_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14785,7 +14998,7 @@ yeccpars2_313_(__Stack0) ->
 -compile({inline,yeccpars2_315_/1}).
 -dialyzer({nowarn_function, yeccpars2_315_/1}).
 -compile({nowarn_unused_function,  yeccpars2_315_/1}).
--file("src/compiler/parser/catena_parser.yrl", 857).
+-file("src/compiler/parser/catena_parser.yrl", 895).
 yeccpars2_315_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14796,7 +15009,7 @@ yeccpars2_315_(__Stack0) ->
 -compile({inline,yeccpars2_317_/1}).
 -dialyzer({nowarn_function, yeccpars2_317_/1}).
 -compile({nowarn_unused_function,  yeccpars2_317_/1}).
--file("src/compiler/parser/catena_parser.yrl", 770).
+-file("src/compiler/parser/catena_parser.yrl", 808).
 yeccpars2_317_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14807,7 +15020,7 @@ yeccpars2_317_(__Stack0) ->
 -compile({inline,yeccpars2_319_/1}).
 -dialyzer({nowarn_function, yeccpars2_319_/1}).
 -compile({nowarn_unused_function,  yeccpars2_319_/1}).
--file("src/compiler/parser/catena_parser.yrl", 575).
+-file("src/compiler/parser/catena_parser.yrl", 613).
 yeccpars2_319_(__Stack0) ->
  [___7,___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14822,7 +15035,7 @@ yeccpars2_319_(__Stack0) ->
 -compile({inline,yeccpars2_320_/1}).
 -dialyzer({nowarn_function, yeccpars2_320_/1}).
 -compile({nowarn_unused_function,  yeccpars2_320_/1}).
--file("src/compiler/parser/catena_parser.yrl", 568).
+-file("src/compiler/parser/catena_parser.yrl", 606).
 yeccpars2_320_(__Stack0) ->
  [___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14837,7 +15050,7 @@ yeccpars2_320_(__Stack0) ->
 -compile({inline,yeccpars2_322_/1}).
 -dialyzer({nowarn_function, yeccpars2_322_/1}).
 -compile({nowarn_unused_function,  yeccpars2_322_/1}).
--file("src/compiler/parser/catena_parser.yrl", 583).
+-file("src/compiler/parser/catena_parser.yrl", 621).
 yeccpars2_322_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14848,7 +15061,7 @@ yeccpars2_322_(__Stack0) ->
 -compile({inline,yeccpars2_323_/1}).
 -dialyzer({nowarn_function, yeccpars2_323_/1}).
 -compile({nowarn_unused_function,  yeccpars2_323_/1}).
--file("src/compiler/parser/catena_parser.yrl", 390).
+-file("src/compiler/parser/catena_parser.yrl", 428).
 yeccpars2_323_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14859,7 +15072,7 @@ yeccpars2_323_(__Stack0) ->
 -compile({inline,yeccpars2_324_/1}).
 -dialyzer({nowarn_function, yeccpars2_324_/1}).
 -compile({nowarn_unused_function,  yeccpars2_324_/1}).
--file("src/compiler/parser/catena_parser.yrl", 312).
+-file("src/compiler/parser/catena_parser.yrl", 350).
 yeccpars2_324_(__Stack0) ->
  [begin
                          
@@ -14869,7 +15082,7 @@ yeccpars2_324_(__Stack0) ->
 -compile({inline,yeccpars2_325_/1}).
 -dialyzer({nowarn_function, yeccpars2_325_/1}).
 -compile({nowarn_unused_function,  yeccpars2_325_/1}).
--file("src/compiler/parser/catena_parser.yrl", 395).
+-file("src/compiler/parser/catena_parser.yrl", 433).
 yeccpars2_325_(__Stack0) ->
  [begin
                                   undefined
@@ -14878,7 +15091,7 @@ yeccpars2_325_(__Stack0) ->
 -compile({inline,yeccpars2_328_/1}).
 -dialyzer({nowarn_function, yeccpars2_328_/1}).
 -compile({nowarn_unused_function,  yeccpars2_328_/1}).
--file("src/compiler/parser/catena_parser.yrl", 394).
+-file("src/compiler/parser/catena_parser.yrl", 432).
 yeccpars2_328_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14888,7 +15101,7 @@ yeccpars2_328_(__Stack0) ->
 -compile({inline,yeccpars2_329_/1}).
 -dialyzer({nowarn_function, yeccpars2_329_/1}).
 -compile({nowarn_unused_function,  yeccpars2_329_/1}).
--file("src/compiler/parser/catena_parser.yrl", 398).
+-file("src/compiler/parser/catena_parser.yrl", 436).
 yeccpars2_329_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -14899,7 +15112,7 @@ yeccpars2_329_(__Stack0) ->
 -compile({inline,yeccpars2_331_/1}).
 -dialyzer({nowarn_function, yeccpars2_331_/1}).
 -compile({nowarn_unused_function,  yeccpars2_331_/1}).
--file("src/compiler/parser/catena_parser.yrl", 400).
+-file("src/compiler/parser/catena_parser.yrl", 438).
 yeccpars2_331_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14910,7 +15123,7 @@ yeccpars2_331_(__Stack0) ->
 -compile({inline,yeccpars2_334_/1}).
 -dialyzer({nowarn_function, yeccpars2_334_/1}).
 -compile({nowarn_unused_function,  yeccpars2_334_/1}).
--file("src/compiler/parser/catena_parser.yrl", 410).
+-file("src/compiler/parser/catena_parser.yrl", 448).
 yeccpars2_334_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -14921,7 +15134,7 @@ yeccpars2_334_(__Stack0) ->
 -compile({inline,yeccpars2_338_/1}).
 -dialyzer({nowarn_function, yeccpars2_338_/1}).
 -compile({nowarn_unused_function,  yeccpars2_338_/1}).
--file("src/compiler/parser/catena_parser.yrl", 420).
+-file("src/compiler/parser/catena_parser.yrl", 458).
 yeccpars2_338_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14932,7 +15145,7 @@ yeccpars2_338_(__Stack0) ->
 -compile({inline,yeccpars2_339_/1}).
 -dialyzer({nowarn_function, yeccpars2_339_/1}).
 -compile({nowarn_unused_function,  yeccpars2_339_/1}).
--file("src/compiler/parser/catena_parser.yrl", 428).
+-file("src/compiler/parser/catena_parser.yrl", 466).
 yeccpars2_339_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14948,7 +15161,7 @@ yeccpars2_339_(__Stack0) ->
 -compile({inline,yeccpars2_341_/1}).
 -dialyzer({nowarn_function, yeccpars2_341_/1}).
 -compile({nowarn_unused_function,  yeccpars2_341_/1}).
--file("src/compiler/parser/catena_parser.yrl", 424).
+-file("src/compiler/parser/catena_parser.yrl", 462).
 yeccpars2_341_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14959,7 +15172,7 @@ yeccpars2_341_(__Stack0) ->
 -compile({inline,yeccpars2_342_/1}).
 -dialyzer({nowarn_function, yeccpars2_342_/1}).
 -compile({nowarn_unused_function,  yeccpars2_342_/1}).
--file("src/compiler/parser/catena_parser.yrl", 414).
+-file("src/compiler/parser/catena_parser.yrl", 452).
 yeccpars2_342_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14970,7 +15183,7 @@ yeccpars2_342_(__Stack0) ->
 -compile({inline,yeccpars2_343_/1}).
 -dialyzer({nowarn_function, yeccpars2_343_/1}).
 -compile({nowarn_unused_function,  yeccpars2_343_/1}).
--file("src/compiler/parser/catena_parser.yrl", 412).
+-file("src/compiler/parser/catena_parser.yrl", 450).
 yeccpars2_343_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14981,7 +15194,7 @@ yeccpars2_343_(__Stack0) ->
 -compile({inline,yeccpars2_344_/1}).
 -dialyzer({nowarn_function, yeccpars2_344_/1}).
 -compile({nowarn_unused_function,  yeccpars2_344_/1}).
--file("src/compiler/parser/catena_parser.yrl", 381).
+-file("src/compiler/parser/catena_parser.yrl", 419).
 yeccpars2_344_(__Stack0) ->
  [___7,___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -14997,7 +15210,7 @@ yeccpars2_344_(__Stack0) ->
 -compile({inline,yeccpars2_345_/1}).
 -dialyzer({nowarn_function, yeccpars2_345_/1}).
 -compile({nowarn_unused_function,  yeccpars2_345_/1}).
--file("src/compiler/parser/catena_parser.yrl", 516).
+-file("src/compiler/parser/catena_parser.yrl", 554).
 yeccpars2_345_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15008,7 +15221,7 @@ yeccpars2_345_(__Stack0) ->
 -compile({inline,yeccpars2_348_/1}).
 -dialyzer({nowarn_function, yeccpars2_348_/1}).
 -compile({nowarn_unused_function,  yeccpars2_348_/1}).
--file("src/compiler/parser/catena_parser.yrl", 509).
+-file("src/compiler/parser/catena_parser.yrl", 547).
 yeccpars2_348_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15022,7 +15235,7 @@ yeccpars2_348_(__Stack0) ->
 -compile({inline,yeccpars2_349_/1}).
 -dialyzer({nowarn_function, yeccpars2_349_/1}).
 -compile({nowarn_unused_function,  yeccpars2_349_/1}).
--file("src/compiler/parser/catena_parser.yrl", 545).
+-file("src/compiler/parser/catena_parser.yrl", 583).
 yeccpars2_349_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15033,7 +15246,7 @@ yeccpars2_349_(__Stack0) ->
 -compile({inline,yeccpars2_352_/1}).
 -dialyzer({nowarn_function, yeccpars2_352_/1}).
 -compile({nowarn_unused_function,  yeccpars2_352_/1}).
--file("src/compiler/parser/catena_parser.yrl", 524).
+-file("src/compiler/parser/catena_parser.yrl", 562).
 yeccpars2_352_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15047,7 +15260,7 @@ yeccpars2_352_(__Stack0) ->
 -compile({inline,yeccpars2_355_/1}).
 -dialyzer({nowarn_function, yeccpars2_355_/1}).
 -compile({nowarn_unused_function,  yeccpars2_355_/1}).
--file("src/compiler/parser/catena_parser.yrl", 535).
+-file("src/compiler/parser/catena_parser.yrl", 573).
 yeccpars2_355_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -15058,7 +15271,7 @@ yeccpars2_355_(__Stack0) ->
 -compile({inline,yeccpars2_358_/1}).
 -dialyzer({nowarn_function, yeccpars2_358_/1}).
 -compile({nowarn_unused_function,  yeccpars2_358_/1}).
--file("src/compiler/parser/catena_parser.yrl", 541).
+-file("src/compiler/parser/catena_parser.yrl", 579).
 yeccpars2_358_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15069,7 +15282,7 @@ yeccpars2_358_(__Stack0) ->
 -compile({inline,yeccpars2_360_/1}).
 -dialyzer({nowarn_function, yeccpars2_360_/1}).
 -compile({nowarn_unused_function,  yeccpars2_360_/1}).
--file("src/compiler/parser/catena_parser.yrl", 537).
+-file("src/compiler/parser/catena_parser.yrl", 575).
 yeccpars2_360_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15080,7 +15293,7 @@ yeccpars2_360_(__Stack0) ->
 -compile({inline,yeccpars2_362_/1}).
 -dialyzer({nowarn_function, yeccpars2_362_/1}).
 -compile({nowarn_unused_function,  yeccpars2_362_/1}).
--file("src/compiler/parser/catena_parser.yrl", 531).
+-file("src/compiler/parser/catena_parser.yrl", 569).
 yeccpars2_362_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15116,7 +15329,7 @@ yeccpars2_365_(__Stack0) ->
 -compile({inline,yeccpars2_366_/1}).
 -dialyzer({nowarn_function, yeccpars2_366_/1}).
 -compile({nowarn_unused_function,  yeccpars2_366_/1}).
--file("src/compiler/parser/catena_parser.yrl", 485).
+-file("src/compiler/parser/catena_parser.yrl", 523).
 yeccpars2_366_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -15127,7 +15340,7 @@ yeccpars2_366_(__Stack0) ->
 -compile({inline,yeccpars2_368_/1}).
 -dialyzer({nowarn_function, yeccpars2_368_/1}).
 -compile({nowarn_unused_function,  yeccpars2_368_/1}).
--file("src/compiler/parser/catena_parser.yrl", 477).
+-file("src/compiler/parser/catena_parser.yrl", 515).
 yeccpars2_368_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15138,7 +15351,7 @@ yeccpars2_368_(__Stack0) ->
 -compile({inline,yeccpars2_369_/1}).
 -dialyzer({nowarn_function, yeccpars2_369_/1}).
 -compile({nowarn_unused_function,  yeccpars2_369_/1}).
--file("src/compiler/parser/catena_parser.yrl", 1117).
+-file("src/compiler/parser/catena_parser.yrl", 1155).
 yeccpars2_369_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -15149,7 +15362,7 @@ yeccpars2_369_(__Stack0) ->
 -compile({inline,yeccpars2_370_comma/1}).
 -dialyzer({nowarn_function, yeccpars2_370_comma/1}).
 -compile({nowarn_unused_function,  yeccpars2_370_comma/1}).
--file("src/compiler/parser/catena_parser.yrl", 1108).
+-file("src/compiler/parser/catena_parser.yrl", 1146).
 yeccpars2_370_comma(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -15160,7 +15373,7 @@ yeccpars2_370_comma(__Stack0) ->
 -compile({inline,yeccpars2_370_double_arrow/1}).
 -dialyzer({nowarn_function, yeccpars2_370_double_arrow/1}).
 -compile({nowarn_unused_function,  yeccpars2_370_double_arrow/1}).
--file("src/compiler/parser/catena_parser.yrl", 1108).
+-file("src/compiler/parser/catena_parser.yrl", 1146).
 yeccpars2_370_double_arrow(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -15171,7 +15384,7 @@ yeccpars2_370_double_arrow(__Stack0) ->
 -compile({inline,yeccpars2_370_/1}).
 -dialyzer({nowarn_function, yeccpars2_370_/1}).
 -compile({nowarn_unused_function,  yeccpars2_370_/1}).
--file("src/compiler/parser/catena_parser.yrl", 481).
+-file("src/compiler/parser/catena_parser.yrl", 519).
 yeccpars2_370_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -15181,7 +15394,7 @@ yeccpars2_370_(__Stack0) ->
 -compile({inline,yeccpars2_374_/1}).
 -dialyzer({nowarn_function, yeccpars2_374_/1}).
 -compile({nowarn_unused_function,  yeccpars2_374_/1}).
--file("src/compiler/parser/catena_parser.yrl", 492).
+-file("src/compiler/parser/catena_parser.yrl", 530).
 yeccpars2_374_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -15192,7 +15405,7 @@ yeccpars2_374_(__Stack0) ->
 -compile({inline,yeccpars2_375_/1}).
 -dialyzer({nowarn_function, yeccpars2_375_/1}).
 -compile({nowarn_unused_function,  yeccpars2_375_/1}).
--file("src/compiler/parser/catena_parser.yrl", 459).
+-file("src/compiler/parser/catena_parser.yrl", 497).
 yeccpars2_375_(__Stack0) ->
  [___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15208,7 +15421,7 @@ yeccpars2_375_(__Stack0) ->
 -compile({inline,yeccpars2_377_/1}).
 -dialyzer({nowarn_function, yeccpars2_377_/1}).
 -compile({nowarn_unused_function,  yeccpars2_377_/1}).
--file("src/compiler/parser/catena_parser.yrl", 654).
+-file("src/compiler/parser/catena_parser.yrl", 692).
 yeccpars2_377_(__Stack0) ->
  [begin
                           
@@ -15218,7 +15431,7 @@ yeccpars2_377_(__Stack0) ->
 -compile({inline,yeccpars2_380_/1}).
 -dialyzer({nowarn_function, yeccpars2_380_/1}).
 -compile({nowarn_unused_function,  yeccpars2_380_/1}).
--file("src/compiler/parser/catena_parser.yrl", 500).
+-file("src/compiler/parser/catena_parser.yrl", 538).
 yeccpars2_380_(__Stack0) ->
  [___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15229,7 +15442,7 @@ yeccpars2_380_(__Stack0) ->
 -compile({inline,yeccpars2_381_/1}).
 -dialyzer({nowarn_function, yeccpars2_381_/1}).
 -compile({nowarn_unused_function,  yeccpars2_381_/1}).
--file("src/compiler/parser/catena_parser.yrl", 496).
+-file("src/compiler/parser/catena_parser.yrl", 534).
 yeccpars2_381_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15240,7 +15453,7 @@ yeccpars2_381_(__Stack0) ->
 -compile({inline,yeccpars2_382_/1}).
 -dialyzer({nowarn_function, yeccpars2_382_/1}).
 -compile({nowarn_unused_function,  yeccpars2_382_/1}).
--file("src/compiler/parser/catena_parser.yrl", 494).
+-file("src/compiler/parser/catena_parser.yrl", 532).
 yeccpars2_382_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15251,7 +15464,7 @@ yeccpars2_382_(__Stack0) ->
 -compile({inline,yeccpars2_383_/1}).
 -dialyzer({nowarn_function, yeccpars2_383_/1}).
 -compile({nowarn_unused_function,  yeccpars2_383_/1}).
--file("src/compiler/parser/catena_parser.yrl", 450).
+-file("src/compiler/parser/catena_parser.yrl", 488).
 yeccpars2_383_(__Stack0) ->
  [___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15267,7 +15480,7 @@ yeccpars2_383_(__Stack0) ->
 -compile({inline,yeccpars2_384_/1}).
 -dialyzer({nowarn_function, yeccpars2_384_/1}).
 -compile({nowarn_unused_function,  yeccpars2_384_/1}).
--file("src/compiler/parser/catena_parser.yrl", 482).
+-file("src/compiler/parser/catena_parser.yrl", 520).
 yeccpars2_384_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15277,7 +15490,7 @@ yeccpars2_384_(__Stack0) ->
 -compile({inline,yeccpars2_387_/1}).
 -dialyzer({nowarn_function, yeccpars2_387_/1}).
 -compile({nowarn_unused_function,  yeccpars2_387_/1}).
--file("src/compiler/parser/catena_parser.yrl", 481).
+-file("src/compiler/parser/catena_parser.yrl", 519).
 yeccpars2_387_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
@@ -15287,7 +15500,7 @@ yeccpars2_387_(__Stack0) ->
 -compile({inline,yeccpars2_391_/1}).
 -dialyzer({nowarn_function, yeccpars2_391_/1}).
 -compile({nowarn_unused_function,  yeccpars2_391_/1}).
--file("src/compiler/parser/catena_parser.yrl", 468).
+-file("src/compiler/parser/catena_parser.yrl", 506).
 yeccpars2_391_(__Stack0) ->
  [___7,___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15303,7 +15516,7 @@ yeccpars2_391_(__Stack0) ->
 -compile({inline,yeccpars2_392_/1}).
 -dialyzer({nowarn_function, yeccpars2_392_/1}).
 -compile({nowarn_unused_function,  yeccpars2_392_/1}).
--file("src/compiler/parser/catena_parser.yrl", 441).
+-file("src/compiler/parser/catena_parser.yrl", 479).
 yeccpars2_392_(__Stack0) ->
  [___8,___7,___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15319,7 +15532,7 @@ yeccpars2_392_(__Stack0) ->
 -compile({inline,yeccpars2_394_/1}).
 -dialyzer({nowarn_function, yeccpars2_394_/1}).
 -compile({nowarn_unused_function,  yeccpars2_394_/1}).
--file("src/compiler/parser/catena_parser.yrl", 487).
+-file("src/compiler/parser/catena_parser.yrl", 525).
 yeccpars2_394_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
@@ -15327,121 +15540,213 @@ yeccpars2_394_(__Stack0) ->
     [___1 | ___3]
   end | __Stack].
 
--compile({inline,yeccpars2_395_/1}).
--dialyzer({nowarn_function, yeccpars2_395_/1}).
--compile({nowarn_unused_function,  yeccpars2_395_/1}).
--file("src/compiler/parser/catena_parser.yrl", 271).
-yeccpars2_395_(__Stack0) ->
+-compile({inline,yeccpars2_396_/1}).
+-dialyzer({nowarn_function, yeccpars2_396_/1}).
+-compile({nowarn_unused_function,  yeccpars2_396_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 275).
+yeccpars2_396_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                                    
-    {import_decl, extract_atom(___2), extract_location(___1)}
+    {import, extract_atom(___2), all, false, undefined, extract_location(___1)}
   end | __Stack].
 
--compile({inline,yeccpars2_397_/1}).
--dialyzer({nowarn_function, yeccpars2_397_/1}).
--compile({nowarn_unused_function,  yeccpars2_397_/1}).
--file("src/compiler/parser/catena_parser.yrl", 275).
-yeccpars2_397_(__Stack0) ->
+-compile({inline,yeccpars2_400_/1}).
+-dialyzer({nowarn_function, yeccpars2_400_/1}).
+-compile({nowarn_unused_function,  yeccpars2_400_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 315).
+yeccpars2_400_(__Stack0) ->
+ [___1 | __Stack] = __Stack0,
+ [begin
+                              [extract_atom(___1)]
+  end | __Stack].
+
+-compile({inline,yeccpars2_402_/1}).
+-dialyzer({nowarn_function, yeccpars2_402_/1}).
+-compile({nowarn_unused_function,  yeccpars2_402_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 316).
+yeccpars2_402_(__Stack0) ->
+ [___3,___2,___1 | __Stack] = __Stack0,
+ [begin
+                                                 [extract_atom(___1) | ___3]
+  end | __Stack].
+
+-compile({inline,yeccpars2_403_/1}).
+-dialyzer({nowarn_function, yeccpars2_403_/1}).
+-compile({nowarn_unused_function,  yeccpars2_403_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 295).
+yeccpars2_403_(__Stack0) ->
+ [___5,___4,___3,___2,___1 | __Stack] = __Stack0,
+ [begin
+                                                              
+    {import, extract_atom(___2), ___4, false, undefined, extract_location(___1)}
+  end | __Stack].
+
+-compile({inline,yeccpars2_404_/1}).
+-dialyzer({nowarn_function, yeccpars2_404_/1}).
+-compile({nowarn_unused_function,  yeccpars2_404_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 279).
+yeccpars2_404_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
                                                    
-    {import_decl,
-        list_to_atom(atom_to_list(extract_atom(___2)) ++ "." ++ atom_to_list(extract_atom(___4))),
-        extract_location(___1)}
+    ModuleName = list_to_atom(atom_to_list(extract_atom(___2)) ++ "." ++
+                               atom_to_list(extract_atom(___4))),
+    {import, ModuleName, all, false, undefined, extract_location(___1)}
   end | __Stack].
 
--compile({inline,yeccpars2_398_/1}).
--dialyzer({nowarn_function, yeccpars2_398_/1}).
--compile({nowarn_unused_function,  yeccpars2_398_/1}).
+-compile({inline,yeccpars2_407_/1}).
+-dialyzer({nowarn_function, yeccpars2_407_/1}).
+-compile({nowarn_unused_function,  yeccpars2_407_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 299).
+yeccpars2_407_(__Stack0) ->
+ [___7,___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
+ [begin
+                                                                              
+    ModuleName = list_to_atom(atom_to_list(extract_atom(___2)) ++ "." ++
+                               atom_to_list(extract_atom(___4))),
+    {import, ModuleName, ___6, false, undefined, extract_location(___1)}
+  end | __Stack].
+
+-compile({inline,yeccpars2_413_/1}).
+-dialyzer({nowarn_function, yeccpars2_413_/1}).
+-compile({nowarn_unused_function,  yeccpars2_413_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 289).
+yeccpars2_413_(__Stack0) ->
+ [___7,___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
+ [begin
+                                                                            
+    ModuleName = list_to_atom(atom_to_list(extract_atom(___3)) ++ "." ++
+                               atom_to_list(extract_atom(___5))),
+    {import, ModuleName, all, true, extract_atom(___7), extract_location(___1)}
+  end | __Stack].
+
+-compile({inline,yeccpars2_416_/1}).
+-dialyzer({nowarn_function, yeccpars2_416_/1}).
+-compile({nowarn_unused_function,  yeccpars2_416_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 309).
+yeccpars2_416_(__Stack0) ->
+ [___10,___9,___8,___7,___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
+ [begin
+                                                                                                       
+    ModuleName = list_to_atom(atom_to_list(extract_atom(___3)) ++ "." ++
+                               atom_to_list(extract_atom(___5))),
+    {import, ModuleName, ___9, true, extract_atom(___7), extract_location(___1)}
+  end | __Stack].
+
+-compile({inline,yeccpars2_417_/1}).
+-dialyzer({nowarn_function, yeccpars2_417_/1}).
+-compile({nowarn_unused_function,  yeccpars2_417_/1}).
 -file("src/compiler/parser/catena_parser.yrl", 285).
-yeccpars2_398_(__Stack0) ->
+yeccpars2_417_(__Stack0) ->
+ [___5,___4,___3,___2,___1 | __Stack] = __Stack0,
+ [begin
+                                                            
+    {import, extract_atom(___3), all, true, extract_atom(___5), extract_location(___1)}
+  end | __Stack].
+
+-compile({inline,yeccpars2_420_/1}).
+-dialyzer({nowarn_function, yeccpars2_420_/1}).
+-compile({nowarn_unused_function,  yeccpars2_420_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 305).
+yeccpars2_420_(__Stack0) ->
+ [___8,___7,___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
+ [begin
+                                                                                       
+    {import, extract_atom(___3), ___7, true, extract_atom(___5), extract_location(___1)}
+  end | __Stack].
+
+-compile({inline,yeccpars2_421_/1}).
+-dialyzer({nowarn_function, yeccpars2_421_/1}).
+-compile({nowarn_unused_function,  yeccpars2_421_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 323).
+yeccpars2_421_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                              
     make_error_declaration(extract_location(___2), "Malformed declaration before 'effect'", ___1)
   end | __Stack].
 
--compile({inline,yeccpars2_399_/1}).
--dialyzer({nowarn_function, yeccpars2_399_/1}).
--compile({nowarn_unused_function,  yeccpars2_399_/1}).
--file("src/compiler/parser/catena_parser.yrl", 289).
-yeccpars2_399_(__Stack0) ->
+-compile({inline,yeccpars2_422_/1}).
+-dialyzer({nowarn_function, yeccpars2_422_/1}).
+-compile({nowarn_unused_function,  yeccpars2_422_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 327).
+yeccpars2_422_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                                
     make_error_declaration(extract_location(___2), "Malformed declaration before 'instance'", ___1)
   end | __Stack].
 
--compile({inline,yeccpars2_400_/1}).
--dialyzer({nowarn_function, yeccpars2_400_/1}).
--compile({nowarn_unused_function,  yeccpars2_400_/1}).
--file("src/compiler/parser/catena_parser.yrl", 287).
-yeccpars2_400_(__Stack0) ->
+-compile({inline,yeccpars2_423_/1}).
+-dialyzer({nowarn_function, yeccpars2_423_/1}).
+-compile({nowarn_unused_function,  yeccpars2_423_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 325).
+yeccpars2_423_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                             
     make_error_declaration(extract_location(___2), "Malformed declaration before 'trait'", ___1)
   end | __Stack].
 
--compile({inline,yeccpars2_401_/1}).
--dialyzer({nowarn_function, yeccpars2_401_/1}).
--compile({nowarn_unused_function,  yeccpars2_401_/1}).
--file("src/compiler/parser/catena_parser.yrl", 283).
-yeccpars2_401_(__Stack0) ->
+-compile({inline,yeccpars2_424_/1}).
+-dialyzer({nowarn_function, yeccpars2_424_/1}).
+-compile({nowarn_unused_function,  yeccpars2_424_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 321).
+yeccpars2_424_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                                 
     make_error_declaration(extract_location(___2), "Malformed declaration before 'transform'", ___1)
   end | __Stack].
 
--compile({inline,yeccpars2_402_/1}).
--dialyzer({nowarn_function, yeccpars2_402_/1}).
--compile({nowarn_unused_function,  yeccpars2_402_/1}).
--file("src/compiler/parser/catena_parser.yrl", 281).
-yeccpars2_402_(__Stack0) ->
+-compile({inline,yeccpars2_425_/1}).
+-dialyzer({nowarn_function, yeccpars2_425_/1}).
+-compile({nowarn_unused_function,  yeccpars2_425_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 319).
+yeccpars2_425_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                            
     make_error_declaration(extract_location(___2), "Malformed declaration before 'type'", ___1)
   end | __Stack].
 
--compile({inline,yeccpars2_403_/1}).
--dialyzer({nowarn_function, yeccpars2_403_/1}).
--compile({nowarn_unused_function,  yeccpars2_403_/1}).
--file("src/compiler/parser/catena_parser.yrl", 355).
-yeccpars2_403_(__Stack0) ->
+-compile({inline,yeccpars2_426_/1}).
+-dialyzer({nowarn_function, yeccpars2_426_/1}).
+-compile({nowarn_unused_function,  yeccpars2_426_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 393).
+yeccpars2_426_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                              
     make_error_declaration(extract_location(___1), "Incomplete effect declaration", ___2)
   end | __Stack].
 
--compile({inline,yeccpars2_404_/1}).
--dialyzer({nowarn_function, yeccpars2_404_/1}).
--compile({nowarn_unused_function,  yeccpars2_404_/1}).
--file("src/compiler/parser/catena_parser.yrl", 358).
-yeccpars2_404_(__Stack0) ->
+-compile({inline,yeccpars2_427_/1}).
+-dialyzer({nowarn_function, yeccpars2_427_/1}).
+-compile({nowarn_unused_function,  yeccpars2_427_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 396).
+yeccpars2_427_(__Stack0) ->
  [begin
                                
     []
   end | __Stack0].
 
--compile({inline,yeccpars2_406_/1}).
--dialyzer({nowarn_function, yeccpars2_406_/1}).
--compile({nowarn_unused_function,  yeccpars2_406_/1}).
--file("src/compiler/parser/catena_parser.yrl", 358).
-yeccpars2_406_(__Stack0) ->
+-compile({inline,yeccpars2_429_/1}).
+-dialyzer({nowarn_function, yeccpars2_429_/1}).
+-compile({nowarn_unused_function,  yeccpars2_429_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 396).
+yeccpars2_429_(__Stack0) ->
  [begin
                                
     []
   end | __Stack0].
 
--compile({inline,yeccpars2_408_/1}).
--dialyzer({nowarn_function, yeccpars2_408_/1}).
--compile({nowarn_unused_function,  yeccpars2_408_/1}).
--file("src/compiler/parser/catena_parser.yrl", 363).
-yeccpars2_408_(__Stack0) ->
+-compile({inline,yeccpars2_431_/1}).
+-dialyzer({nowarn_function, yeccpars2_431_/1}).
+-compile({nowarn_unused_function,  yeccpars2_431_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 401).
+yeccpars2_431_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                                            
@@ -15451,11 +15756,11 @@ yeccpars2_408_(__Stack0) ->
         extract_location(___1)}
   end | __Stack].
 
--compile({inline,yeccpars2_410_/1}).
--dialyzer({nowarn_function, yeccpars2_410_/1}).
--compile({nowarn_unused_function,  yeccpars2_410_/1}).
--file("src/compiler/parser/catena_parser.yrl", 369).
-yeccpars2_410_(__Stack0) ->
+-compile({inline,yeccpars2_433_/1}).
+-dialyzer({nowarn_function, yeccpars2_433_/1}).
+-compile({nowarn_unused_function,  yeccpars2_433_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 407).
+yeccpars2_433_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
                                                            
@@ -15465,22 +15770,22 @@ yeccpars2_410_(__Stack0) ->
         extract_location(___1)}
   end | __Stack].
 
--compile({inline,yeccpars2_411_/1}).
--dialyzer({nowarn_function, yeccpars2_411_/1}).
--compile({nowarn_unused_function,  yeccpars2_411_/1}).
--file("src/compiler/parser/catena_parser.yrl", 360).
-yeccpars2_411_(__Stack0) ->
+-compile({inline,yeccpars2_434_/1}).
+-dialyzer({nowarn_function, yeccpars2_434_/1}).
+-compile({nowarn_unused_function,  yeccpars2_434_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 398).
+yeccpars2_434_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                                                          
     [___1 | ___2]
   end | __Stack].
 
--compile({inline,yeccpars2_412_/1}).
--dialyzer({nowarn_function, yeccpars2_412_/1}).
--compile({nowarn_unused_function,  yeccpars2_412_/1}).
--file("src/compiler/parser/catena_parser.yrl", 348).
-yeccpars2_412_(__Stack0) ->
+-compile({inline,yeccpars2_435_/1}).
+-dialyzer({nowarn_function, yeccpars2_435_/1}).
+-compile({nowarn_unused_function,  yeccpars2_435_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 386).
+yeccpars2_435_(__Stack0) ->
  [___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
                                                            
@@ -15490,110 +15795,110 @@ yeccpars2_412_(__Stack0) ->
         extract_location(___1)}
   end | __Stack].
 
--compile({inline,yeccpars2_413_/1}).
--dialyzer({nowarn_function, yeccpars2_413_/1}).
--compile({nowarn_unused_function,  yeccpars2_413_/1}).
+-compile({inline,yeccpars2_436_/1}).
+-dialyzer({nowarn_function, yeccpars2_436_/1}).
+-compile({nowarn_unused_function,  yeccpars2_436_/1}).
 -file("src/compiler/parser/catena_parser.yrl", 258).
-yeccpars2_413_(__Stack0) ->
+yeccpars2_436_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                                           
     [___1 | ___2]
   end | __Stack].
 
--compile({inline,yeccpars2_414_/1}).
--dialyzer({nowarn_function, yeccpars2_414_/1}).
--compile({nowarn_unused_function,  yeccpars2_414_/1}).
+-compile({inline,yeccpars2_437_/1}).
+-dialyzer({nowarn_function, yeccpars2_437_/1}).
+-compile({nowarn_unused_function,  yeccpars2_437_/1}).
 -file("src/compiler/parser/catena_parser.yrl", 238).
-yeccpars2_414_(__Stack0) ->
+yeccpars2_437_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
                             
     ___1
   end | __Stack].
 
--compile({inline,yeccpars2_415_/1}).
--dialyzer({nowarn_function, yeccpars2_415_/1}).
--compile({nowarn_unused_function,  yeccpars2_415_/1}).
+-compile({inline,yeccpars2_438_/1}).
+-dialyzer({nowarn_function, yeccpars2_438_/1}).
+-compile({nowarn_unused_function,  yeccpars2_438_/1}).
 -file("src/compiler/parser/catena_parser.yrl", 241).
-yeccpars2_415_(__Stack0) ->
+yeccpars2_438_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
                             
     [___1]
   end | __Stack].
 
--compile({inline,yeccpars2_416_/1}).
--dialyzer({nowarn_function, yeccpars2_416_/1}).
--compile({nowarn_unused_function,  yeccpars2_416_/1}).
+-compile({inline,yeccpars2_439_/1}).
+-dialyzer({nowarn_function, yeccpars2_439_/1}).
+-compile({nowarn_unused_function,  yeccpars2_439_/1}).
 -file("src/compiler/parser/catena_parser.yrl", 223).
-yeccpars2_416_(__Stack0) ->
+yeccpars2_439_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                                           
     {module_header, element(2, ___1), ___2, element(4, ___1)}
   end | __Stack].
 
--compile({inline,yeccpars2_422_/1}).
--dialyzer({nowarn_function, yeccpars2_422_/1}).
--compile({nowarn_unused_function,  yeccpars2_422_/1}).
+-compile({inline,yeccpars2_445_/1}).
+-dialyzer({nowarn_function, yeccpars2_445_/1}).
+-compile({nowarn_unused_function,  yeccpars2_445_/1}).
 -file("src/compiler/parser/catena_parser.yrl", 249).
-yeccpars2_422_(__Stack0) ->
+yeccpars2_445_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
                                         
     {export_type, extract_atom(___3)}
   end | __Stack].
 
--compile({inline,yeccpars2_423_/1}).
--dialyzer({nowarn_function, yeccpars2_423_/1}).
--compile({nowarn_unused_function,  yeccpars2_423_/1}).
+-compile({inline,yeccpars2_446_/1}).
+-dialyzer({nowarn_function, yeccpars2_446_/1}).
+-compile({nowarn_unused_function,  yeccpars2_446_/1}).
 -file("src/compiler/parser/catena_parser.yrl", 251).
-yeccpars2_423_(__Stack0) ->
+yeccpars2_446_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
                                              
     {export_transform, extract_atom(___3)}
   end | __Stack].
 
--compile({inline,yeccpars2_424_/1}).
--dialyzer({nowarn_function, yeccpars2_424_/1}).
--compile({nowarn_unused_function,  yeccpars2_424_/1}).
+-compile({inline,yeccpars2_447_/1}).
+-dialyzer({nowarn_function, yeccpars2_447_/1}).
+-compile({nowarn_unused_function,  yeccpars2_447_/1}).
 -file("src/compiler/parser/catena_parser.yrl", 247).
-yeccpars2_424_(__Stack0) ->
+yeccpars2_447_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
                                          
     {export_trait, extract_atom(___3)}
   end | __Stack].
 
--compile({inline,yeccpars2_425_/1}).
--dialyzer({nowarn_function, yeccpars2_425_/1}).
--compile({nowarn_unused_function,  yeccpars2_425_/1}).
+-compile({inline,yeccpars2_448_/1}).
+-dialyzer({nowarn_function, yeccpars2_448_/1}).
+-compile({nowarn_unused_function,  yeccpars2_448_/1}).
 -file("src/compiler/parser/catena_parser.yrl", 253).
-yeccpars2_425_(__Stack0) ->
+yeccpars2_448_(__Stack0) ->
  [___3,___2,___1 | __Stack] = __Stack0,
  [begin
                                           
     {export_effect, extract_atom(___3)}
   end | __Stack].
 
--compile({inline,yeccpars2_426_/1}).
--dialyzer({nowarn_function, yeccpars2_426_/1}).
--compile({nowarn_unused_function,  yeccpars2_426_/1}).
+-compile({inline,yeccpars2_449_/1}).
+-dialyzer({nowarn_function, yeccpars2_449_/1}).
+-compile({nowarn_unused_function,  yeccpars2_449_/1}).
 -file("src/compiler/parser/catena_parser.yrl", 243).
-yeccpars2_426_(__Stack0) ->
+yeccpars2_449_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                                         
     [___1 | ___2]
   end | __Stack].
 
--compile({inline,yeccpars2_427_/1}).
--dialyzer({nowarn_function, yeccpars2_427_/1}).
--compile({nowarn_unused_function,  yeccpars2_427_/1}).
+-compile({inline,yeccpars2_450_/1}).
+-dialyzer({nowarn_function, yeccpars2_450_/1}).
+-compile({nowarn_unused_function,  yeccpars2_450_/1}).
 -file("src/compiler/parser/catena_parser.yrl", 209).
-yeccpars2_427_(__Stack0) ->
+yeccpars2_450_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                                              
@@ -15605,11 +15910,11 @@ yeccpars2_427_(__Stack0) ->
         element(4, ___1)}
   end | __Stack].
 
--compile({inline,yeccpars2_428_/1}).
--dialyzer({nowarn_function, yeccpars2_428_/1}).
--compile({nowarn_unused_function,  yeccpars2_428_/1}).
--file("src/compiler/parser/catena_parser.yrl", 552).
-yeccpars2_428_(__Stack0) ->
+-compile({inline,yeccpars2_451_/1}).
+-dialyzer({nowarn_function, yeccpars2_451_/1}).
+-compile({nowarn_unused_function,  yeccpars2_451_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 590).
+yeccpars2_451_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                                                          
@@ -15620,32 +15925,32 @@ yeccpars2_428_(__Stack0) ->
         extract_location(___1)}
   end | __Stack].
 
--compile({inline,yeccpars2_429_/1}).
--dialyzer({nowarn_function, yeccpars2_429_/1}).
--compile({nowarn_unused_function,  yeccpars2_429_/1}).
--file("src/compiler/parser/catena_parser.yrl", 595).
-yeccpars2_429_(__Stack0) ->
+-compile({inline,yeccpars2_452_/1}).
+-dialyzer({nowarn_function, yeccpars2_452_/1}).
+-compile({nowarn_unused_function,  yeccpars2_452_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 633).
+yeccpars2_452_(__Stack0) ->
  [___1 | __Stack] = __Stack0,
  [begin
                                        
     [___1]
   end | __Stack].
 
--compile({inline,yeccpars2_431_/1}).
--dialyzer({nowarn_function, yeccpars2_431_/1}).
--compile({nowarn_unused_function,  yeccpars2_431_/1}).
--file("src/compiler/parser/catena_parser.yrl", 654).
-yeccpars2_431_(__Stack0) ->
+-compile({inline,yeccpars2_454_/1}).
+-dialyzer({nowarn_function, yeccpars2_454_/1}).
+-compile({nowarn_unused_function,  yeccpars2_454_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 692).
+yeccpars2_454_(__Stack0) ->
  [begin
                           
     []
   end | __Stack0].
 
--compile({inline,yeccpars2_437_/1}).
--dialyzer({nowarn_function, yeccpars2_437_/1}).
--compile({nowarn_unused_function,  yeccpars2_437_/1}).
--file("src/compiler/parser/catena_parser.yrl", 607).
-yeccpars2_437_(__Stack0) ->
+-compile({inline,yeccpars2_460_/1}).
+-dialyzer({nowarn_function, yeccpars2_460_/1}).
+-compile({nowarn_unused_function,  yeccpars2_460_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 645).
+yeccpars2_460_(__Stack0) ->
  [___7,___6,___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
                                                                                   
@@ -15656,11 +15961,11 @@ yeccpars2_437_(__Stack0) ->
         extract_location(___1)}
   end | __Stack].
 
--compile({inline,yeccpars2_438_/1}).
--dialyzer({nowarn_function, yeccpars2_438_/1}).
--compile({nowarn_unused_function,  yeccpars2_438_/1}).
--file("src/compiler/parser/catena_parser.yrl", 600).
-yeccpars2_438_(__Stack0) ->
+-compile({inline,yeccpars2_461_/1}).
+-dialyzer({nowarn_function, yeccpars2_461_/1}).
+-compile({nowarn_unused_function,  yeccpars2_461_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 638).
+yeccpars2_461_(__Stack0) ->
  [___5,___4,___3,___2,___1 | __Stack] = __Stack0,
  [begin
                                                                     
@@ -15671,11 +15976,11 @@ yeccpars2_438_(__Stack0) ->
         extract_location(___1)}
   end | __Stack].
 
--compile({inline,yeccpars2_439_/1}).
--dialyzer({nowarn_function, yeccpars2_439_/1}).
--compile({nowarn_unused_function,  yeccpars2_439_/1}).
--file("src/compiler/parser/catena_parser.yrl", 597).
-yeccpars2_439_(__Stack0) ->
+-compile({inline,yeccpars2_462_/1}).
+-dialyzer({nowarn_function, yeccpars2_462_/1}).
+-compile({nowarn_unused_function,  yeccpars2_462_/1}).
+-file("src/compiler/parser/catena_parser.yrl", 635).
+yeccpars2_462_(__Stack0) ->
  [___2,___1 | __Stack] = __Stack0,
  [begin
                                                          
@@ -15683,4 +15988,4 @@ yeccpars2_439_(__Stack0) ->
   end | __Stack].
 
 
--file("src/compiler/parser/catena_parser.yrl", 1220).
+-file("src/compiler/parser/catena_parser.yrl", 1258).

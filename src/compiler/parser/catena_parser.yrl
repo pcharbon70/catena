@@ -19,7 +19,7 @@ Header
 Nonterminals
   catena_module
   module_header module_decl export_decl export_list export_item
-  import_decl
+  import_decl import_items
   declarations declaration
   type_decl transform_decl effect_decl trait_decl instance_decl
   test_decl property_decl property_body property_bindings property_binding
@@ -294,6 +294,30 @@ import_decl -> import qualified upper_ident dot upper_ident as upper_ident :
     ModuleName = list_to_atom(atom_to_list(extract_atom('$3')) ++ "." ++
                                atom_to_list(extract_atom('$5'))),
     {import, ModuleName, all, true, extract_atom('$7'), extract_location('$1')}.
+
+%% Selective import: import Module (item1, item2)
+import_decl -> import upper_ident lparen import_items rparen :
+    {import, extract_atom('$2'), '$4', false, undefined, extract_location('$1')}.
+
+%% Selective dotted import: import Effect.IO (item1, item2)
+import_decl -> import upper_ident dot upper_ident lparen import_items rparen :
+    ModuleName = list_to_atom(atom_to_list(extract_atom('$2')) ++ "." ++
+                               atom_to_list(extract_atom('$4'))),
+    {import, ModuleName, '$6', false, undefined, extract_location('$1')}.
+
+%% Qualified selective import: import qualified Module as Alias (item1, item2)
+import_decl -> import qualified upper_ident as upper_ident lparen import_items rparen :
+    {import, extract_atom('$3'), '$7', true, extract_atom('$5'), extract_location('$1')}.
+
+%% Qualified dotted selective import: import qualified Effect.IO as IO (item1, item2)
+import_decl -> import qualified upper_ident dot upper_ident as upper_ident lparen import_items rparen :
+    ModuleName = list_to_atom(atom_to_list(extract_atom('$3')) ++ "." ++
+                               atom_to_list(extract_atom('$5'))),
+    {import, ModuleName, '$9', true, extract_atom('$7'), extract_location('$1')}.
+
+%% Import items list (comma-separated identifiers)
+import_items -> upper_ident : [extract_atom('$1')].
+import_items -> upper_ident comma import_items : [extract_atom('$1') | '$3'].
 
 %% Error recovery: skip malformed declaration and continue with next
 declaration -> error type :
