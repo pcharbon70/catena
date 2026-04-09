@@ -19,7 +19,7 @@ Header
 Nonterminals
   catena_module
   module_header module_decl export_decl export_list export_item
-  import_decl
+  import_decl import_items
   declarations declaration
   type_decl transform_decl effect_decl trait_decl instance_decl
   test_decl property_decl property_body property_bindings property_binding
@@ -271,15 +271,53 @@ declaration -> test_decl : '$1'.
 declaration -> property_decl : '$1'.
 declaration -> import_decl : '$1'.
 
-%% Import declarations (parsed as declarations, extracted to module imports field)
+%%----------------------------------------------------------------------------
+%% Import Declarations
+%%----------------------------------------------------------------------------
+
+%% Simple import: import Module
 import_decl -> import upper_ident :
-    {import_decl, extract_atom('$2'), extract_location('$1')}.
+    {import, extract_atom('$2'), all, false, undefined, extract_location('$1')}.
 
 %% Dotted import: import Effect.IO
 import_decl -> import upper_ident dot upper_ident :
-    {import_decl,
-        list_to_atom(atom_to_list(extract_atom('$2')) ++ "." ++ atom_to_list(extract_atom('$4'))),
-        extract_location('$1')}.
+    ModuleName = list_to_atom(atom_to_list(extract_atom('$2')) ++ "." ++
+                               atom_to_list(extract_atom('$4'))),
+    {import, ModuleName, all, false, undefined, extract_location('$1')}.
+
+%% Qualified import: import qualified Module as Alias
+import_decl -> import qualified upper_ident as upper_ident :
+    {import, extract_atom('$3'), all, true, extract_atom('$5'), extract_location('$1')}.
+
+%% Qualified dotted import: import qualified Effect.IO as IO
+import_decl -> import qualified upper_ident dot upper_ident as upper_ident :
+    ModuleName = list_to_atom(atom_to_list(extract_atom('$3')) ++ "." ++
+                               atom_to_list(extract_atom('$5'))),
+    {import, ModuleName, all, true, extract_atom('$7'), extract_location('$1')}.
+
+%% Selective import: import Module (item1, item2)
+import_decl -> import upper_ident lparen import_items rparen :
+    {import, extract_atom('$2'), '$4', false, undefined, extract_location('$1')}.
+
+%% Selective dotted import: import Effect.IO (item1, item2)
+import_decl -> import upper_ident dot upper_ident lparen import_items rparen :
+    ModuleName = list_to_atom(atom_to_list(extract_atom('$2')) ++ "." ++
+                               atom_to_list(extract_atom('$4'))),
+    {import, ModuleName, '$6', false, undefined, extract_location('$1')}.
+
+%% Qualified selective import: import qualified Module as Alias (item1, item2)
+import_decl -> import qualified upper_ident as upper_ident lparen import_items rparen :
+    {import, extract_atom('$3'), '$7', true, extract_atom('$5'), extract_location('$1')}.
+
+%% Qualified dotted selective import: import qualified Effect.IO as IO (item1, item2)
+import_decl -> import qualified upper_ident dot upper_ident as upper_ident lparen import_items rparen :
+    ModuleName = list_to_atom(atom_to_list(extract_atom('$3')) ++ "." ++
+                               atom_to_list(extract_atom('$5'))),
+    {import, ModuleName, '$9', true, extract_atom('$7'), extract_location('$1')}.
+
+%% Import items list (comma-separated identifiers)
+import_items -> upper_ident : [extract_atom('$1')].
+import_items -> upper_ident comma import_items : [extract_atom('$1') | '$3'].
 
 %% Error recovery: skip malformed declaration and continue with next
 declaration -> error type :
@@ -1209,11 +1247,11 @@ extract_trait_constraint(TypeExpr) ->
 %% @doc Extract import declarations from a list of declarations
 %% Returns list of {import, ModuleName, Loc} tuples
 extract_imports(Decls) ->
-    [{import, Name, Loc} || {import_decl, Name, Loc} <- Decls].
+    [Import || {import, _, _, _, _, _} = Import <- Decls].
 
 %% @doc Filter out import declarations from a list of declarations
 %% Returns all non-import declarations
 filter_imports(Decls) ->
-    [D || D <- Decls, element(1, D) =/= import_decl].
+    [D || D <- Decls, element(1, D) =/= import].
 
 
