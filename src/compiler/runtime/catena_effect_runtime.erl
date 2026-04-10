@@ -316,18 +316,45 @@ io_get_line() ->
 process_handler() ->
     {'Process', [
         {spawn, fun process_spawn/1},
+        {spawn_link, fun process_spawn_link/1},
         {send, fun process_send/2},
-        {self, fun process_self/0}
+        {self, fun process_self/0},
+        {link, fun process_link/1},
+        {unlink, fun process_unlink/1},
+        {monitor, fun process_monitor/1},
+        {demonitor, fun process_demonitor/1},
+        {whereis, fun process_whereis/1},
+        {register, fun process_register/2},
+        {is_process_alive, fun process_is_process_alive/1},
+        {trap_exit, fun process_trap_exit/1}
     ]}.
 
 %% Perform Process operations directly (for builtin handler)
 -spec perform_process(atom(), list()) -> term().
 perform_process(spawn, [Fun]) ->
     process_spawn(Fun);
+perform_process(spawn_link, [Fun]) ->
+    process_spawn_link(Fun);
 perform_process(send, [Pid, Msg]) ->
     process_send(Pid, Msg);
 perform_process(self, []) ->
     process_self();
+perform_process(link, [Pid]) ->
+    process_link(Pid);
+perform_process(unlink, [Pid]) ->
+    process_unlink(Pid);
+perform_process(monitor, [Pid]) ->
+    process_monitor(Pid);
+perform_process(demonitor, [Ref]) ->
+    process_demonitor(Ref);
+perform_process(whereis, [Name]) ->
+    process_whereis(Name);
+perform_process(register, [Name, Pid]) ->
+    process_register(Name, Pid);
+perform_process(is_process_alive, [Pid]) ->
+    process_is_process_alive(Pid);
+perform_process(trap_exit, [Flag]) ->
+    process_trap_exit(Flag);
 perform_process(Operation, _Args) ->
     erlang:error({unknown_process_operation, Operation}).
 
@@ -351,6 +378,44 @@ process_send(Pid, Msg) ->
 -spec process_self() -> pid().
 process_self() ->
     self().
+
+%% Additional Process effect operations for Phase 5 (Actor Model Integration)
+
+-spec process_spawn_link(fun(() -> term())) -> pid().
+process_spawn_link(Fun) ->
+    spawn_link(Fun).
+
+-spec process_link(pid()) -> true.
+process_link(Pid) ->
+    erlang:link(Pid).
+
+-spec process_unlink(pid()) -> true.
+process_unlink(Pid) ->
+    erlang:unlink(Pid).
+
+-spec process_monitor(pid()) -> reference().
+process_monitor(Pid) ->
+    erlang:monitor(process, Pid).
+
+-spec process_demonitor(reference()) -> true.
+process_demonitor(Ref) ->
+    erlang:demonitor(Ref).
+
+-spec process_whereis(atom()) -> pid() | undefined.
+process_whereis(Name) ->
+    erlang:whereis(Name).
+
+-spec process_register(atom(), pid()) -> true.
+process_register(Name, Pid) ->
+    erlang:register(Name, Pid).
+
+-spec process_is_process_alive(pid()) -> boolean().
+process_is_process_alive(Pid) ->
+    erlang:is_process_alive(Pid).
+
+-spec process_trap_exit(boolean()) -> boolean().
+process_trap_exit(Flag) ->
+    erlang:process_flag(trap_exit, Flag).
 
 %%====================================================================
 %% Utilities
