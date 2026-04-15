@@ -45,7 +45,7 @@
 -export([format_error/1]).
 
 %% User code. This is placed here to allow extra attributes.
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 159).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 159).
 
 %% Export custom functions
 -export([tokenize/1]).
@@ -587,7 +587,7 @@ tab_size() -> 8.
 %% return signal either an unrecognised character or end of current
 %% input.
 
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.erl", 555).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.erl", 555).
 yystate() -> 202.
 
 yystate(205, [97|Ics], Line, Col, Tlen, _, _) ->
@@ -3390,417 +3390,417 @@ yyaction(82, TokenLen, YYtcs, TokenLine, _) ->
 yyaction(_, _, _, _, _) -> error.
 
 -compile({inline,yyaction_0/0}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 39).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 39).
 yyaction_0() ->
      skip_token .
 
 -compile({inline,yyaction_1/0}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 42).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 42).
 yyaction_1() ->
      skip_token .
 
 -compile({inline,yyaction_2/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 45).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 45).
 yyaction_2(TokenLine) ->
      { token, { comment_start, TokenLine } } .
 
 -compile({inline,yyaction_3/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 46).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 46).
 yyaction_3(TokenLine) ->
      { token, { comment_end, TokenLine } } .
 
 -compile({inline,yyaction_4/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 49).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 49).
 yyaction_4(TokenLine) ->
      { token, { type, TokenLine } } .
 
 -compile({inline,yyaction_5/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 50).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 50).
 yyaction_5(TokenLine) ->
      { token, { transform, TokenLine } } .
 
 -compile({inline,yyaction_6/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 51).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 51).
 yyaction_6(TokenLine) ->
      { token, { 'let', TokenLine } } .
 
 -compile({inline,yyaction_7/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 52).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 52).
 yyaction_7(TokenLine) ->
      { token, { match, TokenLine } } .
 
 -compile({inline,yyaction_8/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 53).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 53).
 yyaction_8(TokenLine) ->
      { token, { trait, TokenLine } } .
 
 -compile({inline,yyaction_9/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 54).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 54).
 yyaction_9(TokenLine) ->
      { token, { instance, TokenLine } } .
 
 -compile({inline,yyaction_10/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 55).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 55).
 yyaction_10(TokenLine) ->
      { token, { effect, TokenLine } } .
 
 -compile({inline,yyaction_11/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 56).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 56).
 yyaction_11(TokenLine) ->
      { token, { perform, TokenLine } } .
 
 -compile({inline,yyaction_12/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 57).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 57).
 yyaction_12(TokenLine) ->
      { token, { handle, TokenLine } } .
 
 -compile({inline,yyaction_13/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 58).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 58).
 yyaction_13(TokenLine) ->
      { token, { actor, TokenLine } } .
 
 -compile({inline,yyaction_14/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 59).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 59).
 yyaction_14(TokenLine) ->
      { token, { process, TokenLine } } .
 
 -compile({inline,yyaction_15/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 60).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 60).
 yyaction_15(TokenLine) ->
      { token, { module, TokenLine } } .
 
 -compile({inline,yyaction_16/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 63).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 63).
 yyaction_16(TokenLine) ->
      { token, { in, TokenLine } } .
 
 -compile({inline,yyaction_17/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 64).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 64).
 yyaction_17(TokenLine) ->
      { token, { 'end', TokenLine } } .
 
 -compile({inline,yyaction_18/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 65).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 65).
 yyaction_18(TokenLine) ->
      { token, { then, TokenLine } } .
 
 -compile({inline,yyaction_19/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 66).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 66).
 yyaction_19(TokenLine) ->
      { token, { fn, TokenLine } } .
 
 -compile({inline,yyaction_20/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 67).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 67).
 yyaction_20(TokenLine) ->
      { token, { where, TokenLine } } .
 
 -compile({inline,yyaction_21/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 68).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 68).
 yyaction_21(TokenLine) ->
      { token, { 'case', TokenLine } } .
 
 -compile({inline,yyaction_22/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 69).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 69).
 yyaction_22(TokenLine) ->
      { token, { 'of', TokenLine } } .
 
 -compile({inline,yyaction_23/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 70).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 70).
 yyaction_23(TokenLine) ->
      { token, { 'when', TokenLine } } .
 
 -compile({inline,yyaction_24/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 71).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 71).
 yyaction_24(TokenLine) ->
      { token, { as, TokenLine } } .
 
 -compile({inline,yyaction_25/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 72).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 72).
 yyaction_25(TokenLine) ->
      { token, { forall, TokenLine } } .
 
 -compile({inline,yyaction_26/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 73).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 73).
 yyaction_26(TokenLine) ->
      { token, { operation, TokenLine } } .
 
 -compile({inline,yyaction_27/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 76).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 76).
 yyaction_27(TokenLine) ->
      { token, { import, TokenLine } } .
 
 -compile({inline,yyaction_28/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 77).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 77).
 yyaction_28(TokenLine) ->
      { token, { export, TokenLine } } .
 
 -compile({inline,yyaction_29/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 78).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 78).
 yyaction_29(TokenLine) ->
      { token, { exports, TokenLine } } .
 
 -compile({inline,yyaction_30/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 79).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 79).
 yyaction_30(TokenLine) ->
      { token, { qualified, TokenLine } } .
 
 -compile({inline,yyaction_31/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 80).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 80).
 yyaction_31(TokenLine) ->
      { token, { private, TokenLine } } .
 
 -compile({inline,yyaction_32/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 83).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 83).
 yyaction_32(TokenLine) ->
      { token, { do, TokenLine } } .
 
 -compile({inline,yyaction_33/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 86).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 86).
 yyaction_33(TokenLine) ->
      { token, { test, TokenLine } } .
 
 -compile({inline,yyaction_34/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 87).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 87).
 yyaction_34(TokenLine) ->
      { token, { property, TokenLine } } .
 
 -compile({inline,yyaction_35/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 90).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 90).
 yyaction_35(TokenLine) ->
      { token, { extend, TokenLine } } .
 
 -compile({inline,yyaction_36/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 91).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 91).
 yyaction_36(TokenLine) ->
      { token, { constrain, TokenLine } } .
 
 -compile({inline,yyaction_37/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 100).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 100).
 yyaction_37(TokenLine) ->
      { token, { pipe_right, TokenLine } } .
 
 -compile({inline,yyaction_38/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 101).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 101).
 yyaction_38(TokenLine) ->
      { token, { kleisli, TokenLine } } .
 
 -compile({inline,yyaction_39/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 102).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 102).
 yyaction_39(TokenLine) ->
      { token, { bind, TokenLine } } .
 
 -compile({inline,yyaction_40/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 103).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 103).
 yyaction_40(TokenLine) ->
      { token, { fmap, TokenLine } } .
 
 -compile({inline,yyaction_41/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 104).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 104).
 yyaction_41(TokenLine) ->
      { token, { ap, TokenLine } } .
 
 -compile({inline,yyaction_42/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 105).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 105).
 yyaction_42(TokenLine) ->
      { token, { mappend, TokenLine } } .
 
 -compile({inline,yyaction_43/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 106).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 106).
 yyaction_43(TokenLine) ->
      { token, { arrow, TokenLine } } .
 
 -compile({inline,yyaction_44/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 107).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 107).
 yyaction_44(TokenLine) ->
      { token, { double_arrow, TokenLine } } .
 
 -compile({inline,yyaction_45/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 108).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 108).
 yyaction_45(TokenLine) ->
      { token, { setoid_eq, TokenLine } } .
 
 -compile({inline,yyaction_46/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 109).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 109).
 yyaction_46(TokenLine) ->
      { token, { setoid_neq, TokenLine } } .
 
 -compile({inline,yyaction_47/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 110).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 110).
 yyaction_47(TokenLine) ->
      { token, { eq, TokenLine } } .
 
 -compile({inline,yyaction_48/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 111).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 111).
 yyaction_48(TokenLine) ->
      { token, { neq, TokenLine } } .
 
 -compile({inline,yyaction_49/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 112).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 112).
 yyaction_49(TokenLine) ->
      { token, { lte, TokenLine } } .
 
 -compile({inline,yyaction_50/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 113).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 113).
 yyaction_50(TokenLine) ->
      { token, { gte, TokenLine } } .
 
 -compile({inline,yyaction_51/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 114).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 114).
 yyaction_51(TokenLine) ->
      { token, { 'or', TokenLine } } .
 
 -compile({inline,yyaction_52/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 115).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 115).
 yyaction_52(TokenLine) ->
      { token, { 'and', TokenLine } } .
 
 -compile({inline,yyaction_53/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 116).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 116).
 yyaction_53(TokenLine) ->
      { token, { cons, TokenLine } } .
 
 -compile({inline,yyaction_54/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 117).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 117).
 yyaction_54(TokenLine) ->
      { token, { left_arrow, TokenLine } } .
 
 -compile({inline,yyaction_55/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 118).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 118).
 yyaction_55(TokenLine) ->
      { token, { range, TokenLine } } .
 
 -compile({inline,yyaction_56/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 121).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 121).
 yyaction_56(TokenLine) ->
      { token, { colon, TokenLine } } .
 
 -compile({inline,yyaction_57/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 122).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 122).
 yyaction_57(TokenLine) ->
      { token, { equals, TokenLine } } .
 
 -compile({inline,yyaction_58/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 123).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 123).
 yyaction_58(TokenLine) ->
      { token, { pipe, TokenLine } } .
 
 -compile({inline,yyaction_59/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 124).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 124).
 yyaction_59(TokenLine) ->
      { token, { lt, TokenLine } } .
 
 -compile({inline,yyaction_60/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 125).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 125).
 yyaction_60(TokenLine) ->
      { token, { gt, TokenLine } } .
 
 -compile({inline,yyaction_61/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 126).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 126).
 yyaction_61(TokenLine) ->
      { token, { plus_plus, TokenLine } } .
 
 -compile({inline,yyaction_62/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 127).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 127).
 yyaction_62(TokenLine) ->
      { token, { plus, TokenLine } } .
 
 -compile({inline,yyaction_63/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 128).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 128).
 yyaction_63(TokenLine) ->
      { token, { minus, TokenLine } } .
 
 -compile({inline,yyaction_64/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 129).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 129).
 yyaction_64(TokenLine) ->
      { token, { star, TokenLine } } .
 
 -compile({inline,yyaction_65/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 130).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 130).
 yyaction_65(TokenLine) ->
      { token, { slash, TokenLine } } .
 
 -compile({inline,yyaction_66/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 131).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 131).
 yyaction_66(TokenLine) ->
      { token, { dot, TokenLine } } .
 
 -compile({inline,yyaction_67/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 134).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 134).
 yyaction_67(TokenLine) ->
      { token, { lbrace, TokenLine } } .
 
 -compile({inline,yyaction_68/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 135).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 135).
 yyaction_68(TokenLine) ->
      { token, { rbrace, TokenLine } } .
 
 -compile({inline,yyaction_69/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 136).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 136).
 yyaction_69(TokenLine) ->
      { token, { lbracket, TokenLine } } .
 
 -compile({inline,yyaction_70/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 137).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 137).
 yyaction_70(TokenLine) ->
      { token, { rbracket, TokenLine } } .
 
 -compile({inline,yyaction_71/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 138).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 138).
 yyaction_71(TokenLine) ->
      { token, { lparen, TokenLine } } .
 
 -compile({inline,yyaction_72/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 139).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 139).
 yyaction_72(TokenLine) ->
      { token, { rparen, TokenLine } } .
 
 -compile({inline,yyaction_73/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 140).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 140).
 yyaction_73(TokenLine) ->
      { token, { comma, TokenLine } } .
 
 -compile({inline,yyaction_74/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 141).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 141).
 yyaction_74(TokenLine) ->
      { token, { semicolon, TokenLine } } .
 
 -compile({inline,yyaction_75/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 142).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 142).
 yyaction_75(TokenLine) ->
      { token, { ampersand, TokenLine } } .
 
 -compile({inline,yyaction_76/1}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 143).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 143).
 yyaction_76(TokenLine) ->
      { token, { underscore, TokenLine } } .
 
 -compile({inline,yyaction_77/2}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 146).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 146).
 yyaction_77(TokenChars, TokenLine) ->
      { token, { float, TokenLine, parse_scientific (TokenChars) } } .
 
 -compile({inline,yyaction_78/2}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 147).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 147).
 yyaction_78(TokenChars, TokenLine) ->
      { token, { float, TokenLine, parse_float (TokenChars) } } .
 
 -compile({inline,yyaction_79/2}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 148).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 148).
 yyaction_79(TokenChars, TokenLine) ->
      { token, { integer, TokenLine, parse_integer (TokenChars) } } .
 
 -compile({inline,yyaction_80/2}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 151).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 151).
 yyaction_80(TokenChars, TokenLine) ->
      validate_string_literal (TokenLine, TokenChars) .
 
 -compile({inline,yyaction_81/2}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 154).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 154).
 yyaction_81(TokenChars, TokenLine) ->
      validate_identifier (TokenLine, TokenChars, upper_ident) .
 
 -compile({inline,yyaction_82/2}).
--file("/Users/Pascal/code/personal/catena/src/compiler/lexer/catena_lexer.xrl", 155).
+-file("/Users/Pascal/code/catena/src/compiler/lexer/catena_lexer.xrl", 155).
 yyaction_82(TokenChars, TokenLine) ->
      validate_identifier (TokenLine, TokenChars, lower_ident) .
 -file("/Users/Pascal/.asdf/installs/erlang/28.3.1/lib/parsetools-2.7/include/leexinc.hrl", 377).
