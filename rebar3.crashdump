@@ -1,6 +1,6 @@
 Error: badarg
 [{erlang,'++',
-         [{error,{rebar_prv_eunit,{test,"validate_step_valid_eq_test"}}},[]],
+         [{error,{rebar_prv_eunit,{test,"validate_state_laws_test"}}},[]],
          [{error_info,#{module => erl_erts_errors}}]},
  {lists,flatmap_1,2,[{file,"lists.erl"},{line,2433}]},
  {rebar_prv_eunit,resolve_tests,1,
