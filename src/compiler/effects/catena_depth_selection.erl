@@ -185,8 +185,6 @@ depth_precedence(#{type := Type} = H1, #{type := Type} = H2) ->
     {ok, handler()} | {unhandled, operation()}.
 resolve_handler_conflict(_Operation, [], _Options) ->
     {unhandled, no_handler};
-resolve_handler_conflict(_Operation, [Handler], _Options) ->
-    {ok, Handler};
 resolve_handler_conflict(Operation, Handlers, Options) ->
     % Find handlers matching the operation's effect
     {EffectName, _Op, _Args} = Operation,
