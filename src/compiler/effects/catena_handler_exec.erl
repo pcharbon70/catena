@@ -52,7 +52,8 @@
     coerce_handler/2,
     check_subtype/2,
     check_compatible/2,
-    safe_cast/3
+    safe_cast/3,
+    effects_subsumes/2
 ]).
 
 %% Type error handling
