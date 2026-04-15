@@ -84,8 +84,8 @@ handler_type() ->
         kind => handler_type,
         name => undefined,
         operations => #{},
-        input => catena_types:t_var("A"),
-        output => catena_types:t_var("B"),
+        input => catena_types:tcon('A'),
+        output => catena_types:tcon('B'),
         effects => catena_row_types:empty_row(),
         constraints => #{total => true, deep => false}
     }.
@@ -114,7 +114,7 @@ operation_sig() ->
     #{
         kind => operation_sig,
         params => [],
-        result => catena_types:t_var("T"),
+        result => catena_types:tcon('T'),
         effects => catena_row_types:empty_row()
     }.
 
@@ -187,11 +187,13 @@ is_operation_sig(_) ->
 %% @doc Validate a handler type.
 -spec is_valid_handler_type(handler_type()) -> boolean().
 is_valid_handler_type(#{kind := handler_type, operations := Ops, input := In, output := Out}) ->
-    maps:is_kind(Ops, map) andalso
+    is_map(Ops) andalso
     maps:size(Ops) > 0 andalso
     is_valid_type(In) andalso
     is_valid_type(Out) andalso
-    maps:fold(fun(_, Sig, Acc) -> Acc andalso is_valid_operation_sig(Sig) end, true, Ops).
+    maps:fold(fun(_, Sig, Acc) -> Acc andalso is_valid_operation_sig(Sig) end, true, Ops);
+is_valid_handler_type(_) ->
+    false.
 
 %% @doc Validate an operation signature.
 -spec is_valid_operation_sig(operation_sig()) -> boolean().

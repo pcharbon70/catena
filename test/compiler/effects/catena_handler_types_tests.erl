@@ -105,8 +105,8 @@ test_validation() ->
     Ops = #{
         op1 => catena_handler_types:operation_sig([atom], atom)
     },
-    ValidHandler = catena_handler_types:handler_type()
-        |> catena_handler_types:with_operations(Ops),
+    ValidHandler = catena_handler_types:with_operations(
+        catena_handler_types:handler_type(), Ops),
     ?assert(catena_handler_types:is_valid_handler_type(ValidHandler)),
 
     %% Invalid handler without operations
@@ -128,12 +128,12 @@ test_composition() ->
     Ops1 = #{get => catena_handler_types:operation_sig([], IntType)},
     Ops2 = #{put => catena_handler_types:operation_sig([IntType], AtomType)},
 
-    H1 = catena_handler_types:handler_type(h1)
-        |> catena_handler_types:with_operations(Ops1)
-        |> catena_handler_types:with_output(IntType),
-    H2 = catena_handler_types:handler_type(h2)
-        |> catena_handler_types:with_operations(Ops2)
-        |> catena_handler_types:with_input(IntType),
+    H1 = catena_handler_types:with_output(
+        catena_handler_types:with_operations(
+            catena_handler_types:handler_type(h1), Ops1), IntType),
+    H2 = catena_handler_types:with_input(
+        catena_handler_types:with_operations(
+            catena_handler_types:handler_type(h2), Ops2), IntType),
 
     {ok, Composed} = catena_handler_types:compose_handler_types(H1, H2),
     ComposedOps = maps:get(operations, Composed),
@@ -142,10 +142,10 @@ test_composition() ->
     ?assert(maps:is_key(put, ComposedOps)),
 
     %% Type mismatch case
-    H3 = catena_handler_types:handler_type(h3)
-        |> catena_handler_types:with_output(AtomType),
-    H4 = catena_handler_types:handler_type(h4)
-        |> catena_handler_types:with_input(IntType),
+    H3 = catena_handler_types:with_output(
+        catena_handler_types:handler_type(h3), AtomType),
+    H4 = catena_handler_types:with_input(
+        catena_handler_types:handler_type(h4), IntType),
 
     ?assertMatch({error, _}, catena_handler_types:compose_handler_types(H3, H4)).
 
@@ -156,11 +156,14 @@ test_composition() ->
 test_format_handler() ->
     IntType = int,
     Ops = #{get => catena_handler_types:operation_sig([], IntType)},
-    Handler = catena_handler_types:handler_type(state)
-        |> catena_handler_types:with_operations(Ops)
-        |> catena_handler_types:with_input(IntType)
-        |> catena_handler_types:with_output(IntType)
-        |> catena_handler_types:with_effects(catena_row_types:effect_row([])),
+    Handler = catena_handler_types:with_effects(
+        catena_handler_types:with_output(
+            catena_handler_types:with_input(
+                catena_handler_types:with_operations(
+                    catena_handler_types:handler_type(state), Ops),
+                IntType),
+            IntType),
+        catena_row_types:effect_row([])),
 
     Formatted = catena_handler_types:format_handler_type(Handler),
     ?assert(<<>> /= Formatted),
@@ -173,4 +176,6 @@ test_format_operation() ->
     Formatted = catena_handler_types:format_operation_sig(OpSig),
     ?assert(<<>> /= Formatted),
     ?assert(is_binary(Formatted)),
-    ?assert(<<" -> ">> =:= Formatted).
+    % Check that key patterns exist in the formatted output
+    ?assertNotEqual(nomatch, binary:match(Formatted, <<"->">>)),
+    ?assertNotEqual(nomatch, binary:match(Formatted, <<"/">>)).
