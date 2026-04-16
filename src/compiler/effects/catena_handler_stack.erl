@@ -34,7 +34,8 @@
     push/0,
     push/1,
     pop/0,
-    pop/1
+    pop/1,
+    reset/0
 ]).
 
 %% Stack inspection
@@ -116,6 +117,12 @@ pop(Default) ->
         {ok, Top} -> Top;
         {error, empty} -> Default
     end.
+
+%% @doc Reset the stack to empty.
+-spec reset() -> ok.
+reset() ->
+    put_stack([]),
+    ok.
 
 %%====================================================================
 %% Stack Inspection
