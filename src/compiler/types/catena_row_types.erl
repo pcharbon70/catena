@@ -163,6 +163,11 @@ row_difference(#{elements := Es1, row_var := Rv}, #{elements := Es2}) ->
 row_contains(#{elements := Es}, Effect) ->
     lists:member(Effect, Es).
 
+%% @doc Check if an effect row contains all effects from another row.
+-spec row_contains_all(effect_row(), effect_row()) -> boolean().
+row_contains_all(#{elements := Es1}, #{elements := Es2}) ->
+    lists:all(fun(E) -> lists:member(E, Es1) end, Es2).
+
 %% @doc Normalize an effect row (sort and deduplicate elements).
 -spec row_normalize(effect_row()) -> effect_row().
 row_normalize(#{elements := Es, row_var := Rv}) ->

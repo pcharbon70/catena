@@ -35,6 +35,7 @@
     singleton_effect/1,
     effect_set/1,
     union_effects/2,
+    remove_effect/2,
     normalize_effects/1,
     is_pure/1,
     effects_equal/2
@@ -512,6 +513,26 @@ effect_set(Effects) when is_list(Effects) ->
 union_effects({effect_set, E1}, {effect_set, E2}) ->
     % Merge and normalize (sort + deduplicate)
     normalize_effects(E1 ++ E2).
+
+%% @doc Remove an effect from an effect set.
+%%
+%% Returns a new effect set with the specified effect removed.
+%% If the effect is not present, returns the original set.
+%%
+%% @param Effect The effect to remove
+%% @param EffectSet The effect set to remove from
+%% @returns Effect set without the specified effect
+%%
+%% @example
+%% ```
+%% %% Remove state effect
+%% FullSet = catena_types:effect_set([io, state, error]),
+%% WithoutState = catena_types:remove_effect(state, FullSet).
+%% %% → {effect_set, [error, io]}
+%% '''
+-spec remove_effect(atom(), effect_set()) -> effect_set().
+remove_effect(Effect, {effect_set, Effects}) ->
+    {effect_set, lists:delete(Effect, Effects)}.
 
 %% @doc Normalize a list of effects into a canonical effect set.
 %%
