@@ -388,8 +388,28 @@ convert_type_sig({tfun, From, To, Effects}) ->
         {{error, _} = E, _} -> E;
         {_, {error, _} = E} -> E
     end;
+convert_type_sig({type_fun, From, {type_effect, To, Effects, _InnerLoc}, _OuterLoc}) ->
+    case {convert_type_sig(From), convert_type_sig(To)} of
+        {{ok, FromType}, {ok, ToType}} ->
+            {ok, catena_types:tfun(FromType, ToType, convert_effects(Effects))};
+        {{error, _} = E, _} -> E;
+        {_, {error, _} = E} -> E
+    end;
+convert_type_sig({type_fun, From, To, _Loc}) ->
+    case {convert_type_sig(From), convert_type_sig(To)} of
+        {{ok, FromType}, {ok, ToType}} ->
+            {ok, catena_types:tfun(FromType, ToType, catena_types:empty_effects())};
+        {{error, _} = E, _} -> E;
+        {_, {error, _} = E} -> E
+    end;
+convert_type_sig({type_effect, Type, _Effects, _Loc}) ->
+    convert_type_sig(Type);
+convert_type_sig({type_var, Name, _Loc}) ->
+    {ok, catena_types:tvar(param_to_var(Name))};
 convert_type_sig({type_var, Name}) ->
     {ok, catena_types:tvar(param_to_var(Name))};
+convert_type_sig({type_con, Name, _Loc}) ->
+    {ok, catena_types:tcon(Name)};
 convert_type_sig({type_con, Name}) ->
     {ok, catena_types:tcon(Name)};
 convert_type_sig({type_app, Con, Args}) ->
@@ -423,6 +443,8 @@ convert_type_args([Arg | Rest]) ->
 convert_effects(undefined) ->
     catena_types:empty_effects();
 convert_effects({effect_set, Effects}) ->
+    catena_types:effect_set(Effects);
+convert_effects(Effects) when is_list(Effects) ->
     catena_types:effect_set(Effects);
 convert_effects(_) ->
     catena_types:empty_effects().
@@ -494,18 +516,26 @@ type_check_transform(Name, DeclaredType, Clauses, Env) ->
             %% Infer type
             case catena_infer:infer_expr(Expr, Env) of
                 {ok, InferredType} ->
-                    %% If there's a declared type, check it matches
-                    case DeclaredType of
-                        undefined ->
-                            {ok, InferredType};
-                        _ ->
-                            case convert_type_sig(DeclaredType) of
-                                {ok, ExpectedType} ->
-                                    %% TODO: Check types are compatible
-                                    {ok, InferredType};
-                                Error ->
-                                    Error
-                            end
+                    State0 = catena_infer_state:new(),
+                    {SynthesizedEffects, State1} =
+                        catena_effect_synthesis:synthesize(Body, State0),
+                    {GeneratedConstraints, State2} =
+                        catena_effect_constraints:generate_constraints(Body, State1),
+                    {PropagatedConstraints, State3} =
+                        catena_effect_constraints:propagate_constraints(GeneratedConstraints, State2),
+                    case catena_effect_constraints:solve_constraints(PropagatedConstraints, State3) of
+                        {ok, State4} ->
+                            InferredType1 =
+                                apply_effects_to_inferred_type(InferredType, SynthesizedEffects),
+                            validate_declared_effects(
+                                Name,
+                                DeclaredType,
+                                InferredType1,
+                                SynthesizedEffects,
+                                State4
+                            );
+                        {error, Constraints, Message} ->
+                            {error, {effect_constraint_error, Name, Constraints, Message}}
                     end;
                 {error, Errors} ->
                     {error, {type_error, Name, Errors}}
@@ -553,6 +583,8 @@ patterns_to_lambda([Pattern | Rest], Body) ->
 %% @doc Convert parser expression to type inference expression.
 convert_expr({var, Name, _Loc}) ->
     {var, Name};
+convert_expr({literal, Type, Value, Loc}) ->
+    {literal, Type, Value, Loc};
 convert_expr({literal, {int, Value}, _Loc}) ->
     {lit, {int, Value}};
 convert_expr({literal, {float, Value}, _Loc}) ->
@@ -573,19 +605,28 @@ convert_expr({let_expr, [Pattern, Value], Body, _Loc}) ->
     %% Complex pattern - extract name or generate fresh
     Name = extract_pattern_name(Pattern),
     {'let', Name, convert_expr(Value), convert_expr(Body)};
+convert_expr({tuple_expr, Elements, _Loc}) ->
+    {tuple, [convert_expr(E) || E <- Elements]};
 convert_expr({tuple, Elements, _Loc}) ->
     {tuple, [convert_expr(E) || E <- Elements]};
+convert_expr({list_expr, Elements, Loc}) ->
+    {list, [convert_expr(E) || E <- Elements], Loc};
 convert_expr({list, Elements, _Loc}) ->
-    %% Convert list to nested cons
-    convert_list(Elements);
+    {list, [convert_expr(E) || E <- Elements], undefined};
 convert_expr({match_expr, Scrutinee, Cases, _Loc}) ->
-    %% TODO: Convert match to case expression
-    %% For now, return a placeholder
-    convert_expr(Scrutinee);
+    {match, convert_expr(Scrutinee), [convert_match_clause(C) || C <- Cases]};
+convert_expr({perform_expr, Effect, Operation, Args, Loc}) ->
+    {perform_expr, Effect, Operation, [convert_expr(Arg) || Arg <- Args], Loc};
+convert_expr({handle_expr, Body, Handlers, Loc}) ->
+    {handle_expr, convert_expr(Body), Handlers, Loc};
+convert_expr({record_expr, Fields, _Base, _Loc}) ->
+    {record, [{Name, convert_expr(Expr)} || {Name, Expr} <- Fields]};
+convert_expr({field_access, Expr, FieldName, _Loc}) ->
+    {field, convert_expr(Expr), FieldName};
 convert_expr({binary_op, Op, Left, Right, _Loc}) ->
     %% Convert binary op to function application
     {app, {app, {var, Op}, convert_expr(Left)}, convert_expr(Right)};
-convert_expr(Other) ->
+convert_expr(_Other) ->
     %% Fallback for unhandled expressions
     {lit, {int, 0}}.
 
@@ -605,15 +646,65 @@ extract_pattern_name(_) ->
 
 convert_application(Func, []) ->
     convert_expr(Func);
-convert_application(Func, [Arg]) ->
-    {app, convert_expr(Func), convert_expr(Arg)};
-convert_application(Func, [Arg | Rest]) ->
-    convert_application({app, convert_expr(Func), convert_expr(Arg)}, Rest).
+convert_application(Func, Args) ->
+    lists:foldl(
+        fun(Arg, Acc) ->
+            {app, Acc, convert_expr(Arg)}
+        end,
+        convert_expr(Func),
+        Args
+    ).
 
-convert_list([]) ->
-    {var, '[]'};
-convert_list([H | T]) ->
-    {app, {app, {var, '::'}, convert_expr(H)}, convert_list(T)}.
+convert_match_clause({match_clause, Pattern, undefined, Body, _Loc}) ->
+    {Pattern, convert_expr(Body)};
+convert_match_clause({match_clause, Pattern, Guard, Body, _Loc}) ->
+    {Pattern, convert_expr(Guard), convert_expr(Body)};
+convert_match_clause(Other) ->
+    Other.
+
+extract_declared_effects(undefined) ->
+    undefined;
+extract_declared_effects({type_fun, _From, To, _Loc}) ->
+    extract_declared_effects(To);
+extract_declared_effects({type_effect, _Type, Effects, _Loc}) ->
+    catena_types:effect_set(Effects);
+extract_declared_effects(_) ->
+    catena_types:empty_effects().
+
+apply_effects_to_inferred_type({tfun, From, To, _ExistingEffects}, Effects) ->
+    case catena_types:is_function_type(To) of
+        true ->
+            {tfun, From, apply_effects_to_inferred_type(To, Effects), catena_types:empty_effects()};
+        false ->
+            {tfun, From, To, Effects}
+    end;
+apply_effects_to_inferred_type(Type, _Effects) ->
+    Type.
+
+validate_declared_effects(_Name, undefined, InferredType, _SynthesizedEffects, _State) ->
+    {ok, InferredType};
+validate_declared_effects(Name, DeclaredType, InferredType, SynthesizedEffects, State) ->
+    case convert_type_sig(DeclaredType) of
+        {ok, _ExpectedType} ->
+            DeclaredEffects = extract_declared_effects(DeclaredType),
+            case DeclaredEffects of
+                undefined ->
+                    {ok, InferredType};
+                _ ->
+                    case catena_effect_constraints:solve_effect_constraint(
+                        {effects_subset, declared_type, SynthesizedEffects, DeclaredEffects},
+                        catena_types:empty_effects(),
+                        State
+                    ) of
+                        {ok, _} ->
+                            {ok, InferredType};
+                        {error, Constraints, Message} ->
+                            {error, {effect_mismatch, Name, Constraints, Message}}
+                    end
+            end;
+        Error ->
+            Error
+    end.
 
 %% @doc Type check a module with a given environment.
 %% Exposed for testing.

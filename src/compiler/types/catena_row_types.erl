@@ -9,6 +9,7 @@
     %% Row type constructors
     empty_row/0,
     effect_row/1,
+    effect_row/2,
     row_var/1,
     row_var/0,
     %% Row type predicates
@@ -20,6 +21,7 @@
     row_intersection/2,
     row_difference/2,
     row_contains/2,
+    row_contains_all/2,
     row_normalize/1,
     row_to_list/1,
     list_to_row/1,
@@ -84,6 +86,16 @@ effect_row(Effects) when is_list(Effects) ->
         kind => effect_row,
         elements => Unique,
         row_var => undefined
+    }.
+
+%% @doc Create an effect row from a list of effects and an optional row variable.
+-spec effect_row([atom()], row_var() | undefined) -> effect_row().
+effect_row(Effects, RowVar) when is_list(Effects) ->
+    Unique = lists:usort(Effects),
+    #{
+        kind => effect_row,
+        elements => Unique,
+        row_var => RowVar
     }.
 
 %% @doc Create a row variable with a specific ID.

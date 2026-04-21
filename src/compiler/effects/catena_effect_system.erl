@@ -53,6 +53,11 @@
     init/0,
     init/1,
     shutdown/0,
+    start_runtime/0,
+    start_runtime/1,
+    stop_runtime/0,
+    with_runtime/1,
+    with_runtime/2,
     is_initialized/0
 ]).
 
@@ -266,6 +271,40 @@ shutdown() ->
     erase(?EFFECT_REGISTRY_KEY),
     erase(?EQUATION_REGISTRY_KEY),
     ok.
+
+%% @doc Initialize the orchestration layer and return a fresh runtime context.
+-spec start_runtime() -> catena_effect_runtime:effect_context().
+start_runtime() ->
+    start_runtime([]).
+
+%% @doc Initialize with config/options and return a fresh runtime context.
+-spec start_runtime(system_config() | [config_option()]) -> catena_effect_runtime:effect_context().
+start_runtime(Config) ->
+    case is_initialized() of
+        true -> ok;
+        false -> init(Config)
+    end,
+    catena_effect_runtime:new_context().
+
+%% @doc Stop the effect runtime and shutdown orchestration state.
+-spec stop_runtime() -> ok.
+stop_runtime() ->
+    shutdown().
+
+%% @doc Execute a function inside a runtime context with automatic cleanup.
+-spec with_runtime(fun((catena_effect_runtime:effect_context()) -> T)) -> T.
+with_runtime(Fun) ->
+    with_runtime([], Fun).
+
+%% @doc Execute a function inside a configured runtime context with cleanup.
+-spec with_runtime(system_config() | [config_option()], fun((catena_effect_runtime:effect_context()) -> T)) -> T.
+with_runtime(Config, Fun) ->
+    Ctx = start_runtime(Config),
+    try
+        Fun(Ctx)
+    after
+        stop_runtime()
+    end.
 
 %%====================================================================
 %% System Configuration

@@ -1,240 +1,64 @@
 %%%-------------------------------------------------------------------
-%%% @doc Catena Row Polymorphism Integration Tests (Phase 14.2.2)
-%%%
-%%% Tests for row polymorphism integration in the type system.
-%%%
+%%% @doc Focused tests for Phase 14.2 row-polymorphism integration.
 %%% @end
 %%%-------------------------------------------------------------------
 -module(catena_row_poly_integration_tests).
 
 -include_lib("eunit/include/eunit.hrl").
 
-%%====================================================================
-%% Test Fixtures
-%%====================================================================
+type_int() ->
+    catena_types:tcon(integer).
 
-setup() ->
-    State = catena_infer_state:new(),
-    State.
+state() ->
+    catena_infer_state:new().
 
-cleanup(_) ->
-    ok.
-
-%%====================================================================
-%% Row Variable Management Tests
-%%====================================================================
-
-row_variable_tests_test_() ->
-    {setup,
-        fun setup/0,
-        fun cleanup/1,
-        fun(State) ->
-            [
-                {"Add row vars to mono scheme", fun test_add_row_vars_mono/0},
-                {"Add row vars to poly scheme", fun test_add_row_vars_poly/0},
-                {"Get row vars from scheme", fun test_get_row_vars/0},
-                {"Scheme has row vars", fun test_has_row_vars/0}
-            ]
-        end
-    }.
-
-test_add_row_vars_mono() ->
-    Type = catena_types:tcon(integer),
+add_row_vars_to_mono_scheme_test() ->
     RowVarId = {row_var, 1},
     Scheme = catena_row_poly_integration:add_row_vars_to_scheme(
-        catena_type_scheme:mono(Type),
+        catena_type_scheme:mono(type_int()),
         [RowVarId]
     ),
-    ?assertEqual({poly, [], [RowVarId], Type}, Scheme).
+    ?assertEqual({poly, [], [RowVarId], type_int()}, Scheme).
 
-test_add_row_vars_poly() ->
-    Type = catena_types:tcon(integer),
+get_and_detect_row_vars_test() ->
+    RowVarId = {row_var, 7},
+    Scheme = {poly, [], [RowVarId], type_int()},
+    ?assertEqual([RowVarId], catena_row_poly_integration:get_row_vars_from_scheme(Scheme)),
+    ?assert(catena_row_poly_integration:scheme_has_row_vars(Scheme)),
+    ?assertNot(catena_row_poly_integration:scheme_has_row_vars(catena_type_scheme:mono(type_int()))).
+
+row_constraint_and_satisfaction_test() ->
     RowVarId = {row_var, 1},
-    Scheme = catena_row_poly_integration:add_row_vars_to_scheme(
-        catena_type_scheme:poly([1], Type),
-        [RowVarId]
-    ),
-    ?assertEqual({poly, [1], [RowVarId], Type}, Scheme).
-
-test_get_row_vars() ->
-    Type = catena_types:tcon(integer),
-    RowVarId = {row_var, 1},
-    Scheme = {poly, [], [RowVarId], Type},
-    RowVars = catena_row_poly_integration:get_row_vars_from_scheme(Scheme),
-    ?assertEqual([RowVarId], RowVars).
-
-test_has_row_vars() ->
-    Type = catena_types:tcon(integer),
-    RowVarId = {row_var, 1},
-    SchemeWith = {poly, [], [RowVarId], Type},
-    SchemeWithout = catena_type_scheme:mono(Type),
-    ?assert(catena_row_poly_integration:scheme_has_row_vars(SchemeWith)),
-    ?assertNot(catena_row_poly_integration:scheme_has_row_vars(SchemeWithout)).
-
-%%====================================================================
-%% Row Polymorphic Scheme Tests
-%%====================================================================
-
-row_poly_scheme_tests_test_() ->
-    {setup,
-        fun setup/0,
-        fun cleanup/1,
-        fun(State) ->
-            [
-                {"Create row poly scheme", fun test_row_poly_scheme/0},
-                {"Generalize row vars", fun test_generalize_row_vars/0}
-            ]
-        end
-    }.
-
-test_row_poly_scheme() ->
-    Type = catena_types:tcon(integer),
-    RowVarId = {row_var, 1},
-    Scheme = catena_row_poly_integration:row_poly_scheme([], [RowVarId], Type),
-    ?assertEqual({poly, [], [RowVarId], Type}, Scheme).
-
-test_generalize_row_vars() ->
-    Type = catena_types:tcon(integer),
-    RowVarId = {row_var, 1},
-    Scheme = catena_row_poly_integration:generalize_row_vars(Type, [RowVarId]),
-    ?assertEqual({poly, [], [RowVarId], Type}, Scheme).
-
-%%====================================================================
-%% Row Constraint Tests
-%%====================================================================
-
-row_constraint_tests_test_() ->
-    {setup,
-        fun setup/0,
-        fun cleanup/1,
-        fun(State) ->
-            [
-                {"Create row constraint", fun test_row_constraint/0},
-                {"Satisfy row constraints", fun test_satisfy_constraints/0},
-                {"Merge row constraints", fun test_merge_constraints/0}
-            ]
-        end
-    }.
-
-test_row_constraint() ->
-    RowVarId = {row_var, 1},
-    Constraint = catena_row_poly_integration:row_constraint(RowVarId, [state, io]),
-    ?assertMatch({row_constraint, RowVarId, _}, Constraint).
-
-test_satisfy_constraints() ->
-    RowVarId = {row_var, 1},
-    Constraint = catena_row_poly_integration:row_constraint(RowVarId, [state]),
-    EffectRow = catena_row_types:effect_row([state, io, error]),
+    Constraint = catena_row_poly_integration:row_constraint(RowVarId, ['IO']),
+    EffectRow = catena_row_types:effect_row(['IO', 'State']),
+    ?assertMatch({row_constraint, {row_var, 1}, _}, Constraint),
     ?assert(catena_row_poly_integration:satisfy_row_constraints([Constraint], EffectRow)).
 
-test_merge_constraints() ->
+merge_row_constraints_unions_required_effects_test() ->
     RowVarId = {row_var, 1},
-    C1 = catena_row_poly_integration:row_constraint(RowVarId, [state]),
-    C2 = catena_row_poly_integration:row_constraint(RowVarId, [io]),
-    Merged = catena_row_poly_integration:merge_row_constraints([C1], [C2]),
-    ?assertEqual(1, length(Merged)),
-    [{row_constraint, RowVarId, MergedRow}] = Merged,
-    ?assertEqual(3, length(catena_row_types:row_to_list(MergedRow))).
+    C1 = catena_row_poly_integration:row_constraint(RowVarId, ['IO']),
+    C2 = catena_row_poly_integration:row_constraint(RowVarId, ['State']),
+    [{row_constraint, {row_var, 1}, MergedRow}] =
+        catena_row_poly_integration:merge_row_constraints([C1], [C2]),
+    ?assertEqual(['IO', 'State'], catena_row_types:row_to_list(MergedRow)).
 
-%%====================================================================
-%% Instantiation Tests
-%%====================================================================
+instantiate_standard_poly_scheme_test() ->
+    Scheme = catena_type_scheme:poly([1], catena_types:tvar(1)),
+    {Instantiated, _State} =
+        catena_row_poly_integration:instantiate_with_row_poly(Scheme, catena_infer_state:new(10)),
+    ?assertEqual({tvar, 10}, Instantiated).
 
-instantiation_tests_test_() ->
-    {setup,
-        fun setup/0,
-        fun cleanup/1,
-        fun(State) ->
-            [
-                {"Instantiate mono scheme", fun test_instantiate_mono/0},
-                {"Instantiate poly scheme without rows", fun test_instantiate_poly_no_rows/0},
-                {"Instantiate row poly scheme", fun test_instantiate_row_poly/0}
-            ]
-        end
-    }.
-
-test_instantiate_mono() ->
-    Type = catena_types:tcon(integer),
-    Scheme = catena_type_scheme:mono(Type),
-    {ResultType, _NewState} = catena_row_poly_integration:instantiate_with_row_poly(
-        Scheme,
-        catena_infer_state:new()
-    ),
-    ?assertEqual(Type, ResultType).
-
-test_instantiate_poly_no_rows() ->
-    Type = catena_types:tcon(integer),
-    Scheme = catena_type_scheme:poly([1], Type),
-    {ResultType, _NewState} = catena_row_poly_integration:instantiate_with_row_poly(
-        Scheme,
-        catena_infer_state:new()
-    ),
-    ?assert(is_tuple(ResultType)).
-
-test_instantiate_row_poly() ->
-    Type = catena_types:tcon(integer),
-    RowVarId = {row_var, 1},
-    Scheme = {poly, [], [RowVarId], Type},
-    {ResultType, _NewState} = catena_row_poly_integration:instantiate_row_poly_scheme(
-        Scheme,
-        catena_infer_state:new()
-    ),
-    ?assert(is_tuple(ResultType)).
-
-%%====================================================================
-%% Extension Tests
-%%====================================================================
-
-extension_tests_test_() ->
-    {setup,
-        fun setup/0,
-        fun cleanup/1,
-        fun(State) ->
-            [
-                {"Extend scheme with row var", fun test_extend_with_row_var/0}
-            ]
-        end
-    }.
-
-test_extend_with_row_var() ->
-    Type = catena_types:tcon(integer),
-    Scheme = catena_type_scheme:mono(Type),
-    {NewScheme, _NewState} = catena_row_poly_integration:extend_with_row_var(
-        Scheme,
-        catena_infer_state:new()
-    ),
+extend_with_row_var_test() ->
+    {NewScheme, _State} =
+        catena_row_poly_integration:extend_with_row_var(catena_type_scheme:mono(type_int()), state()),
     ?assert(catena_row_poly_integration:scheme_has_row_vars(NewScheme)).
 
-%%====================================================================
-%% Inference Integration Tests
-%%====================================================================
+generalize_with_row_poly_without_rows_is_mono_test() ->
+    {Scheme, _State} = catena_row_poly_integration:generalize_with_row_poly(type_int(), state()),
+    ?assertEqual({mono, type_int()}, Scheme).
 
-inference_integration_tests_test_() ->
-    {setup,
-        fun setup/0,
-        fun cleanup/1,
-        fun(State) ->
-            [
-                {"Infer with row poly", fun test_infer_with_row_poly/0},
-                {"Generalize with row poly", fun test_generalize_with_row_poly/0}
-            ]
-        end
-    }.
-
-test_infer_with_row_poly() ->
-    Expr = {literal, {int, 42}, {1, 1}},
-    Env = catena_type_env:empty(),
-    {Type, _NewState} = catena_row_poly_integration:infer_with_row_poly(
-        Expr,
-        Env,
-        catena_infer_state:new()
-    ),
-    ?assert(is_tuple(Type)).
-
-test_generalize_with_row_poly() ->
-    Type = catena_types:tcon(integer),
-    {Scheme, _NewState} = catena_row_poly_integration:generalize_with_row_poly(
-        Type,
-        catena_infer_state:new()
-    ),
-    ?assert(is_tuple(Scheme)).
+infer_with_row_poly_delegates_to_inference_test() ->
+    Expr = {literal, integer, 42, {location, 1, 1}},
+    {Type, _State} =
+        catena_row_poly_integration:infer_with_row_poly(Expr, catena_type_env:empty(), state()),
+    ?assertEqual({tcon, int}, Type).

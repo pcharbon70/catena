@@ -160,7 +160,8 @@ compile_function({transform, Name, Params, Body, _Loc}, State) ->
     {ParamVars, State1} = compile_params(Params, State),
 
     %% Compile body
-    {CoreBody, State2} = catena_codegen_expr:translate_expr(Body, State1),
+    {CoreBody0, State2} = catena_codegen_expr:translate_expr(Body, State1),
+    CoreBody = maybe_wrap_effect_runtime(Body, CoreBody0),
 
     %% Create function definition
     FunDef = cerl:c_fun(ParamVars, CoreBody),
@@ -193,6 +194,25 @@ compile_param(Other, State) ->
     %% (full pattern matching handled elsewhere)
     logger:warning("Complex parameter pattern in code generation: ~p", [Other]),
     catena_codegen_utils:fresh_var(State).
+
+maybe_wrap_effect_runtime(Body, CoreBody) ->
+    case requires_effect_runtime(Body) of
+        true -> catena_effect_codegen:with_runtime_call(CoreBody);
+        false -> CoreBody
+    end.
+
+requires_effect_runtime({perform_expr, _, _, _, _}) ->
+    true;
+requires_effect_runtime({handle_expr, _, _, _}) ->
+    true;
+requires_effect_runtime({try_with_expr, _, _, _}) ->
+    true;
+requires_effect_runtime(Term) when is_tuple(Term) ->
+    requires_effect_runtime(tuple_to_list(Term));
+requires_effect_runtime(Terms) when is_list(Terms) ->
+    lists:any(fun requires_effect_runtime/1, Terms);
+requires_effect_runtime(_) ->
+    false.
 
 %%====================================================================
 %% Export List Generation (1.3.4.3)
@@ -304,4 +324,3 @@ compile_to_string(ModuleAST) ->
     function_count => non_neg_integer(),
     public_count => non_neg_integer()
 }.
-
