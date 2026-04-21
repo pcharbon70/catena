@@ -39,6 +39,11 @@ typed_module() ->
             loc()}
     ], loc()}.
 
+effectful_decl() ->
+    {transform, log_value, [{pat_var, value, loc()}],
+        {perform_expr, 'IO', println, [{var, value, loc()}], loc()},
+        loc()}.
+
 %%====================================================================
 %% Module Structure Tests (1.3.4.1)
 %%====================================================================
@@ -246,6 +251,40 @@ integration_test_() ->
         ?_test(test_module_with_type_decls()),
         ?_test(test_complex_function_bodies())
     ].
+
+effect_runtime_integration_test_() ->
+    [
+        ?_test(test_compile_effectful_function_wraps_runtime()),
+        ?_test(test_compile_pure_function_skips_runtime_wrapper())
+    ].
+
+test_compile_effectful_function_wraps_runtime() ->
+    State = catena_codegen_utils:new_state(),
+    {{FName, FunDef}, _State1} = catena_codegen_module:compile_function(effectful_decl(), State),
+    ?assertEqual(log_value, cerl:fname_id(FName)),
+    ?assertEqual('fun', cerl:type(FunDef)),
+    WrappedBody = cerl:fun_body(FunDef),
+    ?assertEqual(call, cerl:type(WrappedBody)),
+    ?assertEqual(catena_effect_system, cerl:atom_val(cerl:call_module(WrappedBody))),
+    ?assertEqual(with_runtime, cerl:atom_val(cerl:call_name(WrappedBody))),
+    [RuntimeFun] = cerl:call_args(WrappedBody),
+    ?assertEqual('fun', cerl:type(RuntimeFun)),
+    ?assertEqual(1, cerl:fun_arity(RuntimeFun)),
+    InnerBody = cerl:fun_body(RuntimeFun),
+    ?assertEqual(call, cerl:type(InnerBody)),
+    ?assertEqual(catena_effect_runtime, cerl:atom_val(cerl:call_module(InnerBody))),
+    ?assertEqual(perform, cerl:atom_val(cerl:call_name(InnerBody))).
+
+test_compile_pure_function_skips_runtime_wrapper() ->
+    State = catena_codegen_utils:new_state(),
+    Decl = {transform, identity, [{pat_var, x, loc()}], {var, x, loc()}, loc()},
+    {{_FName, FunDef}, _State1} = catena_codegen_module:compile_function(Decl, State),
+    Body = cerl:fun_body(FunDef),
+    ?assertNot(
+        cerl:type(Body) =:= call andalso
+        cerl:atom_val(cerl:call_module(Body)) =:= catena_effect_system andalso
+        cerl:atom_val(cerl:call_name(Body)) =:= with_runtime
+    ).
 
 test_full_module_compilation() ->
     Module = multi_function_module(),

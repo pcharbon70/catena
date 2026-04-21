@@ -85,6 +85,10 @@ translate_expr({tuple_expr, Elements, Loc}, State) ->
 translate_expr({perform_expr, Effect, Operation, Args, Loc}, State) ->
     translate_perform({perform_expr, Effect, Operation, Args, Loc}, State);
 
+%% Handle expression (parser AST)
+translate_expr({handle_expr, Body, Handlers, Loc}, State) ->
+    catena_effect_codegen:translate_handle({handle_expr, Body, Handlers, Loc}, State);
+
 %% Try/with expression (effect handling)
 translate_expr({try_with_expr, Body, Handlers, Loc}, State) ->
     translate_try_with({try_with_expr, Body, Handlers, Loc}, State);
@@ -402,21 +406,10 @@ translate_tuple({tuple_expr, Elements, _Loc}, State) ->
 %% catena_effect_runtime:perform(Ctx, Effect, Operation, Args)
 %% where Ctx is the current effect context (passed through __catena_ctx__)
 translate_perform({perform_expr, Effect, Operation, Args, _Loc}, State) ->
-    {CoreArgs, State1} = translate_exprs(Args, State),
-
-    %% Build the effect invocation with explicit context
-    %% This creates: effect_runtime:perform(__catena_ctx__, Effect, Operation, Args)
-    PerformCall = cerl:c_call(
-        cerl:c_atom(catena_effect_runtime),
-        cerl:c_atom(perform),
-        [
-            cerl:c_var('__catena_ctx__'),
-            cerl:c_atom(Effect),
-            cerl:c_atom(Operation),
-            build_list(CoreArgs)
-        ]
-    ),
-    {PerformCall, State1}.
+    catena_effect_codegen:translate_perform(
+        {perform_expr, Effect, Operation, Args, _Loc},
+        State
+    ).
 
 %% @doc Translate try/with expression to process-based handler
 %%
@@ -424,57 +417,10 @@ translate_perform({perform_expr, Effect, Operation, Args, _Loc}, State) ->
 %% catena_effect_runtime:with_handlers(Ctx, HandlerSpecs, fun(NewCtx) -> Body end)
 %% where Ctx is the current effect context and NewCtx is the child context
 translate_try_with({try_with_expr, Body, Handlers, _Loc}, State) ->
-    {CoreBody, State1} = translate_expr(Body, State),
-
-    %% Translate handlers to handler specifications
-    {HandlerSpecs, State2} = translate_handlers(Handlers, State1),
-
-    %% Wrap body with handler setup/teardown
-    %% This creates: effect_runtime:with_handlers(__catena_ctx__, HandlerSpecs, fun(__catena_ctx__) -> Body end)
-    %% Note: The body function receives the new context and shadows __catena_ctx__
-    BodyFun = cerl:c_fun([cerl:c_var('__catena_ctx__')], CoreBody),
-    WithHandlers = cerl:c_call(
-        cerl:c_atom(catena_effect_runtime),
-        cerl:c_atom(with_handlers),
-        [cerl:c_var('__catena_ctx__'), HandlerSpecs, BodyFun]
-    ),
-    {WithHandlers, State2}.
-
-%% Translate handler clauses to handler specifications
-translate_handlers(Handlers, State) ->
-    {CoreHandlers, FinalState} = lists:mapfoldl(
-        fun(Handler, St) ->
-            translate_handler(Handler, St)
-        end,
-        State,
-        Handlers
-    ),
-    {build_list(CoreHandlers), FinalState}.
-
-translate_handler({handler_clause, Effect, Operations, _Loc}, State) ->
-    %% Translate each operation case
-    {OpCases, State1} = lists:mapfoldl(
-        fun({operation_case, OpName, Params, Body, _OpLoc}, St) ->
-            %% Create parameter variables
-            ParamVars = [cerl:c_var(param_name(P)) || P <- Params],
-            %% Translate body
-            {CoreBody, St1} = translate_expr(Body, St),
-            %% Create handler function
-            HandlerFun = cerl:c_fun(ParamVars, CoreBody),
-            %% Create tuple {operation_name, handler_fun}
-            OpSpec = cerl:c_tuple([cerl:c_atom(OpName), HandlerFun]),
-            {OpSpec, St1}
-        end,
-        State,
-        Operations
-    ),
-
-    %% Create handler spec tuple {Effect, [{op1, fun}, {op2, fun}, ...]}
-    HandlerSpec = cerl:c_tuple([
-        cerl:c_atom(Effect),
-        build_list(OpCases)
-    ]),
-    {HandlerSpec, State1}.
+    catena_effect_codegen:translate_try_with(
+        {try_with_expr, Body, Handlers, _Loc},
+        State
+    ).
 
 %%====================================================================
 %% Unary Operator Translation
@@ -531,11 +477,3 @@ translate_constructor({constructor, Name, Args, _Loc}, State) ->
     %% Constructors translate to tagged tuples: {Name, Arg1, Arg2, ...}
     Constructor = cerl:c_tuple([cerl:c_atom(Name) | CoreArgs]),
     {Constructor, State1}.
-
-%%====================================================================
-%% Helper Functions
-%%====================================================================
-
-%% Build a Core Erlang list from elements
-build_list(Elements) ->
-    lists:foldr(fun cerl:c_cons/2, cerl:c_nil(), Elements).
