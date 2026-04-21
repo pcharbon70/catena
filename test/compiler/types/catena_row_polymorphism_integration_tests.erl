@@ -30,6 +30,8 @@ catena_row_polymorphism_integration_test_() ->
         {"row poly function inference", fun test_function_inference/0},
         {"row poly operation inference", fun test_operation_inference/0},
         {"row poly handler inference", fun test_handler_inference/0},
+        {"handled effect removal preserves remaining effects", fun test_handled_effect_removal/0},
+        {"effect subset failure is reported", fun test_effect_subset_failure/0},
         {"full row polymorphism workflow", fun test_workflow/0}
      ]}.
 
@@ -42,6 +44,9 @@ setup() ->
 
 cleanup(_) ->
     ok.
+
+loc() ->
+    {location, 1, 1}.
 
 %%%---------------------------------------------------------------------
 %%% Row Type Tests
@@ -194,6 +199,27 @@ test_handler_inference() ->
 
     {Type, _} = catena_row_inference:infer_row_poly_handler(HandlerInfo, State),
     ?assertEqual(row_poly, maps:get(kind, Type)).
+
+test_handled_effect_removal() ->
+    Expr = {handle_expr,
+        {perform_expr, 'IO', read, [], loc()},
+        [{handler_clause, 'IO', [
+            {operation_case, read, [], {perform_expr, 'State', get, [], loc()}, loc()}
+        ], loc()}],
+        loc()},
+
+    {Effects, _} = catena_effect_synthesis:synthesize(Expr, catena_infer_state:new()),
+    ?assertEqual(['State'], lists:sort(catena_effect_synthesis:to_list(Effects))).
+
+test_effect_subset_failure() ->
+    Result = catena_effect_constraints:solve_effect_constraint(
+        {effects_subset, declared_effects,
+            catena_types:effect_set(['IO', 'State']),
+            catena_types:effect_set(['IO'])},
+        catena_types:empty_effects(),
+        catena_infer_state:new()
+    ),
+    ?assertMatch({error, _, _}, Result).
 
 %%%---------------------------------------------------------------------
 %%% Full Workflow Tests
