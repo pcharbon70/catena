@@ -1,0 +1,25 @@
+-- Phase 14 algebraic-effects example.
+-- This file uses the full handler/resumption model.
+
+effect Counter
+  operation get : Unit -> Natural
+  operation put : Natural -> Unit
+end
+
+transform tick () =
+  let current = perform Counter.get ()
+  in let next = current + 1
+  in let _ = perform Counter.put next
+  in current
+
+transform doubleTick () =
+  let first = tick ()
+  in let second = tick ()
+  in (first, second)
+
+transform runCounter initial program =
+  handle program ()
+    | Counter.get () resume -> resume initial
+    | Counter.put next resume -> resume ()
+    | return value -> (value, initial)
+  end
