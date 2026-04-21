@@ -17,13 +17,13 @@ When you need syntax proven in the frontend today, prefer:
 
 ## Files
 
-- `state_counter.catena` uses the full Phase 14 model to show resumptions and
+- `state_counter.cat` uses the full Phase 14 model to show resumptions and
   state threading.
-- `error_recovery.catena` uses the full Phase 14 model to show handler-based
+- `error_recovery.cat` uses the full Phase 14 model to show handler-based
   recovery.
-- `logging_pipeline.catena` stays close to the current parser-compatible core
+- `logging_pipeline.cat` stays close to the current parser-compatible core
   syntax.
-- `async_worker.catena` stays close to the current parser-compatible core
+- `async_worker.cat` stays close to the current parser-compatible core
   syntax while using builtin process effects.
-- `resource_scope.catena` uses the full Phase 14 model to show a higher-order
+- `resource_scope.cat` uses the full Phase 14 model to show a higher-order
   resource effect.

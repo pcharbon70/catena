@@ -67,7 +67,7 @@ notes/features/
   phase-2.1-repl.md      # Feature planning document
 
 examples/simple/
-  identity.catena        # Example Catena program
+  identity.cat           # Example Catena program
   README.md              # Compilation instructions
 ```
 
@@ -98,8 +98,8 @@ catena> transform double x = x
 double : α1 -> α1
 catena> :type double
 α1 -> α1
-catena> :load examples/simple/identity.catena
-Loaded examples/simple/identity.catena (6 definitions)
+catena> :load examples/simple/identity.cat
+Loaded examples/simple/identity.cat (6 definitions)
 catena> :browse
 Current bindings:
   double : α1 -> α1

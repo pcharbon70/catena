@@ -156,8 +156,8 @@ scope.
 
 See `examples/effects/` for migration-oriented sample programs:
 
-- `state_counter.catena`
-- `error_recovery.catena`
-- `logging_pipeline.catena`
-- `async_worker.catena`
-- `resource_scope.catena`
+- `state_counter.cat`
+- `error_recovery.cat`
+- `logging_pipeline.cat`
+- `async_worker.cat`
+- `resource_scope.cat`

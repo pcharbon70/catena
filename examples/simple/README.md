@@ -4,7 +4,7 @@ This directory contains simple Catena programs to test the compiler.
 
 ## Files
 
-- `identity.catena` - Basic functional programming primitives (identity, const, compose)
+- `identity.cat` - Basic functional programming primitives (identity, const, compose)
 
 ## Compiling
 
@@ -30,7 +30,7 @@ Then compile a Catena file:
 
 ```erlang
 %% Read and compile a file
-{ok, Result} = catena_compile:compile_file("examples/simple/identity.catena").
+{ok, Result} = catena_compile:compile_file("examples/simple/identity.cat").
 
 %% Or compile a string directly
 {ok, Result} = catena_compile:compile_string("transform id x = x\n").
@@ -42,7 +42,7 @@ To see each stage of compilation:
 
 ```erlang
 %% 1. Read the source file
-{ok, Binary} = file:read_file("examples/simple/identity.catena").
+{ok, Binary} = file:read_file("examples/simple/identity.cat").
 Source = binary_to_list(Binary).
 
 %% 2. Lexical analysis (tokenization)

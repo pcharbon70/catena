@@ -141,3 +141,15 @@ prelude_compile_test() ->
             %% Don't fail test - we expect errors initially
             ok
     end.
+
+compile_file_rejects_non_cat_extension_test() ->
+    TempPath = "/tmp/catena_wrong_extension.catena",
+    ok = file:write_file(TempPath, <<"transform id x = x\n">>),
+    try
+        ?assertEqual(
+            {error, {invalid_file_extension, TempPath, ".catena"}},
+            catena_compile:compile_file(TempPath)
+        )
+    after
+        ok = file:delete(TempPath)
+    end.

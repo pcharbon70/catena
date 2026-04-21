@@ -11,7 +11,7 @@ is_command_test_() ->
     [
         ?_assert(catena_repl:is_command(":quit")),
         ?_assert(catena_repl:is_command(":type x")),
-        ?_assert(catena_repl:is_command(":load file.catena")),
+        ?_assert(catena_repl:is_command(":load file.cat")),
         ?_assertNot(catena_repl:is_command("transform id x = x")),
         ?_assertNot(catena_repl:is_command("42")),
         ?_assertNot(catena_repl:is_command(""))
@@ -126,13 +126,13 @@ load_command_test_() ->
          [
              {"Load existing file",
               fun() ->
-                  Result = catena_repl:eval(":load examples/simple/identity.catena", State),
+                  Result = catena_repl:eval(":load examples/simple/identity.cat", State),
                   ?assertMatch({ok, {loaded, _, _}, _}, Result)
               end},
 
              {"Load missing file",
               fun() ->
-                  Result = catena_repl:eval(":load nonexistent.catena", State),
+                  Result = catena_repl:eval(":load nonexistent.cat", State),
                   ?assertMatch({error, {load_error, _, _}, _}, Result)
               end},
 

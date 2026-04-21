@@ -22,11 +22,16 @@
 %% @doc Compile a Catena source file.
 -spec compile_file(string()) -> {ok, term()} | {error, term()}.
 compile_file(Path) ->
-    case file:read_file(Path) of
-        {ok, Binary} ->
-            compile_string(binary_to_list(Binary));
-        {error, Reason} ->
-            {error, {file_error, Path, Reason}}
+    case filename:extension(Path) of
+        ".cat" ->
+            case file:read_file(Path) of
+                {ok, Binary} ->
+                    compile_string(binary_to_list(Binary));
+                {error, Reason} ->
+                    {error, {file_error, Path, Reason}}
+            end;
+        Extension ->
+            {error, {invalid_file_extension, Path, Extension}}
     end.
 
 %% @doc Compile a Catena source string.

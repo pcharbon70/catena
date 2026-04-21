@@ -150,8 +150,8 @@ catena> transform id x = x
 id : α1 -> α1
 catena> :type id
 α1 -> α1
-catena> :load examples/simple/identity.catena
-Loaded examples/simple/identity.catena (6 definitions)
+catena> :load examples/simple/identity.cat
+Loaded examples/simple/identity.cat (6 definitions)
 catena> :browse
 Current bindings:
   id : α1 -> α1
