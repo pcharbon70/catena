@@ -20,6 +20,9 @@ Promoted status: in progress. The rose-tree foundation, generator/seed/size laye
 - `test/proptest/catena_range_tests.erl`
 - `src/proptest/catena_gen.erl`
 - `test/proptest/catena_gen_tests.erl`
+- `lib/catena/stdlib/gen.cat`
+- `lib/catena/stdlib/test.cat`
+- `src/testing/catena_first_class_property_adapter.erl`
 - `src/testing/catena_generators.erl`
 - `src/testing/catena_test_runner.erl`
 
@@ -30,7 +33,11 @@ Promoted status: in progress. The rose-tree foundation, generator/seed/size laye
 - `catena_gen` now includes the functor/applicative/monad/alternative-style layer needed to compose generators before the primitive-combinator phase.
 - `catena_gen` now also includes primitive constant/element/bool/int/filter/sample utilities with first-class `Range` integration for integer generation.
 - `catena_range` now owns the promoted range abstraction, including origins, size-scaled bounds, and linear/exponential constructors.
+- `lib/catena/stdlib/test.cat` now exposes a real first-class property surface through `Test.prop`, property configuration helpers, and `forAll` / `implies` / `discard`.
+- `lib/catena/stdlib/gen.cat` now exposes the initial Catena-facing generator surface for bool/int/text families and first combinators such as `oneOf`, `map`, `flatMap`, and `filter`.
+- `src/testing/catena_first_class_property_adapter.erl` is now the promoted bridge from first-class stdlib property/generator values into `src/proptest/*`.
 - The older Phase 2.3 property-test execution path still exists and remains the active runner for first-class `property` declarations.
+- `src/testing/catena_test_runner.erl` now also executes first-class `Test.prop` values and mixed `Suite` values through the same internal property engine.
 - Concrete law suites now execute on the current `Laws + Test.verify + src/testing/*` path for known instances while the generic framework is still under construction.
 - The repo is in transition from older/simple generation toward a more principled internal framework with integrated shrinking.
 - The generic long-term destination for trait-law verification is this internal framework, but that law-testing layer belongs to a later roadmap phase and is not yet implemented.
