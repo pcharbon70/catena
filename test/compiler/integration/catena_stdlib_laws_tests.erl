@@ -170,7 +170,7 @@ parse_mapper_identity_law_test() ->
     %% Check that mapperIdentityLaw is exported
     ?assert(lists:member({export_transform, mapperIdentityLaw}, Exports)),
     %% Check declaration exists
-    ?assertEqual(8, length(Decls)).
+    ?assertEqual(18, length(Decls)).
 
 %% 1.5.4.2 Compile Mapper composition law verification
 parse_mapper_composition_law_test() ->
@@ -200,6 +200,29 @@ parse_comparable_combiner_laws_test() ->
     ?assertEqual(1, length(Symm)),
     ?assertEqual(1, length(CombAssoc)).
 
+parse_system_flow_laws_test() ->
+    Decls = load_laws_decls(),
+    LeftId = [D || D = {transform_decl, systemLeftIdentityLaw, _, _, _} <- Decls],
+    RightId = [D || D = {transform_decl, systemRightIdentityLaw, _, _, _} <- Decls],
+    Assoc = [D || D = {transform_decl, systemAssociativityLaw, _, _, _} <- Decls],
+    FlowLiftId = [D || D = {transform_decl, flowLiftIdentityLaw, _, _, _} <- Decls],
+    FlowLift = [D || D = {transform_decl, flowLiftCompositionLaw, _, _, _} <- Decls],
+    FlowFirstLift = [D || D = {transform_decl, flowFirstLiftLaw, _, _, _} <- Decls],
+    FlowFirstComp = [D || D = {transform_decl, flowFirstCompositionLaw, _, _, _} <- Decls],
+    FlowFirstProj = [D || D = {transform_decl, flowFirstProjectionLaw, _, _, _} <- Decls],
+    FlowFirstNat = [D || D = {transform_decl, flowFirstNaturalityLaw, _, _, _} <- Decls],
+    FlowFirstAssoc = [D || D = {transform_decl, flowFirstAssociativityLaw, _, _, _} <- Decls],
+    ?assertEqual(1, length(LeftId)),
+    ?assertEqual(1, length(RightId)),
+    ?assertEqual(1, length(Assoc)),
+    ?assertEqual(1, length(FlowLiftId)),
+    ?assertEqual(1, length(FlowLift)),
+    ?assertEqual(1, length(FlowFirstLift)),
+    ?assertEqual(1, length(FlowFirstComp)),
+    ?assertEqual(1, length(FlowFirstProj)),
+    ?assertEqual(1, length(FlowFirstNat)),
+    ?assertEqual(1, length(FlowFirstAssoc)).
+
 %% 1.5.4.4 Test law structure contains expected AST nodes
 verify_law_structure_test() ->
     Decls = load_laws_decls(),
@@ -211,13 +234,13 @@ verify_law_structure_test() ->
     [{transform_clause, Patterns, _Guards, _Body, _ClauseLoc}] = Clauses,
     ?assertEqual(1, length(Patterns)).
 
-%% Test that all 8 laws are present
+%% Test that all 18 laws are present
 all_laws_present_test() ->
     Decls = load_laws_decls(),
-    ?assertEqual(8, length(Decls)),
+    ?assertEqual(18, length(Decls)),
     %% All should be transform_decl
     TransformDecls = [D || D = {transform_decl, _, _, _, _} <- Decls],
-    ?assertEqual(8, length(TransformDecls)).
+    ?assertEqual(18, length(TransformDecls)).
 
 %% =============================================================================
 %% Stage 2 - Executable Concrete Law Suites
@@ -269,6 +292,10 @@ get_param_count({transform_decl, _, _, Clauses, _}) ->
         [{transform_clause, Patterns, _, _, _}] -> length(Patterns);
         _ -> 0
     end.
+
+assert_law_arity(Decls, Name, ExpectedArity) ->
+    [LawDecl] = [D || D = {transform_decl, Name, _, _, _} <- Decls],
+    ?assertEqual(ExpectedArity, get_param_count(LawDecl)).
 
 %% 1.5.4.4a - Verify mapperIdentityLaw expected signature
 %% mapperIdentityLaw : f a -> Bool (1 parameter)
@@ -333,6 +360,19 @@ verify_combiner_associativity_law_signature_test() ->
     [CombAssocLaw] = [D || D = {transform_decl, combinerAssociativityLaw, _, _, _} <- Decls],
     %% Should take 3 parameters (a, b, c)
     ?assertEqual(3, get_param_count(CombAssocLaw)).
+
+verify_system_and_flow_law_signatures_test() ->
+    Decls = load_laws_decls(),
+    assert_law_arity(Decls, systemLeftIdentityLaw, 1),
+    assert_law_arity(Decls, systemRightIdentityLaw, 1),
+    assert_law_arity(Decls, systemAssociativityLaw, 3),
+    assert_law_arity(Decls, flowLiftIdentityLaw, 0),
+    assert_law_arity(Decls, flowLiftCompositionLaw, 2),
+    assert_law_arity(Decls, flowFirstLiftLaw, 1),
+    assert_law_arity(Decls, flowFirstCompositionLaw, 2),
+    assert_law_arity(Decls, flowFirstProjectionLaw, 1),
+    assert_law_arity(Decls, flowFirstNaturalityLaw, 2),
+    assert_law_arity(Decls, flowFirstAssociativityLaw, 1).
 
 %% =============================================================================
 %% Law Arity Verification Tests
@@ -412,5 +452,95 @@ law_arity_test_() ->
                [D || D = {transform_decl, combinerAssociativityLaw, _, _, _} <- Decls],
            [{transform_clause, Patterns, _, _, _}] = Clauses,
            ?assertEqual(3, length(Patterns))
+       end},
+
+      {"systemLeftIdentityLaw takes 1 argument (f)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, systemLeftIdentityLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(1, length(Patterns))
+       end},
+
+      {"systemRightIdentityLaw takes 1 argument (f)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, systemRightIdentityLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(1, length(Patterns))
+       end},
+
+      {"systemAssociativityLaw takes 3 arguments (f, g, h)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, systemAssociativityLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(3, length(Patterns))
+       end},
+
+      {"flowLiftIdentityLaw takes 0 arguments",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, flowLiftIdentityLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(0, length(Patterns))
+       end},
+
+      {"flowLiftCompositionLaw takes 2 arguments (f, g)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, flowLiftCompositionLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(2, length(Patterns))
+       end},
+
+      {"flowFirstLiftLaw takes 1 argument (f)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, flowFirstLiftLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(1, length(Patterns))
+       end},
+
+      {"flowFirstCompositionLaw takes 2 arguments (f, g)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, flowFirstCompositionLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(2, length(Patterns))
+       end},
+
+      {"flowFirstProjectionLaw takes 1 argument (f)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, flowFirstProjectionLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(1, length(Patterns))
+       end},
+
+      {"flowFirstNaturalityLaw takes 2 arguments (f, g)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, flowFirstNaturalityLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(2, length(Patterns))
+       end},
+
+      {"flowFirstAssociativityLaw takes 1 argument (f)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, flowFirstAssociativityLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(1, length(Patterns))
        end}
      ]}.

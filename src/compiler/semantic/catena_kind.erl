@@ -165,7 +165,8 @@ kind_from_arity(N) when N > 0 ->
 %% @doc Check kind of trait type parameter
 %%
 %% Analyzes how the type parameter is used in trait methods to infer its kind.
-%% If applied to arguments, it has arrow kind; otherwise star.
+%% The inferred kind arity matches the maximum number of type arguments used
+%% at any application site in the trait signatures.
 -spec check_trait_kind(term()) -> {ok, [{atom(), kind()}]} | {error, term()}.
 check_trait_kind({trait_decl, _Name, TypeVars, _Supers, Methods, _Loc}) ->
     %% Infer kinds for each type variable from method signatures
@@ -182,33 +183,54 @@ check_trait_kind(_) ->
 
 %% @doc Infer kind of a type variable from how it's used in methods
 infer_var_kind_from_methods(Var, Methods) ->
-    %% Check if Var is applied to arguments anywhere in method signatures
-    IsApplied = lists:any(
+    MaxArity = lists:foldl(
         fun(Method) ->
             case Method of
                 {trait_sig, _Name, Type, _Loc} ->
-                    is_var_applied(Var, Type);
+                    erlang:max(max_var_application_arity(Var, Type), 0);
                 _ ->
-                    false
+                    0
             end
         end,
+        0,
         Methods
     ),
-    case IsApplied of
-        true -> arrow(star(), star());  % f a -> f has kind Type -> Type
-        false -> star()
-    end.
+    kind_from_arity(MaxArity).
 
-%% @doc Check if a variable is used in a type application
-is_var_applied(Var, {type_app, {type_var, Var, _}, _, _}) ->
-    true;
-is_var_applied(Var, {type_app, Con, Args, _}) ->
-    is_var_applied(Var, Con) orelse
-    lists:any(fun(A) -> is_var_applied(Var, A) end, Args);
-is_var_applied(Var, {type_fun, T1, T2, _}) ->
-    is_var_applied(Var, T1) orelse is_var_applied(Var, T2);
-is_var_applied(_Var, _) ->
-    false.
+%% @doc Find the maximum application arity for a type variable within a type.
+max_var_application_arity(Var, {type_app, {type_var, Var, _}, Args, _}) ->
+    max_in_list([length(Args) | [max_var_application_arity(Var, A) || A <- Args]]);
+max_var_application_arity(Var, {type_app, Con, Args, _}) ->
+    max_in_list([max_var_application_arity(Var, Con) |
+                 [max_var_application_arity(Var, A) || A <- Args]]);
+max_var_application_arity(Var, {type_fun, T1, T2, _}) ->
+    erlang:max(max_var_application_arity(Var, T1),
+               max_var_application_arity(Var, T2));
+max_var_application_arity(Var, {type_forall, _Params, Type, _}) ->
+    max_var_application_arity(Var, Type);
+max_var_application_arity(Var, {type_effect, Type, _Effects, _}) ->
+    max_var_application_arity(Var, Type);
+max_var_application_arity(Var, {constrained_type, Constraints, Type, _}) ->
+    erlang:max(max_var_application_arity(Var, Type),
+               max_in_list([max_var_application_arity(Var, C) || C <- Constraints]));
+max_var_application_arity(Var, {type_tuple, Types, _}) ->
+    max_in_list([max_var_application_arity(Var, T) || T <- Types]);
+max_var_application_arity(Var, {type_record, Fields, Base, _}) ->
+    FieldMax = max_in_list([max_var_application_arity(Var, T) || {_Name, T} <- Fields]),
+    BaseMax = case Base of
+        undefined -> 0;
+        _ -> max_var_application_arity(Var, Base)
+    end,
+    erlang:max(FieldMax, BaseMax);
+max_var_application_arity(Var, {trait_constraint, _Name, Args, _}) ->
+    max_in_list([max_var_application_arity(Var, A) || A <- Args]);
+max_var_application_arity(_Var, _Other) ->
+    0.
+
+max_in_list([]) ->
+    0;
+max_in_list(Values) ->
+    lists:max(Values).
 
 %% @doc Check kind of instance type argument
 %%

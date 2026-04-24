@@ -97,8 +97,56 @@ trait_kind_checking_test_() ->
                    loc()}],
                loc()},
            {ok, Kinds} = catena_kind:check_trait_kind(Trait),
-           %% f is applied to two arguments, so f : Type -> Type (from first application)
-           ?assertEqual([{f, {arrow, star, star}}], Kinds)
+           ?assertEqual([{f, {arrow, star, {arrow, star, star}}}], Kinds)
+       end},
+
+      {"System trait parameter arr has kind Type -> Type -> Type",
+       fun() ->
+           Trait = {trait_decl, 'System', [arr], [],
+               [{trait_sig, id,
+                   {type_app, {type_var, arr, loc()},
+                       [{type_var, a, loc()}, {type_var, a, loc()}], loc()},
+                   loc()},
+                {trait_sig, compose,
+                    {type_fun,
+                        {type_app, {type_var, arr, loc()},
+                            [{type_var, b, loc()}, {type_var, c, loc()}], loc()},
+                        {type_fun,
+                            {type_app, {type_var, arr, loc()},
+                                [{type_var, a, loc()}, {type_var, b, loc()}], loc()},
+                            {type_app, {type_var, arr, loc()},
+                                [{type_var, a, loc()}, {type_var, c, loc()}], loc()},
+                            loc()},
+                        loc()},
+                    loc()}],
+               loc()},
+           {ok, Kinds} = catena_kind:check_trait_kind(Trait),
+           ?assertEqual([{arr, {arrow, star, {arrow, star, star}}}], Kinds)
+       end},
+
+      {"Flow trait parameter arr has kind Type -> Type -> Type",
+       fun() ->
+           Trait = {trait_decl, 'Flow', [arr], [],
+               [{trait_sig, lift,
+                   {type_fun,
+                       {type_fun, {type_var, a, loc()}, {type_var, b, loc()}, loc()},
+                       {type_app, {type_var, arr, loc()},
+                           [{type_var, a, loc()}, {type_var, b, loc()}], loc()},
+                       loc()},
+                   loc()},
+                {trait_sig, first,
+                    {type_fun,
+                        {type_app, {type_var, arr, loc()},
+                            [{type_var, a, loc()}, {type_var, b, loc()}], loc()},
+                        {type_app, {type_var, arr, loc()},
+                            [{type_tuple, [{type_var, a, loc()}, {type_var, c, loc()}], loc()},
+                             {type_tuple, [{type_var, b, loc()}, {type_var, c, loc()}], loc()}],
+                            loc()},
+                        loc()},
+                    loc()}],
+               loc()},
+           {ok, Kinds} = catena_kind:check_trait_kind(Trait),
+           ?assertEqual([{arr, {arrow, star, {arrow, star, star}}}], Kinds)
        end}
      ]}.
 

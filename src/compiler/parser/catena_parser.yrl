@@ -79,6 +79,7 @@ Terminals
   plus minus star slash dot plus_plus
   %% Category theory operators (lexer tokens)
   fmap ap bind mappend kleisli
+  flow_then flow_before flow_parallel flow_split
 
   %% Delimiters
   lbrace rbrace lbracket rbracket lparen rparen
@@ -108,7 +109,9 @@ Right    160 pipe_right.      %% |> pipe operator
 
 %% Category theory operators
 Right    170 kleisli.         %% >=> Kleisli composition
+Right    172 flow_then flow_before. %% >>> and <<< flow composition
 Left     180 bind.            %% >>= monadic bind
+Left     182 flow_parallel flow_split. %% *** and &&& flow combinators
 Left     185 fmap.            %% <$> functor map
 Left     190 ap.              %% <*> applicative apply
 Right    195 mappend.         %% <> semigroup combine
@@ -878,6 +881,18 @@ expr -> expr cons expr :
 expr -> expr bind expr :
     {binary_op, bind, '$1', '$3', extract_location('$2')}.
 
+expr -> expr flow_then expr :
+    {binary_op, flow_then, '$1', '$3', extract_location('$2')}.
+
+expr -> expr flow_before expr :
+    {binary_op, flow_before, '$1', '$3', extract_location('$2')}.
+
+expr -> expr flow_parallel expr :
+    {binary_op, flow_parallel, '$1', '$3', extract_location('$2')}.
+
+expr -> expr flow_split expr :
+    {binary_op, flow_split, '$1', '$3', extract_location('$2')}.
+
 expr -> expr fmap expr :
     {binary_op, fmap, '$1', '$3', extract_location('$2')}.
 
@@ -1253,5 +1268,4 @@ extract_imports(Decls) ->
 %% Returns all non-import declarations
 filter_imports(Decls) ->
     [D || D <- Decls, element(1, D) =/= import].
-
 

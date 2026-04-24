@@ -115,6 +115,30 @@ parse_restored_kleisli_operator_test() ->
     TokenTypes = [element(1, T) || T <- Tokens],
     ?assert(lists:member(kleisli, TokenTypes)).
 
+parse_flow_then_operator_test() ->
+    Source = "f >>> g",
+    {ok, Tokens} = catena_lexer:tokenize(Source),
+    TokenTypes = [element(1, T) || T <- Tokens],
+    ?assert(lists:member(flow_then, TokenTypes)).
+
+parse_flow_before_operator_test() ->
+    Source = "f <<< g",
+    {ok, Tokens} = catena_lexer:tokenize(Source),
+    TokenTypes = [element(1, T) || T <- Tokens],
+    ?assert(lists:member(flow_before, TokenTypes)).
+
+parse_flow_parallel_operator_test() ->
+    Source = "f *** g",
+    {ok, Tokens} = catena_lexer:tokenize(Source),
+    TokenTypes = [element(1, T) || T <- Tokens],
+    ?assert(lists:member(flow_parallel, TokenTypes)).
+
+parse_flow_split_operator_test() ->
+    Source = "f &&& g",
+    {ok, Tokens} = catena_lexer:tokenize(Source),
+    TokenTypes = [element(1, T) || T <- Tokens],
+    ?assert(lists:member(flow_split, TokenTypes)).
+
 %%--------------------------------------------------------------------
 %% Invalid Type Signatures
 %%--------------------------------------------------------------------

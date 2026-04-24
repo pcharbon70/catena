@@ -21,6 +21,10 @@
 %%% - `a <> b` becomes `combine a b` (Combiner trait)
 %%% - `a === b` becomes `equals a b` (Comparable trait)
 %%% - `a !== b` becomes `not (equals a b)` (Comparable trait)
+%%% - `f >>> g` becomes `compose g f` (System trait)
+%%% - `f <<< g` becomes `compose f g` (System trait)
+%%% - `f *** g` becomes `parallel f g` (Flow trait)
+%%% - `f &&& g` becomes `split f g` (Flow trait)
 %%%
 %%% The desugared code uses trait methods (chain, map, etc.).
 %%%
@@ -219,6 +223,18 @@ operator_to_method(ap) -> {ok, apply};
 %% Monad bind: m >>= f => chain f m
 operator_to_method(bind) -> {ok, chain};
 
+%% Flow composition: f >>> g => compose g f
+operator_to_method(flow_then) -> {ok, flow_then};
+
+%% Reverse flow composition: f <<< g => compose f g
+operator_to_method(flow_before) -> {ok, flow_before};
+
+%% Flow parallel composition: f *** g => parallel f g
+operator_to_method(flow_parallel) -> {ok, parallel};
+
+%% Flow fanout/split: f &&& g => split f g
+operator_to_method(flow_split) -> {ok, split};
+
 %% Semigroup combine: a <> b => combine a b
 operator_to_method(mappend) -> {ok, combine};
 
@@ -257,6 +273,22 @@ desugar_operator(apply, Func, Value, Loc) ->
 %% Our chain: chain f m means "chain function f over monad m"
 desugar_operator(chain, Monad, Func, Loc) ->
     {app, {var, chain, Loc}, [Func, Monad], Loc};
+
+%% flow_then: f >>> g => compose g f
+desugar_operator(flow_then, Left, Right, Loc) ->
+    {app, {var, compose, Loc}, [Right, Left], Loc};
+
+%% flow_before: f <<< g => compose f g
+desugar_operator(flow_before, Left, Right, Loc) ->
+    {app, {var, compose, Loc}, [Left, Right], Loc};
+
+%% parallel: f *** g => parallel f g
+desugar_operator(parallel, Left, Right, Loc) ->
+    {app, {var, parallel, Loc}, [Left, Right], Loc};
+
+%% split: f &&& g => split f g
+desugar_operator(split, Left, Right, Loc) ->
+    {app, {var, split, Loc}, [Left, Right], Loc};
 
 %% combine: a <> b => combine a b
 desugar_operator(combine, Left, Right, Loc) ->

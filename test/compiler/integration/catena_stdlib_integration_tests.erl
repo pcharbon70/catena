@@ -246,6 +246,58 @@ operator_desugaring_test_() ->
            {transform_decl, compose, _, Clauses, _} = Decl,
            [{transform_clause, _, _, Body, _}] = Clauses,
            ?assertMatch({app, {var, kleisli, _}, [_, _], _}, Body)
+       end},
+
+      {">>> operator desugars to compose with flipped operands",
+       fun() ->
+           Source = "module Test\ntransform pipe f g = f >>> g",
+           {ok, Tokens, _} = catena_lexer:string(Source),
+           {ok, AST} = catena_parser:parse(Tokens),
+           Desugared = catena_desugar:desugar(AST),
+           {module, _, _, _, [Decl], _} = Desugared,
+           {transform_decl, pipe, _, Clauses, _} = Decl,
+           [{transform_clause, _, _, Body, _}] = Clauses,
+           ?assertMatch(
+               {app, {var, compose, _}, [{var, g, _}, {var, f, _}], _},
+               Body)
+       end},
+
+      {"<<< operator desugars to compose with source order",
+       fun() ->
+           Source = "module Test\ntransform pipe f g = f <<< g",
+           {ok, Tokens, _} = catena_lexer:string(Source),
+           {ok, AST} = catena_parser:parse(Tokens),
+           Desugared = catena_desugar:desugar(AST),
+           {module, _, _, _, [Decl], _} = Desugared,
+           {transform_decl, pipe, _, Clauses, _} = Decl,
+           [{transform_clause, _, _, Body, _}] = Clauses,
+           ?assertMatch(
+               {app, {var, compose, _}, [{var, f, _}, {var, g, _}], _},
+               Body)
+       end},
+
+      {"*** operator desugars to parallel",
+       fun() ->
+           Source = "module Test\ntransform pair f g = f *** g",
+           {ok, Tokens, _} = catena_lexer:string(Source),
+           {ok, AST} = catena_parser:parse(Tokens),
+           Desugared = catena_desugar:desugar(AST),
+           {module, _, _, _, [Decl], _} = Desugared,
+           {transform_decl, pair, _, Clauses, _} = Decl,
+           [{transform_clause, _, _, Body, _}] = Clauses,
+           ?assertMatch({app, {var, parallel, _}, [_, _], _}, Body)
+       end},
+
+      {"&&& operator desugars to split",
+       fun() ->
+           Source = "module Test\ntransform fanout f g = f &&& g",
+           {ok, Tokens, _} = catena_lexer:string(Source),
+           {ok, AST} = catena_parser:parse(Tokens),
+           Desugared = catena_desugar:desugar(AST),
+           {module, _, _, _, [Decl], _} = Desugared,
+           {transform_decl, fanout, _, Clauses, _} = Decl,
+           [{transform_clause, _, _, Body, _}] = Clauses,
+           ?assertMatch({app, {var, split, _}, [_, _], _}, Body)
        end}
      ]}.
 

@@ -99,6 +99,10 @@ constrain : {token, {constrain, TokenLine}}.
 
 %% Two-character and three-character operators (must come before single-character)
 %% Ordering is critical: longer operators must come before shorter ones
+>>> : {token, {flow_then, TokenLine}}.
+<<< : {token, {flow_before, TokenLine}}.
+\*\*\* : {token, {flow_parallel, TokenLine}}.
+&&& : {token, {flow_split, TokenLine}}.
 \|> : {token, {pipe_right, TokenLine}}.
 >=> : {token, {kleisli, TokenLine}}.
 >>= : {token, {bind, TokenLine}}.

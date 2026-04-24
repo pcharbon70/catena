@@ -13,6 +13,16 @@ export transform pipelineAssociativityLaw
 export transform comparableReflexivityLaw
 export transform comparableSymmetryLaw
 export transform combinerAssociativityLaw
+export transform systemLeftIdentityLaw
+export transform systemRightIdentityLaw
+export transform systemAssociativityLaw
+export transform flowLiftIdentityLaw
+export transform flowLiftCompositionLaw
+export transform flowFirstLiftLaw
+export transform flowFirstCompositionLaw
+export transform flowFirstProjectionLaw
+export transform flowFirstNaturalityLaw
+export transform flowFirstAssociativityLaw
 
 -- Mapper Laws (Functor)
 -- ====================
@@ -73,6 +83,77 @@ transform comparableSymmetryLaw a b =
 transform combinerAssociativityLaw a b c =
   let left = combine (combine a b) c in
   let right = combine a (combine b c) in
+  equals left right
+
+-- System Laws (Category)
+-- ======================
+
+-- Left Identity: compose id f = f
+transform systemLeftIdentityLaw f =
+  equals (compose id f) f
+
+-- Right Identity: compose f id = f
+transform systemRightIdentityLaw f =
+  equals (compose f id) f
+
+-- Associativity: compose h (compose g f) = compose (compose h g) f
+transform systemAssociativityLaw f g h =
+  let left = compose h (compose g f) in
+  let right = compose (compose h g) f in
+  equals left right
+
+-- Flow Laws (Arrow)
+-- =================
+
+-- Lift Identity: lift id = id
+transform flowLiftIdentityLaw =
+  equals (lift id) id
+
+-- Lift Composition: lift (f . g) = compose (lift f) (lift g)
+transform flowLiftCompositionLaw f g =
+  let left = compose (lift f) (lift g) in
+  let right = lift (fn x -> f (g x)) in
+  equals left right
+
+-- First Lift: first (lift f) = lift (fn (x, z) -> (f x, z))
+transform flowFirstLiftLaw f =
+  let left = first (lift f) in
+  let right = lift (fn pair -> match pair of
+    | (x, z) -> (f x, z)
+  end) in
+  equals left right
+
+-- First Composition: compose (first g) (first f) = first (compose g f)
+transform flowFirstCompositionLaw f g =
+  let left = compose (first g) (first f) in
+  let right = first (compose g f) in
+  equals left right
+
+-- First Projection: compose (lift fst) (first f) = compose f (lift fst)
+transform flowFirstProjectionLaw f =
+  let fst = fn pair -> match pair of
+    | (x, z) -> x
+  end in
+  let left = compose (lift fst) (first f) in
+  let right = compose f (lift fst) in
+  equals left right
+
+-- First Naturality: compose (lift rightMap) (first f) = compose (first f) (lift rightMap)
+transform flowFirstNaturalityLaw f g =
+  let rightMap = fn pair -> match pair of
+    | (x, z) -> (x, g z)
+  end in
+  let left = compose (lift rightMap) (first f) in
+  let right = compose (first f) (lift rightMap) in
+  equals left right
+
+-- First Associativity: compose (lift assoc) (first (first f)) = compose (first f) (lift assoc)
+transform flowFirstAssociativityLaw f =
+  let assoc = fn nested -> match nested of
+    | ((x, y), z) -> (x, (y, z))
+  end in
+  let left = compose (lift assoc) (first (first f)) in
+  let right = compose (first f) (lift assoc) in
   equals left right
 
 -- Example Test Suite Creation

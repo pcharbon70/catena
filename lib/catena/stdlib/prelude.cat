@@ -17,6 +17,8 @@ export trait Comparable
 export trait Orderable
 export trait Combiner
 export trait Accumulator
+export trait System
+export trait Flow
 export trait Mapper
 export trait Applicator
 export trait Chainable
@@ -91,6 +93,32 @@ end
 --   right identity: combine x empty === x
 trait Accumulator a extend Combiner a where
   empty : a
+end
+
+-- System: composable transformations with identity
+-- Laws:
+--   left identity: compose id f === f
+--   right identity: compose f id === f
+--   associativity: compose h (compose g f) === compose (compose h g) f
+trait System arr where
+  id : arr a a,
+  compose : arr b c -> arr a b -> arr a c
+end
+
+-- Flow: structured computation with lifting and tuple threading
+-- Laws:
+--   lift identity: lift id === id
+--   lift composition: compose (lift f) (lift g) === lift (fn x -> f (g x))
+--   first lift: first (lift f) === lift (fn pair -> match pair of | (x, z) -> (f x, z) end)
+--   first composition: compose (first g) (first f) === first (compose g f)
+--   first projection: compose (lift fst) (first f) === compose f (lift fst)
+--   first naturality: compose (lift rightMap) (first f) === compose (first f) (lift rightMap)
+--   first associativity: compose (lift assoc) (first (first f)) === compose (first f) (lift assoc)
+trait Flow arr extend System arr where
+  lift : (a -> b) -> arr a b,
+  first : arr a b -> arr (a, c) (b, c),
+  parallel : arr a b -> arr c d -> arr (a, c) (b, d),
+  split : arr a b -> arr a c -> arr a (b, c)
 end
 
 -- Mapper: Structure-preserving transformations (Functor)

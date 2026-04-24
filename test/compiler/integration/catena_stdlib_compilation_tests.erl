@@ -264,8 +264,8 @@ typecheck_prelude_test() ->
     Path = filename:join([catena_test_helpers:stdlib_dir(), "prelude.cat"]),
     case catena_compile:compile_file(Path) of
         {ok, {typed_module, 'Prelude', Decls, _Env}} ->
-            %% Verify we get all 32 declarations
-            ?assertEqual(32, length(Decls)),
+            %% Verify we get all 34 declarations
+            ?assertEqual(34, length(Decls)),
             ok;
         {error, Reason} ->
             io:format("~nPrelude type-check error: ~p~n", [Reason]),
@@ -435,6 +435,20 @@ kind_check_pipeline_trait_test() ->
     {ok, Kinds} = catena_kind:check_trait_kind(Pipeline),
     %% Pipeline's m parameter should have kind Type -> Type
     ?assertEqual([{m, {arrow, star, star}}], Kinds).
+
+%% Test kind checking for System trait (binary HKT)
+kind_check_system_trait_test() ->
+    Decls = catena_test_helpers:load_prelude_decls(),
+    [System] = [D || D = {trait_decl, 'System', _, _, _, _} <- Decls],
+    {ok, Kinds} = catena_kind:check_trait_kind(System),
+    ?assertEqual([{arr, {arrow, star, {arrow, star, star}}}], Kinds).
+
+%% Test kind checking for Flow trait (binary HKT)
+kind_check_flow_trait_test() ->
+    Decls = catena_test_helpers:load_prelude_decls(),
+    [Flow] = [D || D = {trait_decl, 'Flow', _, _, _, _} <- Decls],
+    {ok, Kinds} = catena_kind:check_trait_kind(Flow),
+    ?assertEqual([{arr, {arrow, star, {arrow, star, star}}}], Kinds).
 
 %% Test kind checking for Comparable trait (not HKT)
 kind_check_comparable_trait_test() ->
