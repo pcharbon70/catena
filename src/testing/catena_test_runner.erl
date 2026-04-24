@@ -25,6 +25,7 @@
     build_runtime_env/1,
     build_runtime_env/2,
     collect_tests/1,
+    evaluate_expr/2,
     format_results/1,
     format_result/1
 ]).
