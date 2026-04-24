@@ -396,3 +396,16 @@ run_suite_value_aggregates_results_test() ->
     ?assertEqual(2, maps:get(total, Results)),
     ?assert(lists:member({pass, "identity"}, maps:get(results, Results))),
     ?assert(lists:member({fail, "associativity", "Law verification failed"}, maps:get(results, Results))).
+
+run_suite_value_ignores_empty_properties_field_test() ->
+    SuiteValue = #{
+        name => "Mixed Suite",
+        tests => [
+            #{name => "identity", run => fun(_Unit) -> passed end}
+        ],
+        properties => []
+    },
+    Results = catena_test_runner:run_suite_value(SuiteValue),
+    ?assertEqual(1, maps:get(passed, Results)),
+    ?assertEqual(0, maps:get(failed, Results)),
+    ?assertEqual(1, maps:get(total, Results)).

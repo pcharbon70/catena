@@ -310,23 +310,23 @@ typecheck_error_effect_test() ->
     end.
 
 %% Test parsing test.cat (type-checking has known limitations with record construction)
-%% NOTE: test.cat uses 'property' as a function name but 'property' is a reserved keyword.
-%% This test validates that we get the expected parse error until the stdlib is updated.
 parse_test_module_test() ->
     Path = filename:join([catena_test_helpers:stdlib_dir(), "test.cat"]),
     {ok, Content} = file:read_file(Path),
     Source = binary_to_list(Content),
     {ok, Tokens} = catena_lexer:tokenize(Source),
     case catena_parser:parse(Tokens) of
-        {ok, {module, 'Test', Exports, _, Decls, _}} ->
-            %% Verify exports and declarations
-            ?assertEqual(13, length(Exports)),
-            ?assertEqual(13, length(Decls)),
-            ok;
-        {error, {_Line, catena_parser, _Msg}} ->
-            %% Known issue: test.cat uses 'property' as a function name
-            %% but 'property' is a reserved keyword in the grammar.
-            %% The stdlib file should be updated to rename the function.
+        {ok, {module, 'Test', Exports, Imports, Decls, _}} ->
+            ?assertEqual(19, length(Exports)),
+            ?assertEqual(1, length(Imports)),
+            ?assertEqual(20, length(Decls)),
+            ?assert(lists:member({export_type, 'PropertyConfig'}, Exports)),
+            ?assert(lists:member({export_transform, prop}, Exports)),
+            ?assert(lists:member({export_transform, defaultPropertyConfig}, Exports)),
+            ?assert(lists:member({export_transform, withIterations}, Exports)),
+            ?assert(lists:member({export_transform, withSeed}, Exports)),
+            ?assert(lists:member({export_transform, withLabel}, Exports)),
+            ?assert(lists:member({export_transform, suiteWithProperties}, Exports)),
             ok
     end.
 
