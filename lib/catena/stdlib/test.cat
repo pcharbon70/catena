@@ -8,6 +8,7 @@ module Test
 export type Test
 export type Property
 export type PropertyConfig
+export type PropertySpec
 export type TestResult
 export type Suite
 export transform unit
@@ -15,6 +16,9 @@ export transform prop
 export transform assert
 export transform assertEqual
 export transform assertMatch
+export transform forAll
+export transform implies
+export transform discard
 export transform defaultPropertyConfig
 export transform withIterations
 export transform withSeed
@@ -26,6 +30,7 @@ export transform run
 export transform benchmark
 
 import Prelude
+import Gen
 
 -- Test result types
 type TestResult = Passed | Failed String | Skipped String
@@ -39,7 +44,7 @@ type Test = Test {
 -- a zero-argument builder that will later evaluate to quantified property data.
 type Property = Property {
   name : String,
-  body : Unit -> Unit,
+  body : Unit -> PropertySpec,
   config : PropertyConfig
 }
 
@@ -48,6 +53,10 @@ type PropertyConfig = PropertyConfig {
   seed : Maybe Natural,
   labels : List String
 }
+
+type PropertySpec =
+  For_All Generator (Unit -> Unit)
+  | Discard
 
 type Suite = Suite {
   name : String,
@@ -71,6 +80,15 @@ transform prop name body = Property {
   body: body,
   config: defaultPropertyConfig
 }
+
+transform forAll generator predicate = For_All generator predicate
+
+transform implies condition predicate = match condition of
+  | true -> predicate unit
+  | false -> discard
+end
+
+transform discard = Discard
 
 transform defaultPropertyConfig = PropertyConfig {
   iterations: 100,
@@ -177,8 +195,7 @@ transform benchmark name iterations benchFn = Benchmark {
 --
 -- myProperty =
 --   prop "addition commutative" (fn u ->
---     -- Quantification helpers land in the generator bridge layer.
---     unit
+--     forAll Gen.int (fn n -> n >= 0)
 --   )
 --
 -- tunedProperty =
