@@ -133,8 +133,17 @@ run_property_always_false_test() ->
             {literal, false, bool, {line, 1}},
             {line, 1}},
         {line, 1}},
-    Result = catena_test_runner:run_test(PropDecl, #{}, #{property_iterations => 10}),
-    ?assertMatch({fail, "always false", {counterexample, 1, _}}, Result).
+    Result = catena_test_runner:run_test(PropDecl, #{}, #{
+        property_iterations => 10,
+        property_seed => 7
+    }),
+    ?assertMatch(
+        {fail, "always false", {property_counterexample, #{
+            tests_run := 1,
+            shrunk_counterexample := #{x := _}
+        }}},
+        Result
+    ).
 
 run_property_with_natural_test() ->
     %% Property: forall n : Natural. n >= 0
@@ -156,9 +165,18 @@ run_property_failing_with_counterexample_test() ->
             {line, 1}},
         {line, 1}},
     %% Run with enough iterations to likely hit a value >= 50
-    Result = catena_test_runner:run_test(PropDecl, #{}, #{property_iterations => 200}),
+    Result = catena_test_runner:run_test(PropDecl, #{}, #{
+        property_iterations => 200,
+        property_seed => 13
+    }),
     %% This should fail with a counterexample
-    ?assertMatch({fail, "less than 50", {counterexample, _, _}}, Result).
+    ?assertMatch(
+        {fail, "less than 50", {property_counterexample, #{
+            tests_run := _,
+            original_counterexample := #{n := _}
+        }}},
+        Result
+    ).
 
 %%====================================================================
 %% Test Result Formatting Tests
@@ -173,6 +191,15 @@ format_fail_result_test() ->
     Result = catena_test_runner:format_result({fail, "my test", {expected_true, false}}),
     ?assert(string:find(Result, "✗") =/= nomatch),
     ?assert(string:find(Result, "my test") =/= nomatch).
+
+format_property_fail_result_test() ->
+    Result = catena_test_runner:format_result({fail, "property fails", {property_counterexample, #{
+        tests_run => 3,
+        seed => seeded,
+        shrunk_counterexample => #{x => false}
+    }}}),
+    ?assert(string:find(Result, "property fails") =/= nomatch),
+    ?assert(string:find(Result, "Counterexample") =/= nomatch).
 
 format_results_all_pass_test() ->
     Results = #{

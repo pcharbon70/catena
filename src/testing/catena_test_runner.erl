@@ -13,6 +13,8 @@
 %%
 -module(catena_test_runner).
 
+-include("../proptest/catena_property.hrl").
+
 -export([
     run_tests/1,
     run_tests/2,
@@ -91,8 +93,7 @@ run_test(TestDecl, Env) ->
 run_test({test_decl, Name, Body, _Loc}, Env, _Opts) ->
     run_unit_test(Name, Body, Env);
 run_test({property_decl, Name, Body, _Loc}, Env, Opts) ->
-    Iterations = maps:get(property_iterations, Opts, ?DEFAULT_PROPERTY_ITERATIONS),
-    run_property_test(Name, Body, Env, Iterations).
+    run_property_test(Name, Body, Env, Opts).
 
 %% @doc Run a first-class Catena Test value produced by stdlib `Test.verify`/`Test.unit`
 -spec run_test_value(map()) -> test_result().
@@ -206,53 +207,20 @@ run_unit_test(Name, Body, Env) ->
             {fail, Name, {exception, Class, Error}}
     end.
 
-%% @doc Run a property test
--spec run_property_test(string(), term(), map(), pos_integer()) -> test_result().
-run_property_test(Name, {property_forall, Bindings, Expr, _Loc}, Env, Iterations) ->
-    run_property_iterations(Name, Bindings, Expr, Env, Iterations, 1).
-
-%% @doc Run property test iterations
-run_property_iterations(Name, _Bindings, _Expr, _Env, MaxIter, Current) when Current > MaxIter ->
-    {pass, Name};
-run_property_iterations(Name, Bindings, Expr, Env, MaxIter, Current) ->
-    %% Generate values for each binding
-    GeneratedValues = generate_values(Bindings),
-
-    %% Create environment with generated values
-    TestEnv = maps:merge(Env, GeneratedValues),
-
-    %% Evaluate the property expression
-    try
-        case evaluate_expr(Expr, TestEnv) of
-            true ->
-                run_property_iterations(Name, Bindings, Expr, Env, MaxIter, Current + 1);
-            false ->
-                {fail, Name, {counterexample, Current, GeneratedValues}};
-            Other ->
-                {fail, Name, {unexpected_result, Current, Other, GeneratedValues}}
-        end
-    catch
-        Class:Error ->
-            {fail, Name, {exception_in_property, Current, Class, Error, GeneratedValues}}
+%% @doc Run a property test through the internal property-testing engine.
+-spec run_property_test(string(), term(), map(), map()) -> test_result().
+run_property_test(Name, Body, Env, Opts) ->
+    case catena_property_adapter:from_property_body(Name, Body, Env) of
+        {ok, Property} ->
+            case catena_runner:run_property(Property, property_run_options(Opts)) of
+                {passed, _Result} ->
+                    {pass, Name};
+                {failed, Result} ->
+                    translate_property_result(Name, Result)
+            end;
+        {error, Reason} ->
+            {fail, Name, Reason}
     end.
-
-%% @doc Generate values for property bindings
--spec generate_values([{atom(), atom()}]) -> map().
-generate_values(Bindings) ->
-    lists:foldl(
-        fun({VarName, GenName}, Acc) ->
-            Value = catena_generators:generate(GenName),
-            maps:put(VarName, wrap_generated_value(Value), Acc)
-        end,
-        #{},
-        Bindings
-    ).
-
-%% @doc Wrap a generated value for the runtime environment
-wrap_generated_value(Value) ->
-    %% Runtime bindings expect {Fun, Arity, Type} tuples for functions,
-    %% but for generated values we just need the value itself
-    {value, Value}.
 
 %% @doc Evaluate an expression in the given environment
 %% This is a simplified evaluator for test expressions.
@@ -472,6 +440,33 @@ format_failure_reason({counterexample, Iteration, Values}) ->
     ValueStrs = [io_lib:format("    ~p = ~p", [K, get_value(V)]) || {K, V} <- maps:to_list(Values)],
     io_lib:format("Property failed after ~B iterations.~n  Counterexample:~n~s",
                   [Iteration, string:join(ValueStrs, "\n")]);
+format_failure_reason({property_counterexample, Details}) ->
+    TestsRun = maps:get(tests_run, Details, 0),
+    Seed = maps:get(seed, Details, undefined),
+    Counterexample = maps:get(shrunk_counterexample, Details, maps:get(original_counterexample, Details, #{})),
+    ValueStrs = [io_lib:format("    ~p = ~p", [K, V]) || {K, V} <- maps:to_list(Counterexample)],
+    io_lib:format(
+        "Property failed after ~B iterations.~n  Seed: ~p~n  Counterexample:~n~s",
+        [TestsRun, Seed, string:join(ValueStrs, "\n")]
+    );
+format_failure_reason({property_discarded, Details}) ->
+    io_lib:format(
+        "Property discarded too many test cases after ~B successful iterations (~B discarded). Seed: ~p",
+        [
+            maps:get(tests_run, Details, 0),
+            maps:get(tests_discarded, Details, 0),
+            maps:get(seed, Details, undefined)
+        ]
+    );
+format_failure_reason({property_error, Details}) ->
+    io_lib:format(
+        "Property execution error after ~B iterations. Seed: ~p. Reason: ~p",
+        [
+            maps:get(tests_run, Details, 0),
+            maps:get(seed, Details, undefined),
+            maps:get(reason, Details, undefined)
+        ]
+    );
 format_failure_reason({error, Error, _Stacktrace}) ->
     io_lib:format("Error: ~p", [Error]);
 format_failure_reason({exception, Class, Error}) ->
@@ -486,6 +481,63 @@ format_failure_reason(Other) ->
 %% @doc Extract value from wrapped form
 get_value({value, V}) -> V;
 get_value(V) -> V.
+
+property_run_options(Opts) ->
+    Base = #{
+        num_tests => maps:get(property_iterations, Opts, ?DEFAULT_PROPERTY_ITERATIONS)
+    },
+    maybe_put_property_opt(max_shrinks, property_max_shrinks, Opts,
+        maybe_put_property_opt(timeout, property_timeout, Opts,
+            maybe_put_property_opt(parallel, property_parallel, Opts,
+                maybe_put_seed_opt(Opts, Base)
+            )
+        )
+    ).
+
+maybe_put_property_opt(RunnerKey, OptsKey, Opts, Acc) ->
+    case maps:get(OptsKey, Opts, undefined) of
+        undefined -> Acc;
+        Value -> maps:put(RunnerKey, Value, Acc)
+    end.
+
+maybe_put_seed_opt(Opts, Acc) ->
+    case maps:get(property_seed, Opts, maps:get(seed, Opts, undefined)) of
+        undefined ->
+            Acc;
+        Seed when is_integer(Seed) ->
+            maps:put(seed, catena_gen:seed_from_int(Seed), Acc);
+        Seed ->
+            maps:put(seed, Seed, Acc)
+    end.
+
+translate_property_result(Name, #property_result{kind = success}) ->
+    {pass, Name};
+translate_property_result(Name, #property_result{kind = failure} = Result) ->
+    {fail, Name, {property_counterexample, property_result_details(Result)}};
+translate_property_result(Name, #property_result{kind = discarded} = Result) ->
+    {fail, Name, {property_discarded, property_result_details(Result)}};
+translate_property_result(Name, #property_result{kind = error} = Result) ->
+    Details = property_result_details(Result),
+    Reason = maps:get(original_counterexample, Details, undefined),
+    {fail, Name, {property_error, Details#{reason => Reason}}}.
+
+property_result_details(Result) ->
+    #{
+        kind => Result#property_result.kind,
+        tests_run => Result#property_result.tests_run,
+        tests_discarded => Result#property_result.tests_discarded,
+        shrinks_attempted => Result#property_result.shrinks_attempted,
+        seed => Result#property_result.seed,
+        original_counterexample => normalize_property_counterexample(Result#property_result.original_counterexample),
+        shrunk_counterexample => normalize_property_counterexample(Result#property_result.shrunk_counterexample)
+    }.
+
+normalize_property_counterexample(undefined) ->
+    undefined;
+normalize_property_counterexample(Counterexample) when is_map(Counterexample) ->
+    maps:map(fun(_Key, Value) -> get_value(Value) end, Counterexample);
+normalize_property_counterexample(Counterexample) ->
+    Counterexample.
 
 %%====================================================================
 %% Runtime Environment Construction
