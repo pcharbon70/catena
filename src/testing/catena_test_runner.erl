@@ -22,6 +22,8 @@
     run_test/3,
     run_test_value/1,
     run_test_value/2,
+    run_property_value/1,
+    run_property_value/2,
     run_suite_value/1,
     run_suite_value/2,
     build_runtime_env/1,
@@ -101,11 +103,14 @@ run_test_value(TestValue) ->
     run_test_value(TestValue, #{}).
 
 -spec run_test_value(map(), map()) -> test_result().
-run_test_value(TestValue, _Opts) when is_map(TestValue) ->
+run_test_value(TestValue, Opts) when is_map(TestValue) ->
     Name = maps:get(name, TestValue, "<anonymous test>"),
     case maps:get(run, TestValue, undefined) of
         undefined ->
-            {fail, Name, missing_run_function};
+            case maps:is_key(body, TestValue) of
+                true -> run_property_value(TestValue, Opts);
+                false -> {fail, Name, missing_run_function}
+            end;
         Run ->
             try
                 case apply_function(Run, [unit_value()]) of
@@ -127,6 +132,28 @@ run_test_value(TestValue, _Opts) when is_map(TestValue) ->
             end
     end.
 
+%% @doc Run a first-class Catena Property value produced by stdlib `Test.prop`.
+-spec run_property_value(map()) -> test_result().
+run_property_value(PropertyValue) ->
+    run_property_value(PropertyValue, #{}).
+
+-spec run_property_value(map(), map()) -> test_result().
+run_property_value(PropertyValue, Opts) when is_map(PropertyValue) ->
+    Name = maps:get(name, PropertyValue, "<anonymous property>"),
+    try
+        case catena_first_class_property_adapter:from_property_value(PropertyValue) of
+            {ok, Property} ->
+                run_property_engine(Name, Property, Opts);
+            {error, Reason} ->
+                {fail, Name, Reason}
+        end
+    catch
+        error:Error:Stacktrace ->
+            {fail, Name, {error, Error, Stacktrace}};
+        Class:Error ->
+            {fail, Name, {exception, Class, Error}}
+    end.
+
 %% @doc Run a first-class Catena Suite value and aggregate its results.
 -spec run_suite_value(map()) -> test_results().
 run_suite_value(SuiteValue) ->
@@ -135,7 +162,10 @@ run_suite_value(SuiteValue) ->
 -spec run_suite_value(map(), map()) -> test_results().
 run_suite_value(SuiteValue, Opts) when is_map(SuiteValue) ->
     Tests = maps:get(tests, SuiteValue, []),
-    Results = [run_test_value(TestValue, Opts) || TestValue <- Tests],
+    Properties = maps:get(properties, SuiteValue, []),
+    TestResults = [run_test_value(TestValue, Opts) || TestValue <- Tests],
+    PropertyResults = [run_property_value(PropertyValue, Opts) || PropertyValue <- Properties],
+    Results = TestResults ++ PropertyResults,
     aggregate_results(Results).
 
 %% @doc Build a runtime environment from Catena declarations.
@@ -212,12 +242,7 @@ run_unit_test(Name, Body, Env) ->
 run_property_test(Name, Body, Env, Opts) ->
     case catena_property_adapter:from_property_body(Name, Body, Env) of
         {ok, Property} ->
-            case catena_runner:run_property(Property, property_run_options(Opts)) of
-                {passed, _Result} ->
-                    {pass, Name};
-                {failed, Result} ->
-                    translate_property_result(Name, Result)
-            end;
+            run_property_engine(Name, Property, Opts);
         {error, Reason} ->
             {fail, Name, Reason}
     end.
@@ -482,15 +507,27 @@ format_failure_reason(Other) ->
 get_value({value, V}) -> V;
 get_value(V) -> V.
 
-property_run_options(Opts) ->
+run_property_engine(Name, Property, Opts) ->
+    case catena_runner:run_property(Property, property_run_options(Property, Opts)) of
+        {passed, _Result} ->
+            {pass, Name};
+        {failed, Result} ->
+            translate_property_result(Name, Result)
+    end.
+
+property_run_options(Property, Opts) ->
+    Config = Property#property.config,
     Base = #{
-        num_tests => maps:get(property_iterations, Opts, ?DEFAULT_PROPERTY_ITERATIONS)
+        num_tests => maps:get(
+            property_iterations,
+            Opts,
+            default_property_num_tests(Config)
+        ),
+        max_shrinks => maps:get(property_max_shrinks, Opts, Config#property_config.max_shrinks)
     },
-    maybe_put_property_opt(max_shrinks, property_max_shrinks, Opts,
-        maybe_put_property_opt(timeout, property_timeout, Opts,
-            maybe_put_property_opt(parallel, property_parallel, Opts,
-                maybe_put_seed_opt(Opts, Base)
-            )
+    maybe_put_property_opt(timeout, property_timeout, Opts,
+        maybe_put_property_opt(parallel, property_parallel, Opts,
+            maybe_put_seed_opt(Config, Opts, Base)
         )
     ).
 
@@ -500,14 +537,26 @@ maybe_put_property_opt(RunnerKey, OptsKey, Opts, Acc) ->
         Value -> maps:put(RunnerKey, Value, Acc)
     end.
 
-maybe_put_seed_opt(Opts, Acc) ->
-    case maps:get(property_seed, Opts, maps:get(seed, Opts, undefined)) of
+maybe_put_seed_opt(Config, Opts, Acc) ->
+    case maps:get(property_seed, Opts, maps:get(seed, Opts, config_seed(Config))) of
         undefined ->
             Acc;
         Seed when is_integer(Seed) ->
             maps:put(seed, catena_gen:seed_from_int(Seed), Acc);
         Seed ->
             maps:put(seed, Seed, Acc)
+    end.
+
+default_property_num_tests(Config) ->
+    case Config#property_config.num_tests of
+        undefined -> ?DEFAULT_PROPERTY_ITERATIONS;
+        NumTests -> NumTests
+    end.
+
+config_seed(Config) ->
+    case Config#property_config.seed of
+        undefined -> undefined;
+        Seed -> Seed
     end.
 
 translate_property_result(Name, #property_result{kind = success}) ->

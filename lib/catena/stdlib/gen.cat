@@ -1,0 +1,66 @@
+-- Catena property-testing generator surface.
+--
+-- This is intentionally small and explicit for the first promoted bridge.
+-- The current supported subset focuses on bool/int/text families plus the
+-- combinators needed to build richer generators without exposing Erlang internals.
+
+module Gen
+export type Generator
+export transform bool
+export transform int
+export transform natural
+export transform intRange
+export transform constantBool
+export transform constantInt
+export transform constantText
+export transform elementBools
+export transform elementInts
+export transform elementTexts
+export transform oneOf
+export transform map
+export transform flatMap
+export transform filter
+
+type Generator =
+  Gen_Bool
+  | Gen_Int
+  | Gen_Natural
+  | Gen_IntRange Natural Natural
+  | Gen_ConstantBool Bool
+  | Gen_ConstantInt Int
+  | Gen_ConstantText String
+  | Gen_ElementBools (List Bool)
+  | Gen_ElementInts (List Int)
+  | Gen_ElementTexts (List String)
+  | Gen_OneOf (List Generator)
+  | Gen_Map Generator (Unit -> Unit)
+  | Gen_FlatMap Generator (Unit -> Generator)
+  | Gen_Filter Generator (Unit -> Bool)
+
+transform bool = Gen_Bool
+
+transform int = Gen_Int
+
+transform natural = Gen_Natural
+
+transform intRange min max = Gen_IntRange min max
+
+transform constantBool value = Gen_ConstantBool value
+
+transform constantInt value = Gen_ConstantInt value
+
+transform constantText value = Gen_ConstantText value
+
+transform elementBools values = Gen_ElementBools values
+
+transform elementInts values = Gen_ElementInts values
+
+transform elementTexts values = Gen_ElementTexts values
+
+transform oneOf generators = Gen_OneOf generators
+
+transform map generator mapper = Gen_Map generator mapper
+
+transform flatMap generator binder = Gen_FlatMap generator binder
+
+transform filter generator predicate = Gen_Filter generator predicate

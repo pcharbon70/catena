@@ -7,6 +7,8 @@
 module Test
 export type Test
 export type Property
+export type PropertyConfig
+export type PropertySpec
 export type TestResult
 export type Suite
 export transform unit
@@ -14,10 +16,21 @@ export transform prop
 export transform assert
 export transform assertEqual
 export transform assertMatch
+export transform forAll
+export transform implies
+export transform discard
+export transform defaultPropertyConfig
+export transform withIterations
+export transform withSeed
+export transform withLabel
 export transform verify
 export transform suite
+export transform suiteWithProperties
 export transform run
 export transform benchmark
+
+import Prelude
+import Gen
 
 -- Test result types
 type TestResult = Passed | Failed String | Skipped String
@@ -27,14 +40,28 @@ type Test = Test {
   run : Unit -> TestResult
 }
 
+-- Property bodies mirror the internal property-engine shape:
+-- a zero-argument builder that will later evaluate to quantified property data.
 type Property = Property {
   name : String,
-  check : Natural -> TestResult
+  body : Unit -> PropertySpec,
+  config : PropertyConfig
 }
+
+type PropertyConfig = PropertyConfig {
+  iterations : Natural,
+  seed : Maybe Natural,
+  labels : List String
+}
+
+type PropertySpec =
+  For_All Generator (Unit -> Unit)
+  | Discard
 
 type Suite = Suite {
   name : String,
-  tests : List Test
+  tests : List Test,
+  properties : List Property
 }
 
 -- Create a unit test
@@ -48,12 +75,56 @@ transform unit name testFn = Test {
 }
 
 -- Create a property-based test
--- Property tests need generators (not yet implemented)
--- transform property : String -> (a -> Bool) -> Property
--- transform property name prop = Property {
---   name: name,
---   check: fn numTests -> Passed
--- }
+transform prop name body = Property {
+  name: name,
+  body: body,
+  config: defaultPropertyConfig
+}
+
+transform forAll generator predicate = For_All generator predicate
+
+transform implies condition predicate = match condition of
+  | true -> predicate unit
+  | false -> discard
+end
+
+transform discard = Discard
+
+transform defaultPropertyConfig = PropertyConfig {
+  iterations: 100,
+  seed: None,
+  labels: []
+}
+
+transform withIterations iterations propValue = Property {
+  name: propValue.name,
+  body: propValue.body,
+  config: PropertyConfig {
+    iterations: iterations,
+    seed: propValue.config.seed,
+    labels: propValue.config.labels
+  }
+}
+
+transform withSeed seed propValue = Property {
+  name: propValue.name,
+  body: propValue.body,
+  config: PropertyConfig {
+    iterations: propValue.config.iterations,
+    seed: Some seed,
+    labels: propValue.config.labels
+  }
+}
+
+transform withLabel label propValue = Property {
+  name: propValue.name,
+  body: propValue.body,
+  config: PropertyConfig {
+    iterations: propValue.config.iterations,
+    seed: propValue.config.seed,
+    labels: label :: propValue.config.labels
+  }
+}
 
 -- Basic assertions
 transform assert cond = match cond of
@@ -83,7 +154,14 @@ transform verify lawName check = Test {
 -- Create a test suite
 transform suite name tests = Suite {
   name: name,
-  tests: tests
+  tests: tests,
+  properties: []
+}
+
+transform suiteWithProperties name tests properties = Suite {
+  name: name,
+  tests: tests,
+  properties: properties
 }
 
 -- Run a test and get result
@@ -115,7 +193,10 @@ transform benchmark name iterations benchFn = Benchmark {
 --   )
 -- ]
 --
--- myProps = [
---   property "addition commutative" (fn x y -> x + y === y + x),
---   property "list reverse involutive" (fn xs -> reverse (reverse xs) === xs)
--- ]
+-- myProperty =
+--   prop "addition commutative" (fn u ->
+--     forAll Gen.int (fn n -> n >= 0)
+--   )
+--
+-- tunedProperty =
+--   withSeed 7 (withIterations 250 myProperty)

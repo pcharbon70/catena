@@ -310,25 +310,43 @@ typecheck_error_effect_test() ->
     end.
 
 %% Test parsing test.cat (type-checking has known limitations with record construction)
-%% NOTE: test.cat uses 'property' as a function name but 'property' is a reserved keyword.
-%% This test validates that we get the expected parse error until the stdlib is updated.
 parse_test_module_test() ->
     Path = filename:join([catena_test_helpers:stdlib_dir(), "test.cat"]),
     {ok, Content} = file:read_file(Path),
     Source = binary_to_list(Content),
     {ok, Tokens} = catena_lexer:tokenize(Source),
     case catena_parser:parse(Tokens) of
-        {ok, {module, 'Test', Exports, _, Decls, _}} ->
-            %% Verify exports and declarations
-            ?assertEqual(13, length(Exports)),
-            ?assertEqual(13, length(Decls)),
-            ok;
-        {error, {_Line, catena_parser, _Msg}} ->
-            %% Known issue: test.cat uses 'property' as a function name
-            %% but 'property' is a reserved keyword in the grammar.
-            %% The stdlib file should be updated to rename the function.
+        {ok, {module, 'Test', Exports, Imports, Decls, _}} ->
+            ?assertEqual(23, length(Exports)),
+            ?assertEqual(2, length(Imports)),
+            ?assertEqual(24, length(Decls)),
+            ?assert(lists:member({export_type, 'PropertyConfig'}, Exports)),
+            ?assert(lists:member({export_type, 'PropertySpec'}, Exports)),
+            ?assert(lists:member({export_transform, prop}, Exports)),
+            ?assert(lists:member({export_transform, forAll}, Exports)),
+            ?assert(lists:member({export_transform, implies}, Exports)),
+            ?assert(lists:member({export_transform, discard}, Exports)),
+            ?assert(lists:member({export_transform, defaultPropertyConfig}, Exports)),
+            ?assert(lists:member({export_transform, withIterations}, Exports)),
+            ?assert(lists:member({export_transform, withSeed}, Exports)),
+            ?assert(lists:member({export_transform, withLabel}, Exports)),
+            ?assert(lists:member({export_transform, suiteWithProperties}, Exports)),
             ok
     end.
+
+parse_gen_module_test() ->
+    Path = filename:join([catena_test_helpers:stdlib_dir(), "gen.cat"]),
+    {ok, Content} = file:read_file(Path),
+    Source = binary_to_list(Content),
+    {ok, Tokens} = catena_lexer:tokenize(Source),
+    {ok, {module, 'Gen', Exports, Imports, Decls, _}} = catena_parser:parse(Tokens),
+    ?assertEqual(15, length(Exports)),
+    ?assertEqual(0, length(Imports)),
+    ?assertEqual(15, length(Decls)),
+    ?assert(lists:member({export_type, 'Generator'}, Exports)),
+    ?assert(lists:member({export_transform, intRange}, Exports)),
+    ?assert(lists:member({export_transform, flatMap}, Exports)),
+    ?assert(lists:member({export_transform, elementInts}, Exports)).
 
 %% =============================================================================
 %% Section 1.5.2 - Trait Instance Resolution

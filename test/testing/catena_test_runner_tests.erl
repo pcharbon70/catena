@@ -382,6 +382,72 @@ run_test_value_fails_with_message_test() ->
         catena_test_runner:run_test_value(TestValue)
     ).
 
+run_property_value_passes_test() ->
+    PropertyValue = #{
+        name => "naturals are non-negative",
+        body => fun(_Unit) ->
+            {for_all, gen_natural, fun(N) -> N >= 0 end}
+        end,
+        config => #{iterations => 10, seed => {some, 7}, labels => []}
+    },
+    ?assertEqual(
+        {pass, "naturals are non-negative"},
+        catena_test_runner:run_property_value(PropertyValue)
+    ).
+
+run_property_value_honors_property_iterations_test() ->
+    erase(property_runs),
+    PropertyValue = #{
+        name => "single configured run",
+        body => fun(_Unit) ->
+            {for_all, {gen_constant_int, 0}, fun(_Value) ->
+                Count = case get(property_runs) of
+                    undefined -> 0;
+                    Existing -> Existing
+                end,
+                put(property_runs, Count + 1),
+                Count =:= 0
+            end}
+        end,
+        config => #{iterations => 1, seed => {some, 11}, labels => []}
+    },
+    ?assertEqual(
+        {pass, "single configured run"},
+        catena_test_runner:run_property_value(PropertyValue)
+    ),
+    ?assertEqual(1, get(property_runs)),
+    erase(property_runs).
+
+run_property_value_fails_with_counterexample_test() ->
+    PropertyValue = #{
+        name => "less than three",
+        body => fun(_Unit) ->
+            {for_all, {gen_int_range, 0, 10}, fun(N) -> N < 3 end}
+        end,
+        config => #{iterations => 10, seed => {some, 5}, labels => []}
+    },
+    Result = catena_test_runner:run_property_value(PropertyValue),
+    ?assertMatch(
+        {fail, "less than three", {property_counterexample, #{
+            tests_run := _,
+            original_counterexample := _
+        }}},
+        Result
+    ).
+
+run_test_value_delegates_property_values_test() ->
+    PropertyValue = #{
+        name => "delegated property",
+        body => fun(_Unit) ->
+            {for_all, gen_bool, fun(_Bool) -> true end}
+        end,
+        config => #{iterations => 3, seed => {some, 3}, labels => []}
+    },
+    ?assertEqual(
+        {pass, "delegated property"},
+        catena_test_runner:run_test_value(PropertyValue)
+    ).
+
 run_suite_value_aggregates_results_test() ->
     SuiteValue = #{
         name => "Law Suite",
@@ -396,3 +462,37 @@ run_suite_value_aggregates_results_test() ->
     ?assertEqual(2, maps:get(total, Results)),
     ?assert(lists:member({pass, "identity"}, maps:get(results, Results))),
     ?assert(lists:member({fail, "associativity", "Law verification failed"}, maps:get(results, Results))).
+
+run_suite_value_ignores_empty_properties_field_test() ->
+    SuiteValue = #{
+        name => "Mixed Suite",
+        tests => [
+            #{name => "identity", run => fun(_Unit) -> passed end}
+        ],
+        properties => []
+    },
+    Results = catena_test_runner:run_suite_value(SuiteValue),
+    ?assertEqual(1, maps:get(passed, Results)),
+    ?assertEqual(0, maps:get(failed, Results)),
+    ?assertEqual(1, maps:get(total, Results)).
+
+run_suite_value_runs_properties_test() ->
+    SuiteValue = #{
+        name => "Mixed Suite",
+        tests => [
+            #{name => "identity", run => fun(_Unit) -> passed end}
+        ],
+        properties => [
+            #{
+                name => "property passes",
+                body => fun(_Unit) ->
+                    {for_all, gen_bool, fun(_Bool) -> true end}
+                end,
+                config => #{iterations => 5, seed => {some, 17}, labels => []}
+            }
+        ]
+    },
+    Results = catena_test_runner:run_suite_value(SuiteValue),
+    ?assertEqual(2, maps:get(passed, Results)),
+    ?assertEqual(0, maps:get(failed, Results)),
+    ?assertEqual(2, maps:get(total, Results)).
