@@ -142,5 +142,5 @@ test_equation_rewrite_optimization() ->
         1,
         catena_equations:op(inc, 1, catena_equations:lit(42))
     ),
-    {expr, Optimized, _} = catena_equation_apply:rewrite(Expr, Set, normal),
+    {ok, Optimized, _} = catena_equation_rewrite:optimize(Expr, Set),
     ?assertMatch({lit, 42}, Optimized).

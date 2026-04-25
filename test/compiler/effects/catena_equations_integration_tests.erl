@@ -178,6 +178,42 @@ derive_simple_proof_test() ->
     ),
     ?assert(length(Chain) > 0).
 
+public_prover_equivalence_test() ->
+    Set = setup_arithmetic_equations(),
+    Left = catena_equations:op(add, 0,
+        catena_equations:seq([catena_equations:lit(5), catena_equations:lit(0)])
+    ),
+    Right = catena_equations:lit(5),
+    {ok, Report} = catena_equation_prover:prove_equivalence(Left, Right, Set),
+    ?assertEqual(normalized, maps:get(strategy, Report)).
+
+public_prover_handler_verification_test() ->
+    Eq = catena_equations:new(
+        catena_equations:op(get, 0, catena_equations:var(state)),
+        catena_equations:var(state)
+    ),
+    Set = catena_equation_spec:add_handler_equation(
+        catena_equation_spec:new_set(handler),
+        state_handler,
+        state_get,
+        Eq
+    ),
+    {ok, Report} = catena_equation_prover:verify_handler(
+        state_handler,
+        fun(Pattern) -> Pattern end,
+        Set,
+        [get]
+    ),
+    ?assertEqual([state_get], maps:get(verified, Report)).
+
+equation_property_integration_test() ->
+    Set = setup_arithmetic_equations(),
+    {ok, Eq} = catena_equation_spec:get_equation(Set, add_zero),
+    ?assertMatch(
+        {passed, _},
+        catena_equation_prover:run_equation_property(Eq, Set, #{num_tests => 10})
+    ).
+
 %%%=============================================================================
 %%% Algebraic Laws Integration Tests
 %%%=============================================================================
@@ -239,6 +275,14 @@ rewrite_nested_expression_test() ->
     Expr = catena_equations:seq([catena_equations:var(x)]),
     {expr, Result, _} = catena_equation_apply:rewrite(Expr, SetWithEq, normal),
     ?assertMatch({var, y}, Result).
+
+rewrite_wrapper_optimization_test() ->
+    Set = setup_arithmetic_equations(),
+    Expr = catena_equations:op(add, 0,
+        catena_equations:seq([catena_equations:lit(7), catena_equations:lit(0)])
+    ),
+    {ok, Result, _Context} = catena_equation_rewrite:optimize(Expr, Set),
+    ?assertEqual(catena_equations:lit(7), Result).
 
 rewrite_with_limit_test() ->
     % Test rewriting with a limit
