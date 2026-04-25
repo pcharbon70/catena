@@ -25,6 +25,19 @@ property_new_creates_property_test() ->
     ?assertMatch(#property{generator = Gen, predicate = Pred}, Prop),
     ok.
 
+property_creation_preserves_single_tuple_values_test() ->
+    Prop = catena_property:property("tuple_prop", fun() ->
+        catena_property:forall(
+            catena_gen:constant({some, 1}),
+            fun(Value) -> Value =:= {some, 1} end
+        )
+    end),
+    {passed, _} = catena_runner:run_property(Prop, #{
+        num_tests => 1,
+        seed => catena_gen:seed_from_int(1)
+    }),
+    ok.
+
 default_config_test() ->
     Config = catena_property:default_config(),
     ?assertEqual(100, Config#property_config.num_tests),

@@ -110,13 +110,12 @@ functor_composition_law_list_test() ->
 functor_identity_law_maybe_test() ->
     Law = catena_trait_laws:functor_identity_law(),
     Adapter = maybe_adapter(),
-    %% Wrap the maybe values in a tuple so the predicate receives them as single arg
-    MaybeGen = catena_gen:gen_bind(catena_gen:gen_one_of([
+    MaybeGen = catena_gen:gen_one_of([
         catena_gen:constant(nothing),
         catena_gen:gen_bind(catena_gen:gen_int(), fun(N) ->
             catena_gen:constant({just, N})
         end)
-    ]), fun(M) -> catena_gen:constant({M}) end),
+    ]),
     Params = #law_params{
         generator = MaybeGen,
         eq_fn = catena_laws:eq_structural(),
