@@ -9,6 +9,7 @@ export type Test
 export type Property
 export type PropertyConfig
 export type PropertySpec
+export type LawCheck
 export type TestResult
 export type Suite
 export transform unit
@@ -24,6 +25,10 @@ export transform withIterations
 export transform withSeed
 export transform withLabel
 export transform verify
+export transform verifyTrait
+export transform verifyTraits
+export transform withLawIterations
+export transform withLawSeed
 export transform suite
 export transform suiteWithProperties
 export transform run
@@ -37,7 +42,8 @@ type TestResult = Passed | Failed String | Skipped String
 
 type Test = Test {
   name : String,
-  run : Unit -> TestResult
+  run : Unit -> TestResult,
+  lawCheck : Maybe LawCheck
 }
 
 -- Property bodies mirror the internal property-engine shape:
@@ -58,6 +64,12 @@ type PropertySpec =
   For_All Generator (Unit -> Unit)
   | Discard
 
+type LawCheck = LawCheck {
+  instanceName : String,
+  traits : List String,
+  config : PropertyConfig
+}
+
 type Suite = Suite {
   name : String,
   tests : List Test,
@@ -71,7 +83,8 @@ transform unit name testFn = Test {
   run: fn u -> match (testFn u) of
     | true -> Passed
     | false -> Failed "Assertion failed"
-  end
+  end,
+  lawCheck: None
 }
 
 -- Create a property-based test
@@ -148,8 +161,55 @@ transform verify lawName check = Test {
   run: fn u -> match (check u) of
     | true -> Passed
     | false -> Failed "Law verification failed"
-  end
+  end,
+  lawCheck: None
 }
+
+transform verifyTrait lawName instanceName traitName = verifyTraits lawName instanceName [traitName]
+
+transform verifyTraits lawName instanceName traits = Test {
+  name: lawName,
+  run: fn u -> Passed,
+  lawCheck: Some (LawCheck {
+    instanceName: instanceName,
+    traits: traits,
+    config: defaultPropertyConfig
+  })
+}
+
+transform withLawIterations iterations testValue = match testValue.lawCheck of
+  | Some lawCheck -> Test {
+      name: testValue.name,
+      run: testValue.run,
+      lawCheck: Some (LawCheck {
+        instanceName: lawCheck.instanceName,
+        traits: lawCheck.traits,
+        config: PropertyConfig {
+          iterations: iterations,
+          seed: lawCheck.config.seed,
+          labels: lawCheck.config.labels
+        }
+      })
+    }
+  | None -> testValue
+end
+
+transform withLawSeed seed testValue = match testValue.lawCheck of
+  | Some lawCheck -> Test {
+      name: testValue.name,
+      run: testValue.run,
+      lawCheck: Some (LawCheck {
+        instanceName: lawCheck.instanceName,
+        traits: lawCheck.traits,
+        config: PropertyConfig {
+          iterations: lawCheck.config.iterations,
+          seed: Some seed,
+          labels: lawCheck.config.labels
+        }
+      })
+    }
+  | None -> testValue
+end
 
 -- Create a test suite
 transform suite name tests = Suite {

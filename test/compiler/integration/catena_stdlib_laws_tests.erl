@@ -212,6 +212,25 @@ orderable_suite_source() ->
     "  verify \"totality\" (fn u -> orderableTotalityLaw 4 9)\n"
     "]\n".
 
+generic_bridge_suite_source() ->
+    "module GenericBridgeLawSuite\n"
+    "export transform genericBridgeSuite\n"
+    "import Prelude\n"
+    "import Test\n"
+    "transform genericBridgeSuite = suite \"Generic Bridge Laws\" [\n"
+    "  verifyTrait \"maybe mapper\" \"Maybe\" \"Mapper\",\n"
+    "  withLawSeed 11 (withLawIterations 12 (verifyTraits \"list accumulator\" \"List\" [\"Accumulator\"]))\n"
+    "]\n".
+
+generic_bridge_bad_suite_source() ->
+    "module GenericBridgeBadLawSuite\n"
+    "export transform genericBridgeBadSuite\n"
+    "import Prelude\n"
+    "import Test\n"
+    "transform genericBridgeBadSuite = suite \"Generic Bridge Laws\" [\n"
+    "  verifyTrait \"unsupported maybe accumulator\" \"Maybe\" \"Accumulator\"\n"
+    "]\n".
+
 broken_maybe_suite_source() ->
     "module BrokenMaybeLawSuite\n"
     "export transform brokenMaybeSuite\n"
@@ -369,6 +388,22 @@ orderable_law_suite_executes_test() ->
     ?assertEqual(3, maps:get(total, Results)),
     ?assertEqual(3, maps:get(passed, Results)),
     ?assertEqual(0, maps:get(failed, Results)).
+
+generic_bridge_law_suite_executes_test() ->
+    Results = run_named_suite(generic_bridge_suite_source(), genericBridgeSuite, #{}),
+    ?assertEqual(2, maps:get(total, Results)),
+    ?assertEqual(2, maps:get(passed, Results)),
+    ?assertEqual(0, maps:get(failed, Results)).
+
+generic_bridge_reports_explicit_errors_test() ->
+    Results = run_named_suite(generic_bridge_bad_suite_source(), genericBridgeBadSuite, #{}),
+    ?assertEqual(1, maps:get(total, Results)),
+    ?assertEqual(0, maps:get(passed, Results)),
+    ?assertEqual(1, maps:get(failed, Results)),
+    ?assertEqual(
+        [{fail, "unsupported maybe accumulator", {unsupported_traits, 'maybe', [monoid]}}],
+        maps:get(results, Results)
+    ).
 
 broken_fixture_reports_law_failure_test() ->
     Results = run_named_suite(

@@ -496,3 +496,79 @@ run_suite_value_runs_properties_test() ->
     ?assertEqual(2, maps:get(passed, Results)),
     ?assertEqual(0, maps:get(failed, Results)),
     ?assertEqual(2, maps:get(total, Results)).
+
+run_test_value_runs_generic_law_checks_test() ->
+    TestValue = generic_law_test(
+        "maybe mapper laws",
+        <<"Maybe">>,
+        [<<"Mapper">>],
+        #{iterations => 10, seed => {some, 7}, labels => []}
+    ),
+    ?assertEqual(
+        {pass, "maybe mapper laws"},
+        catena_test_runner:run_test_value(TestValue)
+    ).
+
+run_test_value_reports_unsupported_generic_law_traits_test() ->
+    TestValue = generic_law_test(
+        "unsupported maybe laws",
+        <<"Maybe">>,
+        [<<"Accumulator">>],
+        #{iterations => 10, seed => {some, 7}, labels => []}
+    ),
+    ?assertEqual(
+        {fail, "unsupported maybe laws", {unsupported_traits, 'maybe', [monoid]}},
+        catena_test_runner:run_test_value(TestValue)
+    ).
+
+run_suite_value_runs_generic_law_checks_test() ->
+    SuiteValue = #{
+        name => "Generic Law Suite",
+        tests => [
+            #{name => "identity", run => fun(_Unit) -> passed end},
+            generic_law_test(
+                "list accumulator laws",
+                <<"List">>,
+                [<<"Accumulator">>],
+                #{iterations => 10, seed => {some, 11}, labels => []}
+            )
+        ],
+        properties => []
+    },
+    Results = catena_test_runner:run_suite_value(SuiteValue),
+    ?assertEqual(2, maps:get(passed, Results)),
+    ?assertEqual(0, maps:get(failed, Results)),
+    ?assertEqual(2, maps:get(total, Results)).
+
+format_generic_law_failure_result_test() ->
+    Result = catena_test_runner:format_result(
+        {fail, "generic laws", {law_suite_failure, #{
+            instance => <<"Maybe">>,
+            total => 2,
+            failed => 1,
+            failures => [
+                #{
+                    trait => <<"Mapper">>,
+                    law => <<"identity">>,
+                    stdlib_law => mapperIdentityLaw,
+                    kind => failure,
+                    seed => seeded,
+                    counterexample => #{value => {some, 1}}
+                }
+            ]
+        }}}
+    ),
+    ?assert(string:find(Result, "Maybe") =/= nomatch),
+    ?assert(string:find(Result, "Mapper.identity") =/= nomatch),
+    ?assert(string:find(Result, "mapperIdentityLaw") =/= nomatch).
+
+generic_law_test(Name, Instance, Traits, Config) ->
+    #{
+        name => Name,
+        run => fun(_Unit) -> passed end,
+        lawCheck => {some, #{
+            instance => Instance,
+            traits => Traits,
+            config => Config
+        }}
+    }.
