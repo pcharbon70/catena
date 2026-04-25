@@ -24,6 +24,28 @@ state_machine_type_test() ->
     ?assertEqual(#{count => 0}, SM#state_machine.initial_state),
     ok.
 
+state_machine_default_options_test() ->
+    SM = catena_statem:state_machine(<<"test">>, counter_statem),
+    Options = SM#state_machine.options,
+    ?assertEqual(<<"test">>, SM#state_machine.name),
+    ?assertEqual(100, Options#options.num_commands),
+    ok.
+
+state_machine_validate_counter_statem_test() ->
+    SM = catena_statem:state_machine(<<"test">>, counter_statem),
+    ?assertEqual(ok, catena_statem:validate(SM)),
+    ok.
+
+state_machine_validate_invalid_command_spec_test() ->
+    SM = catena_statem:state_machine(<<"bad-command">>, invalid_command_statem),
+    ?assertMatch({error, _}, catena_statem:validate(SM)),
+    ok.
+
+state_machine_validate_invalid_invariant_test() ->
+    SM = catena_statem:state_machine(<<"bad-invariant">>, invalid_invariant_statem),
+    ?assertMatch({error, _}, catena_statem:validate(SM)),
+    ok.
+
 %% ---- Section 5.1.2: Command Specification ----
 
 command_gen_type_test() ->
@@ -54,6 +76,17 @@ command_has_name_test() ->
     ?assertEqual(increment, Gen#command_gen.name),
     ok.
 
+command_constructor_test() ->
+    Precondition = fun(State) -> maps:get(enabled, State, false) end,
+    Spec = catena_statem:command(test, catena_gen:constant([1]), #{
+        precondition => Precondition,
+        weight => 3
+    }),
+    ?assertEqual(test, Spec#command_gen.name),
+    ?assertEqual(3, Spec#command_gen.weight),
+    ?assertEqual(Precondition, Spec#command_gen.precondition),
+    ok.
+
 command_has_args_gen_test() ->
     ArgsGen = catena_gen:constant([1, 2, 3]),
     Gen = #command_gen{name = test, args_gen = ArgsGen},
@@ -68,6 +101,12 @@ command_has_weight_test() ->
 command_without_precondition_test() ->
     Gen = #command_gen{name = test, args_gen = catena_gen:constant([])},
     ?assertEqual(undefined, Gen#command_gen.precondition),
+    ok.
+
+invariant_constructor_test() ->
+    Inv = catena_statem:invariant(non_negative, fun(State) -> maps:get(count, State) >= 0 end),
+    ?assertEqual(non_negative, Inv#invariant.name),
+    ?assertEqual(undefined, Inv#invariant.when_fun),
     ok.
 
 %% ---- Section 5.1.3: State Model ----
@@ -96,16 +135,34 @@ state_get_list_test() ->
     ?assertEqual(<<"test">>, catena_statem:state_get(name, State)),
     ok.
 
+state_get_tuple_test() ->
+    State = {counter, 5, <<"test">>},
+    ?assertEqual(counter, catena_statem:state_get(1, State)),
+    ?assertEqual(5, catena_statem:state_get(2, State)),
+    ok.
+
 state_put_list_test() ->
     State = [{count, 5}],
     NewState = catena_statem:state_put(count, 10, State),
     ?assertEqual(10, proplists:get_value(count, NewState)),
     ok.
 
+state_put_tuple_test() ->
+    State = {counter, 5, <<"test">>},
+    NewState = catena_statem:state_put(2, 10, State),
+    ?assertEqual({counter, 10, <<"test">>}, NewState),
+    ok.
+
 state_update_list_test() ->
     State = [{count, 5}],
     NewState = catena_statem:state_update(count, fun(X) -> X * 2 end, State),
     ?assertEqual(10, proplists:get_value(count, NewState)),
+    ok.
+
+state_update_tuple_test() ->
+    State = {counter, 5, <<"test">>},
+    NewState = catena_statem:state_update(2, fun(X) -> X * 2 end, State),
+    ?assertEqual({counter, 10, <<"test">>}, NewState),
     ok.
 
 %% ---- Section 5.1.4: Invariants ----

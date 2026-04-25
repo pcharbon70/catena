@@ -22,7 +22,11 @@
     name :: atom(),
     args_gen :: term(),
     precondition :: term() | undefined,
-    weight :: pos_integer() | undefined
+    execute :: term() | undefined,
+    postcondition :: term() | undefined,
+    next_state :: term() | undefined,
+    weight :: pos_integer() | undefined,
+    frequency :: term() | undefined
 }).
 
 -record(invariant, {

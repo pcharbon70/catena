@@ -59,7 +59,12 @@
 %%====================================================================
 
 -export([
+    state_machine/2,
     state_machine/3,
+    command/2,
+    command/3,
+    invariant/2,
+    invariant/3,
     validate/1,
     extract_commands/2,
     extract_invariants/1
@@ -196,6 +201,16 @@
 %% @doc Command generator result.
 -type gen_result(T) :: {T, catena_gen:seed()} | {error, term()}.
 
+-callback initial_state() -> state().
+-callback command(state()) -> [command_spec()].
+-callback precondition(state(), symbolic_command()) -> boolean().
+-callback next_state(state(), var_bindings(), symbolic_command()) -> state().
+-callback postcondition(state(), symbolic_command(), command_result()) -> boolean().
+-callback setup() -> {ok, system()} | {error, term()}.
+-callback cleanup(system()) -> ok.
+-callback invariants() -> [invariant_spec()].
+-optional_callbacks([setup/0, cleanup/1, invariants/0]).
+
 %%====================================================================
 %% Section 5.1.1: State Machine Type Definition
 %%====================================================================
@@ -205,6 +220,10 @@
 %% @param Name Human-readable name for this state machine
 %% @param Module Callback module implementing the statem behavior
 %% @param Options Configuration options
+-spec state_machine(atom() | binary(), module()) -> state_machine().
+state_machine(Name, Module) ->
+    state_machine(Name, Module, default_options()).
+
 -spec state_machine(atom() | binary(), module(), options()) -> state_machine().
 state_machine(Name, Module, Options) ->
     InitialState = Module:initial_state(),
@@ -218,6 +237,44 @@ state_machine(Name, Module, Options) ->
         invariants = Invariants,
         options = Options
     }.
+
+%% @doc Construct a command specification with default options.
+-spec command(atom(), args_generator()) -> command_spec().
+command(Name, ArgsGen) ->
+    command(Name, ArgsGen, #{}).
+
+%% @doc Construct a command specification from a name, generator, and option map.
+%%
+%% Supported options are:
+%% - `precondition`
+%% - `execute`
+%% - `postcondition`
+%% - `next_state`
+%% - `weight`
+%% - `frequency`
+-spec command(atom(), args_generator(), map()) -> command_spec().
+command(Name, ArgsGen, Options) ->
+    #command_gen{
+        name = Name,
+        args_gen = ArgsGen,
+        precondition = maps:get(precondition, Options, undefined),
+        execute = maps:get(execute, Options, undefined),
+        postcondition = maps:get(postcondition, Options, undefined),
+        next_state = maps:get(next_state, Options, undefined),
+        weight = maps:get(weight, Options, undefined),
+        frequency = maps:get(frequency, Options, undefined)
+    }.
+
+%% @doc Construct an invariant with no guard.
+-spec invariant(atom() | binary(), fun((state()) -> boolean())) -> invariant_spec().
+invariant(Name, Check) ->
+    invariant(Name, Check, undefined).
+
+%% @doc Construct an invariant with an optional guard.
+-spec invariant(atom() | binary(), fun((state()) -> boolean()), fun((state()) -> boolean()) | undefined) ->
+    invariant_spec().
+invariant(Name, Check, WhenFun) ->
+    #invariant{name = Name, check = Check, when_fun = WhenFun}.
 
 %% @doc Extract command specifications from the callback module.
 -spec extract_commands(module(), state()) -> [command_spec()].
@@ -236,24 +293,109 @@ extract_invariants(Module) ->
 %%
 %% Checks that all required callbacks are exported and valid.
 -spec validate(state_machine()) -> ok | {error, [term()]}.
-validate(#state_machine{module = Module}) ->
-    CheckCallback = fun({Func, Arity}) ->
-        case erlang:function_exported(Module, Func, Arity) of
-            true -> false;
-            false -> {true, {missing_callback, Func, Arity}}
-        end
-    end,
-    Errors = lists:filtermap(CheckCallback, [
+validate(#state_machine{module = Module, initial_state = InitialState, commands = Commands, invariants = Invariants}) ->
+    Errors =
+        validate_callbacks(Module) ++
+        validate_command_specs(Module, InitialState, Commands) ++
+        validate_invariants(Module, Invariants),
+    case Errors of
+        [] -> ok;
+        _ -> {error, Errors}
+    end.
+
+validate_callbacks(Module) ->
+    Required = [
         {initial_state, 0},
         {command, 1},
         {precondition, 2},
         {next_state, 3},
         {postcondition, 3}
-    ]),
-    case Errors of
-        [] -> ok;
-        _ -> {error, Errors}
-    end.
+    ],
+    CheckCallback = fun({Func, Arity}) ->
+        case erlang:function_exported(Module, Func, Arity) of
+            true -> [];
+            false -> [{missing_callback, Func, Arity}]
+        end
+    end,
+    lists:append([CheckCallback(Callback) || Callback <- Required]).
+
+validate_command_specs(Module, InitialState, Commands) ->
+    DynamicErrors =
+        case catch Module:command(InitialState) of
+            {'EXIT', Reason} ->
+                [{command_callback_failed, Reason}];
+            Result when is_list(Result) ->
+                validate_command_list(dynamic, Result);
+            Result ->
+                [{invalid_command_list, dynamic, Result}]
+        end,
+    CachedErrors =
+        case is_list(Commands) of
+            true -> validate_command_list(cached, Commands);
+            false -> [{invalid_command_list, cached, Commands}]
+        end,
+    DynamicErrors ++ CachedErrors.
+
+validate_command_list(Source, CommandSpecs) ->
+    lists:append([validate_command_spec(Source, Spec) || Spec <- CommandSpecs]).
+
+validate_command_spec(Source, #command_gen{
+    name = Name,
+    args_gen = ArgsGen,
+    precondition = Precondition,
+    execute = Execute,
+    postcondition = Postcondition,
+    next_state = NextState,
+    weight = Weight,
+    frequency = Frequency
+}) ->
+    validate_spec_field(Source, invalid_command_name, Name, is_atom(Name)) ++
+    validate_spec_field(Source, missing_args_generator, ArgsGen, ArgsGen =/= undefined) ++
+    validate_spec_field(Source, invalid_precondition, Precondition, Precondition =:= undefined orelse is_function(Precondition, 1)) ++
+    validate_spec_field(Source, invalid_execute, Execute, Execute =:= undefined orelse is_function(Execute, 2)) ++
+    validate_spec_field(Source, invalid_postcondition, Postcondition, Postcondition =:= undefined orelse is_function(Postcondition, 3)) ++
+    validate_spec_field(Source, invalid_next_state, NextState, NextState =:= undefined orelse is_function(NextState, 3)) ++
+    validate_spec_field(Source, invalid_weight, Weight, Weight =:= undefined orelse (is_integer(Weight) andalso Weight > 0)) ++
+    validate_spec_field(Source, invalid_frequency, Frequency, Frequency =:= undefined orelse is_function(Frequency, 1));
+validate_command_spec(Source, Spec) ->
+    [{invalid_command_spec, Source, Spec}].
+
+validate_spec_field(_Source, _Kind, _Value, true) ->
+    [];
+validate_spec_field(Source, Kind, Value, false) ->
+    [{Kind, Source, Value}].
+
+validate_invariants(Module, Invariants) ->
+    DynamicErrors =
+        case erlang:function_exported(Module, invariants, 0) of
+            true ->
+                case catch Module:invariants() of
+                    {'EXIT', Reason} ->
+                        [{invariants_callback_failed, Reason}];
+                    Result when is_list(Result) ->
+                        validate_invariant_list(dynamic, Result);
+                    Result ->
+                        [{invalid_invariant_list, dynamic, Result}]
+                end;
+            false ->
+                []
+        end,
+    CachedErrors =
+        case is_list(Invariants) of
+            true -> validate_invariant_list(cached, Invariants);
+            false -> [{invalid_invariant_list, cached, Invariants}]
+        end,
+    DynamicErrors ++ CachedErrors.
+
+validate_invariant_list(Source, Invariants) ->
+    lists:append([validate_invariant(Source, Invariant) || Invariant <- Invariants]).
+
+validate_invariant(Source, #invariant{name = Name, check = Check, when_fun = WhenFun}) ->
+    validate_spec_field(Source, invalid_invariant_name, Name, is_atom(Name) orelse is_binary(Name)) ++
+    validate_spec_field(Source, invalid_invariant_check, Check, is_function(Check, 1)) ++
+    validate_spec_field(Source, invalid_invariant_guard, WhenFun, WhenFun =:= undefined orelse is_function(WhenFun, 1));
+validate_invariant(Source, Invariant) ->
+    [{invalid_invariant, Source, Invariant}].
 
 %%====================================================================
 %% Section 5.1.3: State Model
@@ -268,29 +410,35 @@ get_initial_state(#state_machine{initial_state = State}) ->
 -spec state_get(term(), state()) -> term().
 state_get(Key, State) when is_map(State) ->
     maps:get(Key, State);
-state_get(Key, State) when is_tuple(State) ->
+state_get(Key, State) when is_tuple(State), is_integer(Key), Key > 0, Key =< tuple_size(State) ->
     element(Key, State);
 state_get(Key, State) when is_list(State) ->
-    proplists:get_value(Key, State).
+    proplists:get_value(Key, State);
+state_get(Key, State) ->
+    error({unsupported_state_access, Key, State}).
 
 %% @doc Update state using a key (for map-based states).
 -spec state_put(term(), term(), state()) -> state().
 state_put(Key, Value, State) when is_map(State) ->
     maps:put(Key, Value, State);
+state_put(Key, Value, State) when is_tuple(State), is_integer(Key), Key > 0, Key =< tuple_size(State) ->
+    setelement(Key, State, Value);
 state_put(Key, Value, State) when is_list(State) ->
     lists:keystore(Key, 1, State, {Key, Value});
-state_put(_Key, _Value, State) ->
-    State.
+state_put(Key, _Value, State) ->
+    error({unsupported_state_update, Key, State}).
 
 %% @doc Update state using a function (for map-based states).
 -spec state_update(term(), fun((term()) -> term()), state()) -> state().
 state_update(Key, Fun, State) when is_map(State) ->
     maps:update_with(Key, Fun, State);
+state_update(Key, Fun, State) when is_tuple(State), is_integer(Key), Key > 0, Key =< tuple_size(State) ->
+    setelement(Key, State, Fun(element(Key, State)));
 state_update(Key, Fun, State) when is_list(State) ->
     {value, {Key, Value}} = lists:keysearch(Key, 1, State),
     lists:keyreplace(Key, 1, State, {Key, Fun(Value)});
-state_update(_Key, _Fun, State) ->
-    State.
+state_update(Key, _Fun, State) ->
+    error({unsupported_state_update, Key, State}).
 
 %%====================================================================
 %% Section 5.1.4: Invariants
