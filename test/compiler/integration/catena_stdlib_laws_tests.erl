@@ -27,24 +27,31 @@ analyze_source_module(Source) ->
     {ok, SemanticModule} = catena_semantic:analyze(AST),
     SemanticModule.
 
-collect_imported_decls([], Seen) ->
-    {[], Seen};
-collect_imported_decls([{import, ModuleName, _ImportLoc} | Rest], Seen0) ->
-    case sets:is_element(ModuleName, Seen0) of
-        true ->
-            collect_imported_decls(Rest, Seen0);
-        false ->
-            {module, _Name, _Exports, Imports, Decls, _ModuleLoc} =
+filter_imported_runtime_decls(Decls, BaseEnv) ->
+    lists:filter(
+        fun({transform_decl, Name, _TypeSig, _Clauses, _Loc}) ->
+                not maps:is_key(Name, BaseEnv);
+           (_Other) ->
+                true
+        end,
+        Decls
+    ).
+
+stdlib_law_runtime_decls(BaseEnv) ->
+    Modules = ['Prelude', 'Test', 'Laws'],
+    lists:foldl(
+        fun(ModuleName, Acc) ->
+            {module, _Name, _Exports, _Imports, Decls, _ModuleLoc} =
                 load_semantic_module(ModuleName),
-            Seen1 = sets:add_element(ModuleName, Seen0),
-            {ImportedDecls, Seen2} = collect_imported_decls(Imports, Seen1),
-            {RestDecls, Seen3} = collect_imported_decls(Rest, Seen2),
-            {ImportedDecls ++ Decls ++ RestDecls, Seen3}
-    end.
+            Acc ++ filter_imported_runtime_decls(Decls, BaseEnv)
+        end,
+        [],
+        Modules
+    ).
 
 runtime_env_for_source(Source, BaseEnv) ->
-    {module, _Name, _Exports, Imports, LocalDecls, _Loc} = analyze_source_module(Source),
-    {ImportedDecls, _Seen} = collect_imported_decls(Imports, sets:new()),
+    {module, _Name, _Exports, _Imports, LocalDecls, _Loc} = analyze_source_module(Source),
+    ImportedDecls = stdlib_law_runtime_decls(BaseEnv),
     catena_test_runner:build_runtime_env(ImportedDecls ++ LocalDecls, BaseEnv).
 
 run_named_suite(Source, SuiteName, BaseEnv) ->
@@ -60,6 +67,10 @@ maybe_law_env() ->
                    (F, {some, X}) -> {some, F(X)}
                 end, 2, runtime},
         pure => {fun(X) -> {some, X} end, 1, runtime},
+        apply => {fun(_MF, none) -> none;
+                     (none, _MX) -> none;
+                     ({some, F}, {some, X}) -> {some, F(X)}
+                  end, 2, runtime},
         chain => {fun(_F, none) -> none;
                      (F, {some, X}) -> F(X)
                   end, 2, runtime},
@@ -76,6 +87,10 @@ either_law_env() ->
                    (F, {right, X}) -> {right, F(X)}
                 end, 2, runtime},
         pure => {fun(X) -> {right, X} end, 1, runtime},
+        apply => {fun(_EF, {left, Error}) -> {left, Error};
+                     ({left, Error}, _EX) -> {left, Error};
+                     ({right, F}, {right, X}) -> {right, F(X)}
+                  end, 2, runtime},
         chain => {fun(_F, {left, Error}) -> {left, Error};
                      (F, {right, X}) -> F(X)
                   end, 2, runtime},
@@ -87,9 +102,17 @@ list_law_env() ->
         id => {fun(X) -> X end, 1, runtime},
         map => {fun(F, Xs) -> lists:map(F, Xs) end, 2, runtime},
         pure => {fun(X) -> [X] end, 1, runtime},
+        apply => {fun(Fs, Xs) -> [F(X) || F <- Fs, X <- Xs] end, 2, runtime},
         chain => {fun(F, Xs) -> lists:flatmap(F, Xs) end, 2, runtime},
         equals => {fun(A, B) -> A =:= B end, 2, runtime},
-        combine => {fun(A, B) -> A ++ B end, 2, runtime}
+        combine => {fun(A, B) -> A ++ B end, 2, runtime},
+        empty => {value, []}
+    }.
+
+int_order_law_env() ->
+    #{
+        equals => {fun(A, B) -> A =:= B end, 2, runtime},
+        lessOrEqual => {fun(A, B) -> A =< B end, 2, runtime}
     }.
 
 maybe_suite_source() ->
@@ -147,6 +170,67 @@ list_suite_source() ->
     "  verify \"combiner associativity\" (fn u -> combinerAssociativityLaw [1] [2] [3])\n"
     "]\n".
 
+applicative_suite_source() ->
+    "module ApplicativeLawSuite\n"
+    "export transform applicativeSuite\n"
+    "import Prelude\n"
+    "import Test\n"
+    "import Laws\n"
+    "transform inc x = x + 1\n"
+    "transform double x = x * 2\n"
+    "transform applicativeSuite = suite \"Applicative Laws\" [\n"
+    "  verify \"applicative identity\" (fn u -> applicativeIdentityLaw (Some 42)),\n"
+    "  verify \"applicative composition\" (fn u ->\n"
+    "    applicativeCompositionLaw\n"
+    "      (Some inc)\n"
+    "      (Some double)\n"
+    "      (Some 5)),\n"
+    "  verify \"applicative homomorphism\" (fn u -> applicativeHomomorphismLaw inc 41),\n"
+    "  verify \"applicative interchange\" (fn u -> applicativeInterchangeLaw (Some inc) 41)\n"
+    "]\n".
+
+accumulator_suite_source() ->
+    "module AccumulatorLawSuite\n"
+    "export transform accumulatorSuite\n"
+    "import Prelude\n"
+    "import Test\n"
+    "import Laws\n"
+    "transform accumulatorSuite = suite \"Accumulator Laws\" [\n"
+    "  verify \"left identity\" (fn u -> accumulatorLeftIdentityLaw [1, 2]),\n"
+    "  verify \"right identity\" (fn u -> accumulatorRightIdentityLaw [1, 2])\n"
+    "]\n".
+
+orderable_suite_source() ->
+    "module OrderableLawSuite\n"
+    "export transform orderableSuite\n"
+    "import Prelude\n"
+    "import Test\n"
+    "import Laws\n"
+    "transform orderableSuite = suite \"Orderable Laws\" [\n"
+    "  verify \"antisymmetry\" (fn u -> orderableAntisymmetryLaw 5 5),\n"
+    "  verify \"transitivity\" (fn u -> orderableTransitivityLaw 1 2 3),\n"
+    "  verify \"totality\" (fn u -> orderableTotalityLaw 4 9)\n"
+    "]\n".
+
+generic_bridge_suite_source() ->
+    "module GenericBridgeLawSuite\n"
+    "export transform genericBridgeSuite\n"
+    "import Prelude\n"
+    "import Test\n"
+    "transform genericBridgeSuite = suite \"Generic Bridge Laws\" [\n"
+    "  verifyTrait \"maybe mapper\" \"Maybe\" \"Mapper\",\n"
+    "  withLawSeed 11 (withLawIterations 12 (verifyTraits \"list accumulator\" \"List\" [\"Accumulator\"]))\n"
+    "]\n".
+
+generic_bridge_bad_suite_source() ->
+    "module GenericBridgeBadLawSuite\n"
+    "export transform genericBridgeBadSuite\n"
+    "import Prelude\n"
+    "import Test\n"
+    "transform genericBridgeBadSuite = suite \"Generic Bridge Laws\" [\n"
+    "  verifyTrait \"unsupported maybe accumulator\" \"Maybe\" \"Accumulator\"\n"
+    "]\n".
+
 broken_maybe_suite_source() ->
     "module BrokenMaybeLawSuite\n"
     "export transform brokenMaybeSuite\n"
@@ -170,7 +254,7 @@ parse_mapper_identity_law_test() ->
     %% Check that mapperIdentityLaw is exported
     ?assert(lists:member({export_transform, mapperIdentityLaw}, Exports)),
     %% Check declaration exists
-    ?assertEqual(18, length(Decls)).
+    ?assertEqual(28, length(Decls)).
 
 %% 1.5.4.2 Compile Mapper composition law verification
 parse_mapper_composition_law_test() ->
@@ -195,10 +279,33 @@ parse_comparable_combiner_laws_test() ->
     Decls = load_laws_decls(),
     Reflex = [D || D = {transform_decl, comparableReflexivityLaw, _, _, _} <- Decls],
     Symm = [D || D = {transform_decl, comparableSymmetryLaw, _, _, _} <- Decls],
+    Trans = [D || D = {transform_decl, comparableTransitivityLaw, _, _, _} <- Decls],
     CombAssoc = [D || D = {transform_decl, combinerAssociativityLaw, _, _, _} <- Decls],
     ?assertEqual(1, length(Reflex)),
     ?assertEqual(1, length(Symm)),
+    ?assertEqual(1, length(Trans)),
     ?assertEqual(1, length(CombAssoc)).
+
+parse_accumulator_applicator_orderable_laws_test() ->
+    Decls = load_laws_decls(),
+    AccLeft = [D || D = {transform_decl, accumulatorLeftIdentityLaw, _, _, _} <- Decls],
+    AccRight = [D || D = {transform_decl, accumulatorRightIdentityLaw, _, _, _} <- Decls],
+    AppIdentity = [D || D = {transform_decl, applicativeIdentityLaw, _, _, _} <- Decls],
+    AppComposition = [D || D = {transform_decl, applicativeCompositionLaw, _, _, _} <- Decls],
+    AppHomomorphism = [D || D = {transform_decl, applicativeHomomorphismLaw, _, _, _} <- Decls],
+    AppInterchange = [D || D = {transform_decl, applicativeInterchangeLaw, _, _, _} <- Decls],
+    OrdAnti = [D || D = {transform_decl, orderableAntisymmetryLaw, _, _, _} <- Decls],
+    OrdTrans = [D || D = {transform_decl, orderableTransitivityLaw, _, _, _} <- Decls],
+    OrdTotality = [D || D = {transform_decl, orderableTotalityLaw, _, _, _} <- Decls],
+    ?assertEqual(1, length(AccLeft)),
+    ?assertEqual(1, length(AccRight)),
+    ?assertEqual(1, length(AppIdentity)),
+    ?assertEqual(1, length(AppComposition)),
+    ?assertEqual(1, length(AppHomomorphism)),
+    ?assertEqual(1, length(AppInterchange)),
+    ?assertEqual(1, length(OrdAnti)),
+    ?assertEqual(1, length(OrdTrans)),
+    ?assertEqual(1, length(OrdTotality)).
 
 parse_system_flow_laws_test() ->
     Decls = load_laws_decls(),
@@ -234,13 +341,13 @@ verify_law_structure_test() ->
     [{transform_clause, Patterns, _Guards, _Body, _ClauseLoc}] = Clauses,
     ?assertEqual(1, length(Patterns)).
 
-%% Test that all 18 laws are present
+%% Test that all promoted laws are present
 all_laws_present_test() ->
     Decls = load_laws_decls(),
-    ?assertEqual(18, length(Decls)),
+    ?assertEqual(28, length(Decls)),
     %% All should be transform_decl
     TransformDecls = [D || D = {transform_decl, _, _, _, _} <- Decls],
-    ?assertEqual(18, length(TransformDecls)).
+    ?assertEqual(28, length(TransformDecls)).
 
 %% =============================================================================
 %% Stage 2 - Executable Concrete Law Suites
@@ -263,6 +370,40 @@ list_law_suite_executes_test() ->
     ?assertEqual(6, maps:get(total, Results)),
     ?assertEqual(6, maps:get(passed, Results)),
     ?assertEqual(0, maps:get(failed, Results)).
+
+applicative_law_suite_executes_test() ->
+    Results = run_named_suite(applicative_suite_source(), applicativeSuite, maybe_law_env()),
+    ?assertEqual(4, maps:get(total, Results)),
+    ?assertEqual(4, maps:get(passed, Results)),
+    ?assertEqual(0, maps:get(failed, Results)).
+
+accumulator_law_suite_executes_test() ->
+    Results = run_named_suite(accumulator_suite_source(), accumulatorSuite, list_law_env()),
+    ?assertEqual(2, maps:get(total, Results)),
+    ?assertEqual(2, maps:get(passed, Results)),
+    ?assertEqual(0, maps:get(failed, Results)).
+
+orderable_law_suite_executes_test() ->
+    Results = run_named_suite(orderable_suite_source(), orderableSuite, int_order_law_env()),
+    ?assertEqual(3, maps:get(total, Results)),
+    ?assertEqual(3, maps:get(passed, Results)),
+    ?assertEqual(0, maps:get(failed, Results)).
+
+generic_bridge_law_suite_executes_test() ->
+    Results = run_named_suite(generic_bridge_suite_source(), genericBridgeSuite, #{}),
+    ?assertEqual(2, maps:get(total, Results)),
+    ?assertEqual(2, maps:get(passed, Results)),
+    ?assertEqual(0, maps:get(failed, Results)).
+
+generic_bridge_reports_explicit_errors_test() ->
+    Results = run_named_suite(generic_bridge_bad_suite_source(), genericBridgeBadSuite, #{}),
+    ?assertEqual(1, maps:get(total, Results)),
+    ?assertEqual(0, maps:get(passed, Results)),
+    ?assertEqual(1, maps:get(failed, Results)),
+    ?assertEqual(
+        [{fail, "unsupported maybe accumulator", {unsupported_traits, 'maybe', [monoid]}}],
+        maps:get(results, Results)
+    ).
 
 broken_fixture_reports_law_failure_test() ->
     Results = run_named_suite(
@@ -293,8 +434,8 @@ get_param_count({transform_decl, _, _, Clauses, _}) ->
         _ -> 0
     end.
 
-assert_law_arity(Decls, Name, ExpectedArity) ->
-    [LawDecl] = [D || D = {transform_decl, Name, _, _, _} <- Decls],
+assert_law_arity(Decls, LawName, ExpectedArity) ->
+    [LawDecl] = [D || D = {transform_decl, Name, _, _, _} <- Decls, Name =:= LawName],
     ?assertEqual(ExpectedArity, get_param_count(LawDecl)).
 
 %% 1.5.4.4a - Verify mapperIdentityLaw expected signature
@@ -352,6 +493,19 @@ verify_comparable_symmetry_law_signature_test() ->
     [SymmLaw] = [D || D = {transform_decl, comparableSymmetryLaw, _, _, _} <- Decls],
     %% Should take 2 parameters (a, b)
     ?assertEqual(2, get_param_count(SymmLaw)).
+
+verify_additional_promoted_law_signatures_test() ->
+    Decls = load_laws_decls(),
+    assert_law_arity(Decls, comparableTransitivityLaw, 3),
+    assert_law_arity(Decls, accumulatorLeftIdentityLaw, 1),
+    assert_law_arity(Decls, accumulatorRightIdentityLaw, 1),
+    assert_law_arity(Decls, applicativeIdentityLaw, 1),
+    assert_law_arity(Decls, applicativeCompositionLaw, 3),
+    assert_law_arity(Decls, applicativeHomomorphismLaw, 2),
+    assert_law_arity(Decls, applicativeInterchangeLaw, 2),
+    assert_law_arity(Decls, orderableAntisymmetryLaw, 2),
+    assert_law_arity(Decls, orderableTransitivityLaw, 3),
+    assert_law_arity(Decls, orderableTotalityLaw, 2).
 
 %% 1.5.4.4h - Verify combinerAssociativityLaw expected signature
 %% combinerAssociativityLaw : a -> a -> a -> Bool (3 parameters)
@@ -445,6 +599,15 @@ law_arity_test_() ->
            ?assertEqual(2, length(Patterns))
        end},
 
+      {"comparableTransitivityLaw takes 3 arguments (a, b, c)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, comparableTransitivityLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(3, length(Patterns))
+       end},
+
       {"combinerAssociativityLaw takes 3 arguments (a, b, c)",
        fun() ->
            Decls = load_laws_decls(),
@@ -452,6 +615,87 @@ law_arity_test_() ->
                [D || D = {transform_decl, combinerAssociativityLaw, _, _, _} <- Decls],
            [{transform_clause, Patterns, _, _, _}] = Clauses,
            ?assertEqual(3, length(Patterns))
+       end},
+
+      {"accumulatorLeftIdentityLaw takes 1 argument (a)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, accumulatorLeftIdentityLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(1, length(Patterns))
+       end},
+
+      {"accumulatorRightIdentityLaw takes 1 argument (a)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, accumulatorRightIdentityLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(1, length(Patterns))
+       end},
+
+      {"applicativeIdentityLaw takes 1 argument (fa)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, applicativeIdentityLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(1, length(Patterns))
+       end},
+
+      {"applicativeCompositionLaw takes 3 arguments (ff, fg, fa)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, applicativeCompositionLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(3, length(Patterns))
+       end},
+
+      {"applicativeHomomorphismLaw takes 2 arguments (f, x)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, applicativeHomomorphismLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(2, length(Patterns))
+       end},
+
+      {"applicativeInterchangeLaw takes 2 arguments (ff, x)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, applicativeInterchangeLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(2, length(Patterns))
+       end},
+
+      {"orderableAntisymmetryLaw takes 2 arguments (a, b)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, orderableAntisymmetryLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(2, length(Patterns))
+       end},
+
+      {"orderableTransitivityLaw takes 3 arguments (a, b, c)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, orderableTransitivityLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(3, length(Patterns))
+       end},
+
+      {"orderableTotalityLaw takes 2 arguments (a, b)",
+       fun() ->
+           Decls = load_laws_decls(),
+           [{transform_decl, _, _, Clauses, _}] =
+               [D || D = {transform_decl, orderableTotalityLaw, _, _, _} <- Decls],
+           [{transform_clause, Patterns, _, _, _}] = Clauses,
+           ?assertEqual(2, length(Patterns))
        end},
 
       {"systemLeftIdentityLaw takes 1 argument (f)",

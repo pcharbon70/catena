@@ -317,9 +317,10 @@ parse_test_module_test() ->
     {ok, Tokens} = catena_lexer:tokenize(Source),
     case catena_parser:parse(Tokens) of
         {ok, {module, 'Test', Exports, Imports, Decls, _}} ->
-            ?assertEqual(23, length(Exports)),
+            ?assertEqual(28, length(Exports)),
             ?assertEqual(2, length(Imports)),
-            ?assertEqual(24, length(Decls)),
+            ?assertEqual(29, length(Decls)),
+            ?assert(lists:member({export_type, 'LawCheck'}, Exports)),
             ?assert(lists:member({export_type, 'PropertyConfig'}, Exports)),
             ?assert(lists:member({export_type, 'PropertySpec'}, Exports)),
             ?assert(lists:member({export_transform, prop}, Exports)),
@@ -330,6 +331,10 @@ parse_test_module_test() ->
             ?assert(lists:member({export_transform, withIterations}, Exports)),
             ?assert(lists:member({export_transform, withSeed}, Exports)),
             ?assert(lists:member({export_transform, withLabel}, Exports)),
+            ?assert(lists:member({export_transform, verifyTrait}, Exports)),
+            ?assert(lists:member({export_transform, verifyTraits}, Exports)),
+            ?assert(lists:member({export_transform, withLawIterations}, Exports)),
+            ?assert(lists:member({export_transform, withLawSeed}, Exports)),
             ?assert(lists:member({export_transform, suiteWithProperties}, Exports)),
             ok
     end.

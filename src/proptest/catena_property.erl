@@ -104,7 +104,7 @@ property(Name, BodyFun) when is_binary(Name) ->
             #property{
                 name = Name,
                 generator = Gen,
-                predicate = fun(Values) -> apply(PredFun, catena_tuple_to_list(Values)) end,
+                predicate = predicate_wrapper(PredFun),
                 config = default_config()
             };
         _Other ->
@@ -296,3 +296,13 @@ elements_to_list(_Tuple, Pos, Max) when Pos > Max ->
     [];
 elements_to_list(Tuple, Pos, Max) ->
     [element(Pos, Tuple) | elements_to_list(Tuple, Pos + 1, Max)].
+
+predicate_wrapper(PredFun) ->
+    case erlang:fun_info(PredFun, arity) of
+        {arity, 0} ->
+            fun(_Values) -> PredFun() end;
+        {arity, 1} ->
+            fun(Value) -> PredFun(Value) end;
+        {arity, _N} ->
+            fun(Values) -> apply(PredFun, catena_tuple_to_list(Values)) end
+    end.

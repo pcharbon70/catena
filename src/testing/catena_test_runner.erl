@@ -105,30 +105,35 @@ run_test_value(TestValue) ->
 -spec run_test_value(map(), map()) -> test_result().
 run_test_value(TestValue, Opts) when is_map(TestValue) ->
     Name = maps:get(name, TestValue, "<anonymous test>"),
-    case maps:get(run, TestValue, undefined) of
-        undefined ->
-            case maps:is_key(body, TestValue) of
-                true -> run_property_value(TestValue, Opts);
-                false -> {fail, Name, missing_run_function}
-            end;
-        Run ->
-            try
-                case apply_function(Run, [unit_value()]) of
-                    passed -> {pass, Name};
-                    true -> {pass, Name};
-                    ok -> {pass, Name};
-                    {failed, Message} -> {fail, Name, Message};
-                    {skipped, Message} -> {fail, Name, {skipped, Message}};
-                    false -> {fail, Name, {expected_true, false}};
-                    Other -> {fail, Name, {unexpected_result, Other}}
-                end
-            catch
-                throw:{assertion_failed, Details} ->
-                    {fail, Name, {assertion_failed, Details}};
-                error:Error:Stacktrace ->
-                    {fail, Name, {error, Error, Stacktrace}};
-                Class:Error ->
-                    {fail, Name, {exception, Class, Error}}
+    case extract_law_check(TestValue) of
+        {some, LawCheck} ->
+            run_law_check_value(Name, LawCheck, Opts);
+        none ->
+            case maps:get(run, TestValue, undefined) of
+                undefined ->
+                    case maps:is_key(body, TestValue) of
+                        true -> run_property_value(TestValue, Opts);
+                        false -> {fail, Name, missing_run_function}
+                    end;
+                Run ->
+                    try
+                        case apply_function(Run, [unit_value()]) of
+                            passed -> {pass, Name};
+                            true -> {pass, Name};
+                            ok -> {pass, Name};
+                            {failed, Message} -> {fail, Name, Message};
+                            {skipped, Message} -> {fail, Name, {skipped, Message}};
+                            false -> {fail, Name, {expected_true, false}};
+                            Other -> {fail, Name, {unexpected_result, Other}}
+                        end
+                    catch
+                        throw:{assertion_failed, Details} ->
+                            {fail, Name, {assertion_failed, Details}};
+                        error:Error:Stacktrace ->
+                            {fail, Name, {error, Error, Stacktrace}};
+                        Class:Error ->
+                            {fail, Name, {exception, Class, Error}}
+                    end
             end
     end.
 
@@ -492,6 +497,18 @@ format_failure_reason({property_error, Details}) ->
             maps:get(reason, Details, undefined)
         ]
     );
+format_failure_reason({law_suite_failure, Details}) ->
+    Instance = format_law_instance(maps:get(instance, Details, <<"unknown">>)),
+    Failed = maps:get(failed, Details, 0),
+    Total = maps:get(total, Details, 0),
+    FailureLines = [
+        lists:flatten(format_law_failure(Failure))
+     || Failure <- maps:get(failures, Details, [])
+    ],
+    io_lib:format(
+        "Law suite failed for ~s (~B of ~B laws failed).~n~s",
+        [Instance, Failed, Total, string:join(FailureLines, "\n")]
+    );
 format_failure_reason({error, Error, _Stacktrace}) ->
     io_lib:format("Error: ~p", [Error]);
 format_failure_reason({exception, Class, Error}) ->
@@ -587,6 +604,117 @@ normalize_property_counterexample(Counterexample) when is_map(Counterexample) ->
     maps:map(fun(_Key, Value) -> get_value(Value) end, Counterexample);
 normalize_property_counterexample(Counterexample) ->
     Counterexample.
+
+extract_law_check(TestValue) ->
+    case maps:get(lawCheck, TestValue, undefined) of
+        undefined ->
+            case maps:get(law_check, TestValue, undefined) of
+                undefined -> none;
+                Value -> Value
+            end;
+        Value ->
+            Value
+    end.
+
+run_law_check_value(Name, LawCheck, Opts) when is_map(LawCheck) ->
+    Instance = case maps:get(instanceName, LawCheck, undefined) of
+        undefined -> maps:get(instance, LawCheck, undefined);
+        Value -> Value
+    end,
+    Traits = maps:get(traits, LawCheck, []),
+    case catena_stdlib_law_bridge:run_trait_suite(Instance, Traits, law_bridge_options(LawCheck, Opts)) of
+        {error, Reason} ->
+            {fail, Name, Reason};
+        Result ->
+            case maps:get(failed, Result, 0) of
+                0 -> {pass, Name};
+                _ -> {fail, Name, {law_suite_failure, law_suite_failure_details(Result)}}
+            end
+    end;
+run_law_check_value(Name, LawCheck, _Opts) ->
+    {fail, Name, {invalid_law_check, LawCheck}}.
+
+law_bridge_options(LawCheck, Opts) ->
+    Config = maps:get(config, LawCheck, #{}),
+    Base = #{
+        num_tests => maps:get(
+            property_iterations,
+            Opts,
+            maps:get(iterations, Config, ?DEFAULT_PROPERTY_ITERATIONS)
+        )
+    },
+    maybe_put_property_opt(max_shrinks, property_max_shrinks, Opts,
+        maybe_put_law_seed_opt(Config, Opts, Base)
+    ).
+
+law_suite_failure_details(Result) ->
+    FailedResults = [
+        law_failure_details(LawResult)
+     || #{status := failed} = LawResult <- maps:get(results, Result, [])
+    ],
+    #{
+        instance => maps:get(instance_label, Result, maps:get(instance, Result, <<"unknown">>)),
+        total => maps:get(total, Result, 0),
+        failed => maps:get(failed, Result, 0),
+        failures => FailedResults
+    }.
+
+law_failure_details(LawResult) ->
+    PropertyResult = maps:get(property_result, LawResult),
+    #{
+        trait => maps:get(trait_label, LawResult, maps:get(trait, LawResult, unknown)),
+        law => maps:get(law, LawResult, unknown),
+        stdlib_law => maps:get(stdlib_law, LawResult, unknown),
+        kind => PropertyResult#property_result.kind,
+        seed => PropertyResult#property_result.seed,
+        counterexample => normalize_property_counterexample(
+            case PropertyResult#property_result.shrunk_counterexample of
+                undefined -> PropertyResult#property_result.original_counterexample;
+                Value -> Value
+            end
+        )
+    }.
+
+format_law_instance(Instance) when is_binary(Instance) ->
+    binary_to_list(Instance);
+format_law_instance(Instance) when is_atom(Instance) ->
+    atom_to_list(Instance);
+format_law_instance(Instance) when is_list(Instance) ->
+    Instance;
+format_law_instance(Instance) ->
+    lists:flatten(io_lib:format("~p", [Instance])).
+
+format_law_failure(Failure) ->
+    Trait = format_law_instance(maps:get(trait, Failure, <<"unknown">>)),
+    Law = format_law_instance(maps:get(law, Failure, <<"unknown">>)),
+    StdlibLaw = maps:get(stdlib_law, Failure, unknown),
+    Kind = maps:get(kind, Failure, unknown),
+    Seed = maps:get(seed, Failure, undefined),
+    Counterexample = maps:get(counterexample, Failure, undefined),
+    io_lib:format(
+        "  ~s.~s (~p) failed [kind=~p, seed=~p, counterexample=~p]",
+        [Trait, Law, StdlibLaw, Kind, Seed, Counterexample]
+    ).
+
+maybe_put_law_seed_opt(Config, Opts, Acc) ->
+    case maps:get(property_seed, Opts, maps:get(seed, Opts, law_config_seed(Config))) of
+        undefined ->
+            Acc;
+        Seed when is_integer(Seed) ->
+            maps:put(seed, catena_gen:seed_from_int(Seed), Acc);
+        Seed ->
+            maps:put(seed, Seed, Acc)
+    end.
+
+law_config_seed(Config) when is_map(Config) ->
+    case maps:get(seed, Config, undefined) of
+        none -> undefined;
+        {some, SeedInt} when is_integer(SeedInt) -> catena_gen:seed_from_int(SeedInt);
+        undefined -> undefined;
+        Seed -> Seed
+    end;
+law_config_seed(_Other) ->
+    undefined.
 
 %%====================================================================
 %% Runtime Environment Construction

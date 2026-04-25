@@ -316,7 +316,7 @@ applicative_composition_law() ->
                             FunGen
                         }),
                         fun(X, F, G) ->
-                            Compose = fun(A, B) -> fun(C) -> A(B(C)) end end,
+                            Compose = fun(A) -> fun(B) -> fun(C) -> A(B(C)) end end end,
                             PureCompose = Pure(Compose),
                             ApComposeF = Ap(PureCompose, Pure(F)),
                             ApComposeFG = Ap(ApComposeF, Pure(G)),

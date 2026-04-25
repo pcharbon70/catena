@@ -12,7 +12,17 @@ export transform pipelineRightIdentityLaw
 export transform pipelineAssociativityLaw
 export transform comparableReflexivityLaw
 export transform comparableSymmetryLaw
+export transform comparableTransitivityLaw
 export transform combinerAssociativityLaw
+export transform accumulatorLeftIdentityLaw
+export transform accumulatorRightIdentityLaw
+export transform applicativeIdentityLaw
+export transform applicativeCompositionLaw
+export transform applicativeHomomorphismLaw
+export transform applicativeInterchangeLaw
+export transform orderableAntisymmetryLaw
+export transform orderableTransitivityLaw
+export transform orderableTotalityLaw
 export transform systemLeftIdentityLaw
 export transform systemRightIdentityLaw
 export transform systemAssociativityLaw
@@ -76,6 +86,16 @@ transform comparableSymmetryLaw a b =
   let ba = equals b a in
   equals ab ba
 
+-- Transitivity: a === b and b === c implies a === c
+transform comparableTransitivityLaw a b c =
+  match (equals a b) of
+    | true -> match (equals b c) of
+      | true -> equals a c
+      | false -> true
+    end
+    | false -> true
+  end
+
 -- Combiner Laws (Semigroup)
 -- ========================
 
@@ -84,6 +104,65 @@ transform combinerAssociativityLaw a b c =
   let left = combine (combine a b) c in
   let right = combine a (combine b c) in
   equals left right
+
+-- Accumulator Laws (Monoid)
+-- =========================
+
+-- Left Identity: combine empty a = a
+transform accumulatorLeftIdentityLaw a =
+  equals (combine empty a) a
+
+-- Right Identity: combine a empty = a
+transform accumulatorRightIdentityLaw a =
+  equals (combine a empty) a
+
+-- Applicator Laws (Applicative)
+-- =============================
+
+-- Identity: apply (pure id) fa = fa
+transform applicativeIdentityLaw fa =
+  equals (apply (pure id) fa) fa
+
+-- Composition: apply (apply (apply (pure compose) ff) fg) fa = apply ff (apply fg fa)
+transform applicativeCompositionLaw ff fg fa =
+  let composeFn = fn f -> fn g -> fn x -> f (g x) in
+  let left = apply (apply (apply (pure composeFn) ff) fg) fa in
+  let right = apply ff (apply fg fa) in
+  equals left right
+
+-- Homomorphism: apply (pure f) (pure x) = pure (f x)
+transform applicativeHomomorphismLaw f x =
+  let left = apply (pure f) (pure x) in
+  let right = pure (f x) in
+  equals left right
+
+-- Interchange: apply ff (pure x) = apply (pure (fn g -> g x)) ff
+transform applicativeInterchangeLaw ff x =
+  let applyTo = fn g -> g x in
+  let left = apply ff (pure x) in
+  let right = apply (pure applyTo) ff in
+  equals left right
+
+-- Orderable Laws (Ord)
+-- ====================
+
+-- Antisymmetry: a <= b and b <= a implies a === b
+transform orderableAntisymmetryLaw a b =
+  match ((lessOrEqual a b) && (lessOrEqual b a)) of
+    | true -> equals a b
+    | false -> true
+  end
+
+-- Transitivity: a <= b and b <= c implies a <= c
+transform orderableTransitivityLaw a b c =
+  match ((lessOrEqual a b) && (lessOrEqual b c)) of
+    | true -> lessOrEqual a c
+    | false -> true
+  end
+
+-- Totality: a <= b or b <= a
+transform orderableTotalityLaw a b =
+  (lessOrEqual a b) || (lessOrEqual b a)
 
 -- System Laws (Category)
 -- ======================
