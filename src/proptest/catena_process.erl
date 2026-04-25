@@ -55,7 +55,9 @@
 
 %% Internal state for tracking spawned processes
 -record(process_registry, {
-    processes :: [#test_process{}],
+    processes = #{} :: #{pid() => #test_process{}},
+    monitors = #{} :: #{reference() => pid()},
+    exit_reasons = #{} :: #{pid() => term()},
     test_pid :: pid() | undefined
 }).
 
@@ -105,10 +107,7 @@ spawn_test_process(Fun, Options) ->
         _ -> register(Name, Pid)
     end,
 
-    %% Register process tracking (may fail if registry not started)
-    try register_process(TestProc)
-    catch _:_ -> ok
-    end,
+    ok = register_process(TestProc),
 
     %% Wait for process to be ready
     case Timeout of
@@ -139,7 +138,7 @@ stop_process(Pid) when is_pid(Pid) ->
     case is_process_alive(Pid) of
         true ->
             Monitor = erlang:monitor(process, Pid),
-            exit(Pid, normal),
+            exit(Pid, shutdown),
             wait_for_death(Pid, Monitor, 1000);
         false -> ok
     end;
@@ -165,7 +164,7 @@ cleanup_processes() ->
     case whereis(?REGISTRY_NAME) of
         undefined -> ok;
         RegistryPid ->
-            {processes, Processes} = gen_server:call(RegistryPid, get_processes),
+            Processes = gen_server:call(RegistryPid, get_processes),
             lists:foreach(fun cleanup_process/1, Processes)
     end.
 
@@ -199,8 +198,6 @@ process_info_safe(Pid, Items) when is_list(Items) ->
             case Info of
                 undefined -> {error, process_not_found};
                 [] -> #{};
-                {InfoList} when is_list(InfoList) ->
-                    maps:from_list(InfoList);
                 InfoList when is_list(InfoList) ->
                     maps:from_list(InfoList);
                 _ -> {error, unknown}
@@ -267,18 +264,10 @@ full_state(Pid) ->
 -spec gen_pid() -> fun((catena_gen:seed()) -> {pid(), catena_gen:seed()}).
 gen_pid() ->
     fun(Seed) ->
-        %% Generate a PID by selecting from registered processes
-        Registered = registered(),
-        case Registered of
-            [] -> {self(), Seed};
-            [Name | _] ->
-                case whereis(Name) of
-                    undefined -> {self(), Seed};
-                    Pid when is_pid(Pid) ->
-                        {_Word, NewSeed} = catena_gen:seed_next(Seed),
-                        {Pid, NewSeed}
-                end
-        end
+        {_Word, NewSeed} = catena_gen:seed_next(Seed),
+        Candidates = lists:usort([self() | processes()]),
+        Index = (NewSeed#seed.state rem length(Candidates)) + 1,
+        {lists:nth(Index, Candidates), NewSeed}
     end.
 
 %% @doc Generate a unique reference.
@@ -294,20 +283,30 @@ gen_ref() ->
 -spec gen_node() -> fun((catena_gen:seed()) -> {node(), catena_gen:seed()}).
 gen_node() ->
     fun(Seed) ->
-        %% Generate test node names like 'test_node_1@localhost'
         {_Word, NewSeed} = catena_gen:seed_next(Seed),
-        Num = (NewSeed#seed.state rem 100) + 1,
-        NodeName = list_to_atom("test_node_" ++ integer_to_list(Num) ++ "@localhost"),
-        {NodeName, NewSeed}
+        Candidates = lists:usort([node() | nodes()]),
+        case Candidates of
+            [] ->
+                Num = (NewSeed#seed.state rem 100) + 1,
+                NodeName = list_to_atom("test_node_" ++ integer_to_list(Num) ++ "@localhost"),
+                {NodeName, NewSeed};
+            _ ->
+                Index = (NewSeed#seed.state rem length(Candidates)) + 1,
+                {lists:nth(Index, Candidates), NewSeed}
+        end
     end.
 
 %% @doc Generate a registered process name.
 -spec gen_registered_name() -> fun((catena_gen:seed()) -> {atom(), catena_gen:seed()}).
 gen_registered_name() ->
     fun(Seed) ->
-        Names = [test_proc, sample_process, example_server,
-                 worker_1, worker_2, handler, manager],
         {_Word, NewSeed} = catena_gen:seed_next(Seed),
+        Registered = registered(),
+        Names = case Registered of
+            [] -> [test_proc, sample_process, example_server,
+                   worker_1, worker_2, handler, manager];
+            _ -> Registered
+        end,
         Index = (NewSeed#seed.state rem length(Names)) + 1,
         Name = lists:nth(Index, Names),
         {Name, NewSeed}
@@ -370,9 +369,11 @@ assert_exit_reason(Pid, ExpectedReason) when is_pid(Pid) ->
     case is_process_alive(Pid) of
         true -> {error, {process_still_alive, Pid}};
         false ->
-            %% We can't get exit reason after the fact without monitoring
-            %% This is a basic implementation
-            ok
+            case get_recorded_exit_reason(Pid) of
+                {ok, ExpectedReason} -> ok;
+                {ok, ActualReason} -> {error, {unexpected_exit_reason, ExpectedReason, ActualReason}};
+                {error, Reason} -> {error, Reason}
+            end
     end.
 
 %% @doc Assert that a process has no messages in its queue.
@@ -412,26 +413,55 @@ start_registry() ->
 %% @private
 init([]) ->
     {ok, #process_registry{
-        processes = [],
+        processes = #{},
+        monitors = #{},
+        exit_reasons = #{},
         test_pid = undefined
     }}.
 
 %% @private
 handle_call(get_processes, _From, State) ->
-    {reply, {processes, State#process_registry.processes}, State};
+    Processes = maps:values(State#process_registry.processes),
+    {reply, Processes, State};
 handle_call({register_process, Proc}, _From, State) ->
-    NewProcesses = [Proc | State#process_registry.processes],
-    {reply, ok, State#process_registry{processes = NewProcesses}};
+    Pid = Proc#test_process.pid,
+    MonitorRef = erlang:monitor(process, Pid),
+    NewProcesses = (State#process_registry.processes)#{Pid => Proc},
+    NewMonitors = (State#process_registry.monitors)#{MonitorRef => Pid},
+    NewExitReasons = maps:remove(Pid, State#process_registry.exit_reasons),
+    {reply, ok, State#process_registry{
+        processes = NewProcesses,
+        monitors = NewMonitors,
+        exit_reasons = NewExitReasons
+    }};
 handle_call({unregister_process, Pid}, _From, State) ->
-    NewProcesses = lists:filter(fun(P) -> P#test_process.pid =/= Pid end,
-                               State#process_registry.processes),
-    {reply, ok, State#process_registry{processes = NewProcesses}}.
+    {NewMonitors, MonitorRefs} = remove_monitors_for_pid(Pid, State#process_registry.monitors),
+    lists:foreach(fun(Ref) -> erlang:demonitor(Ref, [flush]) end, MonitorRefs),
+    NewProcesses = maps:remove(Pid, State#process_registry.processes),
+    {reply, ok, State#process_registry{
+        processes = NewProcesses,
+        monitors = NewMonitors
+    }};
+handle_call({get_exit_reason, Pid}, _From, State) ->
+    case maps:find(Pid, State#process_registry.exit_reasons) of
+        {ok, Reason} -> {reply, {ok, Reason}, State};
+        error -> {reply, {error, unknown_exit_reason}, State}
+    end.
 
 %% @private
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
 %% @private
+handle_info({'DOWN', Ref, process, Pid, Reason}, State) ->
+    NewProcesses = maps:remove(Pid, State#process_registry.processes),
+    NewMonitors = maps:remove(Ref, State#process_registry.monitors),
+    NewExitReasons = (State#process_registry.exit_reasons)#{Pid => normalize_exit_reason(Reason)},
+    {noreply, State#process_registry{
+        processes = NewProcesses,
+        monitors = NewMonitors,
+        exit_reasons = NewExitReasons
+    }};
 handle_info(_Info, State) ->
     {noreply, State}.
 
@@ -466,23 +496,25 @@ unregister_process(Pid) ->
 -spec ensure_registry_started() -> ok.
 ensure_registry_started() ->
     case whereis(?REGISTRY_NAME) of
-        undefined -> start_registry();
+        undefined ->
+            case start_registry() of
+                {ok, _Pid} -> ok;
+                {error, {already_started, _Pid}} -> ok
+            end;
         _ -> ok
     end.
 
 %% @doc Clean up a single process.
 -spec cleanup_process(#test_process{}) -> ok.
 cleanup_process(#test_process{pid = Pid, monitor = Monitor}) ->
+    stop_process(Pid),
     unregister_process(Pid),
 
-    %% Demonitor if monitoring
     case Monitor of
         undefined -> ok;
         _ -> erlang:demonitor(Monitor, [flush])
     end,
 
-    %% Stop the process
-    stop_process(Pid),
     ok.
 
 %% @doc Wait for a process to die.
@@ -502,3 +534,29 @@ wait_for_death(Pid, Monitor, Timeout) ->
             ok
         end
     end.
+
+-spec get_recorded_exit_reason(pid()) -> {ok, term()} | {error, term()}.
+get_recorded_exit_reason(Pid) ->
+    case whereis(?REGISTRY_NAME) of
+        undefined -> {error, registry_not_started};
+        _ -> gen_server:call(?REGISTRY_NAME, {get_exit_reason, Pid})
+    end.
+
+-spec remove_monitors_for_pid(pid(), #{reference() => pid()}) ->
+    {#{reference() => pid()}, [reference()]}.
+remove_monitors_for_pid(Pid, Monitors) ->
+    maps:fold(
+        fun(Ref, MonitoredPid, {AccMap, AccRefs}) when MonitoredPid =:= Pid ->
+                {maps:remove(Ref, AccMap), [Ref | AccRefs]};
+           (_Ref, _MonitoredPid, Acc) ->
+                Acc
+        end,
+        {Monitors, []},
+        Monitors
+    ).
+
+-spec normalize_exit_reason(term()) -> term().
+normalize_exit_reason(normal) -> normal;
+normalize_exit_reason(shutdown) -> shutdown;
+normalize_exit_reason(killed) -> killed;
+normalize_exit_reason(Reason) -> Reason.

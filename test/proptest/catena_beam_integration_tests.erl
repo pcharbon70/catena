@@ -7,6 +7,7 @@
 
 -include_lib("eunit/include/eunit.hrl").
 -include("../../src/proptest/catena_process.hrl").
+-include("../../src/proptest/catena_distribution.hrl").
 -include("../../src/proptest/catena_gen.hrl").
 -include("../../src/proptest/catena_otp.hrl").
 
@@ -15,14 +16,9 @@
 %%====================================================================
 
 genserver_workflow_test() ->
-    %% Test the complete workflow of testing a GenServer
-    %% 1. Spawn a test process (simulating GenServer)
-    %% 2. Send messages and verify state changes
-    %% 3. Verify state transitions
-    %% 4. Clean up
-
-    %% Start a simple counter server
-    ServerPid = spawn(fun() -> counter_server(0) end),
+    Proc = catena_process:spawn_test_process(fun() -> counter_server(0) end),
+    ServerPid = Proc#test_process.pid,
+    ?assertEqual(ok, catena_process:assert_alive(Proc)),
 
     %% Initial state
     ServerPid ! {get, self()},
@@ -48,10 +44,8 @@ genserver_workflow_test() ->
     after 500 -> ?assert(false, timeout_waiting_for_count_3)
     end,
 
-    %% Cleanup
-    ServerPid ! stop,
-    timer:sleep(10),
-    ?assertNot(is_process_alive(ServerPid)),
+    catena_process:stop_process(Proc),
+    ?assertEqual(ok, catena_process:assert_dead(ServerPid)),
     ok.
 
 %%====================================================================
@@ -95,30 +89,17 @@ supervisor_crash_workflow_test() ->
 %%====================================================================
 
 message_protocol_test() ->
-    %% Test message protocol verification between multiple processes
-    %% Simplified version that directly tests message passing
-
-    %% Create an echo process
-    EchoPid = spawn(fun() -> echo_loop() end),
-
-    %% Send a ping and wait for pong
-    EchoPid ! {ping, self()},
-    receive
-        pong -> ok
-    after 500 -> ?assert(false, timeout_waiting_for_pong)
-    end,
-
-    %% Verify multiple messages work
-    lists:foreach(fun(_) ->
-        EchoPid ! {ping, self()},
-        receive
-            pong -> ok
-        after 500 -> ?assert(false, timeout_waiting_for_pong_multiple)
-        end
-    end, lists:seq(1, 3)),
-
-    %% Cleanup
-    exit(EchoPid, kill),
+    ProtocolProc = catena_process:spawn_test_process(fun protocol_loop/0),
+    Pid = ProtocolProc#test_process.pid,
+    {ok, _Tracer} = catena_message:start_trace(Pid),
+    ?assert(catena_message:sends_message(Pid, ping, 200)),
+    ?assert(catena_message:sends_messages_in_order(Pid, [msg1, msg2], 200)),
+    {ok, Trace} = catena_message:get_trace(),
+    ?assert(length(Trace) > 0),
+    ?assertEqual({ok, true},
+        catena_message:follows_protocol([ping, msg1, msg2], [ping, {repeat, msg1}, msg2], #{allow_extra => false, ordered => true})),
+    ?assertEqual(ok, catena_message:stop_trace()),
+    catena_process:stop_process(ProtocolProc),
     ok.
 
 %%====================================================================
@@ -138,11 +119,11 @@ concurrent_genserver_access_test() ->
     %% Spawn multiple clients
     NumClients = 10,
     IncrementsPerClient = 5,
-    Clients = [spawn(fun() -> client_loop(ServerPid, IncrementsPerClient) end)
-              || _ <- lists:seq(1, NumClients)],
-
-    %% Wait for all clients to finish
-    wait_for_clients(Clients, 5000),
+    Results = catena_concurrency:run_parallel(
+        [fun() -> client_loop(ServerPid, IncrementsPerClient) end
+         || _ <- lists:seq(1, NumClients)]
+    ),
+    ?assertEqual(NumClients, length(Results)),
 
     %% Check final state
     ServerPid ! {get, self()},
@@ -153,7 +134,6 @@ concurrent_genserver_access_test() ->
     after 500 -> ?assert(false, timeout_waiting_for_final_count)
     end,
 
-    %% Cleanup
     ServerPid ! stop,
     ok.
 
@@ -169,9 +149,13 @@ race_condition_detection_test() ->
 
     %% Create shared state with potential race
     SharedPid = spawn(fun() -> shared_state_loop(0) end),
+    ok = catena_concurrency:track_operation(self(), write, shared_state, make_ref()),
 
-    %% Spawn multiple updaters (potential race)
-    Updaters = [spawn(fun() -> update_shared(SharedPid, 1) end)
+    %% Spawn multiple updaters while tracking concurrent writes
+    Updaters = [spawn(fun() ->
+                    catena_concurrency:track_operation(self(), write, shared_state, make_ref()),
+                    update_shared(SharedPid, 1)
+                end)
                 || _ <- lists:seq(1, 5)],
 
     %% Wait for updates
@@ -185,9 +169,23 @@ race_condition_detection_test() ->
     after 500 -> ?assert(false, timeout_waiting_for_value)
     end,
 
+    ?assertEqual({ok, true}, catena_concurrency:check_concurrent_access(Updaters, shared_state)),
+
     %% Cleanup
     lists:foreach(fun(P) -> exit(P, kill) end, Updaters),
     exit(SharedPid, kill),
+    ok.
+
+distribution_partition_workflow_test() ->
+    {ok, Node1} = catena_distribution:spawn_test_node(integration_node_1),
+    {ok, Node2} = catena_distribution:spawn_test_node(integration_node_2),
+    ok = catena_distribution:partition_nodes([Node1#test_node.node], [Node2#test_node.node]),
+    ?assertEqual({ok, false},
+        catena_distribution:strongly_consistent([Node1#test_node.node, Node2#test_node.node], test_state)),
+    ok = catena_distribution:heal_partition([Node1#test_node.node, Node2#test_node.node]),
+    ?assertEqual({ok, true},
+        catena_distribution:eventually_consistent([Node1#test_node.node, Node2#test_node.node], test_state, 100)),
+    catena_distribution:cleanup_nodes(),
     ok.
 
 %%====================================================================
@@ -195,12 +193,10 @@ race_condition_detection_test() ->
 %%====================================================================
 
 cleanup_normal_scenario_test() ->
-    %% Test cleanup in normal scenario
-    Pid = spawn(fun() -> simple_loop() end),
-    ?assert(is_process_alive(Pid)),
-    Pid ! stop,
-    timer:sleep(50),
-    ?assertNot(is_process_alive(Pid)),
+    Proc = catena_process:spawn_test_process(fun() -> simple_loop() end),
+    ?assertEqual(ok, catena_process:assert_alive(Proc)),
+    ?assertEqual(ok, catena_process:stop_process(Proc)),
+    ?assertEqual(ok, catena_process:assert_dead(Proc)),
     ok.
 
 cleanup_crash_scenario_test() ->
@@ -381,37 +377,8 @@ simple_supervisor(Children) ->
             ok
     end.
 
-%% Consumer loop for pipeline
-consumer_loop(Parent) ->
-    receive
-        {produce, Value} ->
-            Parent ! {consumed, Value},
-            consumer_loop(Parent);
-        stop ->
-            ok
-    end.
-
-%% Producer loop for pipeline
-producer_loop(Consumer, Count) when Count > 0 ->
-    Consumer ! {produce, Count - 1},
-    producer_loop(Consumer, Count - 1);
-producer_loop(_, 0) ->
-    ok.
-
-%% Collect results from consumer
-collect_results(0, Acc) ->
-    lists:reverse(Acc);
-collect_results(Count, Acc) ->
-    receive
-        {consumed, Value} ->
-            collect_results(Count - 1, [Value | Acc])
-    after 2000 ->
-        %% Timeout waiting for consumed messages
-        lists:reverse(Acc)
-    end.
-
 %% Client loop for concurrent access
-client_loop(ServerPid, 0) ->
+client_loop(_ServerPid, 0) ->
     ok;
 client_loop(ServerPid, Count) ->
     ServerPid ! {increment, self()},
@@ -460,6 +427,22 @@ shared_state_loop(Value) ->
 %% Update shared state
 update_shared(Pid, Delta) ->
     Pid ! {update, Delta}.
+
+%% Protocol loop used by message utilities
+protocol_loop() ->
+    receive
+        {From, Ref, ping} ->
+            From ! {self(), Ref, pong},
+            protocol_loop();
+        {From, Ref, msg1} ->
+            From ! {self(), Ref, ok},
+            protocol_loop();
+        {From, Ref, msg2} ->
+            From ! {self(), Ref, ok},
+            protocol_loop();
+        stop ->
+            ok
+    end.
 
 %% Echo loop
 echo_loop() ->

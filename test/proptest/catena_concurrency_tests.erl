@@ -114,11 +114,11 @@ priority_interleaving_sorts_test() ->
     PriorityFuns = [{1, Fun3}, {3, Fun1}, {2, Fun2}],
     Result = catena_concurrency:priority_interleaving(PriorityFuns),
     ?assertEqual(3, length(Result)),
-    %% Should be sorted by priority (highest first): Fun3, Fun1, Fun2
+    %% Should be sorted by priority (highest first): Fun1, Fun2, Fun3
     [First, Second, Third] = Result,
     ?assertEqual(1, First()),
-    ?assertEqual(3, Second()),
-    ?assertEqual(2, Third()),
+    ?assertEqual(2, Second()),
+    ?assertEqual(3, Third()),
     ok.
 
 %%====================================================================
@@ -181,6 +181,7 @@ check_concurrent_access_single_test() ->
 track_lock_records_lock_test() ->
     Ref = make_ref(),
     ?assertEqual(ok, catena_concurrency:track_lock(self(), my_lock, Ref)),
+    ?assertEqual(ok, catena_concurrency:release_lock(self(), my_lock)),
     ok.
 
 release_lock_releases_lock_test() ->
@@ -198,6 +199,20 @@ detect_deadlock_no_deadlock_test() ->
 detect_cycles_empty_test() ->
     LockInfo = #lock_info{},
     ?assertEqual([], catena_concurrency:detect_cycles(LockInfo)),
+    ok.
+
+detect_deadlock_cycle_test() ->
+    Ref1 = make_ref(),
+    Ref2 = make_ref(),
+    Pid1 = spawn(fun() -> receive after infinity -> ok end end),
+    Pid2 = spawn(fun() -> receive after infinity -> ok end end),
+    ok = catena_concurrency:track_lock(Pid1, lock_a, Ref1),
+    ok = catena_concurrency:track_lock(Pid2, lock_b, Ref2),
+    ok = catena_concurrency:track_lock(Pid1, lock_b, Ref1),
+    ok = catena_concurrency:track_lock(Pid2, lock_a, Ref2),
+    ?assertEqual({ok, true}, catena_concurrency:detect_deadlock([Pid1, Pid2])),
+    exit(Pid1, kill),
+    exit(Pid2, kill),
     ok.
 
 %%====================================================================
@@ -248,7 +263,7 @@ concurrent_execution_test() ->
     CounterFun = fun(CounterPid) ->
         CounterPid ! {increment, self()},
         receive
-            {result, Value} -> ok
+            {result, _Value} -> ok
         after infinity -> ok
         end
     end,
@@ -257,8 +272,7 @@ concurrent_execution_test() ->
     Counter = spawn(fun() -> counter_loop(0) end),
 
     %% Spawn processes that will increment the counter
-    Pids = [spawn(CounterFun) || _ <- lists:seq(1, 3)],
-    lists:foreach(fun(Pid) ->Pid ! Counter end, Pids),
+    Pids = [spawn(fun() -> CounterFun(Counter) end) || _ <- lists:seq(1, 3)],
 
     timer:sleep(200),
     Counter ! stop,

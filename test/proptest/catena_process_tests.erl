@@ -1,9 +1,18 @@
 %% @doc Unit Tests for Phase 6.1: Process Testing Support
 -module(catena_process_tests).
 
+-behaviour(gen_server).
+
 -include_lib("eunit/include/eunit.hrl").
 -include("../../src/proptest/catena_process.hrl").
 -include("../../src/proptest/catena_gen.hrl").
+
+-export([init/1,
+         handle_call/3,
+         handle_cast/2,
+         handle_info/2,
+         terminate/2,
+         code_change/3]).
 
 %%====================================================================
 %% Section 6.1.1: Test Process Management
@@ -95,6 +104,12 @@ process_info_safe_dead_process_test() ->
     FakePid = list_to_pid("<0.9999.0>"),
     Info = catena_process:process_info_safe(FakePid, [memory]),
     ?assertMatch({error, _}, Info),
+    ok.
+
+get_state_returns_genserver_state_test() ->
+    {ok, Pid} = gen_server:start_link(?MODULE, #{count => 3}, []),
+    ?assertEqual(#{count => 3}, catena_process:get_state(Pid)),
+    gen_server:stop(Pid),
     ok.
 
 message_queue_empty_test() ->
@@ -224,6 +239,23 @@ assert_dead_fails_for_live_process_test() ->
     catena_process:stop_process(Proc),
     ok.
 
+assert_exit_reason_tracks_shutdown_test() ->
+    Fun = fun() -> receive after infinity -> ok end end,
+    Proc = catena_process:spawn_test_process(Fun),
+    Pid = Proc#test_process.pid,
+    catena_process:stop_process(Proc),
+    ?assertEqual(ok, catena_process:assert_exit_reason(Pid, shutdown)),
+    ok.
+
+assert_exit_reason_detects_mismatch_test() ->
+    Fun = fun() -> receive after infinity -> ok end end,
+    Proc = catena_process:spawn_test_process(Fun),
+    Pid = Proc#test_process.pid,
+    catena_process:kill_process(Proc),
+    Result = catena_process:assert_exit_reason(Pid, shutdown),
+    ?assertMatch({error, {unexpected_exit_reason, shutdown, killed}}, Result),
+    ok.
+
 assert_no_messages_passes_for_empty_queue_test() ->
     Fun = fun() -> receive after infinity -> ok end end,
     Proc = catena_process:spawn_test_process(Fun),
@@ -306,8 +338,32 @@ cleanup_processes_handles_multiple_processes_test() ->
     ?assert(lists:all(fun is_process_alive/1, Pids)),
 
     %% Cleanup
-    lists:foreach(fun catena_process:stop_process/1, Procs),
+    ?assertEqual(ok, catena_process:cleanup_processes()),
 
     %% All should be dead
     ?assertNot(lists:any(fun is_process_alive/1, Pids)),
     ok.
+
+%%====================================================================
+%% gen_server callbacks for test support
+%%====================================================================
+
+init(State) ->
+    {ok, State}.
+
+handle_call(get_state, _From, State) ->
+    {reply, State, State};
+handle_call(_Request, _From, State) ->
+    {reply, ok, State}.
+
+handle_cast(_Msg, State) ->
+    {noreply, State}.
+
+handle_info(_Info, State) ->
+    {noreply, State}.
+
+terminate(_Reason, _State) ->
+    ok.
+
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.

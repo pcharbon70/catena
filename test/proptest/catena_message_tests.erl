@@ -125,43 +125,39 @@ sends_messages_in_order_empty_test() ->
     ok.
 
 no_message_loss_all_received_test() ->
-    %% This test verifies the message sending mechanism
-    %% We'll manually verify that messages can be sent and received
-    Self = self(),
-    Ref = make_ref(),
-
     Fun = fun() ->
-        %% Receive and count messages
         receive
-            {Ref, 1, msg1} -> ok
-        after infinity -> ok
-        end,
-        receive
-            {Ref, 2, msg2} -> ok
-        after infinity -> ok
-        end,
-        %% Report back
-        Self ! {received, 2},
-        receive
-            _ -> ok
-        after infinity -> ok
+            {From, Ref1, 1, msg1} ->
+                From ! {Ref1, 1, received},
+                receive
+                    {From2, Ref2, 2, msg2} ->
+                        From2 ! {Ref2, 2, received}
+                after infinity -> ok
+                end
         end
     end,
 
     Proc = catena_process:spawn_test_process(Fun),
     Pid = Proc#test_process.pid,
+    ?assertEqual({sent, 2}, catena_message:no_message_loss(Pid, [msg1, msg2], 500)),
+    catena_process:stop_process(Proc),
+    ok.
 
-    %% Send messages
-    Pid ! {Ref, 1, msg1},
-    Pid ! {Ref, 2, msg2},
-
-    %% Wait for acknowledgment
-    receive
-        {received, 2} -> ?assert(true)
-    after 500 ->
-        ?assert(false, messages_not_received)
+start_trace_records_send_and_receive_test() ->
+    Fun = fun() ->
+        receive
+            ping -> pong
+        after infinity -> ok
+        end
     end,
-
+    Proc = catena_process:spawn_test_process(Fun),
+    Pid = Proc#test_process.pid,
+    {ok, _Tracer} = catena_message:start_trace(Pid),
+    Pid ! ping,
+    timer:sleep(50),
+    {ok, Trace} = catena_message:get_trace(),
+    ?assert(length(Trace) > 0),
+    ?assertEqual(ok, catena_message:stop_trace()),
     catena_process:stop_process(Proc),
     ok.
 
@@ -277,6 +273,18 @@ follows_protocol_mismatch_error_test() ->
     Result = catena_message:follows_protocol(Messages, Protocol,
         #{allow_extra => false, ordered => true}),
     ?assertMatch({error, {protocol_mismatch, _, _}}, Result),
+    ok.
+
+follows_protocol_optional_message_test() ->
+    Messages = [msg1, msg3],
+    Protocol = [msg1, {optional, msg2}, msg3],
+    ?assertEqual({ok, true}, catena_message:follows_protocol(Messages, Protocol, #{})),
+    ok.
+
+follows_protocol_repeated_message_test() ->
+    Messages = [msg1, msg2, msg2, msg3],
+    Protocol = [msg1, {repeat, msg2}, msg3],
+    ?assertEqual({ok, true}, catena_message:follows_protocol(Messages, Protocol, #{})),
     ok.
 
 verify_protocol_exact_match_test() ->

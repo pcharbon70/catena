@@ -11,25 +11,33 @@
 %%====================================================================
 
 spawn_test_node_creates_node_test() ->
-    Result = catena_distribution:spawn_test_node(test_node_1),
-    ?assertMatch({ok, #test_node{name = test_node_1}}, Result),
+    {ok, Node} = catena_distribution:spawn_test_node(test_node_1),
+    ?assertMatch(#test_node{name = test_node_1}, Node),
+    ?assert(is_pid(Node#test_node.pid)),
+    ?assert(is_process_alive(Node#test_node.pid)),
+    ?assert(lists:member(Node#test_node.node, catena_distribution:list_nodes())),
+    catena_distribution:cleanup_nodes(),
     ok.
 
 connect_nodes_connected_test() ->
-    Node1 = #test_node{name = node1, node = node1@localhost, pid = undefined},
-    Node2 = #test_node{name = node2, node = node2@localhost, pid = undefined},
-    %% Both nodes are not connected
-    Result = catena_distribution:connect_nodes(Node1, Node2),
-    ?assertMatch({error, _}, Result),
+    {ok, Node1} = catena_distribution:spawn_test_node(node1),
+    {ok, Node2} = catena_distribution:spawn_test_node(node2),
+    ?assertEqual(ok, catena_distribution:connect_nodes(Node1, Node2)),
+    catena_distribution:cleanup_nodes(),
     ok.
 
 cleanup_nodes_clears_test() ->
+    {ok, _Node} = catena_distribution:spawn_test_node(cleanup_node),
     ?assertEqual(ok, catena_distribution:cleanup_nodes()),
+    ?assertEqual([], catena_distribution:list_nodes()),
     ok.
 
 list_nodes_returns_list_test() ->
+    {ok, Node} = catena_distribution:spawn_test_node(list_node),
     Nodes = catena_distribution:list_nodes(),
     ?assert(is_list(Nodes)),
+    ?assert(lists:member(Node#test_node.node, Nodes)),
+    catena_distribution:cleanup_nodes(),
     ok.
 
 %%====================================================================
@@ -69,20 +77,31 @@ global_process_undefined_test() ->
 %%====================================================================
 
 partition_nodes_simulates_split_test() ->
-    %% Placeholder test - verifies the function exists and runs
-    ?assertEqual(ok, catena_distribution:partition_nodes([node1, node2], [node3, node4])),
+    Nodes = [make_node(node1), make_node(node2)],
+    ?assertEqual(ok, catena_distribution:partition_nodes([hd(Nodes)], [lists:nth(2, Nodes)])),
+    {ok, false} = catena_distribution:strongly_consistent(Nodes, test_state),
+    catena_distribution:cleanup_nodes(),
     ok.
 
 heal_partition_restores_connectivity_test() ->
-    ?assertEqual(ok, catena_distribution:heal_partition([node1, node2])),
+    Node1 = make_node(node1),
+    Node2 = make_node(node2),
+    ok = catena_distribution:partition_nodes([Node1], [Node2]),
+    ok = catena_distribution:heal_partition([Node1, Node2]),
+    {ok, true} = catena_distribution:strongly_consistent([Node1, Node2], test_state),
+    catena_distribution:cleanup_nodes(),
     ok.
 
 delay_messages_adds_delay_test() ->
-    ?assertEqual(ok, catena_distribution:delay_messages(node1, node2, 100)),
+    Node1 = make_node(node1),
+    Node2 = make_node(node2),
+    ?assertEqual(ok, catena_distribution:delay_messages(Node1, Node2, 100)),
+    ?assertEqual(100, catena_distribution:network_delay(Node1, Node2)),
+    catena_distribution:cleanup_nodes(),
     ok.
 
 network_delay_returns_undefined_for_different_nodes_test() ->
-    Result = catena_distribution:network_delay(node1, node2),
+    Result = catena_distribution:network_delay(make_node(node1), make_node(node2)),
     ?assertEqual(undefined, Result),
     ok.
 
@@ -96,8 +115,16 @@ eventually_consistent_empty_nodes_test() ->
     ok.
 
 eventually_consistent_with_timeout_test() ->
-    {ok, Result} = catena_distribution:eventually_consistent([node(), node()], test_state, 100),
+    Node1 = make_node(node1),
+    Node2 = make_node(node2),
+    ok = catena_distribution:partition_nodes([Node1], [Node2]),
+    spawn(fun() ->
+        timer:sleep(50),
+        catena_distribution:heal_partition([Node1, Node2])
+    end),
+    {ok, Result} = catena_distribution:eventually_consistent([Node1, Node2], test_state, 200),
     ?assert(Result),
+    catena_distribution:cleanup_nodes(),
     ok.
 
 strongly_consistent_empty_test() ->
@@ -106,8 +133,10 @@ strongly_consistent_empty_test() ->
     ok.
 
 strongly_consistent_single_test() ->
-    {ok, Result} = catena_distribution:strongly_consistent([node()], test_state),
+    {ok, _Node} = catena_distribution:spawn_test_node(single_node),
+    {ok, Result} = catena_distribution:strongly_consistent([make_node(single_node)], test_state),
     ?assert(Result),
+    catena_distribution:cleanup_nodes(),
     ok.
 
 verify_crdt_consistency_empty_test() ->
@@ -121,6 +150,15 @@ verify_crdt_consistency_single_test() ->
     States = [State1],
     {ok, Result} = catena_distribution:verify_crdt_consistency(States),
     ?assert(Result),
+    ok.
+
+verify_crdt_consistency_detects_divergence_test() ->
+    States = [
+        #crdt_state{value = 42, version = 1},
+        #crdt_state{value = 7, version = 2}
+    ],
+    {ok, Result} = catena_distribution:verify_crdt_consistency(States),
+    ?assertNot(Result),
     ok.
 
 %%====================================================================
@@ -159,14 +197,13 @@ ping_node_local_test() ->
 %%====================================================================
 
 distributed_state_sync_test() ->
-    %% This test demonstrates the interface for distributed state testing
-    %% In a real distributed system, this would test state synchronization
-    Nodes = [node1, node2],
+    Nodes = [make_node(node1), make_node(node2)],
     SharedState = #{counter => 0},
 
     %% Verify consistency across nodes
     {ok, Result} = catena_distribution:strongly_consistent(Nodes, SharedState),
     ?assert(Result),
+    catena_distribution:cleanup_nodes(),
     ok.
 
 network_partition_recovery_test() ->
@@ -178,7 +215,12 @@ network_partition_recovery_test() ->
     ?assert(catena_distribution:is_connected(node())),
 
     %% Verify partition and heal functions exist and return ok
-    Nodes = [node1, node2, node3],
-    ?assertEqual(ok, catena_distribution:partition_nodes([node1, node2], [node3])),
+    Nodes = [make_node(node1), make_node(node2), make_node(node3)],
+    ?assertEqual(ok, catena_distribution:partition_nodes([lists:nth(1, Nodes), lists:nth(2, Nodes)], [lists:nth(3, Nodes)])),
     ?assertEqual(ok, catena_distribution:heal_partition(Nodes)),
+    catena_distribution:cleanup_nodes(),
     ok.
+
+make_node(Name) ->
+    {ok, Node} = catena_distribution:spawn_test_node(Name),
+    Node#test_node.node.
