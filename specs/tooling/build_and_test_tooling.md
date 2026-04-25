@@ -20,7 +20,7 @@ Promoted status: implemented with generated lexer/parser hooks, multiple test en
 - The repo supports both `make`-based and `rebar3`-based workflows.
 - Lexer and parser generation are part of the normal build path rather than a manual pre-step.
 - Tests are organized by subsystem across compiler, runtime, integration, REPL, stdlib, testing, and property-testing areas.
-- Legacy PropEr-oriented suites are preserved under `test_legacy/proper/` and intentionally excluded from the default compile path while the internal replacement work continues.
+- `test_legacy/proper/` is now historical/documentary only; it no longer holds runnable suites that participate in the maintained workflow.
 - The repo-wide `rebar3 eunit` entry point completes successfully across the active suite.
 
 ## Acceptance Criteria
@@ -46,9 +46,10 @@ The test tree must remain organized by subsystem so implementation work can be v
 
 The following is part of the current promoted repo status:
 
-- `rebar3 eunit` completes successfully without compiling the quarantined legacy PropEr suites
+- `rebar3 eunit` completes successfully across the maintained suite
+- the default path no longer depends on or compiles runnable PropEr-era test modules from `test_legacy/proper/`
 
-This criterion exists so the specs record both the quarantine and the restored green default workflow precisely.
+This criterion exists so the specs record both the historical boundary and the restored green default workflow precisely.
 
 ### AC-TOOL-005 Coverage And Analysis Boundaries
 
@@ -60,9 +61,9 @@ The promoted tooling configuration includes the current coverage and dialyzer bo
 
 ### AC-TOOL-006 Migration Expectation
 
-The project must keep the historical PropEr suites quarantined from the default compile path until they are either:
+The project must keep any future rediscovered PropEr-era artifacts out of the default compile path unless they are either:
 
 - migrated to the internal testing/property infrastructure, or
 - intentionally retired
 
-This preserves a clean default workflow while keeping the migration status honest.
+At present, the historical directory is documentation-only rather than an active quarantine of runnable suites.

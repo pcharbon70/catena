@@ -1,9 +1,11 @@
-# Legacy PropEr Suites
+# Legacy PropEr Artifacts
 
-This directory preserves Catena's historical PropEr-based property tests as tracked reference artifacts.
+This directory is now historical/documentary only.
 
-They are intentionally excluded from the default `rebar3 eunit` compile and execution path.
+There are currently no runnable PropEr suites left here. The maintained property/law workflow has converged on Catena's internal engine in `src/proptest/` with `src/testing/` serving as the compatibility/front-end layer.
 
-These suites are migration targets for Catena's internal property-testing framework in `src/proptest/` and `src/testing/`.
+This placeholder remains so the repository can record that:
 
-They are not a supported default workflow for the repository in their current location.
+- PropEr is no longer part of the active default workflow
+- any future rediscovered PropEr-era artifacts should be treated as migration-or-retirement decisions, not revived implicitly
+- the default `rebar3 eunit` / `make test` path should stay clear of legacy external-framework coupling
