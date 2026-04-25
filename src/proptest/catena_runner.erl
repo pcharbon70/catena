@@ -445,9 +445,14 @@ run_properties(Properties, #run_options{} = RunOpts) ->
 
 %% @private Run properties with normalized options.
 -spec run_properties_with_opts([catena_property:property()], run_options()) -> batch_result().
+run_properties_with_opts(Properties, #run_options{parallel = true} = RunOpts) ->
+    Results = run_properties_parallel(Properties, RunOpts),
+    build_batch_result(Results);
 run_properties_with_opts(Properties, RunOpts) ->
     Results = [{P#property.name, run_property(P, RunOpts)} || P <- Properties],
+    build_batch_result(Results).
 
+build_batch_result(Results) ->
     Passed = length([R || {_, {passed, _R}} = R <- Results]),
     Failed = length([R || {_, {failed, _R}} = R <- Results]),
     Total = length(Results),
@@ -459,6 +464,85 @@ run_properties_with_opts(Properties, RunOpts) ->
         errors => 0,
         results => Results
     }.
+
+run_properties_parallel(Properties, RunOpts) ->
+    Parent = self(),
+    Pending = maps:from_list([
+        begin
+            Name = Property#property.name,
+            {Pid, Ref} = spawn_monitor(fun() ->
+                Result = run_property(Property, RunOpts#run_options{parallel = false}),
+                Parent ! {property_result, self(), Index, Name, Result}
+            end),
+            _ = Ref,
+            {Pid, {Index, Name}}
+        end
+        || {Index, Property} <- lists:zip(lists:seq(1, length(Properties)), Properties)
+    ]),
+    Collected = gather_parallel_results(Pending, [], RunOpts#run_options.timeout),
+    [
+        {Name, Result}
+        || {_Index, Name, Result} <- lists:sort(fun({IndexA, _, _}, {IndexB, _, _}) ->
+            IndexA =< IndexB
+        end, Collected)
+    ].
+
+gather_parallel_results(Pending, Acc, _Timeout) when map_size(Pending) =:= 0 ->
+    Acc;
+gather_parallel_results(Pending, Acc, Timeout) ->
+    receive
+        {property_result, Pid, Index, Name, Result} ->
+            gather_parallel_results(
+                maps:remove(Pid, Pending),
+                [{Index, Name, Result} | Acc],
+                Timeout
+            );
+        {'DOWN', _Ref, process, Pid, Reason} ->
+            case maps:take(Pid, Pending) of
+                {{Index, Name}, Remaining} ->
+                    gather_parallel_results(
+                        Remaining,
+                        [{Index, Name, parallel_crash_result(Reason)} | Acc],
+                        Timeout
+                    );
+                error ->
+                    gather_parallel_results(Pending, Acc, Timeout)
+            end
+    after Timeout ->
+        TimeoutResults = [
+            {Index, Name, timeout_result(Timeout)}
+            || {_Pid, {Index, Name}} <- maps:to_list(Pending)
+        ],
+        Acc ++ TimeoutResults
+    end.
+
+parallel_crash_result(Reason) ->
+    {failed, #property_result{
+        kind = error,
+        tests_run = 0,
+        tests_discarded = 0,
+        shrinks_attempted = 0,
+        seed = undefined,
+        original_counterexample = {parallel_worker_crashed, Reason},
+        shrunk_counterexample = {parallel_worker_crashed, Reason},
+        shrink_history = [],
+        labels = [],
+        output = <<"parallel worker crashed">>
+    }}.
+
+timeout_result(Timeout) ->
+    {failed, #property_result{
+        kind = error,
+        tests_run = 0,
+        tests_discarded = 0,
+        shrinks_attempted = 0,
+        seed = undefined,
+        original_counterexample = {parallel_timeout, Timeout},
+        shrunk_counterexample = {parallel_timeout, Timeout},
+        shrink_history = [],
+        labels = [],
+        output = <<"parallel execution timed out">>
+    }}.
 
 %%====================================================================
 %% Section 3.2.4: Integration with Test Framework
