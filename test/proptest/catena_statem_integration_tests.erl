@@ -62,6 +62,31 @@ full_workflow_with_shrinking_test() ->
     ?assert(lists:all(fun is_list/1, Shrunk)),
     ok.
 
+runtime_counter_symbolic_to_concrete_workflow_test() ->
+    Options = catena_statem:default_options(),
+    SM = catena_statem:state_machine(<<"runtime">>, runtime_counter_statem, Options),
+    Commands = [
+        {call, runtime_counter_statem, increment, []},
+        {call, runtime_counter_statem, increment, []},
+        {call, runtime_counter_statem, decrement, []}
+    ],
+    {ok, Trace, SymbolicFinalState, _Bindings} = catena_statem:run_symbolic(SM, Commands),
+    {ok, #{results := [ok, ok, ok], final_state := ConcreteFinalState}} = catena_statem:run_concrete(SM, Commands),
+    ?assertEqual(3, length(Trace)),
+    ?assertEqual(SymbolicFinalState, ConcreteFinalState),
+    ?assertEqual(#{count => 1}, ConcreteFinalState),
+    ok.
+
+parallel_runtime_counter_workflow_test() ->
+    Options = catena_statem:default_options(),
+    SM = catena_statem:state_machine(<<"runtime">>, runtime_counter_statem, Options),
+    {Prefix, Tracks, _Seed} = catena_statem:gen_parallel_commands(SM, 2, 2, 42),
+    ?assertEqual([], Prefix),
+    ?assertEqual(2, length(Tracks)),
+    Results = catena_statem:parallel_property_test(SM, 2, 2, 42),
+    ?assert(lists:all(fun({_SeedValue, Status}) -> Status =:= ok end, Results)),
+    ok.
+
 %%====================================================================
 %% Section 5.6.2: State Machine Validation Integration
 %%====================================================================
@@ -194,4 +219,26 @@ collect_and_check_postconditions_test() ->
     %% Check postconditions against results
     Results = [ok, ok],
     ?assertEqual(ok, catena_statem:check_postconditions(PostConds, Results, State)),
+    ok.
+
+linearizability_witness_integration_test() ->
+    Options = catena_statem:default_options(),
+    SM = catena_statem:state_machine(<<"runtime">>, runtime_counter_statem, Options),
+    Observed = [
+        #{track => 1, commands => [{call, runtime_counter_statem, decrement, []}], result => {ok, [ok], []}}
+    ],
+    ?assertMatch({error, {non_linearizable, _}}, catena_statem:check_linearizable(SM, #{count => 0}, Observed)),
+    ok.
+
+performance_smoke_test() ->
+    Options = catena_statem:default_options(),
+    SM = catena_statem:state_machine(<<"bounded">>, bounded_counter_statem, Options),
+    Results = [
+        begin
+            {Commands, _Seed} = catena_statem:generate_commands(SM, 5, Seed),
+            is_list(Commands)
+        end
+     || Seed <- lists:seq(1, 200)
+    ],
+    ?assert(lists:all(fun(Result) -> Result =:= true end, Results)),
     ok.
