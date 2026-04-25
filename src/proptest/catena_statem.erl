@@ -121,6 +121,8 @@
     bind_var/3,
     lookup_var/2,
     substitute_vars/2,
+    run_symbolic/2,
+    format_symbolic_trace/1,
     symbolic_next_state/3,
     collect_postconditions/3
 ]).
@@ -733,15 +735,110 @@ lookup_var(Var, Bindings) ->
 %% Replaces any {var, N} references with their bound values from the bindings.
 -spec substitute_vars([symbolic_arg()], var_bindings()) -> [term()].
 substitute_vars(Args, Bindings) ->
-    lists:map(fun
-        ({var, _} = Var) ->
-            case lookup_var(Var, Bindings) of
-                {ok, Value} -> Value;
-                error -> Var  %% Keep unbound variable as-is
+    [substitute_term(Arg, Bindings) || Arg <- Args].
+
+substitute_term({var, _} = Var, Bindings) ->
+    case lookup_var(Var, Bindings) of
+        {ok, Value} -> Value;
+        error -> Var
+    end;
+substitute_term(Term, Bindings) when is_list(Term) ->
+    [substitute_term(Item, Bindings) || Item <- Term];
+substitute_term(Term, Bindings) when is_tuple(Term) ->
+    list_to_tuple([substitute_term(Item, Bindings) || Item <- tuple_to_list(Term)]);
+substitute_term(Term, Bindings) when is_map(Term) ->
+    maps:from_list([
+        {substitute_term(Key, Bindings), substitute_term(Value, Bindings)}
+     || {Key, Value} <- maps:to_list(Term)
+    ]);
+substitute_term(Term, _Bindings) ->
+    Term.
+
+%% @doc Run a symbolic command sequence against the state model.
+%%
+%% Returns the symbolic trace, final state, and symbolic bindings used to
+%% validate later concrete execution.
+-spec run_symbolic(state_machine(), command_seq()) ->
+    {ok, [map()], state(), var_bindings()} |
+    {error, {precondition_failed | undefined_variable, pos_integer(), term(), symbolic_command()}}.
+run_symbolic(#state_machine{module = Module, initial_state = InitialState} = StateMachine, Commands) ->
+    run_symbolic_loop(StateMachine, Module, InitialState, Commands, [], [], 1).
+
+run_symbolic_loop(_StateMachine, _Module, State, [], Bindings, Trace, _Index) ->
+    {ok, lists:reverse(Trace), State, lists:reverse(Bindings)};
+run_symbolic_loop(StateMachine, Module, State, [Command | Rest], Bindings, Trace, Index) ->
+    case validate_symbolic_command(Command, Bindings) of
+        ok ->
+            case Module:precondition(State, Command) of
+                true ->
+                    ResultVar = new_var(Index),
+                    SymbolicValue = {symbolic_result, Index},
+                    NewBindings = bind_var(ResultVar, SymbolicValue, Bindings),
+                    NewState = symbolic_next_state(State, NewBindings, Command),
+                    case check_invariants(StateMachine#state_machine.invariants, NewState) of
+                        ok ->
+                            TraceEntry = #{
+                                index => Index,
+                                command => Command,
+                                result_var => ResultVar,
+                                state_before => State,
+                                state_after => NewState
+                            },
+                            run_symbolic_loop(StateMachine, Module, NewState, Rest, NewBindings, [TraceEntry | Trace], Index + 1);
+                        {error, _} ->
+                            {error, {precondition_failed, Index, NewState, Command}}
+                    end;
+                false ->
+                    {error, {precondition_failed, Index, State, Command}}
             end;
-        (Literal) ->
-            Literal
-    end, Args).
+        {error, Reason} ->
+            {error, {undefined_variable, Index, Reason, Command}}
+    end.
+
+validate_symbolic_command({call, _Module, _Name, Args}, Bindings) ->
+    validate_symbolic_args(Args, Bindings);
+validate_symbolic_command(_Command, _Bindings) ->
+    ok.
+
+validate_symbolic_args(Args, Bindings) when is_list(Args) ->
+    validate_symbolic_terms(Args, Bindings);
+validate_symbolic_args(Arg, Bindings) ->
+    validate_symbolic_terms([Arg], Bindings).
+
+validate_symbolic_terms([], _Bindings) ->
+    ok;
+validate_symbolic_terms([Term | Rest], Bindings) ->
+    case validate_symbolic_term(Term, Bindings) of
+        ok -> validate_symbolic_terms(Rest, Bindings);
+        Error -> Error
+    end.
+
+validate_symbolic_term({var, _} = Var, Bindings) ->
+    case lookup_var(Var, Bindings) of
+        {ok, _Value} -> ok;
+        error -> {error, Var}
+    end;
+validate_symbolic_term(Term, Bindings) when is_list(Term) ->
+    validate_symbolic_terms(Term, Bindings);
+validate_symbolic_term(Term, Bindings) when is_tuple(Term) ->
+    validate_symbolic_terms(tuple_to_list(Term), Bindings);
+validate_symbolic_term(Term, Bindings) when is_map(Term) ->
+    validate_symbolic_terms(lists:append([[Key, Value] || {Key, Value} <- maps:to_list(Term)]), Bindings);
+validate_symbolic_term(_Term, _Bindings) ->
+    ok.
+
+%% @doc Format a symbolic trace for debugging output.
+-spec format_symbolic_trace([map()]) -> iolist().
+format_symbolic_trace(Trace) ->
+    lists:map(
+        fun(#{index := Index, command := Command, result_var := ResultVar, state_before := StateBefore, state_after := StateAfter}) ->
+            io_lib:format(
+                "~p. ~p => ~p~n   before: ~p~n   after:  ~p~n",
+                [Index, Command, ResultVar, StateBefore, StateAfter]
+            )
+        end,
+        Trace
+    ).
 
 %% @doc Compute the next abstract state after a symbolic command.
 %%
