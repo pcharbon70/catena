@@ -86,6 +86,35 @@ result_includes_seed_test() ->
     ?assertMatch(#seed{}, Result#property_result.seed),
     ok.
 
+result_includes_static_label_counts_test() ->
+    Prop0 = catena_property:property("labeled", fun() ->
+        catena_property:forall(catena_gen:constant(1), fun(_) -> true end)
+    end),
+    Prop = catena_property:with_label(<<"regression">>, Prop0),
+    {passed, Result} = catena_runner:run_property(Prop, #{num_tests => 4}),
+    ?assertEqual(#{<<"regression">> => 4}, Result#property_result.labels),
+    ?assert(binary:match(Result#property_result.output, <<"labels=regression=4">>) =/= nomatch),
+    ok.
+
+result_includes_classification_counts_test() ->
+    Prop0 = catena_property:property("classified", fun() ->
+        catena_property:forall(catena_gen:constant(1), fun(_) -> true end)
+    end),
+    Prop = catena_property:classify(<<"sign">>, fun(N) when N > 0 -> positive end, Prop0),
+    {passed, Result} = catena_runner:run_property(Prop, #{num_tests => 3}),
+    ?assertEqual(#{<<"sign:positive">> => 3}, Result#property_result.labels),
+    ?assert(binary:match(Result#property_result.output, <<"sign:positive=3">>) =/= nomatch),
+    ok.
+
+result_includes_discard_summary_test() ->
+    Prop = catena_property:property("discard_summary", fun() ->
+        catena_property:forall(catena_gen:gen_int(), fun(_) -> discard end)
+    end),
+    {failed, Result} = catena_runner:run_property(Prop, #{num_tests => 5}),
+    ?assertEqual(discarded, Result#property_result.kind),
+    ?assert(binary:match(Result#property_result.output, <<"discards=">>) =/= nomatch),
+    ok.
+
 %%====================================================================
 %% Section 3.2.3: Test Orchestration
 %%====================================================================

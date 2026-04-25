@@ -471,32 +471,11 @@ format_failure_reason({counterexample, Iteration, Values}) ->
     io_lib:format("Property failed after ~B iterations.~n  Counterexample:~n~s",
                   [Iteration, string:join(ValueStrs, "\n")]);
 format_failure_reason({property_counterexample, Details}) ->
-    TestsRun = maps:get(tests_run, Details, 0),
-    Seed = maps:get(seed, Details, undefined),
-    Counterexample = maps:get(shrunk_counterexample, Details, maps:get(original_counterexample, Details, #{})),
-    ValueStrs = [io_lib:format("    ~p = ~p", [K, V]) || {K, V} <- maps:to_list(Counterexample)],
-    io_lib:format(
-        "Property failed after ~B iterations.~n  Seed: ~p~n  Counterexample:~n~s",
-        [TestsRun, Seed, string:join(ValueStrs, "\n")]
-    );
+    format_property_failure("Property failed", Details);
 format_failure_reason({property_discarded, Details}) ->
-    io_lib:format(
-        "Property discarded too many test cases after ~B successful iterations (~B discarded). Seed: ~p",
-        [
-            maps:get(tests_run, Details, 0),
-            maps:get(tests_discarded, Details, 0),
-            maps:get(seed, Details, undefined)
-        ]
-    );
+    format_property_failure("Property discarded too many test cases", Details);
 format_failure_reason({property_error, Details}) ->
-    io_lib:format(
-        "Property execution error after ~B iterations. Seed: ~p. Reason: ~p",
-        [
-            maps:get(tests_run, Details, 0),
-            maps:get(seed, Details, undefined),
-            maps:get(reason, Details, undefined)
-        ]
-    );
+    format_property_failure("Property execution error", Details);
 format_failure_reason({law_suite_failure, Details}) ->
     Instance = format_law_instance(maps:get(instance, Details, <<"unknown">>)),
     Failed = maps:get(failed, Details, 0),
@@ -519,6 +498,90 @@ format_failure_reason(Reason) when is_list(Reason) ->
     Reason;
 format_failure_reason(Other) ->
     io_lib:format("~p", [Other]).
+
+format_property_failure(Heading, Details) ->
+    TestsRun = maps:get(tests_run, Details, 0),
+    Discards = maps:get(tests_discarded, Details, 0),
+    Shrinks = maps:get(shrinks_attempted, Details, 0),
+    Seed = maps:get(seed, Details, undefined),
+    Labels = maps:get(labels, Details, #{}),
+    Output = maps:get(output, Details, <<>>),
+    Reason = maps:get(reason, Details, undefined),
+    CounterexampleBlock = format_property_counterexample_block(Details),
+    [
+        io_lib:format("~s after ~B iterations.", [Heading, TestsRun]),
+        format_property_discard_summary(Discards),
+        format_property_reason_summary(Reason),
+        io_lib:format("~n  Seed: ~p", [Seed]),
+        format_property_shrink_summary(Shrinks),
+        format_property_label_summary(Labels),
+        format_property_output_summary(Output),
+        CounterexampleBlock
+    ].
+
+format_property_discard_summary(0) ->
+    "";
+format_property_discard_summary(Discards) ->
+    lists:flatten(io_lib:format(" (~B discarded)", [Discards])).
+
+format_property_reason_summary(undefined) ->
+    "";
+format_property_reason_summary(Reason) ->
+    lists:flatten(io_lib:format(" Reason: ~p", [Reason])).
+
+format_property_shrink_summary(0) ->
+    "";
+format_property_shrink_summary(Shrinks) ->
+    lists:flatten(io_lib:format("~n  Shrinks attempted: ~B", [Shrinks])).
+
+format_property_label_summary(Labels) ->
+    case format_label_counts(Labels) of
+        "" -> "";
+        LabelSummary ->
+            lists:flatten(io_lib:format("~n  Labels: ~s", [LabelSummary]))
+    end.
+
+format_property_output_summary(<<>>) ->
+    "";
+format_property_output_summary([]) ->
+    "";
+format_property_output_summary(Output) when is_binary(Output) ->
+    lists:flatten(io_lib:format("~n  Output: ~s", [binary_to_list(Output)]));
+format_property_output_summary(Output) ->
+    lists:flatten(io_lib:format("~n  Output: ~p", [Output])).
+
+format_property_counterexample_block(Details) ->
+    Original = maps:get(original_counterexample, Details, undefined),
+    Shrunk = maps:get(shrunk_counterexample, Details, Original),
+    case {Original, Shrunk} of
+        {undefined, _} ->
+            "";
+        {Value, Value} ->
+            lists:flatten(io_lib:format("~n  Counterexample: ~s", [format_counterexample_value(Value)]));
+        {Orig, Final} ->
+            lists:flatten(io_lib:format(
+                "~n  Original counterexample: ~s~n  Shrunk counterexample: ~s",
+                [format_counterexample_value(Orig), format_counterexample_value(Final)]
+            ))
+    end.
+
+format_counterexample_value(Value) ->
+    lists:flatten(io_lib:format("~p", [Value])).
+
+format_label_counts([]) ->
+    "";
+format_label_counts(Labels) when is_map(Labels), map_size(Labels) =:= 0 ->
+    "";
+format_label_counts(Labels) when is_map(Labels) ->
+    string:join(
+        [
+            lists:flatten(io_lib:format("~s=~B", [format_law_instance(Label), Count]))
+         || {Label, Count} <- lists:sort(maps:to_list(Labels))
+        ],
+        ", "
+    );
+format_label_counts(Labels) ->
+    lists:flatten(io_lib:format("~p", [Labels])).
 
 %% @doc Extract value from wrapped form
 get_value({value, V}) -> V;
@@ -594,6 +657,9 @@ property_result_details(Result) ->
         tests_discarded => Result#property_result.tests_discarded,
         shrinks_attempted => Result#property_result.shrinks_attempted,
         seed => Result#property_result.seed,
+        labels => normalize_property_labels(Result#property_result.labels),
+        output => Result#property_result.output,
+        shrink_history => normalize_property_counterexample(Result#property_result.shrink_history),
         original_counterexample => normalize_property_counterexample(Result#property_result.original_counterexample),
         shrunk_counterexample => normalize_property_counterexample(Result#property_result.shrunk_counterexample)
     }.
@@ -604,6 +670,13 @@ normalize_property_counterexample(Counterexample) when is_map(Counterexample) ->
     maps:map(fun(_Key, Value) -> get_value(Value) end, Counterexample);
 normalize_property_counterexample(Counterexample) ->
     Counterexample.
+
+normalize_property_labels([]) ->
+    #{};
+normalize_property_labels(Labels) when is_map(Labels) ->
+    Labels;
+normalize_property_labels(Labels) ->
+    Labels.
 
 extract_law_check(TestValue) ->
     case maps:get(lawCheck, TestValue, undefined) of
@@ -666,8 +739,16 @@ law_failure_details(LawResult) ->
         law => maps:get(law, LawResult, unknown),
         stdlib_law => maps:get(stdlib_law, LawResult, unknown),
         kind => PropertyResult#property_result.kind,
+        tests_run => PropertyResult#property_result.tests_run,
+        tests_discarded => PropertyResult#property_result.tests_discarded,
+        shrinks_attempted => PropertyResult#property_result.shrinks_attempted,
         seed => PropertyResult#property_result.seed,
-        counterexample => normalize_property_counterexample(
+        labels => normalize_property_labels(PropertyResult#property_result.labels),
+        output => PropertyResult#property_result.output,
+        original_counterexample => normalize_property_counterexample(
+            PropertyResult#property_result.original_counterexample
+        ),
+        shrunk_counterexample => normalize_property_counterexample(
             case PropertyResult#property_result.shrunk_counterexample of
                 undefined -> PropertyResult#property_result.original_counterexample;
                 Value -> Value
@@ -689,12 +770,64 @@ format_law_failure(Failure) ->
     Law = format_law_instance(maps:get(law, Failure, <<"unknown">>)),
     StdlibLaw = maps:get(stdlib_law, Failure, unknown),
     Kind = maps:get(kind, Failure, unknown),
+    TestsRun = maps:get(tests_run, Failure, 0),
+    Discards = maps:get(tests_discarded, Failure, 0),
+    Shrinks = maps:get(shrinks_attempted, Failure, 0),
     Seed = maps:get(seed, Failure, undefined),
-    Counterexample = maps:get(counterexample, Failure, undefined),
+    Labels = maps:get(labels, Failure, #{}),
+    Output = maps:get(output, Failure, <<>>),
+    Original = maps:get(original_counterexample, Failure, undefined),
+    Shrunk = maps:get(shrunk_counterexample, Failure, Original),
     io_lib:format(
-        "  ~s.~s (~p) failed [kind=~p, seed=~p, counterexample=~p]",
-        [Trait, Law, StdlibLaw, Kind, Seed, Counterexample]
+        "  ~s.~s (~p) failed [kind=~p, tests=~B, discards=~B, seed=~p]~s~s~s",
+        [
+            Trait,
+            Law,
+            StdlibLaw,
+            Kind,
+            TestsRun,
+            Discards,
+            Seed,
+            format_law_shrink_summary(Shrinks),
+            format_law_label_summary(Labels),
+            format_law_counterexample_summary(Original, Shrunk, Output)
+        ]
     ).
+
+format_law_shrink_summary(0) ->
+    "";
+format_law_shrink_summary(Shrinks) ->
+    lists:flatten(io_lib:format(", shrinks=~B", [Shrinks])).
+
+format_law_label_summary(Labels) ->
+    case format_label_counts(Labels) of
+        "" -> "";
+        Summary ->
+            lists:flatten(io_lib:format("~n    labels: ~s", [Summary]))
+    end.
+
+format_law_counterexample_summary(Original, Shrunk, Output) ->
+    CounterexampleText = case {Original, Shrunk} of
+        {undefined, _} ->
+            "";
+        {Value, Value} ->
+            lists:flatten(io_lib:format("~n    counterexample: ~s", [format_counterexample_value(Value)]));
+        {Orig, Final} ->
+            lists:flatten(io_lib:format(
+                "~n    original: ~s~n    shrunk: ~s",
+                [format_counterexample_value(Orig), format_counterexample_value(Final)]
+            ))
+    end,
+    CounterexampleText ++ format_law_output_summary(Output).
+
+format_law_output_summary(<<>>) ->
+    "";
+format_law_output_summary([]) ->
+    "";
+format_law_output_summary(Output) when is_binary(Output) ->
+    lists:flatten(io_lib:format("~n    output: ~s", [binary_to_list(Output)]));
+format_law_output_summary(Output) ->
+    lists:flatten(io_lib:format("~n    output: ~p", [Output])).
 
 maybe_put_law_seed_opt(Config, Opts, Acc) ->
     case maps:get(property_seed, Opts, maps:get(seed, Opts, law_config_seed(Config))) of
