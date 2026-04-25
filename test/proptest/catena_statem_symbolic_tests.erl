@@ -100,14 +100,12 @@ substitute_vars_unbound_var_test() ->
     ok.
 
 substitute_vars_nested_var_test() ->
-    %% Variable substitution only applies at the top level of argument lists
-    %% Nested variables are kept as-is (would require recursive traversal)
+    %% Nested symbolic references are resolved recursively.
     Var = {var, 1},
     Args = [{tuple, [1, Var, 3]}],
     Bindings = [{Var, 42}],
     Result = catena_statem:substitute_vars(Args, Bindings),
-    %% The tuple itself contains a var, which isn't substituted at top level
-    ?assertEqual([{tuple, [1, Var, 3]}], Result),
+    ?assertEqual([{tuple, [1, 42, 3]}], Result),
     ok.
 
 %%====================================================================
@@ -200,4 +198,56 @@ collect_postcondition_returns_function_test() ->
     ?assert(is_function(Fun, 1)),
     %% Postcondition checks that count > 0 in pre-state (1 > 0 = true)
     ?assert(Fun(some_result)),
+    ok.
+
+%%====================================================================
+%% Section 5.3.6: Symbolic Execution Workflow
+%%====================================================================
+
+run_symbolic_builds_trace_test() ->
+    Options = catena_statem:default_options(),
+    SM = catena_statem:state_machine(<<"test">>, counter_statem, Options),
+    Commands = [
+        {call, counter_statem, increment, []},
+        {call, counter_statem, increment, []}
+    ],
+    {ok, Trace, FinalState, Bindings} = catena_statem:run_symbolic(SM, Commands),
+    ?assertEqual(2, length(Trace)),
+    ?assertEqual(#{count => 2}, FinalState),
+    ?assertEqual(2, length(Bindings)),
+    ok.
+
+run_symbolic_precondition_failure_test() ->
+    Options = catena_statem:default_options(),
+    SM = catena_statem:state_machine(<<"test">>, counter_statem, Options),
+    Commands = [
+        {call, counter_statem, reset, []}
+    ],
+    Result = catena_statem:run_symbolic(SM, Commands),
+    ?assertMatch({error, {precondition_failed, 1, _, _}}, Result),
+    ok.
+
+run_symbolic_undefined_variable_test() ->
+    Options = catena_statem:default_options(),
+    SM = catena_statem:state_machine(<<"test">>, counter_statem, Options),
+    Commands = [
+        {call, counter_statem, increment, [{var, 99}]}
+    ],
+    Result = catena_statem:run_symbolic(SM, Commands),
+    ?assertMatch({error, {undefined_variable, 1, {var, 99}, _}}, Result),
+    ok.
+
+format_symbolic_trace_test() ->
+    Trace = [
+        #{
+            index => 1,
+            command => {call, counter_statem, increment, []},
+            result_var => {var, 1},
+            state_before => #{count => 0},
+            state_after => #{count => 1}
+        }
+    ],
+    Formatted = catena_statem:format_symbolic_trace(Trace),
+    ?assert(is_list(Formatted)),
+    ?assert(length(Formatted) > 0),
     ok.

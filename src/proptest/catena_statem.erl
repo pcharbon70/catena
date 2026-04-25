@@ -59,7 +59,12 @@
 %%====================================================================
 
 -export([
+    state_machine/2,
     state_machine/3,
+    command/2,
+    command/3,
+    invariant/2,
+    invariant/3,
     validate/1,
     extract_commands/2,
     extract_invariants/1
@@ -99,6 +104,7 @@
 
 -export([
     generate_command/2,
+    generate_command/3,
     generate_commands/3,
     weight_select/1,
     filter_valid_commands/2,
@@ -115,6 +121,8 @@
     bind_var/3,
     lookup_var/2,
     substitute_vars/2,
+    run_symbolic/2,
+    format_symbolic_trace/1,
     symbolic_next_state/3,
     collect_postconditions/3
 ]).
@@ -126,6 +134,8 @@
 -export([
     execute_command/3,
     execute_commands/4,
+    run_concrete/2,
+    expect/2,
     run_parallel_tracks/3,
     check_postconditions/3
 ]).
@@ -135,6 +145,10 @@
 %%====================================================================
 
 -export([
+    gen_parallel_commands/4,
+    execute_parallel_tracks/5,
+    check_linearizable/3,
+    detect_races/1,
     parallel_property_test/4,
     aggregate_parallel_results/1
 ]).
@@ -196,6 +210,16 @@
 %% @doc Command generator result.
 -type gen_result(T) :: {T, catena_gen:seed()} | {error, term()}.
 
+-callback initial_state() -> state().
+-callback command(state()) -> [command_spec()].
+-callback precondition(state(), symbolic_command()) -> boolean().
+-callback next_state(state(), var_bindings(), symbolic_command()) -> state().
+-callback postcondition(state(), symbolic_command(), command_result()) -> boolean().
+-callback setup() -> {ok, system()} | {error, term()}.
+-callback cleanup(system()) -> ok.
+-callback invariants() -> [invariant_spec()].
+-optional_callbacks([setup/0, cleanup/1, invariants/0]).
+
 %%====================================================================
 %% Section 5.1.1: State Machine Type Definition
 %%====================================================================
@@ -205,6 +229,10 @@
 %% @param Name Human-readable name for this state machine
 %% @param Module Callback module implementing the statem behavior
 %% @param Options Configuration options
+-spec state_machine(atom() | binary(), module()) -> state_machine().
+state_machine(Name, Module) ->
+    state_machine(Name, Module, default_options()).
+
 -spec state_machine(atom() | binary(), module(), options()) -> state_machine().
 state_machine(Name, Module, Options) ->
     InitialState = Module:initial_state(),
@@ -218,6 +246,44 @@ state_machine(Name, Module, Options) ->
         invariants = Invariants,
         options = Options
     }.
+
+%% @doc Construct a command specification with default options.
+-spec command(atom(), args_generator()) -> command_spec().
+command(Name, ArgsGen) ->
+    command(Name, ArgsGen, #{}).
+
+%% @doc Construct a command specification from a name, generator, and option map.
+%%
+%% Supported options are:
+%% - `precondition`
+%% - `execute`
+%% - `postcondition`
+%% - `next_state`
+%% - `weight`
+%% - `frequency`
+-spec command(atom(), args_generator(), map()) -> command_spec().
+command(Name, ArgsGen, Options) ->
+    #command_gen{
+        name = Name,
+        args_gen = ArgsGen,
+        precondition = maps:get(precondition, Options, undefined),
+        execute = maps:get(execute, Options, undefined),
+        postcondition = maps:get(postcondition, Options, undefined),
+        next_state = maps:get(next_state, Options, undefined),
+        weight = maps:get(weight, Options, undefined),
+        frequency = maps:get(frequency, Options, undefined)
+    }.
+
+%% @doc Construct an invariant with no guard.
+-spec invariant(atom() | binary(), fun((state()) -> boolean())) -> invariant_spec().
+invariant(Name, Check) ->
+    invariant(Name, Check, undefined).
+
+%% @doc Construct an invariant with an optional guard.
+-spec invariant(atom() | binary(), fun((state()) -> boolean()), fun((state()) -> boolean()) | undefined) ->
+    invariant_spec().
+invariant(Name, Check, WhenFun) ->
+    #invariant{name = Name, check = Check, when_fun = WhenFun}.
 
 %% @doc Extract command specifications from the callback module.
 -spec extract_commands(module(), state()) -> [command_spec()].
@@ -236,24 +302,109 @@ extract_invariants(Module) ->
 %%
 %% Checks that all required callbacks are exported and valid.
 -spec validate(state_machine()) -> ok | {error, [term()]}.
-validate(#state_machine{module = Module}) ->
-    CheckCallback = fun({Func, Arity}) ->
-        case erlang:function_exported(Module, Func, Arity) of
-            true -> false;
-            false -> {true, {missing_callback, Func, Arity}}
-        end
-    end,
-    Errors = lists:filtermap(CheckCallback, [
+validate(#state_machine{module = Module, initial_state = InitialState, commands = Commands, invariants = Invariants}) ->
+    Errors =
+        validate_callbacks(Module) ++
+        validate_command_specs(Module, InitialState, Commands) ++
+        validate_invariants(Module, Invariants),
+    case Errors of
+        [] -> ok;
+        _ -> {error, Errors}
+    end.
+
+validate_callbacks(Module) ->
+    Required = [
         {initial_state, 0},
         {command, 1},
         {precondition, 2},
         {next_state, 3},
         {postcondition, 3}
-    ]),
-    case Errors of
-        [] -> ok;
-        _ -> {error, Errors}
-    end.
+    ],
+    CheckCallback = fun({Func, Arity}) ->
+        case erlang:function_exported(Module, Func, Arity) of
+            true -> [];
+            false -> [{missing_callback, Func, Arity}]
+        end
+    end,
+    lists:append([CheckCallback(Callback) || Callback <- Required]).
+
+validate_command_specs(Module, InitialState, Commands) ->
+    DynamicErrors =
+        case catch Module:command(InitialState) of
+            {'EXIT', Reason} ->
+                [{command_callback_failed, Reason}];
+            Result when is_list(Result) ->
+                validate_command_list(dynamic, Result);
+            Result ->
+                [{invalid_command_list, dynamic, Result}]
+        end,
+    CachedErrors =
+        case is_list(Commands) of
+            true -> validate_command_list(cached, Commands);
+            false -> [{invalid_command_list, cached, Commands}]
+        end,
+    DynamicErrors ++ CachedErrors.
+
+validate_command_list(Source, CommandSpecs) ->
+    lists:append([validate_command_spec(Source, Spec) || Spec <- CommandSpecs]).
+
+validate_command_spec(Source, #command_gen{
+    name = Name,
+    args_gen = ArgsGen,
+    precondition = Precondition,
+    execute = Execute,
+    postcondition = Postcondition,
+    next_state = NextState,
+    weight = Weight,
+    frequency = Frequency
+}) ->
+    validate_spec_field(Source, invalid_command_name, Name, is_atom(Name)) ++
+    validate_spec_field(Source, missing_args_generator, ArgsGen, ArgsGen =/= undefined) ++
+    validate_spec_field(Source, invalid_precondition, Precondition, Precondition =:= undefined orelse is_function(Precondition, 1)) ++
+    validate_spec_field(Source, invalid_execute, Execute, Execute =:= undefined orelse is_function(Execute, 2)) ++
+    validate_spec_field(Source, invalid_postcondition, Postcondition, Postcondition =:= undefined orelse is_function(Postcondition, 3)) ++
+    validate_spec_field(Source, invalid_next_state, NextState, NextState =:= undefined orelse is_function(NextState, 3)) ++
+    validate_spec_field(Source, invalid_weight, Weight, Weight =:= undefined orelse (is_integer(Weight) andalso Weight > 0)) ++
+    validate_spec_field(Source, invalid_frequency, Frequency, Frequency =:= undefined orelse is_function(Frequency, 1));
+validate_command_spec(Source, Spec) ->
+    [{invalid_command_spec, Source, Spec}].
+
+validate_spec_field(_Source, _Kind, _Value, true) ->
+    [];
+validate_spec_field(Source, Kind, Value, false) ->
+    [{Kind, Source, Value}].
+
+validate_invariants(Module, Invariants) ->
+    DynamicErrors =
+        case erlang:function_exported(Module, invariants, 0) of
+            true ->
+                case catch Module:invariants() of
+                    {'EXIT', Reason} ->
+                        [{invariants_callback_failed, Reason}];
+                    Result when is_list(Result) ->
+                        validate_invariant_list(dynamic, Result);
+                    Result ->
+                        [{invalid_invariant_list, dynamic, Result}]
+                end;
+            false ->
+                []
+        end,
+    CachedErrors =
+        case is_list(Invariants) of
+            true -> validate_invariant_list(cached, Invariants);
+            false -> [{invalid_invariant_list, cached, Invariants}]
+        end,
+    DynamicErrors ++ CachedErrors.
+
+validate_invariant_list(Source, Invariants) ->
+    lists:append([validate_invariant(Source, Invariant) || Invariant <- Invariants]).
+
+validate_invariant(Source, #invariant{name = Name, check = Check, when_fun = WhenFun}) ->
+    validate_spec_field(Source, invalid_invariant_name, Name, is_atom(Name) orelse is_binary(Name)) ++
+    validate_spec_field(Source, invalid_invariant_check, Check, is_function(Check, 1)) ++
+    validate_spec_field(Source, invalid_invariant_guard, WhenFun, WhenFun =:= undefined orelse is_function(WhenFun, 1));
+validate_invariant(Source, Invariant) ->
+    [{invalid_invariant, Source, Invariant}].
 
 %%====================================================================
 %% Section 5.1.3: State Model
@@ -268,29 +419,35 @@ get_initial_state(#state_machine{initial_state = State}) ->
 -spec state_get(term(), state()) -> term().
 state_get(Key, State) when is_map(State) ->
     maps:get(Key, State);
-state_get(Key, State) when is_tuple(State) ->
+state_get(Key, State) when is_tuple(State), is_integer(Key), Key > 0, Key =< tuple_size(State) ->
     element(Key, State);
 state_get(Key, State) when is_list(State) ->
-    proplists:get_value(Key, State).
+    proplists:get_value(Key, State);
+state_get(Key, State) ->
+    error({unsupported_state_access, Key, State}).
 
 %% @doc Update state using a key (for map-based states).
 -spec state_put(term(), term(), state()) -> state().
 state_put(Key, Value, State) when is_map(State) ->
     maps:put(Key, Value, State);
+state_put(Key, Value, State) when is_tuple(State), is_integer(Key), Key > 0, Key =< tuple_size(State) ->
+    setelement(Key, State, Value);
 state_put(Key, Value, State) when is_list(State) ->
     lists:keystore(Key, 1, State, {Key, Value});
-state_put(_Key, _Value, State) ->
-    State.
+state_put(Key, _Value, State) ->
+    error({unsupported_state_update, Key, State}).
 
 %% @doc Update state using a function (for map-based states).
 -spec state_update(term(), fun((term()) -> term()), state()) -> state().
 state_update(Key, Fun, State) when is_map(State) ->
     maps:update_with(Key, Fun, State);
+state_update(Key, Fun, State) when is_tuple(State), is_integer(Key), Key > 0, Key =< tuple_size(State) ->
+    setelement(Key, State, Fun(element(Key, State)));
 state_update(Key, Fun, State) when is_list(State) ->
     {value, {Key, Value}} = lists:keysearch(Key, 1, State),
     lists:keyreplace(Key, 1, State, {Key, Fun(Value)});
-state_update(_Key, _Fun, State) ->
-    State.
+state_update(Key, _Fun, State) ->
+    error({unsupported_state_update, Key, State}).
 
 %%====================================================================
 %% Section 5.1.4: Invariants
@@ -354,15 +511,23 @@ default_options() ->
 %%
 %% Selects a command based on weights and generates its arguments.
 -spec generate_command(state_machine(), state()) -> symbolic_command().
-generate_command(#state_machine{module = Module}, State) ->
+generate_command(StateMachine, State) ->
+    {Command, _Seed} = generate_command(StateMachine, State, catena_gen:seed_new()),
+    Command.
+
+-spec generate_command(state_machine(), state(), catena_gen:seed() | integer()) ->
+    {symbolic_command(), catena_gen:seed()}.
+generate_command(StateMachine, State, Seed) when is_integer(Seed) ->
+    generate_command(StateMachine, State, catena_gen:seed_from_int(Seed));
+generate_command(#state_machine{module = Module}, State, Seed) ->
     CommandSpecs = Module:command(State),
     ValidSpecs = filter_valid_commands(CommandSpecs, State),
-    Selected = weight_select(ValidSpecs),
+    {Selected, SelectionSeed} = weight_select_seeded(ValidSpecs, State, Seed),
     #command_gen{name = Name, args_gen = ArgsGen} = Selected,
-    %% Run the generator with default size and random seed
-    Tree = catena_gen:run(ArgsGen, 10, catena_gen:seed_new()),
+    {ArgsSeed, NextSeed} = catena_gen:seed_split(SelectionSeed),
+    Tree = catena_gen:run(ArgsGen, 10, ArgsSeed),
     Args = catena_tree:root(Tree),
-    {call, Module, Name, Args}.
+    {{call, Module, Name, Args}, NextSeed}.
 
 %% @doc Generate a sequence of commands for testing.
 %%
@@ -388,12 +553,7 @@ generate_commands(#state_machine{module = Module} = SM, NumCommands, Seed, Acc) 
             %% No valid commands available, stop generation
             {lists:reverse(Acc), Seed};
         _ ->
-            Selected = weight_select(ValidSpecs),
-            #command_gen{name = Name, args_gen = ArgsGen} = Selected,
-            {_Word, NewSeed} = catena_gen:seed_next(Seed),
-            Tree = catena_gen:run(ArgsGen, 10, Seed),
-            Args = catena_tree:root(Tree),
-            Command = {call, Module, Name, Args},
+            {Command, NewSeed} = generate_command(SM, State, Seed),
             generate_commands(SM, NumCommands - 1, NewSeed, [Command | Acc])
     end.
 
@@ -404,21 +564,34 @@ generate_commands(#state_machine{module = Module} = SM, NumCommands, Seed, Acc) 
 weight_select([]) ->
     error(no_commands_available);
 weight_select(CommandSpecs) ->
-    TotalWeight = lists:foldl(
-        fun(#command_gen{weight = W}, Acc) when is_integer(W), W > 0 -> Acc + W;
-           (#command_gen{}, Acc) -> Acc + 1  %% Default weight
-        end, 0, CommandSpecs),
-    Random = rand:uniform(TotalWeight),
-    select_by_weight(CommandSpecs, Random, 0).
+    {Selected, _Seed} = weight_select_seeded(CommandSpecs, #{}, catena_gen:seed_new()),
+    Selected.
 
-select_by_weight([#command_gen{weight = W} = Spec | Rest], Target, Acc) when is_integer(W) ->
-    NewAcc = Acc + W,
+weight_select_seeded([], _State, _Seed) ->
+    error(no_commands_available);
+weight_select_seeded(CommandSpecs, State, Seed) ->
+    WeightedSpecs = [{effective_weight(Spec, State), Spec} || Spec <- CommandSpecs],
+    TotalWeight = lists:sum([Weight || {Weight, _Spec} <- WeightedSpecs]),
+    {Word, NextSeed} = catena_gen:seed_next(Seed),
+    Target = (Word rem TotalWeight) + 1,
+    {select_by_weight(WeightedSpecs, Target, 0), NextSeed}.
+
+effective_weight(#command_gen{frequency = Frequency}, State) when is_function(Frequency, 1) ->
+    Weight = Frequency(State),
+    case is_integer(Weight) andalso Weight > 0 of
+        true -> Weight;
+        false -> 1
+    end;
+effective_weight(#command_gen{weight = Weight}, _State) when is_integer(Weight), Weight > 0 ->
+    Weight;
+effective_weight(#command_gen{}, _State) ->
+    1.
+
+select_by_weight([{Weight, Spec} | Rest], Target, Acc) ->
+    NewAcc = Acc + Weight,
     if NewAcc >= Target -> Spec;
        true -> select_by_weight(Rest, Target, NewAcc)
-    end;
-select_by_weight([#command_gen{} = Spec | _Rest], _Target, _Acc) ->
-    %% Default weight of 1
-    Spec.
+    end.
 
 %% @doc Filter command specifications to those with valid preconditions.
 -spec filter_valid_commands([command_spec()], state()) -> [command_spec()].
@@ -432,7 +605,6 @@ filter_valid_commands(CommandSpecs, State) ->
 %% Used to determine the abstract state at any point in a command sequence.
 -spec simulate_state(state_machine(), command_seq()) -> state().
 simulate_state(#state_machine{module = Module, initial_state = InitialState}, Commands) ->
-    Module:initial_state(),
     simulate_state_loop(Module, InitialState, Commands, []).
 
 simulate_state_loop(_Module, State, [], _Vars) ->
@@ -446,14 +618,18 @@ simulate_state_loop(Module, State, [Cmd | Rest], Vars) ->
 %%
 %% Returns a list of shrunk sequences to try.
 -spec shrink_command_seq(command_seq(), state_machine()) -> [command_seq()].
-shrink_command_seq(Commands, _StateMachine) ->
-    %% Basic shrinking strategies:
-    %% 1. Remove commands from the end
-    %% 2. Remove individual commands
-    %% 3. Shrink command arguments (future enhancement)
-    Shrunk1 = shrink_from_end(Commands),
-    Shrunk2 = shrink_one_at_a_time(Commands),
-    lists:usort(Shrunk1 ++ Shrunk2).
+shrink_command_seq([], _StateMachine) ->
+    [];
+shrink_command_seq(Commands, StateMachine) ->
+    RemovalShrinks = shrink_from_end(Commands) ++ shrink_one_at_a_time(Commands),
+    ArgumentShrinks = shrink_command_arguments(Commands),
+    ValidShrinks = [
+        Sequence
+     || Sequence <- RemovalShrinks ++ ArgumentShrinks,
+        length(Sequence) < length(Commands) orelse Sequence =/= Commands,
+        valid_command_sequence(StateMachine, Sequence)
+    ],
+    lists:usort(ValidShrinks).
 
 %% @private Shrink by removing commands from the end.
 shrink_from_end([]) ->
@@ -478,6 +654,63 @@ shrink_one_at_a_time([_Single]) ->
 shrink_one_at_a_time(Commands) ->
     Len = length(Commands),
     [lists:sublist(Commands, I - 1) ++ lists:nthtail(I, Commands) || I <- lists:seq(1, Len)].
+
+shrink_command_arguments(Commands) ->
+    lists:append([shrink_single_command(Commands, Index) || Index <- lists:seq(1, length(Commands))]).
+
+shrink_single_command(Commands, Index) ->
+    Command = lists:nth(Index, Commands),
+    case Command of
+        {call, Module, Name, Args} ->
+            Prefix = lists:sublist(Commands, Index - 1),
+            Suffix = lists:nthtail(Index, Commands),
+            [
+                Prefix ++ [{call, Module, Name, ShrunkArgs}] ++ Suffix
+             || ShrunkArgs <- shrink_arguments(Args),
+                ShrunkArgs =/= Args
+            ];
+        _ ->
+            []
+    end.
+
+shrink_arguments(Args) ->
+    lists:append([shrink_argument_at(Args, Index) || Index <- lists:seq(1, length(Args))]).
+
+shrink_argument_at(Args, Index) ->
+    Arg = lists:nth(Index, Args),
+    Prefix = lists:sublist(Args, Index - 1),
+    Suffix = lists:nthtail(Index, Args),
+    [Prefix ++ [Shrunk] ++ Suffix || Shrunk <- shrink_argument(Arg)].
+
+shrink_argument(Arg) when is_integer(Arg) ->
+    lists:usort(catena_shrink:shrink_binary(Arg, 0) ++ catena_shrink:shrink_halves(Arg));
+shrink_argument(true) ->
+    [false];
+shrink_argument(false) ->
+    [];
+shrink_argument(Arg) when is_list(Arg) ->
+    catena_shrink:shrink_list(Arg);
+shrink_argument(Arg) when is_binary(Arg) ->
+    [binary:part(Arg, 0, Len) || Len <- lists:seq(0, max(byte_size(Arg) - 1, 0))];
+shrink_argument(_Arg) ->
+    [].
+
+valid_command_sequence(#state_machine{module = Module, initial_state = InitialState, invariants = Invariants}, Commands) ->
+    valid_command_sequence(Module, InitialState, Invariants, Commands, []).
+
+valid_command_sequence(_Module, State, Invariants, [], _Vars) ->
+    check_invariants(Invariants, State) =:= ok;
+valid_command_sequence(Module, State, Invariants, [Command | Rest], Vars) ->
+    case Module:precondition(State, Command) of
+        true ->
+            NewState = Module:next_state(State, Vars, Command),
+            case check_invariants(Invariants, NewState) of
+                ok -> valid_command_sequence(Module, NewState, Invariants, Rest, Vars);
+                {error, _} -> false
+            end;
+        false ->
+            false
+    end.
 
 %%====================================================================
 %% Section 5.3: Symbolic Execution
@@ -508,15 +741,110 @@ lookup_var(Var, Bindings) ->
 %% Replaces any {var, N} references with their bound values from the bindings.
 -spec substitute_vars([symbolic_arg()], var_bindings()) -> [term()].
 substitute_vars(Args, Bindings) ->
-    lists:map(fun
-        ({var, _} = Var) ->
-            case lookup_var(Var, Bindings) of
-                {ok, Value} -> Value;
-                error -> Var  %% Keep unbound variable as-is
+    [substitute_term(Arg, Bindings) || Arg <- Args].
+
+substitute_term({var, _} = Var, Bindings) ->
+    case lookup_var(Var, Bindings) of
+        {ok, Value} -> Value;
+        error -> Var
+    end;
+substitute_term(Term, Bindings) when is_list(Term) ->
+    [substitute_term(Item, Bindings) || Item <- Term];
+substitute_term(Term, Bindings) when is_tuple(Term) ->
+    list_to_tuple([substitute_term(Item, Bindings) || Item <- tuple_to_list(Term)]);
+substitute_term(Term, Bindings) when is_map(Term) ->
+    maps:from_list([
+        {substitute_term(Key, Bindings), substitute_term(Value, Bindings)}
+     || {Key, Value} <- maps:to_list(Term)
+    ]);
+substitute_term(Term, _Bindings) ->
+    Term.
+
+%% @doc Run a symbolic command sequence against the state model.
+%%
+%% Returns the symbolic trace, final state, and symbolic bindings used to
+%% validate later concrete execution.
+-spec run_symbolic(state_machine(), command_seq()) ->
+    {ok, [map()], state(), var_bindings()} |
+    {error, {precondition_failed | undefined_variable, pos_integer(), term(), symbolic_command()}}.
+run_symbolic(#state_machine{module = Module, initial_state = InitialState} = StateMachine, Commands) ->
+    run_symbolic_loop(StateMachine, Module, InitialState, Commands, [], [], 1).
+
+run_symbolic_loop(_StateMachine, _Module, State, [], Bindings, Trace, _Index) ->
+    {ok, lists:reverse(Trace), State, lists:reverse(Bindings)};
+run_symbolic_loop(StateMachine, Module, State, [Command | Rest], Bindings, Trace, Index) ->
+    case validate_symbolic_command(Command, Bindings) of
+        ok ->
+            case Module:precondition(State, Command) of
+                true ->
+                    ResultVar = new_var(Index),
+                    SymbolicValue = {symbolic_result, Index},
+                    NewBindings = bind_var(ResultVar, SymbolicValue, Bindings),
+                    NewState = symbolic_next_state(State, NewBindings, Command),
+                    case check_invariants(StateMachine#state_machine.invariants, NewState) of
+                        ok ->
+                            TraceEntry = #{
+                                index => Index,
+                                command => Command,
+                                result_var => ResultVar,
+                                state_before => State,
+                                state_after => NewState
+                            },
+                            run_symbolic_loop(StateMachine, Module, NewState, Rest, NewBindings, [TraceEntry | Trace], Index + 1);
+                        {error, _} ->
+                            {error, {precondition_failed, Index, NewState, Command}}
+                    end;
+                false ->
+                    {error, {precondition_failed, Index, State, Command}}
             end;
-        (Literal) ->
-            Literal
-    end, Args).
+        {error, Reason} ->
+            {error, {undefined_variable, Index, Reason, Command}}
+    end.
+
+validate_symbolic_command({call, _Module, _Name, Args}, Bindings) ->
+    validate_symbolic_args(Args, Bindings);
+validate_symbolic_command(_Command, _Bindings) ->
+    ok.
+
+validate_symbolic_args(Args, Bindings) when is_list(Args) ->
+    validate_symbolic_terms(Args, Bindings);
+validate_symbolic_args(Arg, Bindings) ->
+    validate_symbolic_terms([Arg], Bindings).
+
+validate_symbolic_terms([], _Bindings) ->
+    ok;
+validate_symbolic_terms([Term | Rest], Bindings) ->
+    case validate_symbolic_term(Term, Bindings) of
+        ok -> validate_symbolic_terms(Rest, Bindings);
+        Error -> Error
+    end.
+
+validate_symbolic_term({var, _} = Var, Bindings) ->
+    case lookup_var(Var, Bindings) of
+        {ok, _Value} -> ok;
+        error -> {error, Var}
+    end;
+validate_symbolic_term(Term, Bindings) when is_list(Term) ->
+    validate_symbolic_terms(Term, Bindings);
+validate_symbolic_term(Term, Bindings) when is_tuple(Term) ->
+    validate_symbolic_terms(tuple_to_list(Term), Bindings);
+validate_symbolic_term(Term, Bindings) when is_map(Term) ->
+    validate_symbolic_terms(lists:append([[Key, Value] || {Key, Value} <- maps:to_list(Term)]), Bindings);
+validate_symbolic_term(_Term, _Bindings) ->
+    ok.
+
+%% @doc Format a symbolic trace for debugging output.
+-spec format_symbolic_trace([map()]) -> iolist().
+format_symbolic_trace(Trace) ->
+    lists:map(
+        fun(#{index := Index, command := Command, result_var := ResultVar, state_before := StateBefore, state_after := StateAfter}) ->
+            io_lib:format(
+                "~p. ~p => ~p~n   before: ~p~n   after:  ~p~n",
+                [Index, Command, ResultVar, StateBefore, StateAfter]
+            )
+        end,
+        Trace
+    ).
 
 %% @doc Compute the next abstract state after a symbolic command.
 %%
@@ -563,11 +891,15 @@ collect_postconditions_loop(Module, State, [Cmd | Rest], Vars, Index, Acc) ->
 %% Returns {ok, Result, NewBindings} on success, {error, Reason} on failure.
 -spec execute_command(system(), var_bindings(), symbolic_command()) ->
     {ok, command_result(), var_bindings()} | {error, term()}.
-execute_command(_System, Vars, {call, Module, Name, Args}) ->
+execute_command(System, Vars, {call, Module, Name, Args}) ->
     %% Substitute variables in arguments
     ConcreteArgs = substitute_vars(Args, Vars),
+    InvokeArgs = case System =/= none andalso erlang:function_exported(Module, Name, length(ConcreteArgs) + 1) of
+        true -> [System | ConcreteArgs];
+        false -> ConcreteArgs
+    end,
     %% Call the actual command using apply to handle variable arity
-    try apply(Module, Name, ConcreteArgs) of
+    try apply(Module, Name, InvokeArgs) of
         Result ->
             %% Create a new variable binding for this result
             VarIndex = length(Vars) + 1,
@@ -602,7 +934,7 @@ execute_commands_loop(System, State, [Cmd | Rest], Module, ResultsAcc, Bindings)
                     %% Check postcondition
                     case Module:postcondition(State, Cmd, Result) of
                         true ->
-                            NewState = Module:next_state(State, Bindings, Cmd),
+                            NewState = symbolic_next_state(State, Bindings, Cmd),
                             execute_commands_loop(System, NewState, Rest, Module, [Result | ResultsAcc], NewBindings);
                         false ->
                             {error, {postcondition_failed, Cmd, State, Result}, lists:reverse(ResultsAcc)}
@@ -610,6 +942,46 @@ execute_commands_loop(System, State, [Cmd | Rest], Module, ResultsAcc, Bindings)
                 {error, Reason} ->
                     {error, {command_failed, Cmd, Reason}, lists:reverse(ResultsAcc)}
             end
+    end.
+
+%% @doc Execute a state machine workflow against a concrete system.
+%%
+%% If the callback module exports `setup/0` and `cleanup/1`, they are used to
+%% manage the system under test. Otherwise execution falls back to direct module
+%% calls with `none` as the system value.
+-spec run_concrete(state_machine(), command_seq()) ->
+    {ok, map()} | {error, term()}.
+run_concrete(#state_machine{module = Module, initial_state = InitialState} = StateMachine, Commands) ->
+    case setup_system(Module) of
+        {ok, System} ->
+            try execute_commands(System, InitialState, Commands, Module) of
+                {ok, Results, Bindings} ->
+                    FinalState = simulate_state(StateMachine, Commands),
+                    {ok, #{
+                        system => System,
+                        results => Results,
+                        bindings => Bindings,
+                        final_state => FinalState
+                    }};
+                {error, Reason, PartialResults} ->
+                    {error, #{reason => Reason, partial_results => PartialResults}}
+            after
+                cleanup_system(Module, System)
+            end;
+        {error, Reason} ->
+            {error, {setup_failed, Reason}}
+    end.
+
+setup_system(Module) ->
+    case erlang:function_exported(Module, setup, 0) of
+        true -> Module:setup();
+        false -> {ok, none}
+    end.
+
+cleanup_system(Module, System) ->
+    case erlang:function_exported(Module, cleanup, 1) of
+        true -> Module:cleanup(System);
+        false -> ok
     end.
 
 %% @doc Run command sequences in parallel tracks for shrinking.
@@ -674,52 +1046,256 @@ check_postconditions_loop([{PCIndex, Fun} | Rest], Results, State, Index) when P
 check_postconditions_loop(PostConds, Results, State, Index) ->
     check_postconditions_loop(PostConds, Results, State, Index + 1).
 
+%% @doc Compare an actual result against an expected specification.
+%%
+%% Supports exact equality, predicate functions, and approximate numeric
+%% comparisons via `{approx, Expected, Tolerance}`.
+-spec expect(term(), term()) -> ok | {error, {unexpected_result, term(), term()}}.
+expect({approx, Expected, Tolerance}, Actual)
+    when is_number(Expected), is_number(Tolerance), Tolerance >= 0, is_number(Actual) ->
+    case abs(Actual - Expected) =< Tolerance of
+        true -> ok;
+        false -> {error, {unexpected_result, {approx, Expected, Tolerance}, Actual}}
+    end;
+expect(ExpectedFun, Actual) when is_function(ExpectedFun, 1) ->
+    case ExpectedFun(Actual) of
+        true -> ok;
+        false -> {error, {unexpected_result, ExpectedFun, Actual}}
+    end;
+expect(Expected, Actual) ->
+    case Expected =:= Actual of
+        true -> ok;
+        false -> {error, {unexpected_result, Expected, Actual}}
+    end.
+
 %%====================================================================
 %% Section 5.5: Parallel Execution
 %%====================================================================
 
-%% @doc Run a property test in parallel with multiple seeds.
+%% @doc Generate a sequential prefix plus parallel tracks.
 %%
-%% Creates seed list for parallel workers (simplified version).
--spec parallel_property_test(state_machine(), pos_integer(), pos_integer(), pos_integer()) ->
-    [{catena_gen:seed(), ok | {error, term()}}].
-parallel_property_test(_StateMachine, NumTests, NumParallel, BaseSeed) ->
-    %% Create seed list for each parallel worker
-    Seeds = [catena_gen:seed_from_int(BaseSeed + I) || I <- lists:seq(0, NumParallel - 1)],
-    %% Return placeholder results (in actual implementation would spawn processes)
-    [{Seed, ok} || Seed <- Seeds].
+%% The prefix is generated first. Each parallel track then receives one valid
+%% command generated from the same post-prefix abstract state.
+-spec gen_parallel_commands(state_machine(), pos_integer(), pos_integer(), pos_integer() | catena_gen:seed()) ->
+    {command_seq(), [command_seq()], catena_gen:seed()}.
+gen_parallel_commands(StateMachine, NumCommands, NumParallel, Seed) when is_integer(Seed) ->
+    gen_parallel_commands(StateMachine, NumCommands, NumParallel, catena_gen:seed_from_int(Seed));
+gen_parallel_commands(StateMachine, NumCommands, NumParallel, Seed) ->
+    PrefixLength = max(NumCommands - NumParallel, 0),
+    {Prefix, PrefixSeed} = generate_commands(StateMachine, PrefixLength, Seed),
+    PrefixState = simulate_state(StateMachine, Prefix),
+    {Tracks, FinalSeed} = gen_parallel_tracks(StateMachine, PrefixState, NumParallel, PrefixSeed, []),
+    {Prefix, Tracks, FinalSeed}.
 
-%% @private Run property test with specific seed.
-run_property_test_with_seed(_StateMachine, _NumTests, _Seed) ->
-    %% Placeholder - would run actual property test
-    ok.
+gen_parallel_tracks(_StateMachine, _PrefixState, 0, Seed, Acc) ->
+    {lists:reverse(Acc), Seed};
+gen_parallel_tracks(StateMachine, PrefixState, Remaining, Seed, Acc) ->
+    {Command, NextSeed} = generate_command(StateMachine, PrefixState, Seed),
+    gen_parallel_tracks(StateMachine, PrefixState, Remaining - 1, NextSeed, [[Command] | Acc]).
 
-%% @private Collect results from parallel workers.
-collect_parallel_results(Pids, Acc, Remaining) when Remaining =:= 0 ->
-    %% Wait for any remaining processes and return
-    wait_for_remaining(Pids, Acc);
-collect_parallel_results(Pids, Acc, Remaining) ->
+%% @doc Execute a set of tracks concurrently against a shared system.
+-spec execute_parallel_tracks(module(), system(), state(), [command_seq()], timeout()) ->
+    [map()].
+execute_parallel_tracks(Module, System, PrefixState, Tracks, Timeout) ->
+    Parent = self(),
+    StartRef = make_ref(),
+    Workers = [
+        begin
+            {Pid, MonitorRef} = spawn_monitor(fun() ->
+                receive
+                    {start, StartRef} ->
+                        Result = execute_commands(System, PrefixState, Track, Module),
+                        Parent ! {parallel_track_result, self(), Index, Track, Result}
+                end
+            end),
+            #{index => Index, pid => Pid, monitor => MonitorRef, track => Track}
+        end
+     || {Index, Track} <- lists:zip(lists:seq(1, length(Tracks)), Tracks)
+    ],
+    [maps:get(pid, Worker) ! {start, StartRef} || Worker <- Workers],
+    collect_parallel_track_results(Workers, Timeout, []).
+
+collect_parallel_track_results([], _Timeout, Acc) ->
+    lists:sort(fun(Left, Right) -> maps:get(track, Left) =< maps:get(track, Right) end, Acc);
+collect_parallel_track_results(Workers, Timeout, Acc) ->
     receive
-        {'DOWN', _Ref, process, Pid, _Reason} ->
-            %% Process died unexpectedly
-            collect_parallel_results(lists:delete(Pid, Pids), Acc, Remaining - 1);
-        {Pid, {Seed, Result}} ->
-            demonitor(Pid),
-            collect_parallel_results(lists:delete(Pid, Pids), [{Seed, Result} | Acc], Remaining - 1)
+        {parallel_track_result, Pid, Index, Track, Result} ->
+            flush_worker_monitor(Pid, Workers),
+            Remaining = remove_worker(Pid, Workers),
+            collect_parallel_track_results(Remaining, Timeout, [#{track => Index, commands => Track, result => Result} | Acc]);
+        {'DOWN', _Ref, process, Pid, Reason} ->
+            case worker_info(Pid, Workers) of
+                undefined ->
+                    collect_parallel_track_results(Workers, Timeout, Acc);
+                Worker ->
+                    Remaining = remove_worker(Pid, Workers),
+                    collect_parallel_track_results(Remaining, Timeout, [#{
+                        track => maps:get(index, Worker),
+                        commands => maps:get(track, Worker),
+                        result => {error, {worker_crashed, Reason}, []}
+                    } | Acc])
+            end
+    after Timeout ->
+        Acc ++ [
+            #{
+                track => maps:get(index, Worker),
+                commands => maps:get(track, Worker),
+                result => {error, timeout, []}
+            }
+         || Worker <- Workers
+        ]
     end.
 
-wait_for_remaining([], Acc) ->
-    lists:reverse(Acc);
-wait_for_remaining(Pids, Acc) ->
-    receive
-        {'DOWN', _Ref, process, Pid, _Reason} ->
-            wait_for_remaining(lists:delete(Pid, Pids), Acc);
-        {Pid, {Seed, Result}} ->
-            demonitor(Pid),
-            wait_for_remaining(lists:delete(Pid, Pids), [{Seed, Result} | Acc])
-    after 5000 ->
-        %% Timeout
-        lists:reverse(Acc)
+remove_worker(Pid, Workers) ->
+    [Worker || Worker <- Workers, maps:get(pid, Worker) =/= Pid].
+
+worker_info(Pid, Workers) ->
+    case lists:filter(fun(Worker) -> maps:get(pid, Worker) =:= Pid end, Workers) of
+        [Worker | _] -> Worker;
+        [] -> undefined
+    end.
+
+flush_worker_monitor(Pid, Workers) ->
+    case worker_info(Pid, Workers) of
+        undefined ->
+            ok;
+        Worker ->
+            erlang:demonitor(maps:get(monitor, Worker), [flush]),
+            ok
+    end.
+
+%% @doc Check whether observed parallel track results are linearizable.
+-spec check_linearizable(state_machine(), state(), [map()]) -> ok | {error, {non_linearizable, [map()]}}.
+check_linearizable(#state_machine{module = Module}, PrefixState, ObservedTracks) ->
+    Events = observed_events(ObservedTracks),
+    Interleavings = interleave_tracks(Events),
+    case lists:any(fun(Interleaving) -> linearizable_order(Module, PrefixState, Interleaving) end, Interleavings) of
+        true -> ok;
+        false -> {error, {non_linearizable, Events}}
+    end.
+
+observed_events(ObservedTracks) ->
+    [
+        [#{track => maps:get(track, ObservedTrack), command => Command, result => Result}
+         || {Command, Result} <- lists:zip(Commands, Results)]
+     || ObservedTrack = #{commands := Commands, result := {ok, Results, _Bindings}} <- ObservedTracks
+    ].
+
+interleave_tracks(Tracks) ->
+    interleave_tracks(Tracks, [[]]).
+
+interleave_tracks([], Acc) ->
+    Acc;
+interleave_tracks(Tracks, _Acc) ->
+    interleave(Tracks).
+
+interleave(Tracks) ->
+    case lists:all(fun(Track) -> Track =:= [] end, Tracks) of
+        true ->
+            [[]];
+        false ->
+            lists:append([
+                [
+                    [Event | Rest]
+                 || Rest <- interleave(replace_nth(Tracks, Index, Tail))
+                ]
+             || {Index, [Event | Tail]} <- indexed_nonempty_tracks(Tracks)
+            ])
+    end.
+
+indexed_nonempty_tracks(Tracks) ->
+    [{Index, Track} || {Index, Track} <- lists:zip(lists:seq(1, length(Tracks)), Tracks), Track =/= []].
+
+replace_nth(List, Index, Value) ->
+    Prefix = lists:sublist(List, Index - 1),
+    Suffix = lists:nthtail(Index, List),
+    Prefix ++ [Value] ++ Suffix.
+
+linearizable_order(_Module, _State, []) ->
+    true;
+linearizable_order(Module, State, [#{command := Command, result := Result} | Rest]) ->
+    case Module:precondition(State, Command) andalso Module:postcondition(State, Command, Result) of
+        true ->
+            linearizable_order(Module, symbolic_next_state(State, [], Command), Rest);
+        false ->
+            false
+    end.
+
+%% @doc Detect simple potential races across parallel tracks.
+-spec detect_races([command_seq()]) -> [map()].
+detect_races(Tracks) ->
+    lists:append([
+        race_pairs(LeftIndex, LeftTrack, RightIndex, RightTrack)
+     || {LeftIndex, LeftTrack} <- lists:zip(lists:seq(1, length(Tracks)), Tracks),
+        {RightIndex, RightTrack} <- lists:zip(lists:seq(1, length(Tracks)), Tracks),
+        LeftIndex < RightIndex
+    ]).
+
+race_pairs(LeftIndex, LeftTrack, RightIndex, RightTrack) ->
+    [
+        #{
+            left_track => LeftIndex,
+            right_track => RightIndex,
+            left_command => LeftCommand,
+            right_command => RightCommand
+        }
+     || LeftCommand <- LeftTrack,
+        RightCommand <- RightTrack,
+        commands_conflict(LeftCommand, RightCommand)
+    ].
+
+commands_conflict({call, _Module, LeftName, _Args}, {call, _Module2, RightName, _Args2}) ->
+    case {command_access(LeftName), command_access(RightName)} of
+        {read, read} -> false;
+        _ -> true
+    end;
+commands_conflict(_Left, _Right) ->
+    false.
+
+command_access(value) -> read;
+command_access(get) -> read;
+command_access(_Name) -> write.
+
+%% @doc Run a parallel property test using generated tracks and linearizability checking.
+-spec parallel_property_test(state_machine(), pos_integer(), pos_integer(), pos_integer()) ->
+    [{catena_gen:seed(), ok | {error, term()}}].
+parallel_property_test(StateMachine, NumCommands, NumParallel, BaseSeed) ->
+    Seeds = [catena_gen:seed_from_int(BaseSeed + I) || I <- lists:seq(0, NumParallel - 1)],
+    [{Seed, run_parallel_case(StateMachine, NumCommands, NumParallel, Seed)} || Seed <- Seeds].
+
+run_parallel_case(#state_machine{module = Module} = StateMachine, NumCommands, NumParallel, Seed) ->
+    {Prefix, Tracks, _NextSeed} = gen_parallel_commands(StateMachine, NumCommands, NumParallel, Seed),
+    PrefixState = simulate_state(StateMachine, Prefix),
+    Options = StateMachine#state_machine.options,
+    case setup_system(Module) of
+        {ok, System} ->
+            try
+                case execute_commands(System, StateMachine#state_machine.initial_state, Prefix, Module) of
+                    {ok, _PrefixResults, _PrefixBindings} ->
+                        ObservedTracks = execute_parallel_tracks(Module, System, PrefixState, Tracks, Options#options.timeout),
+                        case lists:any(fun(Track) ->
+                            case maps:get(result, Track) of
+                                {ok, _Results, _Bindings} -> false;
+                                _ -> true
+                            end
+                        end, ObservedTracks) of
+                            true ->
+                                {error, #{tracks => ObservedTracks}};
+                            false ->
+                                Races = detect_races(Tracks),
+                                case check_linearizable(StateMachine, PrefixState, ObservedTracks) of
+                                    ok -> ok;
+                                    {error, Reason} -> {error, #{reason => Reason, races => Races, tracks => ObservedTracks}}
+                                end
+                        end;
+                    {error, Reason, PartialResults} ->
+                        {error, #{reason => Reason, partial_results => PartialResults}}
+                end
+            after
+                cleanup_system(Module, System)
+            end;
+        {error, Reason} ->
+            {error, {setup_failed, Reason}}
     end.
 
 %% @doc Aggregate results from parallel test runs.
