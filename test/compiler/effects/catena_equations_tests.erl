@@ -291,12 +291,34 @@ guard_combine_guards_test() ->
     G1 = {is_type, integer},
     G2 = {compare, '>', [x, 0]},
     Combined = catena_equations:combine_guards(G1, G2),
-    ?assertMatch({'andalso', [G1, G2]}, Combined).
+    ?assertMatch({logic_op, 'andalso', [G1, G2]}, Combined).
 
 combine_guards_with_undefined_test() ->
     G1 = {is_type, integer},
     Combined = catena_equations:combine_guards(undefined, G1),
     ?assertEqual(G1, Combined).
+
+guard_compare_with_substitution_test() ->
+    Guard = {compare, '>', [x, 3]},
+    ?assert(catena_equations:evaluate_guard(Guard, #{x => 5})),
+    ?assertNot(catena_equations:evaluate_guard(Guard, #{x => 2})).
+
+guard_is_type_for_named_variable_test() ->
+    Guard = {is_type, {value, integer}},
+    ?assert(catena_equations:evaluate_guard(Guard, #{value => 5})),
+    ?assertNot(catena_equations:evaluate_guard(Guard, #{value => <<"nope">>})).
+
+substitute_pattern_value_test() ->
+    Pattern = catena_equations:var(x),
+    Subst = #{x => {var, y}},
+    ?assertMatch({var, y}, catena_equations:substitute_variables(Pattern, Subst)).
+
+match_bind_respects_existing_binding_test() ->
+    Pattern = catena_equations:bind(result, catena_equations:wildcard()),
+    ?assertEqual(
+        {error, nomatch},
+        catena_equations:match_pattern(Pattern, 5, #{result => 3})
+    ).
 
 %%%=============================================================================
 %%% Equation String Conversion Tests
