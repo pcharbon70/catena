@@ -117,6 +117,24 @@ generate_command_uses_module_test() ->
     ?assertEqual(counter_statem, Module),
     ok.
 
+generate_command_same_seed_reproducible_test() ->
+    Options = catena_statem:default_options(),
+    SM = catena_statem:state_machine(<<"test">>, bounded_counter_statem, Options),
+    {Command1, Seed1} = catena_statem:generate_command(SM, #{count => 0}, 42),
+    {Command2, Seed2} = catena_statem:generate_command(SM, #{count => 0}, 42),
+    ?assertEqual(Command1, Command2),
+    ?assertEqual(Seed1, Seed2),
+    ok.
+
+generate_command_uses_frequency_bias_test() ->
+    Options = catena_statem:default_options(),
+    SM = catena_statem:state_machine(<<"test">>, bounded_counter_statem, Options),
+    Commands = [catena_statem:generate_command(SM, #{count => 0}) || _ <- lists:seq(1, 40)],
+    Names = [Name || {call, _, Name, _Args} <- Commands],
+    AddCount = length([Name || Name <- Names, Name =:= add]),
+    ?assert(AddCount > 30),
+    ok.
+
 %%====================================================================
 %% Section 5.2.4: Command Sequence Generation
 %%====================================================================
@@ -152,6 +170,15 @@ generate_commands_uses_different_seeds_test() ->
     ?assertNot(Seed1 =:= Seed2),
     %% Commands might be same or different (random)
     ?assert(is_list(Commands2)),
+    ok.
+
+generate_commands_same_seed_reproducible_test() ->
+    Options = catena_statem:default_options(),
+    SM = catena_statem:state_machine(<<"test">>, bounded_counter_statem, Options),
+    {Commands1, Seed1} = catena_statem:generate_commands(SM, 5, 42),
+    {Commands2, Seed2} = catena_statem:generate_commands(SM, 5, 42),
+    ?assertEqual(Commands1, Commands2),
+    ?assertEqual(Seed1, Seed2),
     ok.
 
 %%====================================================================
@@ -245,3 +272,51 @@ shrink_command_seq_removes_middle_test() ->
     HasTwoElement = lists:any(fun(Seq) -> length(Seq) =:= 2 end, Result),
     ?assert(HasTwoElement),
     ok.
+
+shrink_command_seq_preserves_preconditions_test() ->
+    Options = catena_statem:default_options(),
+    SM = catena_statem:state_machine(<<"test">>, bounded_counter_statem, Options),
+    Commands = [
+        {call, bounded_counter_statem, add, [2]},
+        {call, bounded_counter_statem, remove, [1]},
+        {call, bounded_counter_statem, remove, [1]}
+    ],
+    Result = catena_statem:shrink_command_seq(Commands, SM),
+    ?assert(Result =/= []),
+    ?assert(lists:all(fun is_valid_bounded_sequence/1, Result)),
+    ok.
+
+shrink_command_seq_shrinks_integer_arguments_test() ->
+    Options = catena_statem:default_options(),
+    SM = catena_statem:state_machine(<<"test">>, bounded_counter_statem, Options),
+    Commands = [
+        {call, bounded_counter_statem, add, [8]},
+        {call, bounded_counter_statem, remove, [4]}
+    ],
+    Result = catena_statem:shrink_command_seq(Commands, SM),
+    HasSmallerArgs =
+        lists:any(
+            fun
+                ([{call, bounded_counter_statem, add, [Add]}, {call, bounded_counter_statem, remove, [Remove]}]) ->
+                    Add < 8 orelse Remove < 4;
+                (_) ->
+                    false
+            end,
+            Result
+        ),
+    ?assert(HasSmallerArgs),
+    ok.
+
+is_valid_bounded_sequence(Commands) ->
+    is_valid_bounded_sequence(#{count => 0}, Commands).
+
+is_valid_bounded_sequence(_State, []) ->
+    true;
+is_valid_bounded_sequence(State, [Command | Rest]) ->
+    case bounded_counter_statem:precondition(State, Command) of
+        true ->
+            NewState = bounded_counter_statem:next_state(State, [], Command),
+            is_valid_bounded_sequence(NewState, Rest);
+        false ->
+            false
+    end.

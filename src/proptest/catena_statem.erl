@@ -104,6 +104,7 @@
 
 -export([
     generate_command/2,
+    generate_command/3,
     generate_commands/3,
     weight_select/1,
     filter_valid_commands/2,
@@ -502,15 +503,23 @@ default_options() ->
 %%
 %% Selects a command based on weights and generates its arguments.
 -spec generate_command(state_machine(), state()) -> symbolic_command().
-generate_command(#state_machine{module = Module}, State) ->
+generate_command(StateMachine, State) ->
+    {Command, _Seed} = generate_command(StateMachine, State, catena_gen:seed_new()),
+    Command.
+
+-spec generate_command(state_machine(), state(), catena_gen:seed() | integer()) ->
+    {symbolic_command(), catena_gen:seed()}.
+generate_command(StateMachine, State, Seed) when is_integer(Seed) ->
+    generate_command(StateMachine, State, catena_gen:seed_from_int(Seed));
+generate_command(#state_machine{module = Module}, State, Seed) ->
     CommandSpecs = Module:command(State),
     ValidSpecs = filter_valid_commands(CommandSpecs, State),
-    Selected = weight_select(ValidSpecs),
+    {Selected, SelectionSeed} = weight_select_seeded(ValidSpecs, State, Seed),
     #command_gen{name = Name, args_gen = ArgsGen} = Selected,
-    %% Run the generator with default size and random seed
-    Tree = catena_gen:run(ArgsGen, 10, catena_gen:seed_new()),
+    {ArgsSeed, NextSeed} = catena_gen:seed_split(SelectionSeed),
+    Tree = catena_gen:run(ArgsGen, 10, ArgsSeed),
     Args = catena_tree:root(Tree),
-    {call, Module, Name, Args}.
+    {{call, Module, Name, Args}, NextSeed}.
 
 %% @doc Generate a sequence of commands for testing.
 %%
@@ -536,12 +545,7 @@ generate_commands(#state_machine{module = Module} = SM, NumCommands, Seed, Acc) 
             %% No valid commands available, stop generation
             {lists:reverse(Acc), Seed};
         _ ->
-            Selected = weight_select(ValidSpecs),
-            #command_gen{name = Name, args_gen = ArgsGen} = Selected,
-            {_Word, NewSeed} = catena_gen:seed_next(Seed),
-            Tree = catena_gen:run(ArgsGen, 10, Seed),
-            Args = catena_tree:root(Tree),
-            Command = {call, Module, Name, Args},
+            {Command, NewSeed} = generate_command(SM, State, Seed),
             generate_commands(SM, NumCommands - 1, NewSeed, [Command | Acc])
     end.
 
@@ -552,21 +556,34 @@ generate_commands(#state_machine{module = Module} = SM, NumCommands, Seed, Acc) 
 weight_select([]) ->
     error(no_commands_available);
 weight_select(CommandSpecs) ->
-    TotalWeight = lists:foldl(
-        fun(#command_gen{weight = W}, Acc) when is_integer(W), W > 0 -> Acc + W;
-           (#command_gen{}, Acc) -> Acc + 1  %% Default weight
-        end, 0, CommandSpecs),
-    Random = rand:uniform(TotalWeight),
-    select_by_weight(CommandSpecs, Random, 0).
+    {Selected, _Seed} = weight_select_seeded(CommandSpecs, #{}, catena_gen:seed_new()),
+    Selected.
 
-select_by_weight([#command_gen{weight = W} = Spec | Rest], Target, Acc) when is_integer(W) ->
-    NewAcc = Acc + W,
+weight_select_seeded([], _State, _Seed) ->
+    error(no_commands_available);
+weight_select_seeded(CommandSpecs, State, Seed) ->
+    WeightedSpecs = [{effective_weight(Spec, State), Spec} || Spec <- CommandSpecs],
+    TotalWeight = lists:sum([Weight || {Weight, _Spec} <- WeightedSpecs]),
+    {Word, NextSeed} = catena_gen:seed_next(Seed),
+    Target = (Word rem TotalWeight) + 1,
+    {select_by_weight(WeightedSpecs, Target, 0), NextSeed}.
+
+effective_weight(#command_gen{frequency = Frequency}, State) when is_function(Frequency, 1) ->
+    Weight = Frequency(State),
+    case is_integer(Weight) andalso Weight > 0 of
+        true -> Weight;
+        false -> 1
+    end;
+effective_weight(#command_gen{weight = Weight}, _State) when is_integer(Weight), Weight > 0 ->
+    Weight;
+effective_weight(#command_gen{}, _State) ->
+    1.
+
+select_by_weight([{Weight, Spec} | Rest], Target, Acc) ->
+    NewAcc = Acc + Weight,
     if NewAcc >= Target -> Spec;
        true -> select_by_weight(Rest, Target, NewAcc)
-    end;
-select_by_weight([#command_gen{} = Spec | _Rest], _Target, _Acc) ->
-    %% Default weight of 1
-    Spec.
+    end.
 
 %% @doc Filter command specifications to those with valid preconditions.
 -spec filter_valid_commands([command_spec()], state()) -> [command_spec()].
@@ -580,7 +597,6 @@ filter_valid_commands(CommandSpecs, State) ->
 %% Used to determine the abstract state at any point in a command sequence.
 -spec simulate_state(state_machine(), command_seq()) -> state().
 simulate_state(#state_machine{module = Module, initial_state = InitialState}, Commands) ->
-    Module:initial_state(),
     simulate_state_loop(Module, InitialState, Commands, []).
 
 simulate_state_loop(_Module, State, [], _Vars) ->
@@ -594,14 +610,18 @@ simulate_state_loop(Module, State, [Cmd | Rest], Vars) ->
 %%
 %% Returns a list of shrunk sequences to try.
 -spec shrink_command_seq(command_seq(), state_machine()) -> [command_seq()].
-shrink_command_seq(Commands, _StateMachine) ->
-    %% Basic shrinking strategies:
-    %% 1. Remove commands from the end
-    %% 2. Remove individual commands
-    %% 3. Shrink command arguments (future enhancement)
-    Shrunk1 = shrink_from_end(Commands),
-    Shrunk2 = shrink_one_at_a_time(Commands),
-    lists:usort(Shrunk1 ++ Shrunk2).
+shrink_command_seq([], _StateMachine) ->
+    [];
+shrink_command_seq(Commands, StateMachine) ->
+    RemovalShrinks = shrink_from_end(Commands) ++ shrink_one_at_a_time(Commands),
+    ArgumentShrinks = shrink_command_arguments(Commands),
+    ValidShrinks = [
+        Sequence
+     || Sequence <- RemovalShrinks ++ ArgumentShrinks,
+        length(Sequence) < length(Commands) orelse Sequence =/= Commands,
+        valid_command_sequence(StateMachine, Sequence)
+    ],
+    lists:usort(ValidShrinks).
 
 %% @private Shrink by removing commands from the end.
 shrink_from_end([]) ->
@@ -626,6 +646,63 @@ shrink_one_at_a_time([_Single]) ->
 shrink_one_at_a_time(Commands) ->
     Len = length(Commands),
     [lists:sublist(Commands, I - 1) ++ lists:nthtail(I, Commands) || I <- lists:seq(1, Len)].
+
+shrink_command_arguments(Commands) ->
+    lists:append([shrink_single_command(Commands, Index) || Index <- lists:seq(1, length(Commands))]).
+
+shrink_single_command(Commands, Index) ->
+    Command = lists:nth(Index, Commands),
+    case Command of
+        {call, Module, Name, Args} ->
+            Prefix = lists:sublist(Commands, Index - 1),
+            Suffix = lists:nthtail(Index, Commands),
+            [
+                Prefix ++ [{call, Module, Name, ShrunkArgs}] ++ Suffix
+             || ShrunkArgs <- shrink_arguments(Args),
+                ShrunkArgs =/= Args
+            ];
+        _ ->
+            []
+    end.
+
+shrink_arguments(Args) ->
+    lists:append([shrink_argument_at(Args, Index) || Index <- lists:seq(1, length(Args))]).
+
+shrink_argument_at(Args, Index) ->
+    Arg = lists:nth(Index, Args),
+    Prefix = lists:sublist(Args, Index - 1),
+    Suffix = lists:nthtail(Index, Args),
+    [Prefix ++ [Shrunk] ++ Suffix || Shrunk <- shrink_argument(Arg)].
+
+shrink_argument(Arg) when is_integer(Arg) ->
+    lists:usort(catena_shrink:shrink_binary(Arg, 0) ++ catena_shrink:shrink_halves(Arg));
+shrink_argument(true) ->
+    [false];
+shrink_argument(false) ->
+    [];
+shrink_argument(Arg) when is_list(Arg) ->
+    catena_shrink:shrink_list(Arg);
+shrink_argument(Arg) when is_binary(Arg) ->
+    [binary:part(Arg, 0, Len) || Len <- lists:seq(0, max(byte_size(Arg) - 1, 0))];
+shrink_argument(_Arg) ->
+    [].
+
+valid_command_sequence(#state_machine{module = Module, initial_state = InitialState, invariants = Invariants}, Commands) ->
+    valid_command_sequence(Module, InitialState, Invariants, Commands, []).
+
+valid_command_sequence(_Module, State, Invariants, [], _Vars) ->
+    check_invariants(Invariants, State) =:= ok;
+valid_command_sequence(Module, State, Invariants, [Command | Rest], Vars) ->
+    case Module:precondition(State, Command) of
+        true ->
+            NewState = Module:next_state(State, Vars, Command),
+            case check_invariants(Invariants, NewState) of
+                ok -> valid_command_sequence(Module, NewState, Invariants, Rest, Vars);
+                {error, _} -> false
+            end;
+        false ->
+            false
+    end.
 
 %%====================================================================
 %% Section 5.3: Symbolic Execution
