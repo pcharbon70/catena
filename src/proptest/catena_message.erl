@@ -37,12 +37,7 @@
 -include("catena_process.hrl").
 -include("catena_gen.hrl").
 
-%% Internal state for tracing
--record(trace_state, {
-    messages :: [term()],
-    sender :: pid() | undefined,
-    receiver :: pid() | undefined
-}).
+-define(TRACE_KEY, catena_message_trace).
 
 %%====================================================================
 %% Message Generators
@@ -159,12 +154,10 @@ no_message_loss(Target, Messages, Timeout) ->
     Ref = make_ref(),
     SentCount = length(Messages),
 
-    %% Send all messages with sequence numbers
     lists:foreach(fun({Msg, Index}) ->
-        Target ! {Ref, Index, Msg}
+        Target ! {self(), Ref, Index, Msg}
     end, lists:zip(Messages, lists:seq(1, SentCount))),
 
-    %% Count how many messages are received
     ReceivedCount = count_received_messages(Ref, Timeout, 0),
 
     case SentCount of
@@ -175,25 +168,53 @@ no_message_loss(Target, Messages, Timeout) ->
 %% @doc Start tracing messages sent to/from a process.
 -spec trace_messages(pid()) -> ok.
 trace_messages(Pid) when is_pid(Pid) ->
-    erlang:trace(Pid, true, [send, 'receive']),
+    case start_trace(Pid) of
+        {ok, _Tracer} -> ok;
+        {error, _Reason} -> ok
+    end,
     ok.
 
 %% @doc Start tracing messages.
 -spec start_trace(pid()) -> {ok, pid()}.
 start_trace(Pid) when is_pid(Pid) ->
-    trace_messages(Pid),
-    {ok, Pid}.
+    stop_trace(),
+    Tracer = spawn_link(fun() -> trace_loop([]) end),
+    TraceOptions = [send, 'receive', timestamp, {tracer, Tracer}],
+    case erlang:trace(Pid, true, TraceOptions) of
+        1 ->
+            put(?TRACE_KEY, {Pid, Tracer}),
+            {ok, Tracer};
+        _ ->
+            exit(Tracer, normal),
+            {error, trace_not_started}
+    end.
 
 %% @doc Stop tracing messages.
 -spec stop_trace() -> ok.
 stop_trace() ->
-    erlang:trace(all, false, [send, 'receive']),
-    ok.
+    case erase(?TRACE_KEY) of
+        {Pid, Tracer} ->
+            catch erlang:trace(Pid, false, [send, 'receive']),
+            Tracer ! stop,
+            ok;
+        _ ->
+            ok
+    end.
 
 %% @doc Get the trace results.
 -spec get_trace() -> {ok, [term()]}.
 get_trace() ->
-    {ok, erlang:trace_info(all, traced)}.
+    case get(?TRACE_KEY) of
+        {_Pid, Tracer} ->
+            Tracer ! {get_trace, self()},
+            receive
+                {trace, Messages} -> {ok, Messages}
+            after 1000 ->
+                {ok, []}
+            end;
+        _ ->
+            {ok, []}
+    end.
 
 %%====================================================================
 %% Message Receiving Properties
@@ -224,25 +245,18 @@ receives_message(Timeout, _AnyPid) ->
 %% @doc Receive a message matching a pattern.
 -spec receives_message_matching(fun((term()) -> boolean()), timeout()) -> {ok, term()} | {error, timeout}.
 receives_message_matching(Predicate, Timeout) ->
-    receive
-        Msg when is_function(Predicate, 1) ->
-            case Predicate(Msg) of
-                true -> {ok, Msg};
-                false -> receives_message_matching(Predicate, Timeout)
-            end;
-        Msg ->
-            case Predicate(Msg) of
-                true -> {ok, Msg};
-                false -> receives_message_matching(Predicate, Timeout)
-            end
-    after Timeout ->
-        {error, timeout}
-    end.
+    Deadline = deadline(Timeout),
+    receives_message_matching_until(Predicate, Deadline).
 
 %% @doc Receive all messages currently in the mailbox.
 -spec receives_all_messages(timeout()) -> {ok, [term()]}.
 receives_all_messages(Timeout) ->
-    receive_all_messages_acc(Timeout, []).
+    receive
+        Msg ->
+            receive_all_messages_acc([Msg])
+    after Timeout ->
+        {ok, []}
+    end.
 
 %% @doc Flush all messages from the current process mailbox.
 -spec flush_messages() -> ok.
@@ -256,7 +270,13 @@ flush_messages() ->
 %% @doc Flush all messages from a specific process mailbox.
 -spec flush_messages(pid()) -> {ok, non_neg_integer()}.
 flush_messages(Pid) ->
-    %% Send a flush request
+    case Pid =:= self() of
+        true ->
+            flush_messages(),
+            ok;
+        false ->
+            ok
+    end,
     Ref = make_ref(),
     Pid ! {flush, Ref, self()},
     receive
@@ -307,20 +327,11 @@ generate_sequence(Count, Type, Acc, Seed) ->
     {Msg, NewSeed} = GenFun(Seed),
     generate_sequence(Count - 1, Type, [Msg | Acc], NewSeed).
 
-%% @doc Helper for no_message_loss.
-no_message_loss(_Target, _Messages, Timeout, Count) ->
-    receive
-        {_Ref, _Index, _Msg} ->
-            no_message_loss(_Target, _Messages, Timeout - 1, Count + 1)
-    after Timeout ->
-        Count
-    end.
-
-%% @doc Receive all messages with timeout.
-receive_all_messages_acc(Timeout, Acc) ->
+%% @doc Receive all messages that are already in the mailbox.
+receive_all_messages_acc(Acc) ->
     receive
         Msg ->
-            receive_all_messages_acc(Timeout, [Msg | Acc])
+            receive_all_messages_acc([Msg | Acc])
     after 0 ->
         {ok, lists:reverse(Acc)}
     end.
@@ -330,34 +341,155 @@ count_received_messages(_Ref, Timeout, Count) when Timeout =< 0 ->
     Count;
 count_received_messages(Ref, Timeout, Count) ->
     receive
-        {Ref, _, _} ->
+        {Ref, _, received} ->
             count_received_messages(Ref, Timeout - 1, Count + 1)
     after Timeout ->
         Count
+    end.
+
+deadline(infinity) ->
+    infinity;
+deadline(Timeout) ->
+    erlang:monotonic_time(millisecond) + Timeout.
+
+receives_message_matching_until(Predicate, Deadline) ->
+    WaitTime = remaining_timeout(Deadline),
+    case WaitTime of
+        0 ->
+            {error, timeout};
+        infinity ->
+            receive
+                Msg ->
+                    case Predicate(Msg) of
+                        true -> {ok, Msg};
+                        false -> receives_message_matching_until(Predicate, Deadline)
+                    end
+            end;
+        _ ->
+            receive
+                Msg ->
+                    case Predicate(Msg) of
+                        true -> {ok, Msg};
+                        false -> receives_message_matching_until(Predicate, Deadline)
+                    end
+            after WaitTime ->
+                {error, timeout}
+            end
+    end.
+
+remaining_timeout(infinity) ->
+    infinity;
+remaining_timeout(Deadline) ->
+    Remaining = Deadline - erlang:monotonic_time(millisecond),
+    case Remaining > 0 of
+        true -> Remaining;
+        false -> 0
+    end.
+
+verify_ordered_protocol(Messages, Protocol, AllowExtra) ->
+    case match_protocol(Messages, Protocol) of
+        {ok, _Remaining} when AllowExtra -> {ok, true};
+        {ok, []} -> {ok, true};
+        {ok, Remaining} -> {error, {unexpected_messages, Remaining}};
+        {error, Reason} -> {error, Reason}
+    end.
+
+verify_unordered_protocol(Messages, Protocol, AllowExtra) ->
+    Required = expand_protocol_terms(Protocol),
+    case required_messages_present(Messages, Required) of
+        true when AllowExtra -> {ok, true};
+        true when length(Messages) =:= length(Required) -> {ok, true};
+        true -> {error, {unexpected_messages, Messages}};
+        false -> {error, {missing_messages, missing_messages(Messages, Required)}}
+    end.
+
+match_protocol(Messages, []) ->
+    {ok, Messages};
+match_protocol([], Protocol) ->
+    case protocol_can_terminate(Protocol) of
+        true -> {ok, []};
+        false -> {error, {protocol_mismatch, [], Protocol}}
+    end;
+match_protocol(Messages, [{optional, Term} | Rest]) ->
+    case Messages of
+        [Term | Remaining] -> match_protocol(Remaining, Rest);
+        _ -> match_protocol(Messages, Rest)
+    end;
+match_protocol(Messages, [{repeat, Term} | Rest]) ->
+    case consume_repeated(Messages, Term, 0) of
+        {0, _Remaining} -> {error, {protocol_missing_repeat, Term}};
+        {_Count, Remaining} -> match_protocol(Remaining, Rest)
+    end;
+match_protocol([Term | Remaining], [Term | Rest]) ->
+    match_protocol(Remaining, Rest);
+match_protocol(Messages, Protocol) ->
+    {error, {protocol_mismatch, Messages, Protocol}}.
+
+consume_repeated([Term | Rest], Term, Count) ->
+    consume_repeated(Rest, Term, Count + 1);
+consume_repeated(Messages, _Term, Count) ->
+    {Count, Messages}.
+
+protocol_can_terminate([]) ->
+    true;
+protocol_can_terminate([{optional, _} | Rest]) ->
+    protocol_can_terminate(Rest);
+protocol_can_terminate([{repeat, _} | _Rest]) ->
+    false;
+protocol_can_terminate(_Other) ->
+    false.
+
+expand_protocol_terms(Protocol) ->
+    lists:flatmap(
+        fun({optional, _Term}) -> [];
+           ({repeat, Term}) -> [Term];
+           (Term) -> [Term]
+        end,
+        Protocol
+    ).
+
+required_messages_present(Messages, Required) ->
+    Missing = missing_messages(Messages, Required),
+    Missing =:= [].
+
+missing_messages(Messages, Required) ->
+    lists:foldl(
+        fun(Term, Acc) ->
+            case lists:member(Term, Messages) of
+                true -> Acc;
+                false -> [Term | Acc]
+            end
+        end,
+        [],
+        Required
+    ).
+
+trace_loop(Messages) ->
+    receive
+        {trace_ts, Pid, send, Msg, To, Timestamp} ->
+            trace_loop([{send, Pid, To, Msg, Timestamp} | Messages]);
+        {trace_ts, Pid, 'receive', Msg, Timestamp} ->
+            trace_loop([{'receive', Pid, Msg, Timestamp} | Messages]);
+        {trace, Pid, send, Msg, To, Timestamp} ->
+            trace_loop([{send, Pid, To, Msg, Timestamp} | Messages]);
+        {trace, Pid, 'receive', Msg, Timestamp} ->
+            trace_loop([{'receive', Pid, Msg, Timestamp} | Messages]);
+        {get_trace, From} ->
+            From ! {trace, lists:reverse(Messages)},
+            trace_loop(Messages);
+        stop ->
+            ok;
+        _Other ->
+            trace_loop(Messages)
     end.
 
 %% @doc Verify protocol implementation.
 verify_protocol(Messages, Protocol, AllowExtra, Ordered) ->
     case {Ordered, AllowExtra} of
         {true, false} ->
-            %% Exact ordered match
-            case Messages of
-                Protocol -> {ok, true};
-                _ -> {error, {protocol_mismatch, Messages, Protocol}}
-            end;
+            verify_ordered_protocol(Messages, Protocol, false);
         {true, true} ->
-            %% Ordered match with extra messages allowed
-            case lists:prefix(Protocol, Messages) of
-                true -> {ok, true};
-                false -> {error, {protocol_prefix_mismatch, Messages, Protocol}}
-            end;
+            verify_ordered_protocol(Messages, Protocol, true);
         {false, _} ->
-            %% Unordered match
-            MsgSet = sets:from_list(Messages),
-            ProtoSet = sets:from_list(Protocol),
-            case sets:is_subset(ProtoSet, MsgSet) of
-                true when AllowExtra -> {ok, true};
-                true -> MsgSet =:= ProtoSet;
-                false -> {error, {missing_messages, sets:to_list(sets:subtract(ProtoSet, MsgSet))}}
-            end
+            verify_unordered_protocol(Messages, Protocol, AllowExtra)
     end.
