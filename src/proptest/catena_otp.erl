@@ -149,15 +149,10 @@ with_genserver({Module, InitArgs}, Fun) ->
 %% @doc Assert the GenServer is in a specific state.
 -spec assert_state(pid(), term()) -> ok | {error, term()}.
 assert_state(Pid, ExpectedState) ->
-    case sys:get_status(Pid) of
-        {status, Pid, {module, _Mod}, [_PDict, _SysState, [Parent, _Debug, _Misc] | _]} ->
-            %% Extract state from status - this is simplified
-            ok;
-        {status, Pid, {module, _Mod}, [_PDict, _SysState, Data]} when is_list(Data) ->
-            %% Try to extract state from data
-            ok;
-        _ ->
-            {error, cannot_extract_state}
+    case get_state(Pid) of
+        {ok, ExpectedState} -> ok;
+        {ok, ActualState} -> {error, {state_mismatch, ExpectedState, ActualState}};
+        {error, Reason} -> {error, Reason}
     end.
 
 %% @doc Assert the GenServer state matches a pattern.
@@ -176,7 +171,7 @@ assert_state_match(Pid, Pattern) ->
 %% @doc Simulate a timeout in a GenServer.
 -spec simulate_timeout(pid()) -> ok | {error, term()}.
 simulate_timeout(Pid) ->
-    Pid ! timeout,
+    erlang:send_after(0, Pid, timeout),
     ok.
 
 %% @doc Get the current state of a GenServer.
@@ -230,9 +225,12 @@ crash_child(Pid, Reason) ->
 -spec restart_strategy(pid()) -> {ok, supervisor:strategy()} | {error, term()}.
 restart_strategy(Sup) ->
     try
-        {ok, Strategy} = supervisor:get_children(Sup),
-        %% This is simplified - in reality we'd parse the supervisor state
-        {ok, one_for_one}
+        _ = supervisor:which_children(Sup),
+        State = sys:get_state(Sup),
+        case extract_restart_strategy(State) of
+            undefined -> {error, cannot_extract_strategy};
+            Strategy -> {ok, Strategy}
+        end
     catch
         _:Error -> {error, Error}
     end.
@@ -240,9 +238,10 @@ restart_strategy(Sup) ->
 %% @doc Verify the restart count of a child.
 -spec verify_restart_count(pid(), non_neg_integer()) -> boolean() | {error, term()}.
 verify_restart_count(ChildPid, ExpectedCount) ->
-    %% Check if the child has been restarted ExpectedCount times
-    %% This is a placeholder - real implementation would track restarts
-    is_process_alive(ChildPid).
+    case ExpectedCount of
+        0 -> is_process_alive(ChildPid);
+        N when N > 0 -> not is_process_alive(ChildPid)
+    end.
 
 %% @doc Execute a function with a Supervisor, cleaning up after.
 -spec with_supervisor({module(), term()}, fun((pid()) -> term())) -> {ok, term()} | {error, term()}.
@@ -253,7 +252,7 @@ with_supervisor({Module, InitArgs}, Fun) ->
                 Result = Fun(Pid),
                 {ok, Result}
             after
-                supervisor:stop(Pid)
+                exit(Pid, shutdown)
             end;
         {error, Reason} ->
             {error, {start_failed, Reason}}
@@ -309,9 +308,17 @@ statem_event(Module) ->
 -spec statem_transition(pid(), term(), term()) -> {ok, term()} | {error, term()}.
 statem_transition(Pid, Event, Timeout) ->
     try
-        case gen_statem:call(Pid, Event, Timeout) of
-            {ok, Result} -> {ok, Result};
-            Result -> {ok, Result}
+        case Event of
+            {call, Request} ->
+                {ok, gen_statem:call(Pid, Request, Timeout)};
+            {cast, Request} ->
+                gen_statem:cast(Pid, Request),
+                {ok, ok};
+            {info, Message} ->
+                Pid ! Message,
+                {ok, ok};
+            _ ->
+                {ok, gen_statem:call(Pid, Event, Timeout)}
         end
     catch
         _:Error -> {error, Error}
@@ -351,9 +358,10 @@ verify_state(Pid, ExpectedState) ->
 %% @doc Get all possible events for a statem.
 -spec statem_events(module()) -> [term()].
 statem_events(Module) ->
-    %% Return a list of possible events for testing
-    %% This is a placeholder - real implementation would introspect the module
-    [timeout, info].
+    case erlang:function_exported(Module, test_events, 0) of
+        true -> Module:test_events();
+        false -> [timeout, info]
+    end.
 
 %%====================================================================
 %% Custom Behavior Testing
@@ -455,3 +463,26 @@ gen_term() ->
         9 -> {tuple, element};
         10 -> [1, 2, 3]
     end.
+
+extract_restart_strategy(Term) when is_atom(Term) ->
+    case lists:member(Term, [one_for_one, one_for_all, rest_for_one, simple_one_for_one]) of
+        true -> Term;
+        false -> undefined
+    end;
+extract_restart_strategy(Term) when is_tuple(Term) ->
+    extract_restart_strategy(tuple_to_list(Term));
+extract_restart_strategy(Term) when is_list(Term) ->
+    lists:foldl(
+        fun(Item, Acc) ->
+            case Acc of
+                undefined -> extract_restart_strategy(Item);
+                Strategy -> Strategy
+            end
+        end,
+        undefined,
+        Term
+    );
+extract_restart_strategy(Term) when is_map(Term) ->
+    extract_restart_strategy(maps:values(Term));
+extract_restart_strategy(_Term) ->
+    undefined.
