@@ -69,7 +69,11 @@ module_lines_reads_cover_analysis_test() ->
         [debug_info, {outdir, "_build/test"}]
     ),
     Beam = code:which(catena_coverage_fixture),
-    {module, catena_coverage_fixture} = cover:compile_beam(Beam),
+    CompileResult = cover:compile_beam(Beam),
+    ?assert(
+        CompileResult =:= {module, catena_coverage_fixture} orelse
+        CompileResult =:= {ok, catena_coverage_fixture}
+    ),
     negative = catena_coverage_fixture:classify(-1),
     zero = catena_coverage_fixture:classify(0),
     even = catena_coverage_fixture:classify(2),
