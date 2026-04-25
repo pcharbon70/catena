@@ -145,6 +145,10 @@
 %%====================================================================
 
 -export([
+    gen_parallel_commands/4,
+    execute_parallel_tracks/5,
+    check_linearizable/3,
+    detect_races/1,
     parallel_property_test/4,
     aggregate_parallel_results/1
 ]).
@@ -1068,48 +1072,230 @@ expect(Expected, Actual) ->
 %% Section 5.5: Parallel Execution
 %%====================================================================
 
-%% @doc Run a property test in parallel with multiple seeds.
+%% @doc Generate a sequential prefix plus parallel tracks.
 %%
-%% Creates seed list for parallel workers (simplified version).
--spec parallel_property_test(state_machine(), pos_integer(), pos_integer(), pos_integer()) ->
-    [{catena_gen:seed(), ok | {error, term()}}].
-parallel_property_test(_StateMachine, NumTests, NumParallel, BaseSeed) ->
-    %% Create seed list for each parallel worker
-    Seeds = [catena_gen:seed_from_int(BaseSeed + I) || I <- lists:seq(0, NumParallel - 1)],
-    %% Return placeholder results (in actual implementation would spawn processes)
-    [{Seed, ok} || Seed <- Seeds].
+%% The prefix is generated first. Each parallel track then receives one valid
+%% command generated from the same post-prefix abstract state.
+-spec gen_parallel_commands(state_machine(), pos_integer(), pos_integer(), pos_integer() | catena_gen:seed()) ->
+    {command_seq(), [command_seq()], catena_gen:seed()}.
+gen_parallel_commands(StateMachine, NumCommands, NumParallel, Seed) when is_integer(Seed) ->
+    gen_parallel_commands(StateMachine, NumCommands, NumParallel, catena_gen:seed_from_int(Seed));
+gen_parallel_commands(StateMachine, NumCommands, NumParallel, Seed) ->
+    PrefixLength = max(NumCommands - NumParallel, 0),
+    {Prefix, PrefixSeed} = generate_commands(StateMachine, PrefixLength, Seed),
+    PrefixState = simulate_state(StateMachine, Prefix),
+    {Tracks, FinalSeed} = gen_parallel_tracks(StateMachine, PrefixState, NumParallel, PrefixSeed, []),
+    {Prefix, Tracks, FinalSeed}.
 
-%% @private Run property test with specific seed.
-run_property_test_with_seed(_StateMachine, _NumTests, _Seed) ->
-    %% Placeholder - would run actual property test
-    ok.
+gen_parallel_tracks(_StateMachine, _PrefixState, 0, Seed, Acc) ->
+    {lists:reverse(Acc), Seed};
+gen_parallel_tracks(StateMachine, PrefixState, Remaining, Seed, Acc) ->
+    {Command, NextSeed} = generate_command(StateMachine, PrefixState, Seed),
+    gen_parallel_tracks(StateMachine, PrefixState, Remaining - 1, NextSeed, [[Command] | Acc]).
 
-%% @private Collect results from parallel workers.
-collect_parallel_results(Pids, Acc, Remaining) when Remaining =:= 0 ->
-    %% Wait for any remaining processes and return
-    wait_for_remaining(Pids, Acc);
-collect_parallel_results(Pids, Acc, Remaining) ->
+%% @doc Execute a set of tracks concurrently against a shared system.
+-spec execute_parallel_tracks(module(), system(), state(), [command_seq()], timeout()) ->
+    [map()].
+execute_parallel_tracks(Module, System, PrefixState, Tracks, Timeout) ->
+    Parent = self(),
+    StartRef = make_ref(),
+    Workers = [
+        begin
+            {Pid, MonitorRef} = spawn_monitor(fun() ->
+                receive
+                    {start, StartRef} ->
+                        Result = execute_commands(System, PrefixState, Track, Module),
+                        Parent ! {parallel_track_result, self(), Index, Track, Result}
+                end
+            end),
+            #{index => Index, pid => Pid, monitor => MonitorRef, track => Track}
+        end
+     || {Index, Track} <- lists:zip(lists:seq(1, length(Tracks)), Tracks)
+    ],
+    [maps:get(pid, Worker) ! {start, StartRef} || Worker <- Workers],
+    collect_parallel_track_results(Workers, Timeout, []).
+
+collect_parallel_track_results([], _Timeout, Acc) ->
+    lists:sort(fun(Left, Right) -> maps:get(track, Left) =< maps:get(track, Right) end, Acc);
+collect_parallel_track_results(Workers, Timeout, Acc) ->
     receive
-        {'DOWN', _Ref, process, Pid, _Reason} ->
-            %% Process died unexpectedly
-            collect_parallel_results(lists:delete(Pid, Pids), Acc, Remaining - 1);
-        {Pid, {Seed, Result}} ->
-            demonitor(Pid),
-            collect_parallel_results(lists:delete(Pid, Pids), [{Seed, Result} | Acc], Remaining - 1)
+        {parallel_track_result, Pid, Index, Track, Result} ->
+            flush_worker_monitor(Pid, Workers),
+            Remaining = remove_worker(Pid, Workers),
+            collect_parallel_track_results(Remaining, Timeout, [#{track => Index, commands => Track, result => Result} | Acc]);
+        {'DOWN', _Ref, process, Pid, Reason} ->
+            case worker_info(Pid, Workers) of
+                undefined ->
+                    collect_parallel_track_results(Workers, Timeout, Acc);
+                Worker ->
+                    Remaining = remove_worker(Pid, Workers),
+                    collect_parallel_track_results(Remaining, Timeout, [#{
+                        track => maps:get(index, Worker),
+                        commands => maps:get(track, Worker),
+                        result => {error, {worker_crashed, Reason}, []}
+                    } | Acc])
+            end
+    after Timeout ->
+        Acc ++ [
+            #{
+                track => maps:get(index, Worker),
+                commands => maps:get(track, Worker),
+                result => {error, timeout, []}
+            }
+         || Worker <- Workers
+        ]
     end.
 
-wait_for_remaining([], Acc) ->
-    lists:reverse(Acc);
-wait_for_remaining(Pids, Acc) ->
-    receive
-        {'DOWN', _Ref, process, Pid, _Reason} ->
-            wait_for_remaining(lists:delete(Pid, Pids), Acc);
-        {Pid, {Seed, Result}} ->
-            demonitor(Pid),
-            wait_for_remaining(lists:delete(Pid, Pids), [{Seed, Result} | Acc])
-    after 5000 ->
-        %% Timeout
-        lists:reverse(Acc)
+remove_worker(Pid, Workers) ->
+    [Worker || Worker <- Workers, maps:get(pid, Worker) =/= Pid].
+
+worker_info(Pid, Workers) ->
+    case lists:filter(fun(Worker) -> maps:get(pid, Worker) =:= Pid end, Workers) of
+        [Worker | _] -> Worker;
+        [] -> undefined
+    end.
+
+flush_worker_monitor(Pid, Workers) ->
+    case worker_info(Pid, Workers) of
+        undefined ->
+            ok;
+        Worker ->
+            erlang:demonitor(maps:get(monitor, Worker), [flush]),
+            ok
+    end.
+
+%% @doc Check whether observed parallel track results are linearizable.
+-spec check_linearizable(state_machine(), state(), [map()]) -> ok | {error, {non_linearizable, [map()]}}.
+check_linearizable(#state_machine{module = Module}, PrefixState, ObservedTracks) ->
+    Events = observed_events(ObservedTracks),
+    Interleavings = interleave_tracks(Events),
+    case lists:any(fun(Interleaving) -> linearizable_order(Module, PrefixState, Interleaving) end, Interleavings) of
+        true -> ok;
+        false -> {error, {non_linearizable, Events}}
+    end.
+
+observed_events(ObservedTracks) ->
+    [
+        [#{track => maps:get(track, ObservedTrack), command => Command, result => Result}
+         || {Command, Result} <- lists:zip(Commands, Results)]
+     || ObservedTrack = #{commands := Commands, result := {ok, Results, _Bindings}} <- ObservedTracks
+    ].
+
+interleave_tracks(Tracks) ->
+    interleave_tracks(Tracks, [[]]).
+
+interleave_tracks([], Acc) ->
+    Acc;
+interleave_tracks(Tracks, _Acc) ->
+    interleave(Tracks).
+
+interleave(Tracks) ->
+    case lists:all(fun(Track) -> Track =:= [] end, Tracks) of
+        true ->
+            [[]];
+        false ->
+            lists:append([
+                [
+                    [Event | Rest]
+                 || Rest <- interleave(replace_nth(Tracks, Index, Tail))
+                ]
+             || {Index, [Event | Tail]} <- indexed_nonempty_tracks(Tracks)
+            ])
+    end.
+
+indexed_nonempty_tracks(Tracks) ->
+    [{Index, Track} || {Index, Track} <- lists:zip(lists:seq(1, length(Tracks)), Tracks), Track =/= []].
+
+replace_nth(List, Index, Value) ->
+    Prefix = lists:sublist(List, Index - 1),
+    Suffix = lists:nthtail(Index, List),
+    Prefix ++ [Value] ++ Suffix.
+
+linearizable_order(_Module, _State, []) ->
+    true;
+linearizable_order(Module, State, [#{command := Command, result := Result} | Rest]) ->
+    case Module:precondition(State, Command) andalso Module:postcondition(State, Command, Result) of
+        true ->
+            linearizable_order(Module, symbolic_next_state(State, [], Command), Rest);
+        false ->
+            false
+    end.
+
+%% @doc Detect simple potential races across parallel tracks.
+-spec detect_races([command_seq()]) -> [map()].
+detect_races(Tracks) ->
+    lists:append([
+        race_pairs(LeftIndex, LeftTrack, RightIndex, RightTrack)
+     || {LeftIndex, LeftTrack} <- lists:zip(lists:seq(1, length(Tracks)), Tracks),
+        {RightIndex, RightTrack} <- lists:zip(lists:seq(1, length(Tracks)), Tracks),
+        LeftIndex < RightIndex
+    ]).
+
+race_pairs(LeftIndex, LeftTrack, RightIndex, RightTrack) ->
+    [
+        #{
+            left_track => LeftIndex,
+            right_track => RightIndex,
+            left_command => LeftCommand,
+            right_command => RightCommand
+        }
+     || LeftCommand <- LeftTrack,
+        RightCommand <- RightTrack,
+        commands_conflict(LeftCommand, RightCommand)
+    ].
+
+commands_conflict({call, _Module, LeftName, _Args}, {call, _Module2, RightName, _Args2}) ->
+    case {command_access(LeftName), command_access(RightName)} of
+        {read, read} -> false;
+        _ -> true
+    end;
+commands_conflict(_Left, _Right) ->
+    false.
+
+command_access(value) -> read;
+command_access(get) -> read;
+command_access(_Name) -> write.
+
+%% @doc Run a parallel property test using generated tracks and linearizability checking.
+-spec parallel_property_test(state_machine(), pos_integer(), pos_integer(), pos_integer()) ->
+    [{catena_gen:seed(), ok | {error, term()}}].
+parallel_property_test(StateMachine, NumCommands, NumParallel, BaseSeed) ->
+    Seeds = [catena_gen:seed_from_int(BaseSeed + I) || I <- lists:seq(0, NumParallel - 1)],
+    [{Seed, run_parallel_case(StateMachine, NumCommands, NumParallel, Seed)} || Seed <- Seeds].
+
+run_parallel_case(#state_machine{module = Module} = StateMachine, NumCommands, NumParallel, Seed) ->
+    {Prefix, Tracks, _NextSeed} = gen_parallel_commands(StateMachine, NumCommands, NumParallel, Seed),
+    PrefixState = simulate_state(StateMachine, Prefix),
+    Options = StateMachine#state_machine.options,
+    case setup_system(Module) of
+        {ok, System} ->
+            try
+                case execute_commands(System, StateMachine#state_machine.initial_state, Prefix, Module) of
+                    {ok, _PrefixResults, _PrefixBindings} ->
+                        ObservedTracks = execute_parallel_tracks(Module, System, PrefixState, Tracks, Options#options.timeout),
+                        case lists:any(fun(Track) ->
+                            case maps:get(result, Track) of
+                                {ok, _Results, _Bindings} -> false;
+                                _ -> true
+                            end
+                        end, ObservedTracks) of
+                            true ->
+                                {error, #{tracks => ObservedTracks}};
+                            false ->
+                                Races = detect_races(Tracks),
+                                case check_linearizable(StateMachine, PrefixState, ObservedTracks) of
+                                    ok -> ok;
+                                    {error, Reason} -> {error, #{reason => Reason, races => Races, tracks => ObservedTracks}}
+                                end
+                        end;
+                    {error, Reason, PartialResults} ->
+                        {error, #{reason => Reason, partial_results => PartialResults}}
+                end
+            after
+                cleanup_system(Module, System)
+            end;
+        {error, Reason} ->
+            {error, {setup_failed, Reason}}
     end.
 
 %% @doc Aggregate results from parallel test runs.
