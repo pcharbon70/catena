@@ -230,6 +230,8 @@ match_pattern({var, Name}, Value, Subst) ->
         {ok, _Other} -> {error, nomatch}; % Bound to different value
         error -> {ok, Subst#{Name => Value}} % Unbound, bind it
     end;
+match_pattern({lit, LitValue}, {lit, LitValue}, Subst) ->
+    {ok, Subst};
 match_pattern({lit, LitValue}, Value, Subst) when LitValue =:= Value ->
     {ok, Subst};
 match_pattern({lit, _LitValue}, _Value, _Subst) ->
@@ -238,6 +240,8 @@ match_pattern({op, Op, OpValue, ArgPattern}, {op, Op, OpValue, ArgValue}, Subst)
     match_pattern(ArgPattern, ArgValue, Subst);
 match_pattern({op, _, _, _}, _Value, _Subst) ->
     {error, nomatch};
+match_pattern({seq, Patterns}, {seq, Values}, Subst) when is_list(Values) ->
+    match_seq_patterns(Patterns, Values, Subst);
 match_pattern({seq, Patterns}, Value, Subst) when is_list(Value) ->
     match_seq_patterns(Patterns, Value, Subst);
 match_pattern({seq, _Patterns}, _Value, _Subst) ->

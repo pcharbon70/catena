@@ -162,6 +162,19 @@ rewrite_normal_test() ->
     % Both inc should be rewritten to get to 42
     ?assertMatch({lit, 42}, Result).
 
+rewrite_normal_stops_on_no_progress_test() ->
+    Eq = catena_equations:new(
+        catena_equations:var(x),
+        catena_equations:var(y)
+    ),
+    Set = catena_equation_spec:add_equation(
+        catena_equation_spec:new_set(no_progress),
+        rename,
+        Eq
+    ),
+    {expr, Result, _} = catena_equation_apply:rewrite(catena_equations:var(x), Set, normal),
+    ?assertEqual(catena_equations:var(y), Result).
+
 rewrite_default_strategy_test() ->
     % Default strategy is innermost
     Expr = catena_equations:op(inc, 1, catena_equations:lit(42)),

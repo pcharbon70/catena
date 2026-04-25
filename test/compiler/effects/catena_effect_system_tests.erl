@@ -253,28 +253,27 @@ equation_management_test_() ->
     }.
 
 test_add_equation() ->
-    %% Create a simple equation (using a placeholder pattern)
-    Eq = {eq, {var, x}, {lit, 5}},
+    Eq = catena_equations:new(catena_equations:var(x), catena_equations:lit(5)),
     ok = catena_effect_system:add_equation(test_op, Eq),
     Eqs = catena_effect_system:find_equations(test_op),
     ?assert(length(Eqs) > 0).
 
 test_find_equations() ->
-    Eq1 = {eq, a, b},
-    Eq2 = {eq, c, d},
+    Eq1 = catena_equations:new(catena_equations:var(a), catena_equations:lit(b)),
+    Eq2 = catena_equations:new(catena_equations:var(c), catena_equations:lit(d)),
     catena_effect_system:add_equations([{find_op, Eq1}, {find_op, Eq2}]),
     Eqs = catena_effect_system:find_equations(find_op),
     ?assert(length(Eqs) >= 2).
 
 test_remove_equation() ->
-    Eq = {eq, x, y},
+    Eq = catena_equations:new(catena_equations:var(x), catena_equations:var(y)),
     catena_effect_system:add_equation(remove_op, Eq),
     ?assert(length(catena_effect_system:find_equations(remove_op)) > 0),
     catena_effect_system:remove_equation(remove_op),
     ?assertEqual([], catena_effect_system:find_equations(remove_op)).
 
 test_all_equations() ->
-    Eq = {eq, x, y},
+    Eq = catena_equations:new(catena_equations:var(x), catena_equations:var(y)),
     catena_effect_system:add_equation(all_test_op, Eq),
     All = catena_effect_system:all_equations(),
     ?assert(is_list(All)),
@@ -332,6 +331,7 @@ optimization_test_() ->
         fun(_) ->
             [
                 {"Optimize program", fun test_optimize_program/0},
+                {"Optimize with equations", fun test_optimize_with_equations/0},
                 {"Fuse effects", fun test_fuse_effects/0},
                 {"Inline handlers", fun test_inline_handlers/0}
             ]
@@ -342,6 +342,17 @@ test_optimize_program() ->
     Program = [{effect, {state, {put, 1}}}, {effect, {state, {put, 2}}}],
     Optimized = catena_effect_system:optimize_program(Program),
     ?assert(is_list(Optimized)).
+
+test_optimize_with_equations() ->
+    Eq = catena_equations:new(
+        catena_equations:op(inc, 1, catena_equations:var(x)),
+        catena_equations:var(x)
+    ),
+    ok = catena_effect_system:add_equation(inc, Eq),
+    Optimized = catena_effect_system:optimize_with_equations(
+        catena_equations:op(inc, 1, catena_equations:lit(5))
+    ),
+    ?assertEqual(catena_equations:lit(5), Optimized).
 
 test_fuse_effects() ->
     Program = [{effect, {state, {put, 1}}}, {effect, {state, {put, 2}}}],

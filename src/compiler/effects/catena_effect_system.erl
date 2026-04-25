@@ -538,15 +538,10 @@ apply_equations(Expr) ->
     State = get_state(),
     case State#system_state.config#system_config.enable_equations of
         true ->
-            Equations = all_equations(),
-            lists:foldl(fun({_Op, Eqs}, Acc) ->
-                lists:foldl(fun(Eq, E) ->
-                    case catena_equation_apply:apply(Eq, E) of
-                        {ok, NewExpr} -> NewExpr;
-                        {error, _} -> E
-                    end
-                end, Acc, Eqs)
-            end, Expr, Equations);
+            EqSet = equation_registry_to_set(State#system_state.equation_registry),
+            case catena_equation_rewrite:optimize(Expr, EqSet, #{limit => 50}) of
+                {ok, Optimized, _Context} -> Optimized
+            end;
         false ->
             Expr
     end.
@@ -762,6 +757,23 @@ get_state() ->
         undefined -> error({effect_system_not_initialized});
         State -> State
     end.
+
+equation_registry_to_set(Registry) ->
+    lists:foldl(fun({Operation, Equations}, AccSet) ->
+        add_registered_equations(Operation, Equations, AccSet, 1)
+    end, catena_equation_spec:new_set(system_equations), maps:to_list(Registry)).
+
+add_registered_equations(_Operation, [], AccSet, _Index) ->
+    AccSet;
+add_registered_equations(Operation, [Equation | Rest], AccSet, Index) ->
+    NextSet = case catena_equations:is_equation(Equation) of
+        true ->
+            Name = list_to_atom(atom_to_list(Operation) ++ "_" ++ integer_to_list(Index)),
+            catena_equation_spec:add_operation_equation(AccSet, Operation, Name, Equation);
+        false ->
+            AccSet
+    end,
+    add_registered_equations(Operation, Rest, NextSet, Index + 1).
 
 %% @private Apply configuration options to a config record.
 apply_options(Config, []) ->

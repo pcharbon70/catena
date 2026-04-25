@@ -22,11 +22,13 @@
 setup_arithmetic_equations() ->
     % Create a set of simple arithmetic equations
     Eq1 = catena_equations:new(
-        catena_equations:var(x),
-        catena_equations:var(y)
+        catena_equations:op(add, 0,
+            catena_equations:seq([catena_equations:var(x), catena_equations:lit(0)])
+        ),
+        catena_equations:var(x)
     ),
     Set0 = catena_equation_spec:new_set(arithmetic),
-    catena_equation_spec:add_equation(Set0, simplify, Eq1).
+    catena_equation_spec:add_equation(Set0, add_zero, Eq1).
 
 setup_state_equations() ->
     % Use the predefined state laws
@@ -55,18 +57,12 @@ create_equation_set_with_multiple_laws_test() ->
     Set = setup_arithmetic_equations(),
     Laws = catena_equation_spec:list_equations(Set),
     ?assertEqual(1, length(Laws)),
-    ?assert(lists:member(simplify, Laws)).
+    ?assert(lists:member(add_zero, Laws)).
 
 validate_full_equation_set_test() ->
     % Test that the arithmetic equation set validates
     Set = setup_arithmetic_equations(),
-    % The equation has unbound variables, so validation will fail
-    % This is expected - we just check that validation runs
-    Result = catena_equation_spec:validate_set(Set),
-    case Result of
-        ok -> ok;
-        {error, _} -> ok  % Expected for this simple equation
-    end.
+    ?assertEqual(ok, catena_equation_spec:validate_set(Set)).
 
 %%%=============================================================================
 %%% Pattern Matching Integration Tests
