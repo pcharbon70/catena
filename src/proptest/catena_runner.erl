@@ -128,8 +128,8 @@ run_property_with_opts(Property, RunOpts) ->
     Seed = RunOpts#run_options.seed,
 
     %% Run the test loop
-    case run_test_loop(Property, NumTests, 0, 0, Seed, 1, []) of
-        {ok, TestsRun, Discards, SeedUsed} ->
+    case run_test_loop(Property, NumTests, 0, 0, Seed, 1, [], #{}) of
+        {ok, TestsRun, Discards, SeedUsed, LabelCounts} ->
             Result = #property_result{
                 kind = success,
                 tests_run = TestsRun,
@@ -139,11 +139,11 @@ run_property_with_opts(Property, RunOpts) ->
                 original_counterexample = undefined,
                 shrunk_counterexample = undefined,
                 shrink_history = [],
-                labels = [],
-                output = <<>>
+                labels = property_result_labels(LabelCounts),
+                output = property_result_output(Discards, LabelCounts)
             },
             {passed, Result};
-        {failure, Counterexample, Tree, TestsRun, Discards, SeedUsed} ->
+        {failure, Counterexample, Tree, TestsRun, Discards, SeedUsed, LabelCounts} ->
             %% Attempt to shrink the counterexample
             case shrink_counterexample(Property, Counterexample, Tree, MaxShrinks) of
                 {found, Shrunk, ShrinkHistory} ->
@@ -156,8 +156,8 @@ run_property_with_opts(Property, RunOpts) ->
                         original_counterexample = Counterexample,
                         shrunk_counterexample = Shrunk,
                         shrink_history = ShrinkHistory,
-                        labels = [],
-                        output = <<>>
+                        labels = property_result_labels(LabelCounts),
+                        output = property_result_output(Discards, LabelCounts)
                     },
                     {failed, Result};
                 {no_shrink, _} ->
@@ -170,26 +170,26 @@ run_property_with_opts(Property, RunOpts) ->
                         original_counterexample = Counterexample,
                         shrunk_counterexample = Counterexample,
                         shrink_history = [],
-                        labels = [],
-                        output = <<>>
+                        labels = property_result_labels(LabelCounts),
+                        output = property_result_output(Discards, LabelCounts)
                     },
                     {failed, Result}
             end;
-        {error, Reason, TestsRun, SeedUsed} ->
+        {error, Reason, TestsRun, Discards, SeedUsed, LabelCounts} ->
             Result = #property_result{
                 kind = error,
                 tests_run = TestsRun,
-                tests_discarded = 0,
+                tests_discarded = Discards,
                 shrinks_attempted = 0,
                 seed = SeedUsed,
                 original_counterexample = Reason,
                 shrunk_counterexample = Reason,
                 shrink_history = [],
-                labels = [],
-                output = <<>>
+                labels = property_result_labels(LabelCounts),
+                output = property_result_output(Discards, LabelCounts)
             },
             {failed, Result};
-        {discarded, TestsRun, Discards, SeedUsed} ->
+        {discarded, TestsRun, Discards, SeedUsed, LabelCounts} ->
             Result = #property_result{
                 kind = discarded,
                 tests_run = TestsRun,
@@ -199,8 +199,8 @@ run_property_with_opts(Property, RunOpts) ->
                 original_counterexample = undefined,
                 shrunk_counterexample = undefined,
                 shrink_history = [],
-                labels = [],
-                output = <<>>
+                labels = property_result_labels(LabelCounts),
+                output = property_result_output(Discards, LabelCounts)
             },
             {failed, Result}
     end.
@@ -213,33 +213,44 @@ run_property_with_opts(Property, RunOpts) ->
     non_neg_integer(),
     catena_gen:seed(),
     pos_integer(),
-    [term()]
-) -> {ok, non_neg_integer(), non_neg_integer(), catena_gen:seed()} |
-    {failure, term(), catena_tree:tree(term()), non_neg_integer(), non_neg_integer(), catena_gen:seed()} |
-    {error, term(), non_neg_integer(), catena_gen:seed()} |
-    {discarded, non_neg_integer(), non_neg_integer(), catena_gen:seed()}.
-run_test_loop(_Property, TargetTests, TestsRun, Discards, Seed, _Size, _History)
+    [term()],
+    map()
+) -> {ok, non_neg_integer(), non_neg_integer(), catena_gen:seed(), map()} |
+    {failure, term(), catena_tree:tree(term()), non_neg_integer(), non_neg_integer(), catena_gen:seed(), map()} |
+    {error, term(), non_neg_integer(), non_neg_integer(), catena_gen:seed(), map()} |
+    {discarded, non_neg_integer(), non_neg_integer(), catena_gen:seed(), map()}.
+run_test_loop(_Property, TargetTests, TestsRun, Discards, Seed, _Size, _History, LabelCounts)
         when TestsRun >= TargetTests ->
     %% All tests passed
-    {ok, TestsRun, Discards, Seed};
-run_test_loop(_Property, TargetTests, TestsRun, Discards, Seed, _Size, _History)
+    {ok, TestsRun, Discards, Seed, LabelCounts};
+run_test_loop(_Property, TargetTests, TestsRun, Discards, Seed, _Size, _History, LabelCounts)
         when Discards > (TargetTests * 10) ->
     %% Too many discards - likely problematic property
-    {discarded, TestsRun, Discards, Seed};
-run_test_loop(Property, TargetTests, TestsRun, Discards, Seed, Size, History) ->
+    {discarded, TestsRun, Discards, Seed, LabelCounts};
+run_test_loop(Property, TargetTests, TestsRun, Discards, Seed, Size, History, LabelCounts) ->
     %% Calculate size for this test (0 to 100, then hold at 100)
     CurrentSize = min(Size, 100),
 
     %% Run a single test case
     case run_test_case(Property, CurrentSize, Seed) of
-        {pass, NewSeed} ->
-            run_test_loop(Property, TargetTests, TestsRun + 1, Discards, NewSeed, Size + 1, History);
-        {fail, Counterexample, Tree, NewSeed} ->
-            {failure, Counterexample, Tree, TestsRun + 1, Discards, Seed};
+        {pass, NewSeed, CaseLabels} ->
+            run_test_loop(
+                Property,
+                TargetTests,
+                TestsRun + 1,
+                Discards,
+                NewSeed,
+                Size + 1,
+                History,
+                add_case_labels(LabelCounts, CaseLabels)
+            );
+        {fail, Counterexample, Tree, _NewSeed, CaseLabels} ->
+            {failure, Counterexample, Tree, TestsRun + 1, Discards, Seed,
+                add_case_labels(LabelCounts, CaseLabels)};
         {discard, NewSeed} ->
-            run_test_loop(Property, TargetTests, TestsRun, Discards + 1, NewSeed, Size + 1, History);
-        {error, Reason, NewSeed} ->
-            {error, Reason, TestsRun + 1, NewSeed}
+            run_test_loop(Property, TargetTests, TestsRun, Discards + 1, NewSeed, Size + 1, History, LabelCounts);
+        {error, Reason, NewSeed, CaseLabels} ->
+            {error, Reason, TestsRun + 1, Discards, NewSeed, add_case_labels(LabelCounts, CaseLabels)}
     end.
 
 %% @doc Run a single test case with given size and seed.
@@ -248,10 +259,10 @@ run_test_loop(Property, TargetTests, TestsRun, Discards, Seed, Size, History) ->
 %% Returns the result and a new seed for the next test.
 %%
 -spec run_test_case(catena_property:property(), pos_integer(), catena_gen:seed()) ->
-    {pass, catena_gen:seed()} |
-    {fail, term(), catena_tree:tree(term()), catena_gen:seed()} |
+    {pass, catena_gen:seed(), [binary()]} |
+    {fail, term(), catena_tree:tree(term()), catena_gen:seed(), [binary()]} |
     {discard, catena_gen:seed()} |
-    {error, term(), catena_gen:seed()}.
+    {error, term(), catena_gen:seed(), [binary()]}.
 run_test_case(Property, Size, Seed) ->
     Generator = Property#property.generator,
     Predicate = Property#property.predicate,
@@ -263,19 +274,20 @@ run_test_case(Property, Size, Seed) ->
         %% Generate a value
         Tree = catena_gen:run(Generator, Size, GenSeed),
         Value = catena_tree:root(Tree),
+        CaseLabels = property_case_labels(Property, Value),
 
         %% Check the predicate
         case apply_predicate(Predicate, Value) of
             true ->
-                {pass, NextSeed};
+                {pass, NextSeed, CaseLabels};
             {discard, _} ->
                 {discard, NextSeed};
             false ->
-                {fail, Value, Tree, NextSeed}
+                {fail, Value, Tree, NextSeed, CaseLabels}
         end
     catch
         Kind:Reason:Stack ->
-            {error, {Kind, Reason, Stack}, NextSeed}
+            {error, {Kind, Reason, Stack}, NextSeed, []}
     end.
 
 %% @private Shrink a counterexample to find minimal failing value.
@@ -333,6 +345,74 @@ apply_predicate(Predicate, Value) ->
 -spec apply_predicate_result(boolean() | discard, term()) -> boolean() | {discard, term()}.
 apply_predicate_result(discard, Value) -> {discard, Value};
 apply_predicate_result(Result, _Value) -> Result.
+
+add_case_labels(LabelCounts, []) ->
+    LabelCounts;
+add_case_labels(LabelCounts, [Label | Rest]) ->
+    Updated = maps:update_with(Label, fun(Count) -> Count + 1 end, 1, LabelCounts),
+    add_case_labels(Updated, Rest).
+
+property_case_labels(Property, Value) ->
+    Config = Property#property.config,
+    StaticLabels = [normalize_label(Label) || Label <- Config#property_config.labels],
+    StaticLabels ++ classification_labels(Config#property_config.classify_fun, Value).
+
+classification_labels(undefined, _Value) ->
+    [];
+classification_labels({Prefix, ClassifyFun}, Value) when is_function(ClassifyFun, 1) ->
+    try
+        [classified_label(Prefix, ClassifyFun(Value))]
+    catch
+        _:_ ->
+            []
+    end;
+classification_labels(_Other, _Value) ->
+    [].
+
+classified_label(Prefix, Classification) ->
+    PrefixBin = normalize_label(Prefix),
+    ClassificationBin = normalize_label(Classification),
+    <<PrefixBin/binary, ":", ClassificationBin/binary>>.
+
+normalize_label(Label) when is_binary(Label) ->
+    Label;
+normalize_label(Label) when is_atom(Label) ->
+    atom_to_binary(Label, utf8);
+normalize_label(Label) when is_list(Label) ->
+    unicode:characters_to_binary(Label);
+normalize_label(Label) ->
+    unicode:characters_to_binary(io_lib:format("~p", [Label])).
+
+property_result_labels(LabelCounts) when map_size(LabelCounts) =:= 0 ->
+    [];
+property_result_labels(LabelCounts) ->
+    maps:from_list(lists:sort(maps:to_list(LabelCounts))).
+
+property_result_output(Discards, LabelCounts) ->
+    Parts0 = case Discards of
+        0 -> [];
+        _ -> [lists:flatten(io_lib:format("discards=~B", [Discards]))]
+    end,
+    Parts1 = case format_label_counts(LabelCounts) of
+        "" -> Parts0;
+        Labels -> Parts0 ++ ["labels=" ++ Labels]
+    end,
+    case Parts1 of
+        [] -> <<>>;
+        _ -> unicode:characters_to_binary(string:join(Parts1, "; "))
+    end.
+
+format_label_counts(LabelCounts) when map_size(LabelCounts) =:= 0 ->
+    "";
+format_label_counts(LabelCounts) ->
+    Pairs = lists:sort(maps:to_list(LabelCounts)),
+    string:join(
+        [
+            lists:flatten(io_lib:format("~s=~B", [binary_to_list(Label), Count]))
+         || {Label, Count} <- Pairs
+        ],
+        ", "
+    ).
 
 %%====================================================================
 %% Section 3.2.3: Test Orchestration

@@ -95,6 +95,26 @@ format_failure_shows_counterexample_test() ->
     ?assert(binary:match(Formatted, <<"counterexample">>) =/= nomatch),
     ok.
 
+format_failure_includes_labels_and_output_test() ->
+    Result = #property_result{
+        kind = failure,
+        tests_run = 10,
+        tests_discarded = 2,
+        shrinks_attempted = 1,
+        seed = #seed{state = 42},
+        original_counterexample = 123,
+        shrunk_counterexample = 0,
+        shrink_history = [123],
+        labels = #{<<"phase4">> => 10, <<"sign:positive">> => 6},
+        output = <<"discards=2; labels=phase4=10, sign:positive=6">>
+    },
+    Formatted = iolist_to_binary(catena_report:format_failure_context(<<"test_prop">>, Result)),
+    ?assert(binary:match(Formatted, <<"Discards">>) =/= nomatch),
+    ?assert(binary:match(Formatted, <<"Labels">>) =/= nomatch),
+    ?assert(binary:match(Formatted, <<"phase4">>) =/= nomatch),
+    ?assert(binary:match(Formatted, <<"Output">>) =/= nomatch),
+    ok.
+
 %%====================================================================
 %% Section 3.3.3: Terminal Output
 %%====================================================================

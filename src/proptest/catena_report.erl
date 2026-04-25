@@ -261,11 +261,18 @@ format_failure_context(_PropertyName, Result, Options) ->
     Original = Result#property_result.original_counterexample,
     Seed = Result#property_result.seed,
     TestsRun = Result#property_result.tests_run,
+    Discards = Result#property_result.tests_discarded,
     Shrinks = Result#property_result.shrinks_attempted,
     History = Result#property_result.shrink_history,
+    Labels = Result#property_result.labels,
+    Output = Result#property_result.output,
 
     ["\n",
      "  Tests run: ", color(cyan, integer_to_list(TestsRun)),
+     case Discards > 0 of
+         true -> ["  Discards: ", color(cyan, integer_to_list(Discards))];
+         false -> []
+     end,
      case Shrinks > 0 of
          true -> ["  Shrinks: ", color(cyan, integer_to_list(Shrinks))];
          false -> []
@@ -300,6 +307,9 @@ format_failure_context(_PropertyName, Result, Options) ->
               "\n"]
      end,
 
+     format_label_distribution(Labels, Options),
+     format_report_output(Output, Options),
+
      "\n",
      "  Seed for reproduction: ",
      color(yellow, format_seed(Seed)),
@@ -323,6 +333,52 @@ format_shrink_items([Item], Options) ->
 format_shrink_items([Item | Rest], Options) ->
     ["    ", format_counterexample(Item, Options), "\n",
      format_shrink_items(Rest, Options)].
+
+-spec format_label_distribution(term(), format_options()) -> iolist().
+format_label_distribution([], _Options) ->
+    [];
+format_label_distribution(Labels, _Options) when is_map(Labels), map_size(Labels) =:= 0 ->
+    [];
+format_label_distribution(Labels, Options) when is_map(Labels) ->
+    Pairs = lists:sort(maps:to_list(Labels)),
+    [
+        "\n",
+        "  Labels:\n",
+        [
+            [
+                "    ",
+                color_opt(blue, binary_to_list(Label), Options),
+                ": ",
+                color_opt(cyan, integer_to_list(Count), Options),
+                "\n"
+            ]
+         || {Label, Count} <- Pairs
+        ]
+    ];
+format_label_distribution(_Other, _Options) ->
+    [].
+
+-spec format_report_output(binary() | list(), format_options()) -> iolist().
+format_report_output(<<>>, _Options) ->
+    [];
+format_report_output([], _Options) ->
+    [];
+format_report_output(Output, Options) when is_binary(Output) ->
+    [
+        "\n",
+        "  Output:\n",
+        "    ",
+        color_opt(grey, binary_to_list(Output), Options),
+        "\n"
+    ];
+format_report_output(Output, Options) when is_list(Output) ->
+    [
+        "\n",
+        "  Output:\n",
+        "    ",
+        color_opt(grey, Output, Options),
+        "\n"
+    ].
 
 %%====================================================================
 %% Section 3.3.3: Terminal Output Formatting

@@ -195,11 +195,18 @@ format_fail_result_test() ->
 format_property_fail_result_test() ->
     Result = catena_test_runner:format_result({fail, "property fails", {property_counterexample, #{
         tests_run => 3,
+        tests_discarded => 1,
+        shrinks_attempted => 2,
         seed => seeded,
+        labels => #{<<"phase4">> => 3},
+        output => <<"discards=1; labels=phase4=3">>,
+        original_counterexample => #{x => true},
         shrunk_counterexample => #{x => false}
     }}}),
     ?assert(string:find(Result, "property fails") =/= nomatch),
-    ?assert(string:find(Result, "Counterexample") =/= nomatch).
+    ?assert(string:find(Result, "Original counterexample") =/= nomatch),
+    ?assert(string:find(Result, "Shrinks attempted") =/= nomatch),
+    ?assert(string:find(Result, "phase4") =/= nomatch).
 
 format_results_all_pass_test() ->
     Results = #{
@@ -430,7 +437,27 @@ run_property_value_fails_with_counterexample_test() ->
     ?assertMatch(
         {fail, "less than three", {property_counterexample, #{
             tests_run := _,
-            original_counterexample := _
+            original_counterexample := _,
+            shrunk_counterexample := _,
+            labels := _,
+            output := _
+        }}},
+        Result
+    ).
+
+run_property_value_preserves_label_reporting_test() ->
+    PropertyValue = #{
+        name => "labeled failure",
+        body => fun(_Unit) ->
+            {for_all, {gen_constant_int, 1}, fun(_) -> false end}
+        end,
+        config => #{iterations => 2, seed => {some, 5}, labels => ["phase4"]}
+    },
+    Result = catena_test_runner:run_property_value(PropertyValue),
+    ?assertMatch(
+        {fail, "labeled failure", {property_counterexample, #{
+            labels := #{<<"phase4">> := 1},
+            output := _
         }}},
         Result
     ).
@@ -552,15 +579,23 @@ format_generic_law_failure_result_test() ->
                     law => <<"identity">>,
                     stdlib_law => mapperIdentityLaw,
                     kind => failure,
+                    tests_run => 5,
+                    tests_discarded => 1,
+                    shrinks_attempted => 2,
                     seed => seeded,
-                    counterexample => #{value => {some, 1}}
+                    labels => #{<<"phase4">> => 5},
+                    output => <<"discards=1; labels=phase4=5">>,
+                    original_counterexample => #{value => {some, 2}},
+                    shrunk_counterexample => #{value => {some, 1}}
                 }
             ]
         }}}
     ),
     ?assert(string:find(Result, "Maybe") =/= nomatch),
     ?assert(string:find(Result, "Mapper.identity") =/= nomatch),
-    ?assert(string:find(Result, "mapperIdentityLaw") =/= nomatch).
+    ?assert(string:find(Result, "mapperIdentityLaw") =/= nomatch),
+    ?assert(string:find(Result, "labels: phase4=5") =/= nomatch),
+    ?assert(string:find(Result, "shrunk") =/= nomatch).
 
 generic_law_test(Name, Instance, Traits, Config) ->
     #{
