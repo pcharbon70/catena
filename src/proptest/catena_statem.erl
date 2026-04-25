@@ -134,6 +134,8 @@
 -export([
     execute_command/3,
     execute_commands/4,
+    run_concrete/2,
+    expect/2,
     run_parallel_tracks/3,
     check_postconditions/3
 ]).
@@ -885,11 +887,15 @@ collect_postconditions_loop(Module, State, [Cmd | Rest], Vars, Index, Acc) ->
 %% Returns {ok, Result, NewBindings} on success, {error, Reason} on failure.
 -spec execute_command(system(), var_bindings(), symbolic_command()) ->
     {ok, command_result(), var_bindings()} | {error, term()}.
-execute_command(_System, Vars, {call, Module, Name, Args}) ->
+execute_command(System, Vars, {call, Module, Name, Args}) ->
     %% Substitute variables in arguments
     ConcreteArgs = substitute_vars(Args, Vars),
+    InvokeArgs = case System =/= none andalso erlang:function_exported(Module, Name, length(ConcreteArgs) + 1) of
+        true -> [System | ConcreteArgs];
+        false -> ConcreteArgs
+    end,
     %% Call the actual command using apply to handle variable arity
-    try apply(Module, Name, ConcreteArgs) of
+    try apply(Module, Name, InvokeArgs) of
         Result ->
             %% Create a new variable binding for this result
             VarIndex = length(Vars) + 1,
@@ -924,7 +930,7 @@ execute_commands_loop(System, State, [Cmd | Rest], Module, ResultsAcc, Bindings)
                     %% Check postcondition
                     case Module:postcondition(State, Cmd, Result) of
                         true ->
-                            NewState = Module:next_state(State, Bindings, Cmd),
+                            NewState = symbolic_next_state(State, Bindings, Cmd),
                             execute_commands_loop(System, NewState, Rest, Module, [Result | ResultsAcc], NewBindings);
                         false ->
                             {error, {postcondition_failed, Cmd, State, Result}, lists:reverse(ResultsAcc)}
@@ -932,6 +938,46 @@ execute_commands_loop(System, State, [Cmd | Rest], Module, ResultsAcc, Bindings)
                 {error, Reason} ->
                     {error, {command_failed, Cmd, Reason}, lists:reverse(ResultsAcc)}
             end
+    end.
+
+%% @doc Execute a state machine workflow against a concrete system.
+%%
+%% If the callback module exports `setup/0` and `cleanup/1`, they are used to
+%% manage the system under test. Otherwise execution falls back to direct module
+%% calls with `none` as the system value.
+-spec run_concrete(state_machine(), command_seq()) ->
+    {ok, map()} | {error, term()}.
+run_concrete(#state_machine{module = Module, initial_state = InitialState} = StateMachine, Commands) ->
+    case setup_system(Module) of
+        {ok, System} ->
+            try execute_commands(System, InitialState, Commands, Module) of
+                {ok, Results, Bindings} ->
+                    FinalState = simulate_state(StateMachine, Commands),
+                    {ok, #{
+                        system => System,
+                        results => Results,
+                        bindings => Bindings,
+                        final_state => FinalState
+                    }};
+                {error, Reason, PartialResults} ->
+                    {error, #{reason => Reason, partial_results => PartialResults}}
+            after
+                cleanup_system(Module, System)
+            end;
+        {error, Reason} ->
+            {error, {setup_failed, Reason}}
+    end.
+
+setup_system(Module) ->
+    case erlang:function_exported(Module, setup, 0) of
+        true -> Module:setup();
+        false -> {ok, none}
+    end.
+
+cleanup_system(Module, System) ->
+    case erlang:function_exported(Module, cleanup, 1) of
+        true -> Module:cleanup(System);
+        false -> ok
     end.
 
 %% @doc Run command sequences in parallel tracks for shrinking.
@@ -995,6 +1041,28 @@ check_postconditions_loop([{PCIndex, Fun} | Rest], Results, State, Index) when P
     end;
 check_postconditions_loop(PostConds, Results, State, Index) ->
     check_postconditions_loop(PostConds, Results, State, Index + 1).
+
+%% @doc Compare an actual result against an expected specification.
+%%
+%% Supports exact equality, predicate functions, and approximate numeric
+%% comparisons via `{approx, Expected, Tolerance}`.
+-spec expect(term(), term()) -> ok | {error, {unexpected_result, term(), term()}}.
+expect({approx, Expected, Tolerance}, Actual)
+    when is_number(Expected), is_number(Tolerance), Tolerance >= 0, is_number(Actual) ->
+    case abs(Actual - Expected) =< Tolerance of
+        true -> ok;
+        false -> {error, {unexpected_result, {approx, Expected, Tolerance}, Actual}}
+    end;
+expect(ExpectedFun, Actual) when is_function(ExpectedFun, 1) ->
+    case ExpectedFun(Actual) of
+        true -> ok;
+        false -> {error, {unexpected_result, ExpectedFun, Actual}}
+    end;
+expect(Expected, Actual) ->
+    case Expected =:= Actual of
+        true -> ok;
+        false -> {error, {unexpected_result, Expected, Actual}}
+    end.
 
 %%====================================================================
 %% Section 5.5: Parallel Execution

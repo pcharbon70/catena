@@ -60,6 +60,33 @@ execute_commands_single_with_counter_statem_test() ->
     ?assertMatch({error, {command_failed, _, _}, _}, Result),
     ok.
 
+execute_commands_with_runtime_state_machine_test() ->
+    {ok, System} = runtime_counter_statem:setup(),
+    try
+        Cmds = [
+            {call, runtime_counter_statem, increment, []},
+            {call, runtime_counter_statem, increment, []},
+            {call, runtime_counter_statem, decrement, []}
+        ],
+        Result = catena_statem:execute_commands(System, #{count => 0}, Cmds, runtime_counter_statem),
+        ?assertMatch({ok, [ok, ok, ok], _}, Result),
+        ?assertEqual(1, runtime_counter_statem:value(System))
+    after
+        runtime_counter_statem:cleanup(System)
+    end,
+    ok.
+
+run_concrete_uses_setup_and_cleanup_test() ->
+    Options = catena_statem:default_options(),
+    SM = catena_statem:state_machine(<<"runtime">>, runtime_counter_statem, Options),
+    Cmds = [
+        {call, runtime_counter_statem, increment, []},
+        {call, runtime_counter_statem, increment, []}
+    ],
+    Result = catena_statem:run_concrete(SM, Cmds),
+    ?assertMatch({ok, #{results := [ok, ok], final_state := #{count := 2}}}, Result),
+    ok.
+
 %%====================================================================
 %% Section 5.4.3: Parallel Track Execution
 %%====================================================================
@@ -134,6 +161,24 @@ check_postconditions_state_included_in_error_test() ->
     State = #{count => 5},
     Result = catena_statem:check_postconditions(PostConds, Results, State),
     ?assertMatch({error, {postcondition_failed, 1, State}}, Result),
+    ok.
+
+expect_exact_match_test() ->
+    ?assertEqual(ok, catena_statem:expect(ok, ok)),
+    ?assertMatch({error, {unexpected_result, ok, error}}, catena_statem:expect(ok, error)),
+    ok.
+
+expect_predicate_test() ->
+    Result = catena_statem:expect(fun(Value) -> is_integer(Value) andalso Value > 10 end, 42),
+    ?assertEqual(ok, Result),
+    ok.
+
+expect_approximate_match_test() ->
+    ?assertEqual(ok, catena_statem:expect({approx, 3.14, 0.01}, 3.145)),
+    ?assertMatch(
+        {error, {unexpected_result, {approx, 3.14, 0.01}, 3.2}},
+        catena_statem:expect({approx, 3.14, 0.01}, 3.2)
+    ),
     ok.
 
 %%====================================================================
