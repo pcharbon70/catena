@@ -35,7 +35,8 @@
     handler_type/0,
     operation_sig/0,
     operation_map/0,
-    handler_constraints/0
+    handler_constraints/0,
+    type_ref/0
 ]).
 
 %%%---------------------------------------------------------------------
@@ -59,7 +60,8 @@
 %% @doc Handler type constraints.
 -type handler_constraints() :: #{
     total => boolean(),
-    deep => boolean()
+    deep => boolean(),
+    pure => boolean()
 }.
 
 %% @doc Handler type with full signature.
@@ -84,10 +86,10 @@ handler_type() ->
         kind => handler_type,
         name => undefined,
         operations => #{},
-        input => catena_types:tcon('A'),
-        output => catena_types:tcon('B'),
+        input => {type_var, input},
+        output => {type_var, output},
         effects => catena_row_types:empty_row(),
-        constraints => #{total => true, deep => false}
+        constraints => default_constraints()
     }.
 
 %% @doc Create a handler type with a name.
@@ -114,7 +116,7 @@ operation_sig() ->
     #{
         kind => operation_sig,
         params => [],
-        result => catena_types:tcon('T'),
+        result => {type_var, result},
         effects => catena_row_types:empty_row()
     }.
 
@@ -135,7 +137,7 @@ operation_sig(Params, Result, Effects) when is_list(Params) ->
         kind => operation_sig,
         params => Params,
         result => Result,
-        effects => Effects
+        effects => catena_row_types:row_normalize(Effects)
     }.
 
 %%%---------------------------------------------------------------------
@@ -160,7 +162,7 @@ with_output(Handler, Output) ->
 %% @doc Set the effects of a handler.
 -spec with_effects(handler_type(), catena_row_types:effect_row()) -> handler_type().
 with_effects(Handler, Effects) ->
-    Handler#{effects => Effects}.
+    Handler#{effects => catena_row_types:row_normalize(Effects)}.
 
 %%%---------------------------------------------------------------------
 %%% Handler Type Predicates
@@ -186,12 +188,23 @@ is_operation_sig(_) ->
 
 %% @doc Validate a handler type.
 -spec is_valid_handler_type(handler_type()) -> boolean().
-is_valid_handler_type(#{kind := handler_type, operations := Ops, input := In, output := Out}) ->
+is_valid_handler_type(#{
+    kind := handler_type,
+    name := Name,
+    operations := Ops,
+    input := In,
+    output := Out,
+    effects := Effects,
+    constraints := Constraints
+}) ->
+    is_valid_name(Name) andalso
     is_map(Ops) andalso
     maps:size(Ops) > 0 andalso
+    maps:fold(fun(Op, Sig, Acc) -> Acc andalso is_atom(Op) andalso is_valid_operation_sig(Sig) end, true, Ops) andalso
     is_valid_type(In) andalso
     is_valid_type(Out) andalso
-    maps:fold(fun(_, Sig, Acc) -> Acc andalso is_valid_operation_sig(Sig) end, true, Ops);
+    catena_row_types:is_valid_row(Effects) andalso
+    is_valid_constraints(Constraints);
 is_valid_handler_type(_) ->
     false.
 
@@ -211,27 +224,37 @@ is_valid_operation_sig(#{kind := operation_sig, params := Params, result := Resu
 %% The output of the first must match the input of the second.
 -spec compose_handler_types(handler_type(), handler_type()) -> {ok, handler_type()} | {error, term()}.
 compose_handler_types(#{output := Out1} = H1, #{input := In2} = H2) ->
-    case types_equal(Out1, In2) of
-        true ->
-            CombinedOps = maps:merge(
-                maps:get(operations, H1, #{}),
-                maps:get(operations, H2, #{})
-            ),
-            CombinedEffects = catena_row_operations:effect_union_rows(
-                maps:get(effects, H1, catena_row_types:empty_row()),
-                maps:get(effects, H2, catena_row_types:empty_row())
-            ),
-            {ok, #{
-                kind => handler_type,
-                name => undefined,
-                operations => CombinedOps,
-                input => maps:get(input, H1),
-                output => maps:get(output, H2),
-                effects => CombinedEffects,
-                constraints => #{total => true, deep => false}
-            }};
-        false ->
-            {error, {type_mismatch, Out1, In2}}
+    case {is_handler_type(H1), is_handler_type(H2)} of
+        {false, _} ->
+            {error, {invalid_handler_type, H1}};
+        {_, false} ->
+            {error, {invalid_handler_type, H2}};
+        {true, true} ->
+            case types_equal(Out1, In2) of
+                true ->
+                    CombinedOps = maps:merge(
+                        maps:get(operations, H1, #{}),
+                        maps:get(operations, H2, #{})
+                    ),
+                    CombinedEffects = catena_row_operations:effect_union_rows(
+                        maps:get(effects, H1, catena_row_types:empty_row()),
+                        maps:get(effects, H2, catena_row_types:empty_row())
+                    ),
+                    {ok, #{
+                        kind => handler_type,
+                        name => undefined,
+                        operations => CombinedOps,
+                        input => maps:get(input, H1),
+                        output => maps:get(output, H2),
+                        effects => CombinedEffects,
+                        constraints => merge_constraints(
+                            maps:get(constraints, H1, default_constraints()),
+                            maps:get(constraints, H2, default_constraints())
+                        )
+                    }};
+                false ->
+                    {error, {type_mismatch, Out1, In2}}
+            end
     end.
 
 %%%---------------------------------------------------------------------
@@ -268,12 +291,16 @@ format_operation_sig(#{params := Params, result := Result, effects := Effects}) 
 %% @doc Check if a term is a valid type.
 -spec is_valid_type(term()) -> boolean().
 is_valid_type(Type) when is_map(Type); is_atom(Type); is_tuple(Type) ->
-    true;
+    is_valid_type_term(Type);
 is_valid_type(_) ->
     false.
 
 %% @doc Check if two types are equal (simplified).
 -spec types_equal(term(), term()) -> boolean().
+types_equal({type_var, _}, _) ->
+    true;
+types_equal(_, {type_var, _}) ->
+    true;
 types_equal(T1, T2) when is_map(T1), is_map(T2) ->
     maps:size(T1) =:= maps:size(T2) andalso
     lists:all(fun({K, V}) ->
@@ -295,6 +322,9 @@ types_equal(_, _) ->
 -spec format_type(type_ref()) -> binary().
 format_type(Type) when is_atom(Type) ->
     list_to_binary(atom_to_list(Type));
+format_type({type_var, Name}) ->
+    <<"'",
+      (list_to_binary(atom_to_list(Name)))/binary>>;
 format_type(Type) when is_map(Type) ->
     case maps:get(kind, Type, undefined) of
         undefined -> <<"{}">>;
@@ -328,3 +358,49 @@ format_params([]) ->
 format_params(Params) ->
     Formatted = [format_type(P) || P <- Params],
     list_to_binary(["(" | [lists:join(<<", ">>, Formatted), ")"]]).
+
+-spec default_constraints() -> handler_constraints().
+default_constraints() ->
+    #{total => true, deep => false, pure => false}.
+
+-spec is_valid_name(atom() | undefined) -> boolean().
+is_valid_name(undefined) ->
+    true;
+is_valid_name(Name) ->
+    is_atom(Name).
+
+-spec is_valid_constraints(map()) -> boolean().
+is_valid_constraints(#{total := Total, deep := Deep, pure := Pure}) ->
+    is_boolean(Total) andalso is_boolean(Deep) andalso is_boolean(Pure);
+is_valid_constraints(_) ->
+    false.
+
+-spec merge_constraints(handler_constraints(), handler_constraints()) -> handler_constraints().
+merge_constraints(Left, Right) ->
+    #{
+        total => maps:get(total, Left, true) andalso maps:get(total, Right, true),
+        deep => maps:get(deep, Left, false) orelse maps:get(deep, Right, false),
+        pure => maps:get(pure, Left, false) andalso maps:get(pure, Right, false)
+    }.
+
+-spec is_valid_type_term(type_ref()) -> boolean().
+is_valid_type_term({type_var, Name}) ->
+    is_atom(Name);
+is_valid_type_term(Type) when is_atom(Type) ->
+    true;
+is_valid_type_term(Type) when is_tuple(Type) ->
+    lists:all(fun is_valid_type/1, tuple_to_list(Type));
+is_valid_type_term(#{kind := effect_row} = Row) ->
+    catena_row_types:is_valid_row(Row);
+is_valid_type_term(#{kind := row_var}) ->
+    true;
+is_valid_type_term(#{kind := _} = TypeMap) ->
+    lists:all(
+        fun({_Key, Value}) -> is_valid_type(Value) end,
+        maps:to_list(TypeMap)
+    );
+is_valid_type_term(TypeMap) when is_map(TypeMap) ->
+    lists:all(
+        fun({_Key, Value}) -> is_valid_type(Value) end,
+        maps:to_list(TypeMap)
+    ).
