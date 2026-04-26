@@ -13,6 +13,7 @@ catena_row_operations_test_() ->
         {"effect union with rows", fun test_effect_union_rows/0},
         {"effect union with options", fun test_effect_union_options/0},
         {"effect difference", fun test_effect_difference/0},
+        {"effect difference with open rows", fun test_effect_difference_open_rows/0},
         {"effect subsumes", fun test_effect_subsumes/0},
         {"effect subsumes with options", fun test_effect_subsumes_options/0},
         {"effect normalize", fun test_effect_normalize/0},
@@ -38,12 +39,13 @@ cleanup(_) ->
 %%%---------------------------------------------------------------------
 
 test_effect_union_rows() ->
-    Row1 = catena_row_types:effect_row([a, b]),
+    RowVar = catena_row_types:row_var(),
+    Row1 = catena_row_types:effect_row([a, b], RowVar),
     Row2 = catena_row_types:effect_row([c, d]),
 
     Union = catena_row_operations:effect_union_rows(Row1, Row2),
     UnionList = catena_row_types:row_to_list(Union),
-    ?assertEqual([a, b, c, d], lists:sort(UnionList)).
+    ?assertEqual([a, b, c, d, RowVar], lists:sort(UnionList)).
 
 test_effect_union_options() ->
     Row1 = catena_row_types:effect_row([c, a, b]),
@@ -65,6 +67,17 @@ test_effect_difference() ->
     DiffList = catena_row_types:row_to_list(Diff),
     ?assertEqual([a, d], lists:sort(DiffList)).
 
+test_effect_difference_open_rows() ->
+    RowVar = catena_row_types:row_var(),
+    Row1 = catena_row_types:effect_row([a, b, c], RowVar),
+    Row2 = catena_row_types:effect_row([b], catena_row_types:row_var()),
+
+    NonStrict = catena_row_operations:effect_difference(Row1, Row2),
+    Strict = catena_row_operations:effect_difference(Row1, Row2, #{strict => true}),
+
+    ?assertEqual([a, c, RowVar], lists:sort(catena_row_types:row_to_list(NonStrict))),
+    ?assertEqual([a, c], lists:sort(catena_row_types:row_to_list(Strict))).
+
 %%%---------------------------------------------------------------------
 %%% Effect Subsumption Tests
 %%%---------------------------------------------------------------------
@@ -73,20 +86,23 @@ test_effect_subsumes() ->
     Row1 = catena_row_types:effect_row([a, b, c]),
     Row2 = catena_row_types:effect_row([a, b]),
     Row3 = catena_row_types:effect_row([a, b, d]),
+    OpenRequirement = catena_row_types:effect_row([a], catena_row_types:row_var()),
 
     ?assert(catena_row_operations:effect_subsumes(Row1, Row2)),
     ?assertNot(catena_row_operations:effect_subsumes(Row1, Row3)),
-    ?assert(catena_row_operations:effect_subsumes(Row1, Row1)).
+    ?assert(catena_row_operations:effect_subsumes(Row1, Row1)),
+    ?assertNot(catena_row_operations:effect_subsumes(Row1, OpenRequirement)).
 
 test_effect_subsumes_options() ->
-    Row1 = catena_row_types:effect_row([a, b]),
+    RowVar = catena_row_types:row_var(),
+    Row1 = catena_row_types:effect_row([a, b], RowVar),
     Row2 = catena_row_types:effect_row([a]),
 
     %% Allow row vars
     ?assert(catena_row_operations:effect_subsumes(Row1, Row2, #{allow_row_vars => true})),
 
     %% Strict mode
-    ?assert(catena_row_operations:effect_subsumes(Row1, Row2, #{strict => true})).
+    ?assertNot(catena_row_operations:effect_subsumes(Row1, Row2, #{allow_row_vars => false})).
 
 %%%---------------------------------------------------------------------
 %%% Effect Normalization Tests
@@ -95,14 +111,20 @@ test_effect_subsumes_options() ->
 test_effect_normalize() ->
     Row = catena_row_types:effect_row([c, a, b, a]),
     Normalized = catena_row_operations:effect_normalize(Row),
-    ?assertEqual([a, b, c], catena_row_types:row_to_list(Normalized)).
+    ?assertEqual([a, b, c], catena_row_types:row_to_list(Normalized)),
+
+    OpenNormalized = catena_row_operations:effect_normalize(
+        catena_row_types:effect_row([], catena_row_types:row_var()),
+        #{strict => true}
+    ),
+    ?assertNot(catena_row_types:is_empty_row(OpenNormalized)).
 
 %%%---------------------------------------------------------------------
 %%% Effect Validation Tests
 %%%---------------------------------------------------------------------
 
 test_effect_validate() ->
-    ValidRow = catena_row_types:effect_row(['State', 'IO']),
+    ValidRow = catena_row_types:effect_row(['State', 'IO'], catena_row_types:row_var()),
     ?assert(catena_row_operations:is_valid_effect_set(ValidRow)).
 
 %%%---------------------------------------------------------------------
@@ -144,7 +166,9 @@ test_effect_subset() ->
     Row1 = catena_row_types:effect_row([a, b]),
     Row2 = catena_row_types:effect_row([a, b, c]),
     Row3 = catena_row_types:effect_row([a, b, d]),
+    OpenSubset = catena_row_types:effect_row([a], catena_row_types:row_var()),
 
     ?assert(catena_row_operations:effect_subset(Row1, Row2)),
     ?assert(catena_row_operations:effect_subset(Row1, Row1)),
-    ?assertNot(catena_row_operations:effect_subset(Row3, Row2)).
+    ?assertNot(catena_row_operations:effect_subset(Row3, Row2)),
+    ?assertNot(catena_row_operations:effect_subset(OpenSubset, Row2)).
