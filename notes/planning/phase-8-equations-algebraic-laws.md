@@ -2,6 +2,29 @@
 
 **Description:** This phase implements the equation system that gives algebraic effects their "algebraic" nature. Operations satisfy equations that enable equational reasoning, optimization, and verification of handler correctness.
 
+## Reconciled Implementation Status
+
+**Description:** This plan was originally written as a forward-looking checklist. The landed Phase 8 implementation covered the core equation representation, verification, and rewrite surfaces, but it did not deliver every parser-facing or effect-optimizer item listed below.
+
+### Implemented Surfaces
+
+- `src/compiler/effects/catena_equations.erl`
+- `src/compiler/effects/catena_equation_prover.erl`
+- `src/compiler/effects/catena_equation_rewrite.erl`
+- `src/compiler/effects/catena_effect_system.erl` equation-driven optimization path
+- focused tests for equation representation, prover, rewrite, and integration behavior
+
+### Deferred Or Re-scoped Items
+
+- parser-level equation syntax work in `src/compiler/parser/catena_parser.yrl` did not land as part of Phase 8
+- the older `catena_effects.erl` / `catena_effect_opt.erl` deliverable wording was not the actual integration path; the landed optimization path routes through `catena_effect_system.erl`
+- several effect-specific rewrite examples remain future follow-on work even though the generic rewrite/prover surfaces now exist
+
+### Promoted Read
+
+- Treat Phase 8 as materially implemented for internal equation modeling, verification, and rewrite-based optimization.
+- Do not treat this note as proof that equation syntax is fully exposed in the Catena front end.
+
 ---
 
 ## Section 8.1: Equation Type and Representation
@@ -192,9 +215,8 @@
 - `src/compiler/effects/catena_equation_rewrite.erl` - Equation-based optimization
 
 ### Modified Modules
-- `src/compiler/effects/catena_effects.erl` - Equation integration
-- `src/compiler/parser/catena_parser.yrl` - Equation syntax parsing
-- `src/compiler/effects/catena_effect_opt.erl` - Equation-based optimizations
+- `src/compiler/effects/catena_effect_system.erl` - Equation orchestration and optimization integration
+- `src/compiler/effects/catena_equations.erl` - Matcher fixes for Catena AST shapes and equation validation support
 
 ### Test Modules
 - `test/compiler/effects/catena_equations_tests.erl`
