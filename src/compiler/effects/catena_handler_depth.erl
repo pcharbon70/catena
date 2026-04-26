@@ -59,6 +59,7 @@
 %% Depth validation and conversion
 -export([
     validate_depth/1,
+    normalize_depth/1,
     to_deep/1,
     to_shallow/1,
     invert_depth/1
@@ -66,6 +67,9 @@
 
 %% Depth semantics documentation
 -export([
+    handles_nested/1,
+    handles_at_depth/3,
+    lookup_strategy/1,
     depth_description/1,
     scope_behavior/1,
     performance_implications/1,
@@ -121,6 +125,22 @@ validate_depth(deep) -> {ok, deep};
 validate_depth(shallow) -> {ok, shallow};
 validate_depth(Other) -> {error, {invalid_depth, Other}}.
 
+%% @doc Normalize a user-facing depth specification.
+%% `default` and `undefined` both normalize to the default deep semantics.
+%% Maps and proplists carrying a `depth` entry are also accepted.
+-spec normalize_depth(term()) -> depth_result().
+normalize_depth(undefined) -> {ok, depth()};
+normalize_depth(default) -> {ok, depth()};
+normalize_depth({depth, Depth}) -> validate_depth(Depth);
+normalize_depth(#{depth := Depth}) -> validate_depth(Depth);
+normalize_depth(Options) when is_list(Options) ->
+    case proplists:get_value(depth, Options, undefined) of
+        undefined -> {ok, depth()};
+        Depth -> validate_depth(Depth)
+    end;
+normalize_depth(Depth) ->
+    validate_depth(Depth).
+
 %% @doc Convert any depth to deep.
 %% If already deep, returns deep. If shallow, converts to deep.
 -spec to_deep(handler_depth()) -> handler_depth().
@@ -143,6 +163,24 @@ invert_depth(shallow) -> deep.
 %% Depth Semantics Documentation
 %%====================================================================
 
+%% @doc Whether a handler depth handles operations from nested scopes.
+-spec handles_nested(handler_depth()) -> boolean().
+handles_nested(deep) -> true;
+handles_nested(shallow) -> false.
+
+%% @doc Decide whether a handler installed at `HandlerDepth` should
+%% handle an operation observed at `OperationDepth`.
+-spec handles_at_depth(handler_depth(), non_neg_integer(), non_neg_integer()) -> boolean().
+handles_at_depth(deep, HandlerDepth, OperationDepth) ->
+    OperationDepth >= HandlerDepth;
+handles_at_depth(shallow, HandlerDepth, OperationDepth) ->
+    OperationDepth =:= HandlerDepth.
+
+%% @doc Describe the lookup strategy used by a handler depth.
+-spec lookup_strategy(handler_depth()) -> current_scope_only | traverse_nested_scopes.
+lookup_strategy(deep) -> traverse_nested_scopes;
+lookup_strategy(shallow) -> current_scope_only.
+
 %% @doc Get a description of a handler depth.
 -spec depth_description(handler_depth()) -> string().
 depth_description(deep) ->
@@ -155,9 +193,7 @@ depth_description(shallow) ->
     "Shallow handlers only catch operations at their direct scope level. "
     "Operations performed in nested function calls will bypass shallow "
     "handlers and propagate upward to find a handler. This is useful for "
-    "creating effect boundaries and limiting handler scope."
-
-.
+    "creating effect boundaries and limiting handler scope.".
 
 %% @doc Get the scope behavior description for a depth.
 -spec scope_behavior(handler_depth()) -> string().
@@ -166,9 +202,7 @@ scope_behavior(deep) ->
     "The handler will traverse the entire call stack to find operations.";
 scope_behavior(shallow) ->
     "Only operations directly within the handler's scope are handled. "
-    "Operations in nested function calls bypass this handler."
-
-.
+    "Operations in nested function calls bypass this handler.".
 
 %% @doc Get performance implications for a depth.
 -spec performance_implications(handler_depth()) -> string().
@@ -180,9 +214,7 @@ performance_implications(deep) ->
 performance_implications(shallow) ->
     "Shallow handlers have O(1) operation lookup since they only check "
     "the current scope. This can provide significant performance benefits "
-    "when handlers are used for scoped effects that shouldn't propagate."
-
-.
+    "when handlers are used for scoped effects that shouldn't propagate.".
 
 %% @doc Get common use cases for a depth.
 -spec use_cases(handler_depth()) -> [string()].
