@@ -19,6 +19,8 @@ catena_row_types_test_() ->
         {"row normalize", fun test_row_normalize/0},
         {"row to list and back", fun test_row_conversion/0},
         {"row variable management", fun test_row_variables/0},
+        {"row variable management with state", fun test_row_variables_with_state/0},
+        {"row contains all with open rows", fun test_row_contains_all/0},
         {"row validation", fun test_row_validation/0}
      ]}.
 
@@ -50,7 +52,10 @@ test_row_constructors() ->
     ?assertEqual([a, b, c], lists:sort(catena_row_types:row_to_list(Row2))),
 
     Var = catena_row_types:row_var(),
-    ?assert(catena_row_types:is_row_var(Var)).
+    ?assert(catena_row_types:is_row_var(Var)),
+
+    OpenRow = catena_row_types:effect_row([a, b], Var),
+    ?assertEqual([a, b, Var], catena_row_types:row_to_list(OpenRow)).
 
 %%%---------------------------------------------------------------------
 %%% Row Type Predicates Tests
@@ -60,6 +65,7 @@ test_row_predicates() ->
     Empty = catena_row_types:empty_row(),
     Row = catena_row_types:effect_row([a, b]),
     Var = catena_row_types:row_var(),
+    OpenEmpty = catena_row_types:effect_row([], Var),
 
     ?assert(catena_row_types:is_effect_row(Empty)),
     ?assert(catena_row_types:is_effect_row(Row)),
@@ -69,7 +75,8 @@ test_row_predicates() ->
     ?assertNot(catena_row_types:is_row_var(Row)),
 
     ?assert(catena_row_types:is_empty_row(Empty)),
-    ?assertNot(catena_row_types:is_empty_row(Row)).
+    ?assertNot(catena_row_types:is_empty_row(Row)),
+    ?assertNot(catena_row_types:is_empty_row(OpenEmpty)).
 
 %%%---------------------------------------------------------------------
 %%% Row Union Tests
@@ -171,6 +178,28 @@ test_row_variables() ->
     Id1 = catena_row_types:row_var_id(Var1),
     Id2 = catena_row_types:row_var_id(Var2),
     ?assertNotEqual(Id1, Id2).
+
+test_row_variables_with_state() ->
+    {Var1, MapState1} = catena_row_types:fresh_row_var(#{}),
+    {Var2, MapState2} = catena_row_types:fresh_row_var(MapState1),
+    ?assertEqual({row_var, 0}, catena_row_types:row_var_id(Var1)),
+    ?assertEqual({row_var, 1}, catena_row_types:row_var_id(Var2)),
+    ?assertEqual(2, maps:get(row_var_counter, MapState2)),
+
+    InferState0 = catena_infer_state:new(),
+    {InferVar, InferState1} = catena_row_types:fresh_row_var(InferState0),
+    ?assertEqual({row_var, 1}, catena_row_types:row_var_id(InferVar)),
+    ?assertEqual(2, catena_infer_state:get_next_var(InferState1)).
+
+test_row_contains_all() ->
+    ProvidedClosed = catena_row_types:effect_row([a, b, c]),
+    RequiredClosed = catena_row_types:effect_row([a, b]),
+    RequiredOpen = catena_row_types:effect_row([a], catena_row_types:row_var()),
+    ProvidedOpen = catena_row_types:effect_row([a, b, c], catena_row_types:row_var()),
+
+    ?assert(catena_row_types:row_contains_all(ProvidedClosed, RequiredClosed)),
+    ?assertNot(catena_row_types:row_contains_all(ProvidedClosed, RequiredOpen)),
+    ?assert(catena_row_types:row_contains_all(ProvidedOpen, RequiredOpen)).
 
 %%%---------------------------------------------------------------------
 %%% Row Validation Tests
