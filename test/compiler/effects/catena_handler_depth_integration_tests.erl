@@ -15,16 +15,6 @@
 -include_lib("eunit/include/eunit.hrl").
 
 %%%=============================================================================
-%%% Setup and Teardown
-%%%=============================================================================
-
-setup_test_handlers() ->
-    #{
-        state => fun(_Op, _Args) -> {ok, test_state} end,
-        logger => fun(_Op, _Args) -> logged end
-    }.
-
-%%%=============================================================================
 %%% Shallow Handler Integration Tests
 %%%=============================================================================
 
@@ -68,6 +58,17 @@ shallow_scope_isolation_test() ->
     end),
     ?assertEqual(boundary_isolated, Result).
 
+shallow_boundary_bypasses_nested_execution_test() ->
+    HandlerFun = fun(_Op, _Args) -> handled end,
+    Result = catena_shallow_handler:with_shallow_handler(test, HandlerFun, fun() ->
+        Boundary = catena_shallow_handler:shallow_scope_boundary(fun() ->
+            Context = get(shallow_context),
+            catena_shallow_handler:execute_shallow({test, get, []}, Context, 1)
+        end),
+        Boundary()
+    end),
+    ?assertEqual({unhandled, {test, get, []}}, Result).
+
 %%%=============================================================================
 %%% Deep Handler Integration Tests
 %%%=============================================================================
@@ -109,6 +110,17 @@ deep_stack_traversal_test() ->
         stack_depth_ok
     end),
     ?assertEqual(stack_depth_ok, Result).
+
+deep_boundary_keeps_nested_execution_visible_test() ->
+    HandlerFun = fun(_Op, _Args) -> handled end,
+    Result = catena_deep_handler:with_deep_handler(test, HandlerFun, fun() ->
+        Boundary = catena_deep_handler:deep_scope_boundary(fun() ->
+            Context = get(deep_context),
+            catena_deep_handler:execute_deep({test, get, []}, Context, 1)
+        end),
+        Boundary()
+    end),
+    ?assertEqual({handled, handled}, Result).
 
 %%%=============================================================================
 %%% Depth Selection Integration Tests
@@ -188,7 +200,11 @@ mixed_depth_scope_test() ->
         #{type => shallow, effect => test2, handler => fun() -> s1 end}
     ],
     Scope = catena_depth_selection:mixed_handler_scope(Handlers, []),
-    ?assertEqual(Handlers, maps:get(handlers, Scope)),
+    [DeepHandler, ShallowHandler] = maps:get(handlers, Scope),
+    ?assertEqual(test1, maps:get(effect, DeepHandler)),
+    ?assertEqual(deep, maps:get(depth, DeepHandler)),
+    ?assertEqual(test2, maps:get(effect, ShallowHandler)),
+    ?assertEqual(shallow, maps:get(depth, ShallowHandler)),
     ?assertEqual(deep_first, maps:get(precedence, Scope)).
 
 deep_preferred_in_mixed_scope_test() ->
@@ -205,7 +221,8 @@ conflict_resolution_deep_first_test() ->
     H1 = #{effect => test, handler => fun() -> h1 end, type => deep},
     H2 = #{effect => test, handler => fun() -> h2 end, type => shallow},
     {ok, Handler} = catena_depth_selection:resolve_handler_conflict(Operation, [H1, H2], []),
-    ?assertEqual(H1, Handler).
+    ?assertEqual(test, maps:get(effect, Handler)),
+    ?assertEqual(deep, maps:get(type, Handler)).
 
 conflict_resolution_shallow_first_test() ->
     % Test conflict resolution prefers shallow when configured
@@ -213,7 +230,8 @@ conflict_resolution_shallow_first_test() ->
     H1 = #{effect => test, handler => fun() -> h1 end, type => deep},
     H2 = #{effect => test, handler => fun() -> h2 end, type => shallow},
     {ok, Handler} = catena_depth_selection:resolve_handler_conflict(Operation, [H1, H2], [{precedence, shallow_first}]),
-    ?assertEqual(H2, Handler).
+    ?assertEqual(test, maps:get(effect, Handler)),
+    ?assertEqual(shallow, maps:get(type, Handler)).
 
 %%%=============================================================================
 %%% Performance Characteristics Tests
