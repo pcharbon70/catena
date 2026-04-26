@@ -12,6 +12,7 @@ catena_continuation_kind_test_() ->
      [
         {"type constructors", fun test_type_constructors/0},
         {"type predicates", fun test_type_predicates/0},
+        {"current kind tracking", fun test_current_kind_tracking/0},
         {"type validation", fun test_type_validation/0},
         {"conversion", fun test_conversion/0},
         {"semantics", fun test_semantics/0},
@@ -50,6 +51,23 @@ test_type_predicates() ->
     ?assertNot(catena_continuation_kind:is_one_shot(MultiShot)),
     ?assert(catena_continuation_kind:is_multi_shot(MultiShot)),
     ?assertNot(catena_continuation_kind:is_multi_shot(OneShot)).
+
+test_current_kind_tracking() ->
+    ?assertEqual(multi_shot, catena_continuation_kind:default_kind()),
+    ?assertEqual(multi_shot, catena_continuation_kind:current_kind()),
+    ?assert(catena_continuation_kind:is_multi_shot()),
+    ?assertNot(catena_continuation_kind:is_one_shot()),
+
+    Result = catena_continuation_kind:with_kind(one_shot, fun() ->
+        ?assertEqual(one_shot, catena_continuation_kind:current_kind()),
+        ?assert(catena_continuation_kind:is_one_shot()),
+        ?assertNot(catena_continuation_kind:is_multi_shot()),
+        ?assertEqual(multi_shot, catena_continuation_kind:compose(one_shot, multi_shot)),
+        ok
+    end),
+
+    ?assertEqual(ok, Result),
+    ?assertEqual(multi_shot, catena_continuation_kind:current_kind()).
 
 %%%---------------------------------------------------------------------
 %%% Type Validation Tests

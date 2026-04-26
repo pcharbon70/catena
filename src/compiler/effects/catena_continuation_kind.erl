@@ -10,14 +10,20 @@
     %% Type constructors
     one_shot/0,
     multi_shot/0,
+    default_kind/0,
+    current_kind/0,
+    with_kind/2,
     %% Type predicates
+    is_one_shot/0,
     is_one_shot/1,
+    is_multi_shot/0,
     is_multi_shot/1,
     %% Type validation
     is_valid_kind/1,
     %% Conversion
     to_atom/1,
     from_atom/1,
+    compose/2,
     %% Semantics documentation
     semantics/1,
     use_cases/1,
@@ -27,6 +33,8 @@
     identity/2,
     idempotent/1
 ]).
+
+-define(CURRENT_KIND_KEY, catena_current_continuation_kind).
 
 -export_type([
     continuation_kind/0
@@ -65,14 +73,54 @@ one_shot() -> one_shot.
 -spec multi_shot() -> continuation_kind().
 multi_shot() -> multi_shot.
 
+%% @doc Get the default continuation kind for effect execution.
+%%
+%% Catena defaults to multi-shot continuations unless a handler
+%% explicitly narrows execution to one-shot semantics.
+-spec default_kind() -> continuation_kind().
+default_kind() ->
+    multi_shot.
+
+%% @doc Get the continuation kind currently active in this process.
+-spec current_kind() -> continuation_kind().
+current_kind() ->
+    case get(?CURRENT_KIND_KEY) of
+        undefined -> default_kind();
+        Kind -> Kind
+    end.
+
+%% @doc Execute a function under a specific continuation kind.
+%%
+%% The previous process-local kind is restored even if the function exits.
+-spec with_kind(continuation_kind(), fun(() -> Result)) -> Result when
+    Result :: term().
+with_kind(Kind, Fun) when is_function(Fun, 0) ->
+    Previous = get(?CURRENT_KIND_KEY),
+    put(?CURRENT_KIND_KEY, Kind),
+    try
+        Fun()
+    after
+        restore_previous_kind(Previous)
+    end.
+
 %%%---------------------------------------------------------------------
 %%% Type Predicates
 %%%---------------------------------------------------------------------
+
+%% @doc Check if the current continuation kind is one-shot.
+-spec is_one_shot() -> boolean().
+is_one_shot() ->
+    is_one_shot(current_kind()).
 
 %% @doc Check if a continuation kind is one-shot.
 -spec is_one_shot(continuation_kind()) -> boolean().
 is_one_shot(one_shot) -> true;
 is_one_shot(_) -> false.
+
+%% @doc Check if the current continuation kind is multi-shot.
+-spec is_multi_shot() -> boolean().
+is_multi_shot() ->
+    is_multi_shot(current_kind()).
 
 %% @doc Check if a continuation kind is multi-shot.
 -spec is_multi_shot(continuation_kind()) -> boolean().
@@ -191,3 +239,12 @@ idempotent(_) -> false.
 compose(one_shot, one_shot) -> one_shot;
 compose(_, multi_shot) -> multi_shot;
 compose(multi_shot, _) -> multi_shot.
+
+%% @private Restore the prior continuation kind after a scoped override.
+-spec restore_previous_kind(continuation_kind() | undefined) -> ok.
+restore_previous_kind(undefined) ->
+    erase(?CURRENT_KIND_KEY),
+    ok;
+restore_previous_kind(Kind) ->
+    put(?CURRENT_KIND_KEY, Kind),
+    ok.
