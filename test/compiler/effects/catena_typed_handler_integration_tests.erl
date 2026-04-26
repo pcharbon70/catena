@@ -71,6 +71,8 @@ test_handler_inference_integration() ->
 
     % Validate inferred type
     ?assert(catena_handler_types:is_handler_type(InferredType)),
+    ?assertMatch({type_var, {input, _}}, maps:get(input, InferredType)),
+    ?assertEqual({type_var, output}, maps:get(output, InferredType)),
 
     % Infer operation signatures
     OpSigs = catena_handler_infer:infer_operation_sigs(Implementation),
@@ -82,7 +84,6 @@ test_handler_inference_integration() ->
 
 test_typed_execution_integration() ->
     % Test typed handler execution flow
-    IntType = int,
     AtomType = atom,
     Ops = #{get => catena_handler_types:operation_sig([AtomType], AtomType)},
     HandlerType = catena_handler_types:with_output(
@@ -98,7 +99,13 @@ test_typed_execution_integration() ->
     % Check resumption type
     OpSig = maps:get(get, Ops),
     Resumption = catena_resumption:new(fun(V) -> V end, 0, 0, #{}),
-    ?assertMatch({ok, _}, catena_handler_exec:enforce_resumption_type(OpSig, dummy, Resumption)).
+    ?assertMatch({ok, _}, catena_handler_exec:enforce_resumption_type(OpSig, dummy, Resumption)),
+
+    GoodHandler = fun(Value, _Resume) -> Value end,
+    BadHandler = fun(_Value, _Resume) -> 42 end,
+    ?assertMatch({ok, dummy}, catena_handler_exec:execute_typed(get, GoodHandler, HandlerType, dummy)),
+    ?assertMatch({error, {return_type_mismatch, _, _}},
+        catena_handler_exec:execute_typed(get, BadHandler, HandlerType, dummy)).
 
 test_complex_scenario() ->
     % Test a complex handler with multiple operations and effects
@@ -167,27 +174,7 @@ test_effect_row_polymorphism() ->
     Handler1 = catena_handler_types:with_effects(
         catena_handler_types:handler_type(), Effects1),
 
-    Handler2 = catena_handler_types:with_effects(
-        catena_handler_types:handler_type(), Effects2),
-
     % Check effect subsumption
     ?assert(catena_handler_exec:check_subtype(Handler1, Handler1)),
     ?assert(catena_handler_exec:effects_subsumes(Effects1, Effects2)),
     ?assertNot(catena_handler_exec:effects_subsumes(Effects2, Effects1)).
-
-%%%---------------------------------------------------------------------
-%%% Helper Functions
-%%%---------------------------------------------------------------------
-
-%% Helper to create a test handler
-create_test_handler(Ops, Input, Output) ->
-    catena_handler_types:with_output(
-        catena_handler_types:with_input(
-            catena_handler_types:with_operations(
-                catena_handler_types:handler_type(), Ops),
-            Input),
-        Output).
-
-%% Helper to create a test operation signature
-create_op_sig(Params, Result) ->
-    catena_handler_types:operation_sig(Params, Result).
