@@ -58,6 +58,10 @@ test_execute_typed() ->
     Result = catena_handler_exec:execute_typed(get, HandlerFn, HandlerType, input),
     ?assertMatch({ok, _}, Result),
 
+    BadHandlerFn = fun(_Val, _Resume) -> wrong end,
+    ResultBad = catena_handler_exec:execute_typed(get, BadHandlerFn, HandlerType, input),
+    ?assertMatch({error, {return_type_mismatch, _, _}}, ResultBad),
+
     % Test with unknown operation
     Result2 = catena_handler_exec:execute_typed(unknown, HandlerFn, HandlerType, input),
     ?assertMatch({error, {unknown_operation, _}}, Result2).
