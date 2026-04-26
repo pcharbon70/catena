@@ -568,13 +568,16 @@ perform(Operation, Value, _Options) ->
     trace_if_enabled(Operation, Value),
 
     %% Capture continuation
-    Cont = catena_resumption:capture_continuation(),
+    Resumption = catena_resumption:capture_with_metadata(#{
+        operation => Operation,
+        original_value => Value,
+        scope_depth => scope_depth()
+    }),
 
     %% Look up handler
     case catena_handler:lookup(Operation) of
         {ok, Handler} ->
             %% Execute handler
-            Resumption = catena_resumption:new(Cont, erlang:system_time(millisecond), scope_depth()),
             case catena_handler:execute(Handler, Value, Resumption) of
                 {handler_error, Kind, Reason, Stack} ->
                     error({handler_crash, Operation, Kind, Reason, Stack});
@@ -591,7 +594,6 @@ perform(Operation, Value, _Options) ->
             %% Try default handler
             case get_default_handler(Operation) of
                 {ok, DefaultHandler} ->
-                    Resumption = catena_resumption:new(Cont, erlang:system_time(millisecond), scope_depth()),
                     catena_handler:execute(DefaultHandler, Value, Resumption);
                 {error, not_found} ->
                     error({unhandled_effect, Operation})

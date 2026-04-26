@@ -197,20 +197,23 @@ stack_depth() ->
 %%
 %% This invokes the handler function with the operation value and
 %% resumption, returning the result or an error.
--spec execute(handler(), term(), catena_resumption:resumption()) -> term().
+-spec execute(handler(), term(), term()) -> term().
 execute(#handler{handler_fn = {Fn, _}}, OpValue, Resumption) ->
-    try
-        Fn(OpValue, Resumption)
-    catch
-        Kind:Reason:Stack ->
-            {handler_error, Kind, Reason, Stack}
-    end.
+    ContinuationKind = continuation_kind(Resumption),
+    catena_continuation_kind:with_kind(ContinuationKind, fun() ->
+        try
+            Fn(OpValue, Resumption)
+        catch
+            Kind:Reason:Stack ->
+                {handler_error, Kind, Reason, Stack}
+        end
+    end).
 
 %% @doc Execute a handler with a timeout.
 %%
 %% If the handler doesn't complete within the timeout, returns
 %% {timeout, OpValue}.
--spec execute_with_timeout(handler(), term(), catena_resumption:resumption(), timeout()) ->
+-spec execute_with_timeout(handler(), term(), term(), timeout()) ->
     term() | {timeout, term()}.
 execute_with_timeout(Handler, OpValue, Resumption, Timeout) ->
     Parent = self(),
@@ -230,3 +233,13 @@ execute_with_timeout(Handler, OpValue, Resumption, Timeout) ->
         {timeout, OpValue}
     end.
 
+%% @private Derive continuation kind from wrapped resumption metadata.
+-spec continuation_kind(term()) -> catena_continuation_kind:continuation_kind().
+continuation_kind(#{kind := one_shot}) ->
+    one_shot;
+continuation_kind(#{kind := multi_shot}) ->
+    multi_shot;
+continuation_kind(#{resumption := Resumption}) ->
+    continuation_kind(Resumption);
+continuation_kind(_) ->
+    catena_continuation_kind:current_kind().
