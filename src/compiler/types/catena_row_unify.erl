@@ -1,22 +1,15 @@
 -module(catena_row_unify).
 
 %% Row unification for effect types with occurs check.
-%% Unification determines if two effect rows can be made equal
-%% through substitution of row variables.
 
 -export([
-    %% Row unification
     unify_rows/2,
     unify_rows/3,
-    %% Row occurs check
     row_occurs/2,
-    %% Row substitution
     apply_row_subst/2,
     compose_row_subst/2,
-    %% Row constraint operations
     generate_row_constraints/2,
     solve_row_constraints/1,
-    %% Utilities
     row_subst_to_list/1,
     list_to_row_subst/1,
     empty_row_subst/0
@@ -28,175 +21,142 @@
     unify_result/0
 ]).
 
-%%%---------------------------------------------------------------------
-%%% Types
-%%%---------------------------------------------------------------------
+-type row_subst() :: catena_row_subst:row_subst().
 
-%% @doc Row substitution mapping row variables to effect rows.
--type row_subst() :: #{catena_row_types:row_var_id() => catena_row_types:effect_row()}.
-
-%% @doc Row constraint for unification.
 -type row_constraint() ::
     {unify, catena_row_types:effect_row(), catena_row_types:effect_row()}.
 
-%% @doc Result of row unification.
 -type unify_result() ::
     {ok, row_subst()} |
     {error, term()}.
 
-%%%---------------------------------------------------------------------
-%%% Row Unification
-%%%---------------------------------------------------------------------
-
-%% @doc Unify two effect rows, producing a substitution.
 -spec unify_rows(catena_row_types:effect_row(), catena_row_types:effect_row()) -> unify_result().
 unify_rows(Row1, Row2) ->
-    unify_rows(Row1, Row2, #{}).
+    unify_rows(Row1, Row2, empty_row_subst()).
 
-%% @doc Unify two effect rows with an existing substitution.
 -spec unify_rows(catena_row_types:effect_row(), catena_row_types:effect_row(), row_subst()) -> unify_result().
-unify_rows(#{elements := Es1, row_var := Rv1}, #{elements := Es2, row_var := Rv2}, Subst) ->
-    case unify_elements(Es1, Es2, Subst) of
-        {ok, Subst1} ->
-            unify_row_vars(Rv1, Rv2, Subst1);
-        {error, Reason} ->
-            {error, Reason}
-    end.
+unify_rows(Row1, Row2, Subst) ->
+    Normalized1 = apply_row_subst(catena_row_types:row_normalize(Row1), Subst),
+    Normalized2 = apply_row_subst(catena_row_types:row_normalize(Row2), Subst),
+    unify_normalized_rows(Normalized1, Normalized2, Subst).
 
-%% @doc Unify lists of effect elements.
--spec unify_elements([atom()], [atom()], row_subst()) -> unify_result().
-unify_elements(Es1, Es2, Subst) when length(Es1) =:= length(Es2) ->
-    Sorted1 = lists:sort(Es1),
-    Sorted2 = lists:sort(Es2),
-    case Sorted1 =:= Sorted2 of
-        true -> {ok, Subst};
-        false -> {error, {effect_mismatch, Sorted1, Sorted2}}
-    end;
-unify_elements(Es1, Es2, _Subst) ->
-    {error, {effect_count_mismatch, length(Es1), length(Es2)}}.
-
-%% @doc Unify row variables.
--spec unify_row_vars(catena_row_types:row_var() | undefined, catena_row_types:row_var() | undefined, row_subst()) -> unify_result().
-unify_row_vars(undefined, undefined, Subst) ->
-    {ok, Subst};
-unify_row_vars(Var, undefined, Subst) when is_map(Var) ->
-    %% Row variable can match empty row
-    {ok, Subst};
-unify_row_vars(undefined, Var, Subst) when is_map(Var) ->
-    {ok, Subst};
-unify_row_vars(Var1, Var2, Subst) when is_map(Var1), is_map(Var2) ->
-    %% Both are row variables - unify them
-    Id1 = catena_row_types:row_var_id(Var1),
-    Id2 = catena_row_types:row_var_id(Var2),
-    case Id1 =:= Id2 of
-        true -> {ok, Subst};
-        false ->
-            %% Create unification constraint
-            Subst#{Id1 => catena_row_types:effect_row([], Var2)}
-    end.
-
-%%%---------------------------------------------------------------------
-%%% Row Occurs Check
-%%%---------------------------------------------------------------------
-
-%% @doc Check if a row variable occurs in an effect row.
-%% Prevents infinite loops in unification.
 -spec row_occurs(catena_row_types:row_var_id(), catena_row_types:effect_row()) -> boolean().
-row_occurs(VarId, #{row_var := #{id := VarId}}) ->
-    true;
-row_occurs(VarId, #{row_var := #{id := OtherId}}) when VarId =:= OtherId ->
-    true;
-row_occurs(VarId, #{row_var := RowVar}) when is_map(RowVar) ->
-    %% Recursively check row variable's definition
-    case maps:get(VarId, undefined, undefined) of
-        undefined -> false;
-        Row -> row_occurs(VarId, Row)
-    end;
-row_occurs(_, _) ->
-    false.
+row_occurs(RowVarId, Row) ->
+    row_occurs(RowVarId, Row, empty_row_subst()).
 
-%%%---------------------------------------------------------------------
-%%% Row Substitution
-%%%---------------------------------------------------------------------
-
-%% @doc Apply a substitution to an effect row.
 -spec apply_row_subst(catena_row_types:effect_row(), row_subst()) -> catena_row_types:effect_row().
-apply_row_subst(#{elements := Es, row_var := undefined}, _Subst) ->
-    catena_row_types:effect_row(Es);
-apply_row_subst(#{elements := Es, row_var := Var}, Subst) when is_map(Var) ->
-    VarId = catena_row_types:row_var_id(Var),
-    case maps:find(VarId, Subst) of
-        {ok, Replacement} ->
-            Replacement;
-        error ->
-            catena_row_types:effect_row(Es, Var)
-    end.
+apply_row_subst(Row, Subst) ->
+    catena_row_subst:apply(Row, Subst).
 
-%% @doc Compose two substitutions.
-%% Result of compose(S1, S2) applies S1 then S2.
 -spec compose_row_subst(row_subst(), row_subst()) -> row_subst().
 compose_row_subst(S1, S2) ->
-    maps:map(fun(_Key, Row) ->
-        apply_row_subst(Row, S2)
-    end, S1).
+    catena_row_subst:compose(S1, S2).
 
-%%%---------------------------------------------------------------------
-%%% Row Constraint Operations
-%%%---------------------------------------------------------------------
-
-%% @doc Generate unification constraints for two effect rows.
 -spec generate_row_constraints(catena_row_types:effect_row(), catena_row_types:effect_row()) -> [row_constraint()].
 generate_row_constraints(Row1, Row2) ->
     [{unify, Row1, Row2}].
 
-%% @doc Solve row constraints to produce a substitution.
 -spec solve_row_constraints([row_constraint()]) -> {ok, row_subst()} | {error, term()}.
 solve_row_constraints(Constraints) ->
-    solve_constraints(Constraints, #{}, []).
+    lists:foldl(
+        fun({unify, Row1, Row2}, {ok, Subst}) ->
+            unify_rows(Row1, Row2, Subst);
+           (_Constraint, {error, _Reason} = Error) ->
+            Error
+        end,
+        {ok, empty_row_subst()},
+        Constraints
+    ).
 
-%% @doc Internal constraint solver.
--spec solve_constraints([row_constraint()], row_subst(), [row_constraint()]) -> {ok, row_subst()} | {error, term()}.
-solve_constraints([], Subst, []) ->
-    {ok, Subst};
-solve_constraints([], Subst, Pending) ->
-    %% Try to solve pending constraints
-    solve_constraints(lists:reverse(Pending), Subst, []);
-solve_constraints([{unify, Row1, Row2} | Rest], Subst, Pending) ->
-    case unify_rows(Row1, Row2, Subst) of
-        {ok, NewSubst} ->
-            solve_constraints(Rest, NewSubst, Pending);
-        {error, _Reason} ->
-            %% Defer to pending
-            solve_constraints(Rest, Subst, [{unify, Row1, Row2} | Pending])
-    end.
-
-%%%---------------------------------------------------------------------
-%%% Utilities
-%%%---------------------------------------------------------------------
-
-%% @doc Convert substitution to a list for debugging.
 -spec row_subst_to_list(row_subst()) -> [{catena_row_types:row_var_id(), catena_row_types:effect_row()}].
 row_subst_to_list(Subst) ->
-    maps:to_list(Subst).
+    catena_row_subst:to_list(Subst).
 
-%% @doc Create a substitution from a list.
 -spec list_to_row_subst([{catena_row_types:row_var_id(), catena_row_types:effect_row()}]) -> row_subst().
 list_to_row_subst(List) ->
-    maps:from_list(List).
+    catena_row_subst:from_list(List).
 
-%% @doc Create an empty substitution.
 -spec empty_row_subst() -> row_subst().
 empty_row_subst() ->
-    #{}.
+    catena_row_subst:empty().
 
-%%%---------------------------------------------------------------------
-%%% Internal Helpers
-%%%---------------------------------------------------------------------
+-spec unify_normalized_rows(catena_row_types:effect_row(), catena_row_types:effect_row(), row_subst()) -> unify_result().
+unify_normalized_rows(
+    #{elements := Es1, row_var := Rv1},
+    #{elements := Es2, row_var := Rv2},
+    Subst
+) ->
+    Only1 = subtract(Es1, Es2),
+    Only2 = subtract(Es2, Es1),
+    case {Only1, Only2, Rv1, Rv2} of
+        {[], [], undefined, undefined} ->
+            {ok, Subst};
+        {[], [], RowVar1, RowVar2} ->
+            unify_row_vars(RowVar1, RowVar2, Subst);
+        {_, _, undefined, undefined} ->
+            {error, {effect_mismatch, Es1, Es2}};
+        {OnlyLeft, [], undefined, RowVar2} ->
+            bind_row_var(RowVar2, catena_row_types:effect_row(OnlyLeft), Subst);
+        {[], OnlyRight, RowVar1, undefined} ->
+            bind_row_var(RowVar1, catena_row_types:effect_row(OnlyRight), Subst);
+        {[], [], RowVar1, RowVar2} ->
+            unify_row_vars(RowVar1, RowVar2, Subst);
+        {OnlyLeft, OnlyRight, RowVar1, RowVar2} ->
+            case bind_row_var(RowVar1, catena_row_types:effect_row(OnlyRight, RowVar2), Subst) of
+                {ok, Subst1} when OnlyLeft =:= [] ->
+                    {ok, Subst1};
+                {ok, _Subst1} ->
+                    {error, {ambiguous_open_row_unification, OnlyLeft, OnlyRight}};
+                {error, _Reason} = Error ->
+                    Error
+            end
+    end.
 
-%% @doc Helper to create effect row with optional row variable.
--spec effect_row_with_var([atom()], catena_row_types:row_var() | undefined) -> catena_row_types:effect_row().
-effect_row_with_var(Elements, undefined) ->
-    catena_row_types:effect_row(Elements);
-effect_row_with_var(Elements, Var) ->
-    ElementsRow = catena_row_types:effect_row(Elements),
-    ElementsRow#{row_var => Var}.
+-spec unify_row_vars(catena_row_types:row_var() | undefined, catena_row_types:row_var() | undefined, row_subst()) ->
+    unify_result().
+unify_row_vars(undefined, undefined, Subst) ->
+    {ok, Subst};
+unify_row_vars(RowVar, undefined, Subst) when is_map(RowVar) ->
+    bind_row_var(RowVar, catena_row_types:empty_row(), Subst);
+unify_row_vars(undefined, RowVar, Subst) when is_map(RowVar) ->
+    bind_row_var(RowVar, catena_row_types:empty_row(), Subst);
+unify_row_vars(RowVar1, RowVar2, Subst) ->
+    case catena_row_types:row_var_id(RowVar1) =:= catena_row_types:row_var_id(RowVar2) of
+        true -> {ok, Subst};
+        false -> bind_row_var(RowVar1, catena_row_types:effect_row([], RowVar2), Subst)
+    end.
+
+-spec bind_row_var(catena_row_types:row_var(), catena_row_types:effect_row(), row_subst()) -> unify_result().
+bind_row_var(RowVar, Replacement, Subst) ->
+    RowVarId = catena_row_types:row_var_id(RowVar),
+    NormalizedReplacement = catena_row_types:row_normalize(Replacement),
+    case row_occurs(RowVarId, NormalizedReplacement, Subst) of
+        true ->
+            {error, {row_occurs_check_failed, RowVarId, NormalizedReplacement}};
+        false ->
+            case maps:find(RowVarId, Subst) of
+                {ok, Existing} ->
+                    unify_rows(Existing, NormalizedReplacement, Subst);
+                error ->
+                    {ok, maps:put(RowVarId, NormalizedReplacement, Subst)}
+            end
+    end.
+
+-spec row_occurs(catena_row_types:row_var_id(), catena_row_types:effect_row(), row_subst()) -> boolean().
+row_occurs(_RowVarId, #{row_var := undefined}, _Subst) ->
+    false;
+row_occurs(RowVarId, #{row_var := RowVar}, Subst) ->
+    NestedId = catena_row_types:row_var_id(RowVar),
+    case NestedId =:= RowVarId of
+        true ->
+            true;
+        false ->
+            case maps:find(NestedId, Subst) of
+                {ok, NestedRow} -> row_occurs(RowVarId, NestedRow, Subst);
+                error -> false
+            end
+    end.
+
+-spec subtract([atom()], [atom()]) -> [atom()].
+subtract(Left, Right) ->
+    [Element || Element <- Left, not lists:member(Element, Right)].
