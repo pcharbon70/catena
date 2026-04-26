@@ -77,17 +77,20 @@
 -type check_error() ::
     {missing_operations, [atom()]} |
     {redundant_operations, [atom()]} |
-    {type_mismatch, operation(), expected, actual} |
-    {return_type_mismatch, expected, actual} |
-    {effect_mismatch, expected, actual} |
+    {coverage_issues, [atom()], [atom()]} |
+    {type_mismatch, operation(), term(), term()} |
+    {return_type_mismatch, term(), term()} |
+    {param_type_mismatch, term(), term()} |
+    param_count_mismatch |
+    {effect_mismatch, term(), term()} |
+    {invalid_effects, term()} |
+    {invalid_operation_sig, term()} |
     {invalid_handler, term()}.
 
 -type check_result() :: ok | {error, check_error()}.
 -type coverage_result() :: {complete, [atom()]} | {error, check_error()}.
 
 -type operation() :: atom().
--type expected() :: term().
--type actual() :: term().
 
 -export_type([check_error/0, check_result/0, coverage_result/0]).
 
@@ -101,15 +104,15 @@
 %% signature, including operation coverage and return types.
 -spec check_handler_type(handler_type(), module()) -> check_result().
 check_handler_type(HandlerType, HandlerModule) when is_atom(HandlerModule) ->
-    case catena_handler_types:is_valid_handler_type(HandlerType) of
-        false ->
-            {error, {invalid_handler, HandlerType}};
-        true ->
+    case check_handler_signature(HandlerType) of
+        ok ->
             Operations = maps:get(operations, HandlerType),
             case check_operation_coverage(Operations, HandlerModule) of
                 {error, _} = Error -> Error;
                 {complete, _} -> check_return_types(HandlerType, HandlerModule)
-            end
+            end;
+        {error, _} ->
+            {error, {invalid_handler, HandlerType}}
     end.
 
 %% @doc Check handler implementation against type signature.
@@ -118,17 +121,21 @@ check_handler_type(HandlerType, HandlerModule) when is_atom(HandlerModule) ->
 %% operation signatures and return types.
 -spec check_handler_implementation(handler_type(), map()) -> check_result().
 check_handler_implementation(HandlerType, Implementation) when is_map(Implementation) ->
-    ExpectedOps = maps:get(operations, HandlerType),
-    ProvidedOps = maps:keys(Implementation),
+    case check_handler_signature(HandlerType) of
+        ok ->
+            ExpectedOps = maps:get(operations, HandlerType),
+            ProvidedOps = maps:keys(Implementation),
+            Missing = find_missing_operations(ExpectedOps, ProvidedOps),
+            Redundant = find_redundant_operations(ExpectedOps, ProvidedOps),
 
-    Missing = find_missing_operations(ExpectedOps, ProvidedOps),
-    Redundant = find_redundant_operations(ExpectedOps, ProvidedOps),
-
-    case {Missing, Redundant} of
-        {[], []} ->
-            check_operation_signatures(HandlerType, Implementation);
-        {_, _} when Missing =/= []; Redundant =/= [] ->
-            {error, {coverage_issues, Missing, Redundant}}
+            case {Missing, Redundant} of
+                {[], []} ->
+                    check_operation_signatures(HandlerType, Implementation);
+                _ ->
+                    {error, {coverage_issues, Missing, Redundant}}
+            end;
+        {error, _} ->
+            {error, {invalid_handler, HandlerType}}
     end.
 
 %% @doc Check handler signature for well-formedness.
@@ -137,13 +144,18 @@ check_handler_implementation(HandlerType, Implementation) when is_map(Implementa
 %% valid input/output types and effect rows.
 -spec check_handler_signature(handler_type()) -> check_result().
 check_handler_signature(HandlerType) ->
-    Checks = [
-        fun check_input_type/1,
-        fun check_output_type/1,
-        fun check_effects_row/1,
-        fun check_operations_consistency/1
-    ],
-    run_checks(Checks, HandlerType).
+    case catena_handler_types:is_handler_type(HandlerType) of
+        false ->
+            {error, {invalid_handler, HandlerType}};
+        true ->
+            Checks = [
+                fun check_input_type/1,
+                fun check_output_type/1,
+                fun check_effects_row/1,
+                fun check_operations_consistency/1
+            ],
+            run_checks(Checks, HandlerType)
+    end.
 
 %%====================================================================
 %% Operation Coverage Checking
@@ -157,9 +169,16 @@ check_handler_signature(HandlerType) ->
 check_operation_coverage(ExpectedOps, HandlerModule) ->
     Implemented = get_implemented_operations(HandlerModule),
     Missing = find_missing_operations(ExpectedOps, Implemented),
-    case Missing of
-        [] -> {complete, Implemented};
-        _ -> {error, {missing_operations, Missing}}
+    Redundant = find_redundant_operations(ExpectedOps, Implemented),
+    case {Missing, Redundant} of
+        {[], []} ->
+            {complete, Implemented};
+        {[_ | _], []} ->
+            {error, {missing_operations, Missing}};
+        {[], [_ | _]} ->
+            {error, {redundant_operations, Redundant}};
+        _ ->
+            {error, {coverage_issues, Missing, Redundant}}
     end.
 
 %% @doc Find operations declared but not implemented.
@@ -191,7 +210,7 @@ coverage_report(ExpectedOps, HandlerModule) ->
         coverage_percent => CoveragePercent,
         missing_operations => Missing,
         redundant_operations => Redundant,
-        is_complete => Missing =:= []
+        is_complete => Missing =:= [] andalso Redundant =:= []
     }.
 
 %%====================================================================
@@ -279,6 +298,11 @@ format_check_error({type_mismatch, Op, Expected, Actual}) ->
     <<"Type mismatch for operation '", (atom_to_binary(Op))/binary,
       "': expected ", (format_type(Expected))/binary,
       ", got ", (format_type(Actual))/binary>>;
+format_check_error({param_type_mismatch, Expected, Actual}) ->
+    <<"Parameter type mismatch: expected ", (format_type(Expected))/binary,
+      ", got ", (format_type(Actual))/binary>>;
+format_check_error(param_count_mismatch) ->
+    <<"Parameter count mismatch">>;
 format_check_error({return_type_mismatch, Expected, Actual}) ->
     <<"Return type mismatch: expected ", (format_type(Expected))/binary,
       ", got ", (format_type(Actual))/binary>>;
@@ -287,6 +311,10 @@ format_check_error({effect_mismatch, Expected, Actual}) ->
       ", got ", (format_effects(Actual))/binary>>;
 format_check_error({invalid_handler, Reason}) ->
     <<"Invalid handler: ", (format_term(Reason))/binary>>;
+format_check_error({invalid_operation_sig, Reason}) ->
+    <<"Invalid operation signature: ", (format_term(Reason))/binary>>;
+format_check_error({invalid_effects, Effects}) ->
+    <<"Invalid effects row: ", (format_term(Effects))/binary>>;
 format_check_error({coverage_issues, Missing, Redundant}) ->
     MissingBin = case Missing of
         [] -> <<"">>;
@@ -359,14 +387,14 @@ validate_operation_sig(OpSig) ->
 
 %% @private Run a list of checks, stopping at first error.
 run_checks(Checks, Value) ->
-    run_checks(Checks, Value, []).
+    run_checks(Checks, Value, ok).
 
-run_checks([], _, []) -> ok;
-run_checks([], _, Acc) -> {error, lists:reverse(Acc)};
-run_checks([Check | Rest], Value, Acc) ->
+run_checks([], _, Result) ->
+    Result;
+run_checks([Check | Rest], Value, ok) ->
     case Check(Value) of
-        ok -> run_checks(Rest, Value, Acc);
-        {error, Error} -> {error, lists:reverse([Error | Acc])}
+        ok -> run_checks(Rest, Value, ok);
+        {error, Error} -> {error, Error}
     end.
 
 %% @private Get implemented operations from handler module.
@@ -402,9 +430,20 @@ check_return_types(HandlerType, HandlerModule) ->
     end, ok, Operations).
 
 %% @private Check return type for a single operation.
-check_single_return_type(_Op, _OpSig, _HandlerModule) ->
-    % Simplified - full implementation would analyze handler function body
-    ok.
+check_single_return_type(Op, OpSig, HandlerModule) ->
+    case erlang:function_exported(HandlerModule, Op, 2) of
+        false ->
+            {error, {missing_operations, [Op]}};
+        true ->
+            SampleInput = sample_operation_value(maps:get(params, OpSig)),
+            DummyResumption = dummy_resumption(),
+            case catch apply(HandlerModule, Op, [SampleInput, DummyResumption]) of
+                {'EXIT', Reason} ->
+                    {error, {type_mismatch, Op, OpSig, Reason}};
+                Result ->
+                    check_return_type(maps:get(result, OpSig), Result)
+            end
+    end.
 
 %% @private Check operation signatures match implementation.
 check_operation_signatures(HandlerType, Implementation) ->
@@ -424,9 +463,17 @@ check_single_op_signature(Op, ExpectedOps, ImplFun) ->
     end.
 
 %% @private Verify signature matches implementation.
-verify_signature_match(_ExpectedSig, _ImplFun) ->
-    % Simplified - full implementation would check function types
-    ok.
+verify_signature_match(ExpectedSig, ImplFun) when is_function(ImplFun, 2) ->
+    SampleInput = sample_operation_value(maps:get(params, ExpectedSig)),
+    DummyResumption = dummy_resumption(),
+    case catch ImplFun(SampleInput, DummyResumption) of
+        {'EXIT', Reason} ->
+            {error, {type_mismatch, handler_implementation, ExpectedSig, Reason}};
+        Result ->
+            check_return_type(maps:get(result, ExpectedSig), Result)
+    end;
+verify_signature_match(ExpectedSig, ImplFun) ->
+    {error, {type_mismatch, handler_implementation, ExpectedSig, ImplFun}}.
 
 %% @private Check parameter types match values.
 check_param_types([], []) -> ok;
@@ -439,17 +486,20 @@ check_param_types(_, _) -> {error, param_count_mismatch}.
 
 %% @private Check if two types match.
 types_match(T1, T2) when T1 =:= T2 -> true;
+types_match({type_var, _}, _) -> true;
+types_match(_, {type_var, _}) -> true;
 types_match(#{kind := t_var}, _) -> true;
 types_match(_, #{kind := t_var}) -> true;
+types_match(any, _) -> true;
+types_match(_, any) -> true;
 types_match(T1, T2) when is_map(T1), is_map(T2) ->
     maps:size(T1) =:= maps:size(T2);
 types_match(_, _) -> false.
 
 %% @private Check if effect rows match.
 effect_rows_match(Row1, Row2) ->
-    List1 = lists:sort(catena_row_types:row_to_list(Row1)),
-    List2 = lists:sort(catena_row_types:row_to_list(Row2)),
-    List1 =:= List2.
+    catena_row_operations:effect_subsumes(Row1, Row2) andalso
+    catena_row_operations:effect_subsumes(Row2, Row1).
 
 %% @private Infer operation signatures from implementation.
 infer_operation_sigs(Implementation) ->
@@ -457,13 +507,11 @@ infer_operation_sigs(Implementation) ->
 
 %% @private Infer signature from function.
 infer_sig_from_fun(_Fun) ->
-    % Simplified - returns generic operation signature
     catena_handler_types:operation_sig().
 
 %% @private Infer input/output types from implementation.
 infer_io_types(_Implementation) ->
-    % Simplified - returns generic type variables
-    {catena_types:tcon('A'), catena_types:tcon('B')}.
+    {{type_var, input}, {type_var, output}}.
 
 %% @private Infer effect row from implementation.
 infer_effect_row(_Implementation) ->
@@ -488,7 +536,7 @@ generalize_types(Types) ->
 generalize_type(#{kind := TypeKind} = Type) when TypeKind =:= t_con; TypeKind =:= t_var ->
     Type;
 generalize_type(Type) when is_atom(Type) ->
-    catena_types:tcon('_');
+    {type_var, generalized};
 generalize_type(Type) -> Type.
 
 %% @private Generalize effect row.
@@ -515,15 +563,23 @@ type_of(_) -> any.
 
 %% @private Format a type for display.
 format_type(Type) when is_atom(Type) -> atom_to_binary(Type);
-format_type(Type) -> catena_handler_types:format_type(Type).
+format_type({type_var, Name}) ->
+    <<"'",
+      (atom_to_binary(Name))/binary>>;
+format_type(Type) when is_tuple(Type) ->
+    list_to_binary(io_lib:format("~p", [Type]));
+format_type(Type) when is_map(Type) ->
+    list_to_binary(io_lib:format("~p", [Type]));
+format_type(Type) ->
+    list_to_binary(io_lib:format("~p", [Type])).
 
 %% @private Format effects for display.
 format_effects(Effects) ->
     Elements = catena_row_types:row_to_list(Effects),
-    Formatted = [atom_to_binary(E) || E <- Elements],
+    Formatted = [format_effect(E) || E <- Elements],
     case Formatted of
         [] -> <<"{}">>;
-        _ -> <<"{${", (list_to_binary(lists:join(<<", ">>, Formatted)))/binary, "}">>
+        _ -> <<"{", (iolist_to_binary(lists:join(<<", ">>, Formatted)))/binary, "}">>
     end.
 
 %% @private Format a term for display.
@@ -534,4 +590,34 @@ format_term(Term) -> list_to_binary(io_lib:format("~p", [Term])).
 binary_list([]) -> <<"">>;
 binary_list(Atoms) ->
     Binaries = [atom_to_binary(A) || A <- Atoms],
-    iolist_to_binary([<<",">> | lists:join(<<", ">>, Binaries)]).
+    iolist_to_binary(lists:join(<<", ">>, Binaries)).
+
+-spec sample_operation_value([type_ref()]) -> term().
+sample_operation_value([]) ->
+    unit;
+sample_operation_value([Type]) ->
+    sample_value_for_type(Type);
+sample_operation_value(Types) ->
+    [sample_value_for_type(Type) || Type <- Types].
+
+-spec sample_value_for_type(type_ref()) -> term().
+sample_value_for_type(atom) -> ok;
+sample_value_for_type(int) -> 0;
+sample_value_for_type(float) -> 0.0;
+sample_value_for_type(binary) -> <<>>;
+sample_value_for_type(list) -> [];
+sample_value_for_type(map) -> #{};
+sample_value_for_type(bool) -> true;
+sample_value_for_type(unit) -> unit;
+sample_value_for_type({type_var, _}) -> unit;
+sample_value_for_type(_) -> unit.
+
+-spec dummy_resumption() -> catena_resumption:resumption().
+dummy_resumption() ->
+    catena_resumption:new(fun(Value) -> Value end, 0, 0, #{}).
+
+-spec format_effect(term()) -> binary().
+format_effect(Effect) when is_atom(Effect) ->
+    atom_to_binary(Effect);
+format_effect(Effect) ->
+    format_term(Effect).
