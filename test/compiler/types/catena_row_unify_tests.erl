@@ -15,6 +15,7 @@ catena_row_unify_test_() ->
         {"unify rows with same elements", fun test_unify_same_elements/0},
         {"unify rows with different elements fails", fun test_unify_different_fails/0},
         {"unify rows with row variables", fun test_unify_row_vars/0},
+        {"unify closed row with open row binds missing effects", fun test_unify_open_closed/0},
         {"row occurs check", fun test_row_occurs/0},
         {"apply row substitution", fun test_apply_subst/0},
         {"compose row substitutions", fun test_compose_subst/0},
@@ -61,6 +62,15 @@ test_unify_row_vars() ->
     Row2 = maps:put(row_var, Var, catena_row_types:effect_row([a])),
     ?assertMatch({ok, _}, catena_row_unify:unify_rows(Row1, Row2)).
 
+test_unify_open_closed() ->
+    Var = catena_row_types:row_var(),
+    VarId = catena_row_types:row_var_id(Var),
+    Closed = catena_row_types:effect_row([a, b, c]),
+    Open = catena_row_types:effect_row([a], Var),
+
+    {ok, Subst} = catena_row_unify:unify_rows(Closed, Open),
+    ?assertEqual(catena_row_types:effect_row([b, c]), maps:get(VarId, Subst)).
+
 %%%---------------------------------------------------------------------
 %%% Row Occurs Check Tests
 %%%---------------------------------------------------------------------
@@ -80,24 +90,31 @@ test_row_occurs() ->
 %%%---------------------------------------------------------------------
 
 test_apply_subst() ->
-    Subst = catena_row_unify:empty_row_subst(),
-    Row = catena_row_types:effect_row([a, b]),
-
-    %% Applying empty substitution returns original row
-    ?assertEqual(Row, catena_row_unify:apply_row_subst(Row, Subst)).
-
-test_compose_subst() ->
     Var = catena_row_types:row_var(),
     VarId = catena_row_types:row_var_id(Var),
+    Subst = #{VarId => catena_row_types:effect_row([c])},
+    Row = catena_row_types:effect_row([a, b], Var),
 
-    Row1 = catena_row_types:effect_row([a]),
-    Row2 = catena_row_types:effect_row([b]),
+    ?assertEqual(
+        catena_row_types:effect_row([a, b, c]),
+        catena_row_unify:apply_row_subst(Row, Subst)
+    ).
 
-    Subst1 = #{VarId => Row1},
-    Subst2 = #{VarId => Row2},
+test_compose_subst() ->
+    Var1 = catena_row_types:row_var(),
+    Var2 = catena_row_types:row_var(),
+    VarId1 = catena_row_types:row_var_id(Var1),
+    VarId2 = catena_row_types:row_var_id(Var2),
+
+    Subst1 = #{VarId1 => catena_row_types:effect_row([a], Var2)},
+    Subst2 = #{VarId2 => catena_row_types:effect_row([b])},
 
     Composed = catena_row_unify:compose_row_subst(Subst1, Subst2),
-    ?assert(is_map(Composed)).
+    ?assertEqual(
+        catena_row_types:effect_row([a, b]),
+        maps:get(VarId1, Composed)
+    ),
+    ?assertEqual(catena_row_types:effect_row([b]), maps:get(VarId2, Composed)).
 
 %%%---------------------------------------------------------------------
 %%% Constraint Tests
@@ -133,3 +150,6 @@ test_row_subst_utilities() ->
     List = [{VarId, Row}],
     Subst = catena_row_unify:list_to_row_subst(List),
     ?assertEqual(List, catena_row_unify:row_subst_to_list(Subst)).
+
+row_subst_utilities_test() ->
+    test_row_subst_utilities().

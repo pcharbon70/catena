@@ -60,11 +60,15 @@
 %% @doc Generalize free row variables in a type.
 -spec generalize_row_vars(row_poly_type(), inference_state()) -> {row_poly_scheme(), inference_state()}.
 generalize_row_vars(#{effects := Effects, row_vars := RowVars}, State) ->
-    %% Find free row variables (those not in the environment)
-    FreeRowVars = RowVars,
+    FreeRowVars = lists:usort(RowVars ++ row_var_ids_from_effect_row(Effects)),
+    GeneralizedType = #{
+        kind => row_poly,
+        effects => Effects,
+        row_vars => FreeRowVars
+    },
     Scheme = #{
         kind => row_scheme,
-        type => #{effects => Effects, row_vars => RowVars},
+        type => GeneralizedType,
         row_vars => FreeRowVars
     },
     {Scheme, State}.
@@ -72,9 +76,12 @@ generalize_row_vars(#{effects := Effects, row_vars := RowVars}, State) ->
 %% @doc Generalize with a specific row variable set.
 -spec generalize_row_vars(row_poly_type(), [catena_row_types:row_var_id()], inference_state()) -> {row_poly_scheme(), inference_state()}.
 generalize_row_vars(Type, ExplicitVars, State) ->
+    ExplicitType = Type#{
+        row_vars => lists:usort(ExplicitVars ++ row_var_ids_from_effect_row(maps:get(effects, Type)))
+    },
     Scheme = #{
         kind => row_scheme,
-        type => Type,
+        type => ExplicitType,
         row_vars => ExplicitVars
     },
     {Scheme, State}.
@@ -86,29 +93,28 @@ generalize_row_vars(Type, ExplicitVars, State) ->
 %% @doc Instantiate row variables in a scheme with fresh variables.
 -spec instantiate_row_vars(row_poly_scheme(), inference_state()) -> {row_poly_type(), inference_state()}.
 instantiate_row_vars(#{type := Type, row_vars := RowVarIds}, State) ->
-    %% Create fresh row variables for each quantified variable
-    {FreshVars, NewState} = lists:mapfoldl(
-        fun(_Id, S) ->
-            Var = catena_row_types:fresh_row_var(),
-            {catena_row_types:row_var_id(Var), S}
+    {Subst, NewState} = lists:foldl(
+        fun(RowVarId, {AccSubst, AccState}) ->
+            {FreshVar, NextState} = catena_row_types:fresh_row_var(AccState),
+            FreshRow = catena_row_types:effect_row([], FreshVar),
+            {maps:put(RowVarId, FreshRow, AccSubst), NextState}
         end,
-        State,
+        {#{}, State},
         RowVarIds
     ),
-
-    %% Build substitution
-    Subst = maps:from_list(lists:zip(RowVarIds, FreshVars)),
-
-    %% Apply substitution to get instance type
     InstanceType = apply_row_subst_to_type(Type, Subst),
-
     {InstanceType, NewState}.
 
 %% @doc Instantiate with specific row variables.
 -spec instantiate_row_vars(row_poly_scheme(), [catena_row_types:row_var()], inference_state()) -> {row_poly_type(), inference_state()}.
-instantiate_row_vars(#{type := Type}, Vars, State) ->
-    %% Use provided variables
-    InstanceType = Type#{row_vars => [catena_row_types:row_var_id(V) || V <- Vars]},
+instantiate_row_vars(#{type := Type, row_vars := RowVarIds}, Vars, State) ->
+    Subst = maps:from_list(
+        lists:zip(
+            RowVarIds,
+            [catena_row_types:effect_row([], Var) || Var <- Vars]
+        )
+    ),
+    InstanceType = apply_row_subst_to_type(Type, Subst),
     {InstanceType, State}.
 
 %%%---------------------------------------------------------------------
@@ -122,53 +128,61 @@ infer_row_poly_function(#{effects := EffectList}, State) when is_list(EffectList
     Type = #{
         kind => row_poly,
         effects => Effects,
-        row_vars => []
+        row_vars => row_var_ids_from_effect_row(Effects)
     },
     {Type, State};
 infer_row_poly_function(#{effects := Effects}, State) when is_map(Effects) ->
+    EffectRow = effect_row_from_term(Effects),
     Type = #{
         kind => row_poly,
-        effects => Effects,
-        row_vars => []
+        effects => EffectRow,
+        row_vars => row_var_ids_from_effect_row(EffectRow)
     },
     {Type, State}.
 
 %% @doc Infer row polymorphic type for an effect operation.
 -spec infer_row_poly_operation(atom(), inference_state()) -> {row_poly_type(), inference_state()}.
 infer_row_poly_operation(Operation, State) ->
-    %% Effect operations introduce fresh row variables
-    Var = catena_row_types:fresh_row_var(),
+    {Var, NextState} = catena_row_types:fresh_row_var(State),
     Effects = catena_row_types:effect_row([Operation]),
     EffectsWithVar = Effects#{row_var => Var},
-
     Type = #{
         kind => row_poly,
         effects => EffectsWithVar,
         row_vars => [catena_row_types:row_var_id(Var)]
     },
-    {Type, State}.
+    {Type, NextState}.
 
 %% @doc Infer row polymorphic type for a handler.
 -spec infer_row_poly_handler(map(), inference_state()) -> {row_poly_type(), inference_state()}.
 infer_row_poly_handler(HandlerInfo, State) ->
     case HandlerInfo of
-        #{handled := Handled, remaining := Remaining} ->
-            %% Handler removes handled effects and may introduce remaining effects
-            HandledEffects = catena_row_types:effect_row(Handled),
-            RemainingEffects = catena_row_types:effect_row(Remaining),
-            Combined = catena_row_operations:effect_union_rows(HandledEffects, RemainingEffects),
+        #{handled := Handled, remaining := Remaining, body_effects := BodyEffects} ->
+            HandledEffects = effect_row_from_term(Handled),
+            RemainingEffects = effect_row_from_term(Remaining),
+            BodyRow = effect_row_from_term(BodyEffects),
+            RemainingBodyEffects = catena_row_operations:effect_difference(BodyRow, HandledEffects),
+            Combined = catena_row_operations:effect_union_rows(RemainingBodyEffects, RemainingEffects),
             Type = #{
                 kind => row_poly,
                 effects => Combined,
-                row_vars => []
+                row_vars => row_var_ids_from_effect_row(Combined)
             },
             {Type, State};
-        #{handled := Handled} ->
-            Effects = catena_row_types:effect_row(Handled),
+        #{handled := _Handled, remaining := Remaining} ->
+            RemainingEffects = effect_row_from_term(Remaining),
+            Type = #{
+                kind => row_poly,
+                effects => RemainingEffects,
+                row_vars => row_var_ids_from_effect_row(RemainingEffects)
+            },
+            {Type, State};
+        #{handled := _Handled} ->
+            Effects = catena_row_types:empty_row(),
             Type = #{
                 kind => row_poly,
                 effects => Effects,
-                row_vars => []
+                row_vars => row_var_ids_from_effect_row(Effects)
             },
             {Type, State}
     end.
@@ -180,10 +194,15 @@ infer_row_poly_handler(HandlerInfo, State) ->
 %% @doc Propagate row constraints through the type.
 -spec propagate_row_constraints(row_poly_type(), inference_state()) -> {ok, inference_state()} | {error, term()}.
 propagate_row_constraints(#{effects := Effects}, State) ->
-    Constraints = catena_row_unify:generate_row_constraints(Effects, Effects),
-    case catena_row_unify:solve_row_constraints(Constraints) of
+    Constraints = catena_row_constraints:merge_constraints(
+        maps:get(constraints, State, []),
+        catena_row_constraints:generate_constraints(Effects, Effects)
+    ),
+    case catena_row_constraints:solve_constraints(Constraints) of
         {ok, Subst} ->
-            {ok, State#{substitutions => Subst}};
+            ExistingSubst = maps:get(substitutions, State, catena_row_unify:empty_row_subst()),
+            ComposedSubst = catena_row_unify:compose_row_subst(ExistingSubst, Subst),
+            {ok, State#{constraints => Constraints, substitutions => ComposedSubst}};
         {error, Reason} ->
             {error, Reason}
     end.
@@ -194,11 +213,14 @@ propagate_row_constraints(#{effects := Effects}, State) ->
 
 %% @doc Create a row polymorphic scheme from a type and state.
 -spec row_poly_scheme(row_poly_type(), inference_state()) -> row_poly_scheme().
-row_poly_scheme(Type, #{row_var_counter := Counter}) ->
+row_poly_scheme(Type, _State) ->
+    RowVars = lists:usort(
+        maps:get(row_vars, Type, []) ++ row_var_ids_from_effect_row(maps:get(effects, Type))
+    ),
     Scheme = #{
         kind => row_scheme,
-        type => Type,
-        row_vars => []
+        type => Type#{row_vars => RowVars},
+        row_vars => RowVars
     },
     Scheme.
 
@@ -213,24 +235,22 @@ row_poly_scheme_instantiate(Scheme, State) ->
 
 %% @doc Apply row substitution to a type.
 -spec apply_row_subst_to_type(row_poly_type(), catena_row_unify:row_subst()) -> row_poly_type().
-apply_row_subst_to_type(#{effects := Effects, row_vars := RowVars}, Subst) ->
+apply_row_subst_to_type(#{effects := Effects}, Subst) ->
     NewEffects = catena_row_unify:apply_row_subst(Effects, Subst),
     #{
         kind => row_poly,
         effects => NewEffects,
-        row_vars => RowVars
+        row_vars => row_var_ids_from_effect_row(NewEffects)
     }.
 
-%% @doc Create fresh inference state.
--spec fresh_state() -> inference_state().
-fresh_state() ->
-    #{
-        row_var_counter => 0,
-        constraints => [],
-        substitutions => #{}
-    }.
+-spec row_var_ids_from_effect_row(catena_row_types:effect_row()) -> [catena_row_types:row_var_id()].
+row_var_ids_from_effect_row(#{row_var := undefined}) ->
+    [];
+row_var_ids_from_effect_row(#{row_var := RowVar}) ->
+    [catena_row_types:row_var_id(RowVar)].
 
-%% @doc Update state with new constraint.
--spec add_constraint(catena_row_unify:row_constraint(), inference_state()) -> inference_state().
-add_constraint(Constraint, #{constraints := Constraints} = State) ->
-    State#{constraints => [Constraint | Constraints]}.
+-spec effect_row_from_term(term()) -> catena_row_types:effect_row().
+effect_row_from_term(Effects) when is_list(Effects) ->
+    catena_row_types:effect_row(Effects);
+effect_row_from_term(#{kind := effect_row} = Effects) ->
+    catena_row_types:row_normalize(Effects).

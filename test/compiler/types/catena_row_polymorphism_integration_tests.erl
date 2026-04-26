@@ -30,6 +30,7 @@ catena_row_polymorphism_integration_test_() ->
         {"row poly function inference", fun test_function_inference/0},
         {"row poly operation inference", fun test_operation_inference/0},
         {"row poly handler inference", fun test_handler_inference/0},
+        {"row poly handler inference with body effects", fun test_handler_inference_with_body_effects/0},
         {"handled effect removal preserves remaining effects", fun test_handled_effect_removal/0},
         {"effect subset failure is reported", fun test_effect_subset_failure/0},
         {"full row polymorphism workflow", fun test_workflow/0}
@@ -145,7 +146,8 @@ test_effect_subsumption() ->
 %%%---------------------------------------------------------------------
 
 test_generalization() ->
-    Effects = catena_row_types:effect_row([a, b]),
+    RowVar = catena_row_types:row_var({row_var, 1}),
+    Effects = catena_row_types:effect_row([a, b], RowVar),
     Type = #{
         kind => row_poly,
         effects => Effects,
@@ -154,14 +156,16 @@ test_generalization() ->
     State = #{row_var_counter => 0, constraints => [], substitutions => #{}},
 
     {Scheme, _} = catena_row_inference:generalize_row_vars(Type, State),
-    ?assertEqual(row_scheme, maps:get(kind, Scheme)).
+    ?assertEqual(row_scheme, maps:get(kind, Scheme)),
+    ?assertEqual([{row_var, 1}], maps:get(row_vars, Scheme)).
 
 test_instantiation() ->
-    Effects = catena_row_types:effect_row([a]),
+    OldRowVar = catena_row_types:row_var({row_var, 1}),
+    Effects = catena_row_types:effect_row([a], OldRowVar),
     Type = #{
         kind => row_poly,
         effects => Effects,
-        row_vars => []
+        row_vars => [{row_var, 1}]
     },
     Scheme = #{
         kind => row_scheme,
@@ -170,8 +174,10 @@ test_instantiation() ->
     },
     State = #{row_var_counter => 0, constraints => [], substitutions => #{}},
 
-    {Instance, _} = catena_row_inference:instantiate_row_vars(Scheme, State),
-    ?assertEqual(row_poly, maps:get(kind, Instance)).
+    {Instance, NewState} = catena_row_inference:instantiate_row_vars(Scheme, State),
+    ?assertEqual(row_poly, maps:get(kind, Instance)),
+    ?assertEqual(1, maps:get(row_var_counter, NewState)),
+    ?assertEqual([{row_var, 0}], maps:get(row_vars, Instance)).
 
 test_function_inference() ->
     FunInfo = #{effects => [a, b, c]},
@@ -187,8 +193,10 @@ test_function_inference() ->
 test_operation_inference() ->
     State = #{row_var_counter => 0, constraints => [], substitutions => #{}},
 
-    {Type, _} = catena_row_inference:infer_row_poly_operation('State', State),
-    ?assertEqual(row_poly, maps:get(kind, Type)).
+    {Type, NewState} = catena_row_inference:infer_row_poly_operation('State', State),
+    ?assertEqual(row_poly, maps:get(kind, Type)),
+    ?assertEqual(1, maps:get(row_var_counter, NewState)),
+    ?assertEqual([{row_var, 0}], maps:get(row_vars, Type)).
 
 test_handler_inference() ->
     HandlerInfo = #{
@@ -198,7 +206,19 @@ test_handler_inference() ->
     State = #{row_var_counter => 0, constraints => [], substitutions => #{}},
 
     {Type, _} = catena_row_inference:infer_row_poly_handler(HandlerInfo, State),
-    ?assertEqual(row_poly, maps:get(kind, Type)).
+    ?assertEqual(row_poly, maps:get(kind, Type)),
+    ?assertEqual([c], catena_row_types:row_to_list(maps:get(effects, Type))).
+
+test_handler_inference_with_body_effects() ->
+    HandlerInfo = #{
+        handled => [a, b],
+        remaining => [d],
+        body_effects => [a, b, c]
+    },
+    State = #{row_var_counter => 0, constraints => [], substitutions => #{}},
+
+    {Type, _} = catena_row_inference:infer_row_poly_handler(HandlerInfo, State),
+    ?assertEqual([c, d], catena_row_types:row_to_list(maps:get(effects, Type))).
 
 test_handled_effect_removal() ->
     Expr = {handle_expr,
@@ -227,7 +247,8 @@ test_effect_subset_failure() ->
 
 test_workflow() ->
     %% Create effect rows
-    Row1 = catena_row_types:effect_row([a, b]),
+    OpenVar = catena_row_types:row_var({row_var, 5}),
+    Row1 = catena_row_types:effect_row([a, b], OpenVar),
     Row2 = catena_row_types:effect_row([b, c]),
 
     %% Perform operations
@@ -238,8 +259,9 @@ test_workflow() ->
     ?assertNot(catena_row_operations:effect_subsumes(Diff, Row2)),
 
     %% Type inference
-    FunInfo = #{effects => [a, b, c]},
+    FunInfo = #{effects => Row1},
     State = #{row_var_counter => 0, constraints => [], substitutions => #{}},
 
     {Type, _} = catena_row_inference:infer_row_poly_function(FunInfo, State),
-    ?assertEqual(row_poly, maps:get(kind, Type)).
+    ?assertEqual(row_poly, maps:get(kind, Type)),
+    ?assertEqual([{row_var, 5}], maps:get(row_vars, Type)).

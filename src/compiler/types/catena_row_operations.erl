@@ -57,11 +57,8 @@ effect_union_rows(Row1, Row2) ->
 
 %% @doc Compute union with options.
 -spec effect_union_rows(effect_set(), effect_set(), effect_op_options()) -> effect_set().
-effect_union_rows(#{elements := Es1, row_var := Rv1}, #{elements := Es2, row_var := Rv2}, Options) ->
-    Union = catena_row_types:row_union(
-        #{elements => Es1, row_var => Rv1},
-        #{elements => Es2, row_var => Rv2}
-    ),
+effect_union_rows(Row1, Row2, Options) ->
+    Union = catena_row_types:row_union(Row1, Row2),
     case maps:get(normalize, Options, true) of
         true -> catena_row_types:row_normalize(Union);
         false -> Union
@@ -78,11 +75,22 @@ effect_difference(Row1, Row2) ->
 
 %% @doc Compute difference with options.
 -spec effect_difference(effect_set(), effect_set(), effect_op_options()) -> effect_set().
-effect_difference(#{elements := Es1, row_var := Rv1}, #{elements := Es2}, Options) ->
-    Diff = catena_row_types:row_difference(
-        #{elements => Es1, row_var => Rv1},
-        #{elements => Es2, row_var => undefined}
+effect_difference(#{elements := Es1, row_var := Rv1}, #{elements := Es2, row_var := Rv2}, Options) ->
+    BaseDiff = catena_row_types:row_difference(
+        catena_row_types:effect_row(Es1, Rv1),
+        catena_row_types:effect_row(Es2)
     ),
+    Diff = case {Rv1, Rv2} of
+        {undefined, _} ->
+            catena_row_types:effect_row(maps:get(elements, BaseDiff));
+        {_Provided, undefined} ->
+            BaseDiff;
+        {_Provided, _Required} ->
+            case maps:get(strict, Options, false) of
+                true -> catena_row_types:effect_row(maps:get(elements, BaseDiff));
+                false -> BaseDiff
+            end
+    end,
     case maps:get(normalize, Options, true) of
         true -> catena_row_types:row_normalize(Diff);
         false -> Diff
@@ -102,23 +110,15 @@ effect_subsumes(Row1, Row2) ->
 -spec effect_subsumes(effect_set(), effect_set(), effect_op_options()) -> boolean().
 effect_subsumes(#{elements := Es1, row_var := Rv1}, #{elements := Es2, row_var := Rv2}, Options) ->
     AllowRowVars = maps:get(allow_row_vars, Options, true),
-
-    %% Check if all elements of Es2 are in Es1
-    ElementsSubsume = lists:all(fun(E) ->
-        lists:member(E, Es1)
-    end, Es2),
-
-    %% Check row variable subsumption
+    ElementsSubsume = lists:all(fun(E) -> lists:member(E, Es1) end, Es2),
     RowVarsSubsume = case AllowRowVars of
         true ->
-            %% Row variables can represent any effects
             case {Rv1, Rv2} of
                 {_, undefined} -> true;
-                {undefined, _} -> true;
-                _ -> true  %% Both have row vars, they subsume each other
+                {undefined, _} -> false;
+                _ -> true
             end;
         false ->
-            %% Strict mode: both must have same row var status
             Rv1 =:= Rv2
     end,
 
@@ -139,9 +139,8 @@ effect_normalize(#{elements := Es, row_var := Rv} = Row, Options) ->
     NormalizedEs = lists:usort(Es),
     case maps:get(strict, Options, false) of
         true ->
-            %% Strict mode: remove row var if elements are empty
-            case NormalizedEs of
-                [] -> catena_row_types:empty_row();
+            case {NormalizedEs, Rv} of
+                {[], undefined} -> catena_row_types:empty_row();
                 _ -> Row#{elements => NormalizedEs}
             end;
         false ->
@@ -157,7 +156,7 @@ effect_normalize(#{elements := Es, row_var := Rv} = Row, Options) ->
 is_valid_effect_set(Row) ->
     catena_row_types:is_valid_row(Row) andalso
     lists:all(fun catena_row_types:is_valid_effect/1,
-        catena_row_types:row_to_list(Row)).
+        maps:get(elements, Row)).
 
 %%%---------------------------------------------------------------------
 %%% Row-Aware Effect Operations
@@ -190,19 +189,11 @@ effect_eq(#{elements := Es1, row_var := Rv1}, #{elements := Es2, row_var := Rv2}
 
 %% @doc Check if one effect set is a subset of another.
 -spec effect_subset(effect_set(), effect_set()) -> boolean().
-effect_subset(#{elements := Es1}, #{elements := Es2}) ->
-    lists:all(fun(E) -> lists:member(E, Es2) end, Es1).
-
-%%%---------------------------------------------------------------------
-%%% Internal Helpers
-%%%---------------------------------------------------------------------
-
-%% @doc Internal helper to get row elements safely.
--spec get_elements(effect_set()) -> [atom()].
-get_elements(#{elements := Es}) ->
-    Es.
-
-%% @doc Internal helper to get row variable safely.
--spec get_row_var(effect_set()) -> catena_row_types:row_var() | undefined.
-get_row_var(#{row_var := Rv}) ->
-    Rv.
+effect_subset(#{elements := Es1, row_var := Rv1}, #{elements := Es2, row_var := Rv2}) ->
+    ElementsSubset = lists:all(fun(E) -> lists:member(E, Es2) end, Es1),
+    RowVarsSubset = case {Rv1, Rv2} of
+        {undefined, _} -> true;
+        {_, undefined} -> false;
+        _ -> true
+    end,
+    ElementsSubset andalso RowVarsSubset.

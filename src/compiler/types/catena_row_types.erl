@@ -127,7 +127,7 @@ is_effect_row(_) -> false.
 
 %% @doc Check if an effect row is empty.
 -spec is_empty_row(effect_row()) -> boolean().
-is_empty_row(#{elements := []}) -> true;
+is_empty_row(#{elements := [], row_var := undefined}) -> true;
 is_empty_row(_) -> false.
 
 %%%---------------------------------------------------------------------
@@ -177,8 +177,14 @@ row_contains(#{elements := Es}, Effect) ->
 
 %% @doc Check if an effect row contains all effects from another row.
 -spec row_contains_all(effect_row(), effect_row()) -> boolean().
-row_contains_all(#{elements := Es1}, #{elements := Es2}) ->
-    lists:all(fun(E) -> lists:member(E, Es1) end, Es2).
+row_contains_all(#{elements := Es1, row_var := ProvidedVar}, #{elements := Es2, row_var := RequiredVar}) ->
+    ElementsContained = lists:all(fun(E) -> lists:member(E, Es1) end, Es2),
+    VarsCompatible = case RequiredVar of
+        undefined -> true;
+        _ when ProvidedVar =:= undefined -> false;
+        _ -> true
+    end,
+    ElementsContained andalso VarsCompatible.
 
 %% @doc Normalize an effect row (sort and deduplicate elements).
 -spec row_normalize(effect_row()) -> effect_row().
@@ -216,12 +222,17 @@ list_to_row(Elements) when is_list(Elements) ->
 %%%---------------------------------------------------------------------
 
 %% @doc Create a fresh row variable with state counter.
--spec fresh_row_var(map()) -> {row_var(), map()}.
-fresh_row_var(#{row_var_counter := Counter} = State) ->
+-spec fresh_row_var(catena_infer_state:infer_state() | map()) ->
+    {row_var(), catena_infer_state:infer_state() | map()}.
+fresh_row_var(State) when is_map(State) ->
+    Counter = maps:get(row_var_counter, State, 0),
     Id = {row_var, Counter},
     Var = row_var(Id),
     NewState = State#{row_var_counter => Counter + 1},
-    {Var, NewState}.
+    {Var, NewState};
+fresh_row_var(State) ->
+    {FreshId, NewState} = catena_infer_state:fresh_var_id(State),
+    {row_var({row_var, FreshId}), NewState}.
 
 %% @doc Create a fresh row variable without state (uses process dictionary).
 -spec fresh_row_var() -> row_var().
@@ -250,7 +261,9 @@ fresh_row_var_id() ->
 %% @doc Validate a term as a proper effect row.
 -spec is_valid_row(term()) -> boolean().
 is_valid_row(#{kind := effect_row, elements := Es, row_var := Rv}) when is_list(Es) ->
-    lists:all(fun is_atom/1, Es) andalso (Rv =:= undefined orelse is_row_var(Rv));
+    lists:usort(Es) =:= Es andalso
+    lists:all(fun is_atom/1, Es) andalso
+    (Rv =:= undefined orelse is_row_var(Rv));
 is_valid_row(_) ->
     false.
 
