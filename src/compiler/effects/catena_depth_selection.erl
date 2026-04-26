@@ -45,6 +45,7 @@
 -export([
     mixed_handler_scope/2,
     depth_precedence/2,
+    depth_precedence/3,
     resolve_handler_conflict/3
 ]).
 
@@ -71,7 +72,8 @@
     type => deep | shallow,
     effect => atom(),
     handler => function(),
-    depth => handler_depth()
+    depth => handler_depth(),
+    metadata => map()
 }.
 -type operation() :: {atom(), atom(), [term()]}.
 
@@ -100,15 +102,21 @@ with_shallow_handler(EffectName, HandlerFun, UserFun) ->
 with_handler(EffectName, deep, HandlerFun, UserFun) ->
     with_deep_handler(EffectName, HandlerFun, UserFun);
 with_handler(EffectName, shallow, HandlerFun, UserFun) ->
-    with_shallow_handler(EffectName, HandlerFun, UserFun).
+    with_shallow_handler(EffectName, HandlerFun, UserFun);
+with_handler(EffectName, Depth, HandlerFun, UserFun) ->
+    case catena_handler_depth:normalize_depth(Depth) of
+        {ok, deep} -> with_deep_handler(EffectName, HandlerFun, UserFun);
+        {ok, shallow} -> with_shallow_handler(EffectName, HandlerFun, UserFun);
+        {error, Reason} -> error(Reason)
+    end.
 
 %% @doc Select a depth based on configuration or defaults.
 %% Returns deep if no preference specified.
 -spec select_depth(proplists:proplist()) -> handler_depth().
 select_depth(Options) ->
-    case proplists:get_value(depth, Options) of
-        undefined -> deep;
-        Depth -> Depth
+    case catena_handler_depth:normalize_depth(Options) of
+        {ok, Depth} -> Depth;
+        {error, _} -> deep
     end.
 
 %%====================================================================
@@ -119,24 +127,22 @@ select_depth(Options) ->
 %% For deep handlers, returns unchanged. For shallow, creates deep equivalent.
 -spec to_deep(handler()) -> handler().
 to_deep(#{type := deep} = Handler) -> Handler;
-to_deep(#{type := shallow, effect := Effect, handler := Fun}) ->
-    #{
+to_deep(#{type := shallow} = Handler) ->
+    Handler#{
         type => deep,
-        effect => Effect,
-        handler => Fun,
-        depth => deep
+        depth => deep,
+        metadata => conversion_metadata(Handler, deep)
     }.
 
 %% @doc Convert any handler to shallow.
 %% For shallow handlers, returns unchanged. For deep, creates shallow equivalent.
 -spec to_shallow(handler()) -> handler().
 to_shallow(#{type := shallow} = Handler) -> Handler;
-to_shallow(#{type := deep, effect := Effect, handler := Fun}) ->
-    #{
+to_shallow(#{type := deep} = Handler) ->
+    Handler#{
         type => shallow,
-        effect => Effect,
-        handler => Fun,
-        depth => shallow
+        depth => shallow,
+        metadata => conversion_metadata(Handler, shallow)
     }.
 
 %% @doc Convert a handler to a specific depth.
@@ -149,7 +155,10 @@ convert_depth(Handler, shallow) -> to_shallow(Handler).
 %% that the conversion is semantically meaningful.
 -spec can_convert(handler(), handler_depth()) -> boolean().
 can_convert(#{type := CurrentType}, TargetDepth) ->
-    CurrentType =:= TargetDepth orelse true.
+    case catena_handler_depth:validate_depth(TargetDepth) of
+        {ok, _} -> CurrentType =:= TargetDepth orelse true;
+        {error, _} -> false
+    end.
 
 %%====================================================================
 %% Mixed Depth Handlers
@@ -159,9 +168,9 @@ can_convert(#{type := CurrentType}, TargetDepth) ->
 %% The scope determines which handlers take precedence.
 -spec mixed_handler_scope([handler()], proplists:proplist()) -> map().
 mixed_handler_scope(Handlers, Options) ->
-    Precedence = proplists:get_value(precedence, Options, deep_first),
+    Precedence = normalize_precedence(Options),
     #{
-        handlers => Handlers,
+        handlers => [normalize_handler(Handler) || Handler <- Handlers],
         precedence => Precedence,
         options => Options
     }.
@@ -170,14 +179,19 @@ mixed_handler_scope(Handlers, Options) ->
 %% Returns which handler should handle an operation.
 -spec depth_precedence(handler(), handler()) ->
     {deep, handler()} | {shallow, handler()} | {equal, both}.
-depth_precedence(#{type := deep} = H1, #{type := shallow} = H2) ->
-    case proplists:get_value(precedence, maps:get(options, H1, []), deep_first) of
-        deep_first -> {deep, H1};
-        shallow_first -> {shallow, H2}
-    end;
-depth_precedence(#{type := shallow} = H1, #{type := deep} = H2) ->
-    depth_precedence(H2, H1);
-depth_precedence(#{type := Type} = H1, #{type := Type} = H2) ->
+depth_precedence(H1, H2) ->
+    depth_precedence(H1, H2, deep_first).
+
+%% @doc Determine precedence using an explicit precedence policy.
+-spec depth_precedence(handler(), handler(), deep_first | shallow_first) ->
+    {deep, handler()} | {shallow, handler()} | {equal, both}.
+depth_precedence(#{type := deep} = H1, #{type := shallow} = _H2, deep_first) ->
+    {deep, H1};
+depth_precedence(#{type := deep} = _H1, #{type := shallow} = H2, shallow_first) ->
+    {shallow, H2};
+depth_precedence(#{type := shallow} = H1, #{type := deep} = H2, Precedence) ->
+    depth_precedence(H2, H1, Precedence);
+depth_precedence(#{type := Type} = _H1, #{type := Type} = _H2, _Precedence) ->
     {equal, both}.
 
 %% @doc Resolve a conflict when multiple handlers could handle an operation.
@@ -188,13 +202,16 @@ resolve_handler_conflict(_Operation, [], _Options) ->
 resolve_handler_conflict(Operation, Handlers, Options) ->
     % Find handlers matching the operation's effect
     {EffectName, _Op, _Args} = Operation,
-    MatchingHandlers = [H || H <- Handlers, maps:get(effect, H, undefined) =:= EffectName],
+    MatchingHandlers = [
+        normalize_handler(H) || H <- Handlers,
+        maps:get(effect, H, undefined) =:= EffectName
+    ],
     case MatchingHandlers of
         [] -> {unhandled, no_matching_handler};
         [Single] -> {ok, Single};
         Multiple ->
             % Use precedence rules
-            Precedence = proplists:get_value(precedence, Options, deep_first),
+            Precedence = normalize_precedence(Options),
             select_by_precedence(Multiple, Precedence)
     end.
 
@@ -228,7 +245,7 @@ select_by_precedence(Handlers, shallow_first) ->
 
 %% @doc Get the depth type of a handler.
 -spec handler_depth(handler()) -> handler_depth().
-handler_depth(#{type := Type, depth := Depth}) ->
+handler_depth(#{type := _Type, depth := Depth}) ->
     Depth;
 handler_depth(#{type := Type}) when Type =:= deep -> deep;
 handler_depth(#{type := Type}) when Type =:= shallow -> shallow.
@@ -237,7 +254,7 @@ handler_depth(#{type := Type}) when Type =:= shallow -> shallow.
 %% This considers both the handler's depth and the surrounding scope.
 -spec effective_depth(handler(), map()) -> handler_depth().
 effective_depth(Handler, _Context) ->
-    handler_depth(Handler).
+    normalize_effective_depth(Handler).
 
 %% @doc Get available depths for a handler type.
 %% Returns which depths are valid for the given handler.
@@ -261,7 +278,8 @@ is_shallow_handler(_) -> false.
 %% @doc Create a handler specification with depth.
 -spec handler_spec(atom(), handler_depth(), function()) -> handler().
 handler_spec(Effect, Depth, HandlerFun) ->
-    Type = case Depth of
+    {ok, NormalizedDepth} = catena_handler_depth:normalize_depth(Depth),
+    Type = case NormalizedDepth of
         deep -> deep;
         shallow -> shallow
     end,
@@ -269,5 +287,43 @@ handler_spec(Effect, Depth, HandlerFun) ->
         type => Type,
         effect => Effect,
         handler => HandlerFun,
-        depth => Depth
+        depth => NormalizedDepth,
+        metadata => #{created_by => depth_selection}
+    }.
+
+%%====================================================================
+%% Internal Helpers
+%%====================================================================
+
+normalize_handler(#{type := _, effect := _, handler := _} = Handler) ->
+    NormalizedDepth = normalize_effective_depth(Handler),
+    Handler#{
+        depth => NormalizedDepth,
+        metadata => maps:get(metadata, Handler, #{})
+    };
+normalize_handler(Handler) ->
+    Handler.
+
+normalize_effective_depth(Handler) ->
+    case maps:find(depth, Handler) of
+        {ok, Depth} ->
+            case catena_handler_depth:normalize_depth(Depth) of
+                {ok, NormalizedDepth} -> NormalizedDepth;
+                {error, _} -> maps:get(type, Handler)
+            end;
+        error ->
+            maps:get(type, Handler)
+    end.
+
+normalize_precedence(Options) ->
+    case proplists:get_value(precedence, Options, deep_first) of
+        shallow_first -> shallow_first;
+        _ -> deep_first
+    end.
+
+conversion_metadata(Handler, TargetDepth) ->
+    Existing = maps:get(metadata, Handler, #{}),
+    Existing#{
+        converted_from => maps:get(type, Handler),
+        converted_to => TargetDepth
     }.
