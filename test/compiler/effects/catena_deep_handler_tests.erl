@@ -21,12 +21,24 @@ scope_effects_deep_test() ->
     Result = catena_deep_handler:scope_effects_deep(Context, fun() -> 42 end),
     ?assertEqual(42, Result).
 
+scope_effects_deep_restores_previous_context_test() ->
+    put(deep_context, #{handlers => [], stack => [], cache => #{}, serial => 1, trace => []}),
+    Context = #{handlers => [], stack => [], cache => #{}, serial => 0, trace => []},
+    ok = catena_deep_handler:scope_effects_deep(Context, fun() ->
+        ?assert(is_map(get(deep_context))),
+        ok
+    end),
+    Restored = get(deep_context),
+    ?assertEqual(1, maps:get(serial, Restored)),
+    erase(deep_context).
+
 with_deep_handler_test() ->
     % Test with_deep_handler sets up context correctly
     HandlerFun = fun(get, []) -> {ok, test_state} end,
     Result = catena_deep_handler:with_deep_handler(test_effect, HandlerFun, fun() ->
         Context = get(deep_context),
         ?assert(maps:is_key(handlers, Context)),
+        ?assertMatch({value, _}, catena_deep_handler:cached_handler_lookup(test_effect, Context)),
         context_ok
     end),
     ?assertEqual(context_ok, Result).
@@ -56,6 +68,13 @@ execute_deep_handler_throws_test() ->
     Result = catena_deep_handler:execute_deep({test_effect, get, []}, Context, 0),
     ?assertEqual({unhandled, {test_effect, get, []}}, Result).
 
+execute_deep_respects_handler_depth_test() ->
+    HandlerFun = fun(_Op, _Args) -> handled end,
+    Handler = #{effect => test_effect, handler => HandlerFun, scope => make_ref(), depth => 2, serial => 1},
+    Context = #{handlers => [Handler], stack => [], cache => #{test_effect => Handler}, serial => 1, trace => []},
+    Result = catena_deep_handler:execute_deep({test_effect, get, []}, Context, 1),
+    ?assertEqual({unhandled, {test_effect, get, []}}, Result).
+
 %%%=============================================================================
 %%% Deep Handler Scoping Tests
 %%%=============================================================================
@@ -67,9 +86,29 @@ deep_scope_boundary_test() ->
     Result = Boundary(),
     ?assertEqual(isolated, Result).
 
+deep_scope_boundary_preserves_handlers_test() ->
+    HandlerFun = fun(_Op, _Args) -> handled end,
+    Result = catena_deep_handler:with_deep_handler(test, HandlerFun, fun() ->
+        Boundary = catena_deep_handler:deep_scope_boundary(fun() ->
+            Context = get(deep_context),
+            length(maps:get(handlers, Context, []))
+        end),
+        Boundary()
+    end),
+    ?assertEqual(1, Result).
+
 current_deep_depth_zero_test() ->
     % Test initial depth is 0
     ?assertEqual(0, catena_deep_handler:current_deep_depth()).
+
+nested_current_deep_depth_test() ->
+    HandlerFun = fun(_Op, _Args) -> ok end,
+    Result = catena_deep_handler:with_deep_handler(outer, HandlerFun, fun() ->
+        catena_deep_handler:with_deep_handler(inner, HandlerFun, fun() ->
+            catena_deep_handler:current_deep_depth()
+        end)
+    end),
+    ?assertEqual(2, Result).
 
 is_in_deep_scope_true_test() ->
     % Test detection when in deep scope
@@ -129,25 +168,25 @@ traverse_handlers_order_test() ->
 
 cached_handler_lookup_hit_test() ->
     % Test cached lookup returns handler
-    Handler = #{effect => test, handler => fun(_Op, _Args) -> ok end, scope => make_ref(), depth => 0},
+    Handler = #{effect => test, handler => fun(_Op, _Args) -> ok end, scope => make_ref(), depth => 0, serial => 1},
     Cache = #{test => Handler},
-    Context = #{handlers => [Handler], stack => [], cache => Cache},
+    Context = #{handlers => [Handler], stack => [], cache => Cache, serial => 1, trace => []},
     Result = catena_deep_handler:cached_handler_lookup(test, Context),
     ?assertMatch({value, _}, Result).
 
 cached_handler_lookup_miss_test() ->
     % Test cached lookup falls back to traversal
-    Handler = #{effect => test, handler => fun(_Op, _Args) -> ok end, scope => make_ref(), depth => 0},
-    Context = #{handlers => [Handler], stack => [], cache => #{}},
+    Handler = #{effect => test, handler => fun(_Op, _Args) -> ok end, scope => make_ref(), depth => 0, serial => 1},
+    Context = #{handlers => [Handler], stack => [], cache => #{}, serial => 1, trace => []},
     Result = catena_deep_handler:cached_handler_lookup(test, Context),
     ?assertMatch({value, _}, Result).
 
 cached_handler_lookup_stale_test() ->
     % Test cached lookup with stale cache entry
-    CachedHandler = #{effect => test, handler => fun(_Op, _Args) -> stale end, scope => old_ref, depth => 0},
-    CurrentHandler = #{effect => test, handler => fun(_Op, _Args) -> current end, scope => new_ref, depth => 0},
+    CachedHandler = #{effect => test, handler => fun(_Op, _Args) -> stale end, scope => old_ref, depth => 0, serial => 1},
+    CurrentHandler = #{effect => test, handler => fun(_Op, _Args) -> current end, scope => new_ref, depth => 0, serial => 2},
     Cache = #{test => CachedHandler},
-    Context = #{handlers => [CurrentHandler], stack => [], cache => Cache},
+    Context = #{handlers => [CurrentHandler], stack => [], cache => Cache, serial => 2, trace => []},
     {value, Handler} = catena_deep_handler:cached_handler_lookup(test, Context),
     % Should fall back to traversal and return current handler
     ?assertEqual(current, apply(maps:get(handler, Handler), [op, []])).

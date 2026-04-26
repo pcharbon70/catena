@@ -55,6 +55,18 @@ validate_atom_test() ->
 validate_number_test() ->
     ?assertMatch({error, {invalid_depth, _}}, catena_handler_depth:validate_depth(42)).
 
+normalize_default_test() ->
+    ?assertEqual({ok, deep}, catena_handler_depth:normalize_depth(default)).
+
+normalize_undefined_test() ->
+    ?assertEqual({ok, deep}, catena_handler_depth:normalize_depth(undefined)).
+
+normalize_map_test() ->
+    ?assertEqual({ok, shallow}, catena_handler_depth:normalize_depth(#{depth => shallow})).
+
+normalize_proplist_test() ->
+    ?assertEqual({ok, deep}, catena_handler_depth:normalize_depth([{depth, deep}])).
+
 %%%=============================================================================
 %%% Depth Conversion Tests
 %%%=============================================================================
@@ -180,3 +192,27 @@ validate_accepts_valid_depths_test() ->
     lists:foreach(fun(D) ->
         ?assertEqual({ok, D}, catena_handler_depth:validate_depth(D))
     end, ValidDepths).
+
+handles_nested_deep_test() ->
+    ?assert(catena_handler_depth:handles_nested(deep)).
+
+handles_nested_shallow_test() ->
+    ?assertNot(catena_handler_depth:handles_nested(shallow)).
+
+handles_at_depth_deep_nested_test() ->
+    ?assert(catena_handler_depth:handles_at_depth(deep, 1, 3)).
+
+handles_at_depth_deep_same_scope_test() ->
+    ?assert(catena_handler_depth:handles_at_depth(deep, 2, 2)).
+
+handles_at_depth_shallow_same_scope_test() ->
+    ?assert(catena_handler_depth:handles_at_depth(shallow, 2, 2)).
+
+handles_at_depth_shallow_nested_test() ->
+    ?assertNot(catena_handler_depth:handles_at_depth(shallow, 1, 2)).
+
+lookup_strategy_deep_test() ->
+    ?assertEqual(traverse_nested_scopes, catena_handler_depth:lookup_strategy(deep)).
+
+lookup_strategy_shallow_test() ->
+    ?assertEqual(current_scope_only, catena_handler_depth:lookup_strategy(shallow)).

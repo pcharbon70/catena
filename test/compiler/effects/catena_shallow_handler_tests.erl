@@ -12,18 +12,6 @@
 -include_lib("eunit/include/eunit.hrl").
 
 %%%=============================================================================
-%%% Setup and Teardown
-%%%=============================================================================
-
-setup_test_state() ->
-    fun(State) ->
-        % Simple state handler that returns the state
-        fun(get, []) -> {ok, State};
-           ({put, [NewState]}, []) -> {ok, undefined, NewState}
-        end
-    end.
-
-%%%=============================================================================
 %%% Shallow Handler Execution Tests
 %%%=============================================================================
 
@@ -33,12 +21,25 @@ scope_effects_shallow_test() ->
     Result = catena_shallow_handler:scope_effects_shallow(Context, fun() -> 42 end),
     ?assertEqual(42, Result).
 
+scope_effects_shallow_restores_previous_context_test() ->
+    put(shallow_context, #{handlers => [], depth => 7, serial => 2, trace => []}),
+    Context = #{handlers => [], depth => 1, serial => 0, trace => []},
+    ok = catena_shallow_handler:scope_effects_shallow(Context, fun() ->
+        ?assertEqual(1, catena_shallow_handler:current_shallow_depth()),
+        ok
+    end),
+    Restored = get(shallow_context),
+    ?assertEqual(7, maps:get(depth, Restored)),
+    erase(shallow_context).
+
 with_shallow_handler_test() ->
     % Test with_shallow_handler sets up context correctly
     HandlerFun = fun(get, []) -> {ok, test_state} end,
     Result = catena_shallow_handler:with_shallow_handler(test_effect, HandlerFun, fun() ->
         Context = get(shallow_context),
         ?assert(maps:is_key(handlers, Context)),
+        Handler = hd(maps:get(handlers, Context)),
+        ?assertEqual(0, maps:get(depth, Handler)),
         context_ok
     end),
     ?assertEqual(context_ok, Result).
@@ -78,6 +79,15 @@ shallow_scope_boundary_test() ->
     Result = Boundary(),
     ?assertEqual(isolated, Result).
 
+shallow_scope_boundary_increments_depth_test() ->
+    put(shallow_context, #{handlers => [], depth => 0, serial => 0, trace => []}),
+    Boundary = catena_shallow_handler:shallow_scope_boundary(fun() ->
+        catena_shallow_handler:current_shallow_depth()
+    end),
+    ?assertEqual(1, Boundary()),
+    ?assertEqual(0, catena_shallow_handler:current_shallow_depth()),
+    erase(shallow_context).
+
 current_shallow_depth_zero_test() ->
     % Test initial depth is 0
     ?assertEqual(0, catena_shallow_handler:current_shallow_depth()).
@@ -107,7 +117,22 @@ compose_shallow_test() ->
     H2 = #{effect => test, handler => fun(_Op, _Args) -> {h2, op} end, scope => make_ref()},
     Composed = catena_shallow_handler:compose_shallow(H1, H2),
     ?assert(is_map(Composed)),
-    ?assertEqual(composed, maps:get(effect, Composed)).
+    ?assertEqual(test, maps:get(effect, Composed)),
+    HandlerFun = maps:get(handler, Composed),
+    ?assertEqual({h1, op}, HandlerFun(op, [])).
+
+compose_shallow_fallback_test() ->
+    H1 = #{effect => test, handler => fun(_Op, _Args) -> error(primary_failed) end, scope => make_ref()},
+    H2 = #{effect => test, handler => fun(_Op, _Args) -> recovered end, scope => make_ref()},
+    Composed = catena_shallow_handler:compose_shallow(H1, H2),
+    HandlerFun = maps:get(handler, Composed),
+    ?assertEqual(recovered, HandlerFun(op, [])).
+
+compose_shallow_different_effects_test() ->
+    H1 = #{effect => test1, handler => fun(_Op, _Args) -> ok end, scope => make_ref()},
+    H2 = #{effect => test2, handler => fun(_Op, _Args) -> ok end, scope => make_ref()},
+    ?assertError({cannot_compose_different_effects, test1, test2},
+        catena_shallow_handler:compose_shallow(H1, H2)).
 
 shallow_precedence_same_scope_test() ->
     % Test precedence with same scope
@@ -147,9 +172,7 @@ execute_shallow_handler_throws_test() ->
 
 context_preservation_test() ->
     % Test that context is preserved after handler execution
-    InitialContext = #{handlers => [], depth => 0},
     HandlerFun = fun(get, []) -> ok end,
-    UserFun = fun() -> context_return end,
     _ = catena_shallow_handler:with_shallow_handler(test, HandlerFun, fun() ->
         % Context should be set during execution
         ?assert(is_map(get(shallow_context)))

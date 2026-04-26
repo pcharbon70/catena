@@ -64,6 +64,9 @@ select_depth_shallow_test() ->
     % Test that select_depth respects shallow option
     ?assertEqual(shallow, catena_depth_selection:select_depth([{depth, shallow}])).
 
+select_depth_invalid_defaults_to_deep_test() ->
+    ?assertEqual(deep, catena_depth_selection:select_depth([{depth, invalid}])).
+
 %%%=============================================================================
 %%% Depth Conversion Tests
 %%%=============================================================================
@@ -76,10 +79,11 @@ to_deep_from_deep_test() ->
 
 to_deep_from_shallow_test() ->
     % Test converting shallow handler to deep
-    Handler = #{type => shallow, effect => test, handler => fun() -> ok end, depth => shallow},
+    Handler = #{type => shallow, effect => test, handler => fun() -> ok end, depth => shallow, metadata => #{origin => shallow}},
     Result = catena_depth_selection:to_deep(Handler),
     ?assertEqual(deep, maps:get(type, Result)),
-    ?assertEqual(deep, maps:get(depth, Result)).
+    ?assertEqual(deep, maps:get(depth, Result)),
+    ?assertEqual(shallow, maps:get(converted_from, maps:get(metadata, Result))).
 
 to_shallow_from_shallow_test() ->
     % Test converting shallow handler to shallow
@@ -89,10 +93,11 @@ to_shallow_from_shallow_test() ->
 
 to_shallow_from_deep_test() ->
     % Test converting deep handler to shallow
-    Handler = #{type => deep, effect => test, handler => fun() -> ok end, depth => deep},
+    Handler = #{type => deep, effect => test, handler => fun() -> ok end, depth => deep, metadata => #{origin => deep}},
     Result = catena_depth_selection:to_shallow(Handler),
     ?assertEqual(shallow, maps:get(type, Result)),
-    ?assertEqual(shallow, maps:get(depth, Result)).
+    ?assertEqual(shallow, maps:get(depth, Result)),
+    ?assertEqual(deep, maps:get(converted_from, maps:get(metadata, Result))).
 
 convert_depth_to_deep_test() ->
     % Test convert_depth to deep
@@ -113,7 +118,8 @@ can_convert_test() ->
     ?assert(catena_depth_selection:can_convert(DeepHandler, deep)),
     ?assert(catena_depth_selection:can_convert(DeepHandler, shallow)),
     ?assert(catena_depth_selection:can_convert(ShallowHandler, deep)),
-    ?assert(catena_depth_selection:can_convert(ShallowHandler, shallow)).
+    ?assert(catena_depth_selection:can_convert(ShallowHandler, shallow)),
+    ?assertNot(catena_depth_selection:can_convert(ShallowHandler, invalid)).
 
 %%%=============================================================================
 %%% Mixed Depth Handlers Tests
@@ -126,8 +132,12 @@ mixed_handler_scope_test() ->
         #{type => shallow, effect => test2, handler => fun() -> ok end}
     ],
     Scope = catena_depth_selection:mixed_handler_scope(Handlers, []),
+    [DeepHandler, ShallowHandler] = maps:get(handlers, Scope),
     ?assert(is_map(Scope)),
-    ?assertEqual(Handlers, maps:get(handlers, Scope)),
+    ?assertEqual(test1, maps:get(effect, DeepHandler)),
+    ?assertEqual(deep, maps:get(depth, DeepHandler)),
+    ?assertEqual(test2, maps:get(effect, ShallowHandler)),
+    ?assertEqual(shallow, maps:get(depth, ShallowHandler)),
     ?assertEqual(deep_first, maps:get(precedence, Scope)).
 
 depth_precedence_deep_shallow_test() ->
@@ -143,6 +153,12 @@ depth_precedence_shallow_deep_test() ->
     Deep = #{type => deep, effect => test, handler => fun() -> ok end},
     Result = catena_depth_selection:depth_precedence(Shallow, Deep),
     ?assertMatch({deep, Deep}, Result).
+
+depth_precedence_shallow_first_test() ->
+    Deep = #{type => deep, effect => test, handler => fun() -> ok end},
+    Shallow = #{type => shallow, effect => test, handler => fun() -> ok end},
+    Result = catena_depth_selection:depth_precedence(Deep, Shallow, shallow_first),
+    ?assertMatch({shallow, Shallow}, Result).
 
 depth_precedence_same_type_test() ->
     % Test precedence between same type
@@ -162,7 +178,7 @@ resolve_handler_conflict_single_handler_test() ->
     Operation = {test, op, []},
     Handler = #{effect => test, handler => fun() -> ok end, type => deep},
     Result = catena_depth_selection:resolve_handler_conflict(Operation, [Handler], []),
-    ?assertMatch({ok, Handler}, Result).
+    ?assertMatch({ok, #{effect := test, type := deep}}, Result).
 
 resolve_handler_conflict_multiple_handlers_test() ->
     % Test resolving with multiple matching handlers
@@ -178,7 +194,7 @@ resolve_handler_conflict_deep_first_test() ->
     H1 = #{effect => test, handler => fun() -> deep_h end, type => deep},
     H2 = #{effect => test, handler => fun() -> shallow_h end, type => shallow},
     Result = catena_depth_selection:resolve_handler_conflict(Operation, [H1, H2], [{precedence, deep_first}]),
-    ?assertMatch({ok, H1}, Result).
+    ?assertMatch({ok, #{effect := test, type := deep}}, Result).
 
 resolve_handler_conflict_shallow_first_test() ->
     % Test shallow_first precedence
@@ -186,7 +202,7 @@ resolve_handler_conflict_shallow_first_test() ->
     H1 = #{effect => test, handler => fun() -> deep_h end, type => deep},
     H2 = #{effect => test, handler => fun() -> shallow_h end, type => shallow},
     Result = catena_depth_selection:resolve_handler_conflict(Operation, [H1, H2], [{precedence, shallow_first}]),
-    ?assertMatch({ok, H2}, Result).
+    ?assertMatch({ok, #{effect := test, type := shallow}}, Result).
 
 %%%=============================================================================
 %%% Depth Introspection Tests
@@ -206,6 +222,10 @@ effective_depth_test() ->
     % Test effective depth is same as handler depth
     Handler = #{type => deep, effect => test},
     ?assertEqual(deep, catena_depth_selection:effective_depth(Handler, #{})).
+
+effective_depth_normalizes_depth_field_test() ->
+    Handler = #{type => deep, effect => test, depth => shallow},
+    ?assertEqual(shallow, catena_depth_selection:effective_depth(Handler, #{})).
 
 available_depths_test() ->
     % Test that both depths are available
@@ -250,7 +270,8 @@ handler_spec_shallow_test() ->
     HandlerFun = fun() -> ok end,
     Spec = catena_depth_selection:handler_spec(test, shallow, HandlerFun),
     ?assertEqual(shallow, maps:get(depth, Spec)),
-    ?assertEqual(shallow, maps:get(type, Spec)).
+    ?assertEqual(shallow, maps:get(type, Spec)),
+    ?assertEqual(depth_selection, maps:get(created_by, maps:get(metadata, Spec))).
 
 %%%=============================================================================
 %%% Round-trip Conversion Tests

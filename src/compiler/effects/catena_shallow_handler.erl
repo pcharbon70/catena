@@ -40,7 +40,8 @@
 -export([
     scope_effects_shallow/2,
     with_shallow_handler/3,
-    execute_shallow/3
+    execute_shallow/3,
+    wrap/1
 ]).
 
 %% Shallow handler scoping
@@ -65,11 +66,15 @@
 -type shallow_handler() :: #{
     effect => effect_name(),
     handler => function(),
-    scope => pid() | reference()
+    scope => pid() | reference(),
+    depth => non_neg_integer(),
+    serial => non_neg_integer()
 }.
 -type shallow_context() :: #{
     handlers => [shallow_handler()],
-    depth => non_neg_integer()
+    depth => non_neg_integer(),
+    serial => non_neg_integer(),
+    trace => [map()]
 }.
 
 -export_type([
@@ -85,25 +90,32 @@
 %% Only operations at the current scope level are handled.
 -spec scope_effects_shallow(shallow_context(), function()) -> any().
 scope_effects_shallow(Context, Fun) ->
-    CurrentDepth = maps:get(depth, Context, 0),
-    NewContext = Context#{depth => CurrentDepth + 1},
+    Previous = get_shallow_context(),
+    Installed = normalize_context(Context, Previous),
     try
+        put_shallow_context(Installed),
         Fun()
     after
-        Context#{depth => CurrentDepth}
+        put_shallow_context(Previous)
     end.
 
 %% @doc Execute a function with a shallow handler.
 %% The handler only catches operations performed directly in Fun.
 -spec with_shallow_handler(effect_name(), function(), function()) -> any().
 with_shallow_handler(EffectName, HandlerFun, UserFun) ->
+    Context = get_shallow_context(),
+    Serial = maps:get(serial, Context, 0) + 1,
     ShallowHandler = #{
         effect => EffectName,
         handler => HandlerFun,
-        scope => make_ref()
+        scope => make_ref(),
+        depth => maps:get(depth, Context, 0),
+        serial => Serial
     },
-    Context = get_shallow_context(),
-    UpdatedContext = Context#{handlers => [ShallowHandler | maps:get(handlers, Context, [])]},
+    UpdatedContext = Context#{
+        handlers => [ShallowHandler | maps:get(handlers, Context, [])],
+        serial => Serial
+    },
     put_shallow_context(UpdatedContext),
     try
         UserFun()
@@ -116,30 +128,23 @@ with_shallow_handler(EffectName, HandlerFun, UserFun) ->
 -spec execute_shallow(effect_operation(), shallow_context(), non_neg_integer()) ->
     {handled, term()} | {unhandled, effect_operation()}.
 execute_shallow({EffectName, Op, Args}, Context, OperationDepth) ->
-    CurrentDepth = maps:get(depth, Context, 0),
-    case OperationDepth =:= CurrentDepth of
-        true ->
-            % Operation is at current scope level - try to handle
-            Handlers = maps:get(handlers, Context, []),
-            try_handle(EffectName, Op, Args, Handlers);
-        false ->
-            % Operation is from nested scope - don't handle
-            {unhandled, {EffectName, Op, Args}}
-    end.
+    Handlers = matching_handlers(EffectName, maps:get(handlers, Context, []), OperationDepth),
+    try_handle(EffectName, Op, Args, Context, Handlers).
 
 %% @private Try to handle an operation with available shallow handlers.
-try_handle(EffectName, Op, Args, Handlers) ->
-    case lists:search(fun(H) -> maps:get(effect, H) =:= EffectName end, Handlers) of
-        {value, Handler} ->
+try_handle(EffectName, Op, Args, Context, Handlers) ->
+    case Handlers of
+        [Handler | _] ->
             HandlerFun = maps:get(handler, Handler),
+            record_trace(Context, EffectName, Op, Args, Handler),
             try
-                Result = apply(HandlerFun, [Op, Args]),
+                Result = HandlerFun(Op, Args),
                 {handled, Result}
             catch
                 _:_ ->
                     {unhandled, {EffectName, Op, Args}}
             end;
-        false ->
+        [] ->
             {unhandled, {EffectName, Op, Args}}
     end.
 
@@ -182,29 +187,29 @@ current_shallow_depth() ->
 %% The resulting handler uses both handlers with precedence rules.
 -spec compose_shallow(shallow_handler(), shallow_handler()) -> shallow_handler().
 compose_shallow(H1, H2) ->
-    #{
-        effect => composed,
-        handler => fun(Op, Args) -> composed_handler(H1, H2, Op, Args) end,
-        scope => make_ref()
-    }.
+    Effect1 = maps:get(effect, H1),
+    Effect2 = maps:get(effect, H2),
+    case Effect1 =:= Effect2 of
+        true ->
+            #{
+                effect => Effect1,
+                handler => fun(Op, Args) -> composed_handler(H1, H2, Op, Args) end,
+                scope => make_ref(),
+                depth => max(maps:get(depth, H1, 0), maps:get(depth, H2, 0)),
+                serial => max(maps:get(serial, H1, 0), maps:get(serial, H2, 0))
+            };
+        false ->
+            error({cannot_compose_different_effects, Effect1, Effect2})
+    end.
 
 %% @private Composed handler that delegates to both handlers.
 composed_handler(H1, H2, Op, Args) ->
-    Effect1 = maps:get(effect, H1),
-    Effect2 = maps:get(effect, H2),
     Handler1 = maps:get(handler, H1),
     Handler2 = maps:get(handler, H2),
-    case {Effect1, Effect2} of
-        {Effect, Effect} ->
-            % Same effect - try first handler, then second
-            try
-                apply(Handler1, [Op | Args])
-            catch
-                _:_ -> apply(Handler2, [Op | Args])
-            end;
-        _ ->
-            % Different effects - error
-            error({cannot_compose_different_effects, Effect1, Effect2})
+    try
+        Handler1(Op, Args)
+    catch
+        _:_ -> Handler2(Op, Args)
     end.
 
 %% @doc Determine precedence between two shallow handlers.
@@ -212,20 +217,28 @@ composed_handler(H1, H2, Op, Args) ->
 -spec shallow_precedence(shallow_handler(), shallow_handler()) ->
     {first, shallow_handler()} | {second, shallow_handler()} | {equal, both}.
 shallow_precedence(H1, H2) ->
-    Scope1 = maps:get(scope, H1),
-    Scope2 = maps:get(scope, H2),
-    if
-        Scope1 =:= Scope2 -> {equal, both};
-        is_reference(Scope1) andalso is_reference(Scope2) ->
-            % Both are refs - compare creation time (older has precedence)
-            if
-                Scope1 < Scope2 -> {first, H1};
-                true -> {second, H2}
-            end;
-        true ->
-            % Different scope types - current scope takes precedence
-            {first, H1}
+    Depth1 = maps:get(depth, H1, 0),
+    Depth2 = maps:get(depth, H2, 0),
+    Serial1 = maps:get(serial, H1, 0),
+    Serial2 = maps:get(serial, H2, 0),
+    Scope1 = maps:get(scope, H1, undefined),
+    Scope2 = maps:get(scope, H2, undefined),
+    case {Depth1, Depth2, Scope1 =:= Scope2, Serial1, Serial2} of
+        {D, D, true, _, _} -> {equal, both};
+        {D1, D2, _, _, _} when D1 > D2 -> {first, H1};
+        {D1, D2, _, _, _} when D2 > D1 -> {second, H2};
+        {_, _, _, S1, S2} when S1 >= S2 -> {first, H1};
+        _ -> {second, H2}
     end.
+
+%% @doc Wrap a resumption with shallow-handler metadata.
+-spec wrap(term()) -> map().
+wrap(Resumption) ->
+    #{
+        depth => shallow,
+        lookup => catena_handler_depth:lookup_strategy(shallow),
+        resumption => Resumption
+    }.
 
 %%====================================================================
 %% Private Functions
@@ -235,7 +248,7 @@ shallow_precedence(H1, H2) ->
 -spec get_shallow_context() -> shallow_context().
 get_shallow_context() ->
     case get(shallow_context) of
-        undefined -> #{handlers => [], depth => 0};
+        undefined -> #{handlers => [], depth => 0, serial => 0, trace => []};
         Context -> Context
     end.
 
@@ -243,3 +256,40 @@ get_shallow_context() ->
 -spec put_shallow_context(shallow_context()) -> true.
 put_shallow_context(Context) ->
     put(shallow_context, Context).
+
+%% @private Normalize a caller-provided context against the current one.
+-spec normalize_context(shallow_context(), shallow_context()) -> shallow_context().
+normalize_context(Context, Previous) ->
+    #{
+        handlers => maps:get(handlers, Context, maps:get(handlers, Previous, [])),
+        depth => maps:get(depth, Context, maps:get(depth, Previous, 0)),
+        serial => maps:get(serial, Context, maps:get(serial, Previous, 0)),
+        trace => maps:get(trace, Context, maps:get(trace, Previous, []))
+    }.
+
+%% @private Select handlers whose effect and depth match shallow semantics.
+-spec matching_handlers(effect_name(), [shallow_handler()], non_neg_integer()) -> [shallow_handler()].
+matching_handlers(EffectName, Handlers, OperationDepth) ->
+    [
+        Handler || Handler <- Handlers,
+        maps:get(effect, Handler) =:= EffectName,
+        catena_handler_depth:handles_at_depth(
+            shallow,
+            maps:get(depth, Handler, 0),
+            OperationDepth
+        )
+    ].
+
+%% @private Record handler telemetry in the process-local shallow context.
+-spec record_trace(shallow_context(), effect_name(), atom(), [term()], shallow_handler()) -> ok.
+record_trace(Context, EffectName, Op, Args, Handler) ->
+    ActiveContext = get_shallow_context(),
+    TraceEntry = #{
+        effect => EffectName,
+        operation => Op,
+        args => Args,
+        handler_scope => maps:get(scope, Handler, undefined),
+        depth => maps:get(depth, Handler, 0)
+    },
+    put_shallow_context(ActiveContext#{trace => [TraceEntry | maps:get(trace, Context, [])]}),
+    ok.

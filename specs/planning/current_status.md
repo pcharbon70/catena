@@ -61,8 +61,17 @@ The phase checklist in `notes/planning/proof-of-concept/phase-03.md` has not bee
 - Phase 4 module system: not complete
 - current repo does include minimal import resolution and exported-environment wiring
 - Phase 5 actor model integration: planned
-- Phase 6 effect completion: planned
+- the original proof-of-concept "Phase 6 effect completion" label is no longer the best description of the current effect-system implementation
 - Phase 7 distribution layer: planned/research-backed, not implemented
+
+## Algebraic-Effects Track
+
+Current promoted status:
+
+- Phase 7 handler/resumption foundations are materially implemented in `src/compiler/effects/catena_handler.erl`, `catena_resumption.erl`, `catena_perform.erl`, and their focused tests
+- Phase 8 equation and algebraic-law surfaces are materially implemented in `src/compiler/effects/catena_equations.erl`, `catena_equation_prover.erl`, `catena_equation_rewrite.erl`, `catena_effect_system.erl`, and dedicated effect-system optimization/verification tests
+- later effect-system surfaces exist in code and tests with uneven maturity, but they are not yet reconciled as a single uniformly finished front-end track
+- the next active milestone on this track is Phase 9 deep-versus-shallow handler semantics
 
 ## Property-Testing Track
 
