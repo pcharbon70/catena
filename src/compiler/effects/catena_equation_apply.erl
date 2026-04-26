@@ -57,8 +57,7 @@
     new_context/2,
     add_equations/2,
     set_limit/2,
-    get_trace/1,
-    rewrite_with_strategy/4
+    get_trace/1
 ]).
 
 %%====================================================================
@@ -123,36 +122,29 @@ apply_equation(Expr, Equation, Direction) ->
                     % Normalize substitution: extract values from pattern wrappers
                     NormSubst = normalize_substitution(Subst),
                     NewExpr = substitute_pattern(Target, NormSubst),
-                    Context = #{
-                        equations => catena_equation_spec:new_set(temp),
-                        limit => infinity,
-                        trace => [#{
-                            from => Expr,
-                            to => NewExpr,
-                            equation => unknown,
-                            depth => 0
-                        }],
-                        max_depth => 100,
-                        rewrite_count => 0
-                    },
-                    {expr, NewExpr, Context};
+                    case NewExpr =:= Expr of
+                        true ->
+                            {no_match, empty_context()};
+                        false ->
+                            Context = #{
+                                equations => catena_equation_spec:new_set(temp),
+                                limit => infinity,
+                                trace => [#{
+                                    from => Expr,
+                                    to => NewExpr,
+                                    equation => unknown,
+                                    depth => 0
+                                }],
+                                max_depth => 100,
+                                rewrite_count => 0
+                            },
+                            {expr, NewExpr, Context}
+                    end;
                 false ->
-                    {no_match, #{
-                        equations => catena_equation_spec:new_set(temp),
-                        limit => infinity,
-                        trace => [],
-                        max_depth => 100,
-                        rewrite_count => 0
-                    }}
+                    {no_match, empty_context()}
             end;
         {error, nomatch} ->
-            {no_match, #{
-                equations => catena_equation_spec:new_set(temp),
-                limit => infinity,
-                trace => [],
-                max_depth => 100,
-                rewrite_count => 0
-            }}
+            {no_match, empty_context()}
     end.
 
 %% @doc Apply equations from a set to an expression.
@@ -296,9 +288,9 @@ rewrite_seq_innermost([], Context, _Depth, Acc) ->
     end;
 rewrite_seq_innermost([P | Ps], Context, Depth, Acc) ->
     case innermost_with_depth(P, Context, Depth) of
-        {expr, NewP, _} ->
+        {expr, NewP, NewContext} ->
             NewList = lists:reverse(Acc) ++ [NewP | Ps],
-            {changed, NewList, Context};
+            {changed, NewList, NewContext};
         {no_match, _} ->
             rewrite_seq_innermost(Ps, Context, Depth, [P | Acc])
     end.
@@ -537,3 +529,12 @@ reconstruct_pattern({seq, _} = V) -> V;
 reconstruct_pattern({wildcard}) -> {wildcard};
 reconstruct_pattern({bind, _, _} = V) -> V;
 reconstruct_pattern(Value) -> {lit, Value}.
+
+empty_context() ->
+    #{
+        equations => catena_equation_spec:new_set(temp),
+        limit => infinity,
+        trace => [],
+        max_depth => 100,
+        rewrite_count => 0
+    }.

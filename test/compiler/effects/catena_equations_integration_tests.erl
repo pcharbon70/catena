@@ -22,11 +22,13 @@
 setup_arithmetic_equations() ->
     % Create a set of simple arithmetic equations
     Eq1 = catena_equations:new(
-        catena_equations:var(x),
-        catena_equations:var(y)
+        catena_equations:op(add, 0,
+            catena_equations:seq([catena_equations:var(x), catena_equations:lit(0)])
+        ),
+        catena_equations:var(x)
     ),
     Set0 = catena_equation_spec:new_set(arithmetic),
-    catena_equation_spec:add_equation(Set0, simplify, Eq1).
+    catena_equation_spec:add_equation(Set0, add_zero, Eq1).
 
 setup_state_equations() ->
     % Use the predefined state laws
@@ -55,18 +57,12 @@ create_equation_set_with_multiple_laws_test() ->
     Set = setup_arithmetic_equations(),
     Laws = catena_equation_spec:list_equations(Set),
     ?assertEqual(1, length(Laws)),
-    ?assert(lists:member(simplify, Laws)).
+    ?assert(lists:member(add_zero, Laws)).
 
 validate_full_equation_set_test() ->
     % Test that the arithmetic equation set validates
     Set = setup_arithmetic_equations(),
-    % The equation has unbound variables, so validation will fail
-    % This is expected - we just check that validation runs
-    Result = catena_equation_spec:validate_set(Set),
-    case Result of
-        ok -> ok;
-        {error, _} -> ok  % Expected for this simple equation
-    end.
+    ?assertEqual(ok, catena_equation_spec:validate_set(Set)).
 
 %%%=============================================================================
 %%% Pattern Matching Integration Tests
@@ -182,6 +178,42 @@ derive_simple_proof_test() ->
     ),
     ?assert(length(Chain) > 0).
 
+public_prover_equivalence_test() ->
+    Set = setup_arithmetic_equations(),
+    Left = catena_equations:op(add, 0,
+        catena_equations:seq([catena_equations:lit(5), catena_equations:lit(0)])
+    ),
+    Right = catena_equations:lit(5),
+    {ok, Report} = catena_equation_prover:prove_equivalence(Left, Right, Set),
+    ?assertEqual(normalized, maps:get(strategy, Report)).
+
+public_prover_handler_verification_test() ->
+    Eq = catena_equations:new(
+        catena_equations:op(get, 0, catena_equations:var(state)),
+        catena_equations:var(state)
+    ),
+    Set = catena_equation_spec:add_handler_equation(
+        catena_equation_spec:new_set(handler),
+        state_handler,
+        state_get,
+        Eq
+    ),
+    {ok, Report} = catena_equation_prover:verify_handler(
+        state_handler,
+        fun(Pattern) -> Pattern end,
+        Set,
+        [get]
+    ),
+    ?assertEqual([state_get], maps:get(verified, Report)).
+
+equation_property_integration_test() ->
+    Set = setup_arithmetic_equations(),
+    {ok, Eq} = catena_equation_spec:get_equation(Set, add_zero),
+    ?assertMatch(
+        {passed, _},
+        catena_equation_prover:run_equation_property(Eq, Set, #{num_tests => 10})
+    ).
+
 %%%=============================================================================
 %%% Algebraic Laws Integration Tests
 %%%=============================================================================
@@ -243,6 +275,14 @@ rewrite_nested_expression_test() ->
     Expr = catena_equations:seq([catena_equations:var(x)]),
     {expr, Result, _} = catena_equation_apply:rewrite(Expr, SetWithEq, normal),
     ?assertMatch({var, y}, Result).
+
+rewrite_wrapper_optimization_test() ->
+    Set = setup_arithmetic_equations(),
+    Expr = catena_equations:op(add, 0,
+        catena_equations:seq([catena_equations:lit(7), catena_equations:lit(0)])
+    ),
+    {ok, Result, _Context} = catena_equation_rewrite:optimize(Expr, Set),
+    ?assertEqual(catena_equations:lit(7), Result).
 
 rewrite_with_limit_test() ->
     % Test rewriting with a limit

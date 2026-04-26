@@ -80,6 +80,28 @@ add_equation_indexes_operations_test() ->
     ?assertEqual(1, length(Eqs)),
     ?assertEqual(Eq, hd(Eqs)).
 
+add_operation_equation_tracks_explicit_operation_test() ->
+    Set = catena_equation_spec:new_set(test_set),
+    Eq = catena_equations:new(
+        catena_equations:var(x),
+        catena_equations:var(y)
+    ),
+    NewSet = catena_equation_spec:add_operation_equation(Set, send, send_identity, Eq),
+
+    Eqs = catena_equation_spec:lookup_equations(NewSet, send),
+    ?assertEqual([Eq], Eqs).
+
+add_handler_equation_tracks_handler_index_test() ->
+    Set = catena_equation_spec:new_set(test_set),
+    Eq = catena_equations:new(
+        catena_equations:op(get, 0, catena_equations:wildcard()),
+        catena_equations:var(state)
+    ),
+    NewSet = catena_equation_spec:add_handler_equation(Set, state_handler, get_rule, Eq),
+
+    Eqs = catena_equation_spec:lookup_handler_equations(NewSet, state_handler),
+    ?assertEqual([Eq], Eqs).
+
 add_multiple_equations_test() ->
     Set = catena_equation_spec:new_set(test_set),
     Eq1 = catena_equations:new(catena_equations:var(x), catena_equations:lit(1)),
@@ -218,6 +240,72 @@ validate_equation_with_invalid_guard_test() ->
     Eq = catena_equations:new(LHS, RHS, Condition),
     Result = catena_equation_spec:validate_equation(Eq),
     ?assertMatch({error, [#{type := invalid_guard}]}, Result).
+
+validate_equation_rejects_invalid_nested_sequence_item_test() ->
+    Eq = catena_equations:new(
+        {seq, [catena_equations:var(x), invalid_pattern]},
+        catena_equations:var(x)
+    ),
+    Result = catena_equation_spec:validate_equation(Eq),
+    ?assertMatch({error, [#{type := ill_formed}]}, Result).
+
+validate_equation_rejects_invalid_nested_guard_test() ->
+    Eq = catena_equations:new(
+        catena_equations:var(x),
+        catena_equations:var(x),
+        {logic_op, 'andalso', [{is_type, integer}, invalid_guard]}
+    ),
+    Result = catena_equation_spec:validate_equation(Eq),
+    ?assertMatch({error, [#{type := invalid_guard}]}, Result).
+
+validate_handler_equations_complete_coverage_test() ->
+    Eq = catena_equations:new(
+        catena_equations:op(get, 0, catena_equations:var(state)),
+        catena_equations:var(state)
+    ),
+    Set = catena_equation_spec:add_handler_equation(
+        catena_equation_spec:new_set(test),
+        state_handler,
+        get_rule,
+        Eq
+    ),
+    ?assertEqual(
+        ok,
+        catena_equation_spec:validate_handler_equations(Set, state_handler, [get])
+    ).
+
+validate_handler_equations_reports_missing_coverage_test() ->
+    Eq = catena_equations:new(
+        catena_equations:op(get, 0, catena_equations:var(state)),
+        catena_equations:var(state)
+    ),
+    Set = catena_equation_spec:add_handler_equation(
+        catena_equation_spec:new_set(test),
+        state_handler,
+        get_rule,
+        Eq
+    ),
+    Result = catena_equation_spec:validate_handler_equations(Set, state_handler, [get, put]),
+    ?assertMatch(
+        {error, [#{type := coverage, details := #{missing := [put]}}]},
+        Result
+    ).
+
+find_conflicts_detects_same_lhs_with_different_rhs_test() ->
+    Eq1 = catena_equations:new(
+        catena_equations:op(get, 0, catena_equations:wildcard()),
+        catena_equations:var(x)
+    ),
+    Eq2 = catena_equations:new(
+        catena_equations:op(get, 0, catena_equations:wildcard()),
+        catena_equations:lit(undefined)
+    ),
+    Set0 = catena_equation_spec:new_set(test),
+    Set1 = catena_equation_spec:add_equation(Set0, eq1, Eq1),
+    Set2 = catena_equation_spec:add_equation(Set1, eq2, Eq2),
+
+    Conflicts = catena_equation_spec:find_conflicts(Set2),
+    ?assertMatch([#{operation := get, equations := _}], Conflicts).
 
 check_well_formed_valid_patterns_test() ->
     ?assertEqual(ok, catena_equation_spec:check_well_formed(catena_equations:var(x))),

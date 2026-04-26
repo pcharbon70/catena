@@ -92,23 +92,27 @@
 %%====================================================================
 
 -type var_name() :: atom().
+-type operation() :: atom().
 -type pattern() ::
     {var, var_name()} |
     {lit, term()} |
-    {op, atom(), term(), pattern()} |
+    {op, operation(), term(), pattern()} |
     {seq, [pattern()]} |
-    {{wildcard}} |
+    {wildcard} |
     {bind, var_name(), pattern()}.
 
 -type guard() ::
     {is_type, atom()} |
+    {is_type, {var_name(), atom()}} |
     {compare, atom(), term()} |
     {logic_op, atom(), [guard()]} |
     {call, atom(), [term()]}.
 
--type condition() :: guard() | undefined | conjunction | disjunction.
--type conjunction() :: {'andalso', [guard()]}.
--type disjunction() :: {'orelse', [guard()]}.
+-type condition() ::
+    guard() |
+    undefined |
+    {'andalso', [guard()]} |
+    {'orelse', [guard()]}.
 
 -record(equation, {
     lhs :: pattern(),
@@ -122,6 +126,7 @@
 -export_type([
     equation/0,
     pattern/0,
+    operation/0,
     guard/0,
     condition/0,
     substitution/0
@@ -225,6 +230,8 @@ match_pattern({var, Name}, Value, Subst) ->
         {ok, _Other} -> {error, nomatch}; % Bound to different value
         error -> {ok, Subst#{Name => Value}} % Unbound, bind it
     end;
+match_pattern({lit, LitValue}, {lit, LitValue}, Subst) ->
+    {ok, Subst};
 match_pattern({lit, LitValue}, Value, Subst) when LitValue =:= Value ->
     {ok, Subst};
 match_pattern({lit, _LitValue}, _Value, _Subst) ->
@@ -233,17 +240,17 @@ match_pattern({op, Op, OpValue, ArgPattern}, {op, Op, OpValue, ArgValue}, Subst)
     match_pattern(ArgPattern, ArgValue, Subst);
 match_pattern({op, _, _, _}, _Value, _Subst) ->
     {error, nomatch};
+match_pattern({seq, Patterns}, {seq, Values}, Subst) when is_list(Values) ->
+    match_seq_patterns(Patterns, Values, Subst);
 match_pattern({seq, Patterns}, Value, Subst) when is_list(Value) ->
     match_seq_patterns(Patterns, Value, Subst);
 match_pattern({seq, _Patterns}, _Value, _Subst) ->
     {error, nomatch};
 match_pattern({bind, Name, Pattern}, Value, Subst) ->
     case match_pattern(Pattern, Value, Subst) of
-        {ok, NewSubst} -> {ok, NewSubst#{Name => Value}};
+        {ok, NewSubst} -> bind_substitution(Name, Value, NewSubst);
         {error, nomatch} -> {error, nomatch}
     end;
-match_pattern({bind, _Name, _Pattern}, _Value, _Subst) ->
-    {error, nomatch};
 match_pattern(_Other, _Value, _Subst) ->
     {error, nomatch}.
 
@@ -325,7 +332,7 @@ substitute_variables({wildcard}, _Subst) ->
     {wildcard};
 substitute_variables({var, Name}, Subst) ->
     case maps:find(Name, Subst) of
-        {ok, Value} -> {lit, Value};
+        {ok, Value} -> pattern_from_substitution(Value);
         error -> {var, Name}
     end;
 substitute_variables({lit, Value}, _Subst) ->
@@ -345,25 +352,41 @@ substitute_variables({bind, Name, Pattern}, Subst) ->
 -spec evaluate_guard(condition(), substitution()) -> boolean().
 evaluate_guard(undefined, _Subst) ->
     true;
-evaluate_guard({is_type, Type}, _Subst) ->
-    % Type check guards need actual values, not patterns
-    % This is a simplified implementation
-    true;
-evaluate_guard({compare, _Op, _Values}, _Subst) ->
-    % Comparison guards need actual values
-    true;
+evaluate_guard({is_type, Type}, Subst) when is_atom(Type) ->
+    case maps:values(Subst) of
+        [] -> true;
+        Values -> lists:all(fun(Value) -> value_has_type(Type, unwrap_value(Value)) end, Values)
+    end;
+evaluate_guard({is_type, {Name, Type}}, Subst) when is_atom(Name), is_atom(Type) ->
+    case maps:find(Name, Subst) of
+        {ok, Value} -> value_has_type(Type, unwrap_value(Value));
+        error -> true
+    end;
+evaluate_guard({compare, Op, Values}, Subst) ->
+    evaluate_compare_guard(Op, Values, Subst);
+evaluate_guard({'andalso', Guards}, Subst) ->
+    lists:all(fun(G) -> evaluate_guard(G, Subst) end, Guards);
+evaluate_guard({'orelse', Guards}, Subst) ->
+    lists:any(fun(G) -> evaluate_guard(G, Subst) end, Guards);
 evaluate_guard({logic_op, 'andalso', Guards}, Subst) ->
     lists:all(fun(G) -> evaluate_guard(G, Subst) end, Guards);
 evaluate_guard({logic_op, 'orelse', Guards}, Subst) ->
     lists:any(fun(G) -> evaluate_guard(G, Subst) end, Guards);
-evaluate_guard({call, _Fun, _Args}, _Subst) ->
-    % Custom predicate guards
-    true.
+evaluate_guard({call, Fun, Args}, Subst) ->
+    ResolvedArgs = [resolve_guard_value(Arg, Subst) || Arg <- Args],
+    case lists:any(fun is_unresolved_guard_value/1, ResolvedArgs) of
+        true ->
+            true;
+        false ->
+            apply_guard_call(Fun, ResolvedArgs)
+    end.
 
 %% @doc Extract variable names referenced in a guard.
 -spec guard_vars(condition()) -> [var_name()].
 guard_vars(undefined) ->
     [];
+guard_vars({is_type, {Name, _Type}}) ->
+    [Name];
 guard_vars({is_type, _Type}) ->
     [];
 guard_vars({compare, _Op, Values}) when is_list(Values) ->
@@ -373,6 +396,10 @@ guard_vars({compare, _Op, Value}) ->
         true -> [Value];
         false -> []
     end;
+guard_vars({'andalso', Guards}) ->
+    lists:usort(lists:flatmap(fun guard_vars/1, Guards));
+guard_vars({'orelse', Guards}) ->
+    lists:usort(lists:flatmap(fun guard_vars/1, Guards));
 guard_vars({logic_op, _Op, Guards}) ->
     lists:usort(lists:flatmap(fun guard_vars/1, Guards));
 guard_vars({call, _Fun, Args}) when is_list(Args) ->
@@ -382,7 +409,7 @@ guard_vars({call, _Fun, Args}) when is_list(Args) ->
 -spec combine_guards(condition(), condition()) -> condition().
 combine_guards(undefined, G) -> G;
 combine_guards(G, undefined) -> G;
-combine_guards(G1, G2) -> {'andalso', [G1, G2]}.
+combine_guards(G1, G2) -> {logic_op, 'andalso', [G1, G2]}.
 
 %%====================================================================
 %% Equation Utilities
@@ -462,3 +489,88 @@ value_to_string(V) when is_integer(V) -> integer_to_list(V);
 value_to_string(V) when is_float(V) -> float_to_list(V);
 value_to_string(V) when is_list(V) -> io_lib:format("~p", [V]);
 value_to_string(V) -> io_lib:format("~p", [V]).
+
+bind_substitution(Name, Value, Subst) ->
+    case maps:find(Name, Subst) of
+        {ok, Existing} when Existing =:= Value ->
+            {ok, Subst};
+        {ok, _Existing} ->
+            {error, nomatch};
+        error ->
+            {ok, Subst#{Name => Value}}
+    end.
+
+pattern_from_substitution(Value = {var, _}) ->
+    Value;
+pattern_from_substitution(Value = {lit, _}) ->
+    Value;
+pattern_from_substitution(Value = {op, _, _, _}) ->
+    Value;
+pattern_from_substitution(Value = {seq, _}) ->
+    Value;
+pattern_from_substitution(Value = {wildcard}) ->
+    Value;
+pattern_from_substitution(Value = {bind, _, _}) ->
+    Value;
+pattern_from_substitution(Value) ->
+    {lit, Value}.
+
+unwrap_value({lit, Value}) ->
+    Value;
+unwrap_value(Value) ->
+    Value.
+
+evaluate_compare_guard(Op, Values, Subst) when is_list(Values) ->
+    case [resolve_guard_value(Value, Subst) || Value <- Values] of
+        [Left, Right] ->
+            case is_unresolved_guard_value(Left) orelse is_unresolved_guard_value(Right) of
+                true -> true;
+                false -> compare_values(Op, Left, Right)
+            end;
+        _ ->
+            true
+    end;
+evaluate_compare_guard(Op, Value, Subst) ->
+    evaluate_compare_guard(Op, [Value], Subst).
+
+resolve_guard_value(Value, Subst) when is_atom(Value), Value =/= true, Value =/= false, Value =/= undefined ->
+    maps:get(Value, Subst, Value);
+resolve_guard_value(Value, _Subst) ->
+    Value.
+
+is_unresolved_guard_value(Value) when is_atom(Value), Value =/= true, Value =/= false, Value =/= undefined ->
+    true;
+is_unresolved_guard_value(_) ->
+    false.
+
+compare_values('>', Left, Right) -> Left > Right;
+compare_values('<', Left, Right) -> Left < Right;
+compare_values('<<', Left, Right) -> Left < Right;
+compare_values('<=', Left, Right) -> Left =< Right;
+compare_values('>=', Left, Right) -> Left >= Right;
+compare_values('==', Left, Right) -> Left == Right;
+compare_values('=:=', Left, Right) -> Left =:= Right;
+compare_values('/=', Left, Right) -> Left /= Right;
+compare_values('=/=', Left, Right) -> Left =/= Right;
+compare_values(_, Left, Right) -> Left =:= Right.
+
+value_has_type(integer, Value) -> is_integer(Value);
+value_has_type(float, Value) -> is_float(Value);
+value_has_type(number, Value) -> is_number(Value);
+value_has_type(atom, Value) -> is_atom(Value);
+value_has_type(binary, Value) -> is_binary(Value);
+value_has_type(list, Value) -> is_list(Value);
+value_has_type(tuple, Value) -> is_tuple(Value);
+value_has_type(map, Value) -> is_map(Value);
+value_has_type(pid, Value) -> is_pid(Value);
+value_has_type(reference, Value) -> is_reference(Value);
+value_has_type(boolean, Value) -> is_boolean(Value);
+value_has_type(_, _Value) -> true.
+
+apply_guard_call(Fun, Args) ->
+    try apply(erlang, Fun, Args) of
+        Result when is_boolean(Result) -> Result;
+        _ -> true
+    catch
+        _:_ -> true
+    end.

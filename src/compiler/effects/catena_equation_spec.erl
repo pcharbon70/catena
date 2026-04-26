@@ -41,11 +41,14 @@
     new_set/1,
     new_set/2,
     add_equation/3,
+    add_operation_equation/4,
+    add_handler_equation/4,
     add_equations/2,
     remove_equation/2,
     get_equation/2,
     list_equations/1,
-    lookup_equations/2
+    lookup_equations/2,
+    lookup_handler_equations/2
 ]).
 
 %% Equation validation
@@ -53,7 +56,10 @@
     validate_equation/1,
     validate_equation/2,
     validate_set/1,
-    check_well_formed/1
+    validate_handler_equations/3,
+    check_well_formed/1,
+    handler_coverage/3,
+    find_conflicts/1
 ]).
 
 %% Equation query
@@ -79,6 +85,7 @@
 
 -type set_name() :: atom().
 -type equation_name() :: atom().
+-type handler_name() :: atom().
 -type equation_entry() :: #{
     name => equation_name(),
     equation => catena_equations:equation(),
@@ -89,11 +96,12 @@
     name => set_name(),
     equations => #{equation_name() => equation_entry()},
     operations => #{catena_equations:operation() => [equation_name()]},
+    handlers => #{handler_name() => [equation_name()]},
     metadata => map()
 }.
 
 -type validation_error() :: #{
-    type := ill_formed | unbound_variable | invalid_guard | circular,
+    type := ill_formed | unbound_variable | invalid_guard | circular | conflict | coverage,
     details := term()
 }.
 
@@ -122,6 +130,7 @@ new_set(Name, Metadata) when is_atom(Name), is_map(Metadata) ->
         name => Name,
         equations => #{},
         operations => #{},
+        handlers => #{},
         metadata => Metadata
     }.
 
@@ -129,30 +138,29 @@ new_set(Name, Metadata) when is_atom(Name), is_map(Metadata) ->
 -spec add_equation(equation_set(), equation_name(), catena_equations:equation()) ->
     equation_set().
 add_equation(Set, Name, Equation) when is_atom(Name) ->
-    Equations = maps:get(equations, Set),
-    Operations = maps:get(operations, Set),
+    add_entry(Set, Name, Equation, #{}).
 
-    Entry = #{
-        name => Name,
-        equation => Equation,
-        metadata => #{}
-    },
+%% @doc Add a named equation explicitly associated with an operation.
+-spec add_operation_equation(
+    equation_set(),
+    catena_equations:operation(),
+    equation_name(),
+    catena_equations:equation()
+) -> equation_set().
+add_operation_equation(Set, Operation, Name, Equation)
+        when is_atom(Operation), is_atom(Name) ->
+    add_entry(Set, Name, Equation, #{operation => Operation}).
 
-    % Extract operations from the equation
-    LHSOps = extract_operations(catena_equations:lhs(Equation)),
-    RHSOps = extract_operations(catena_equations:rhs(Equation)),
-    AllOps = lists:usort(LHSOps ++ RHSOps),
-
-    % Update operation index
-    NewOperations = lists:foldl(fun(Op, Acc) ->
-        Existing = maps:get(Op, Acc, []),
-        Acc#{Op => [Name | lists:delete(Name, Existing)]}
-    end, Operations, AllOps),
-
-    Set#{
-        equations => Equations#{Name => Entry},
-        operations => NewOperations
-    }.
+%% @doc Add a named equation associated with a handler.
+-spec add_handler_equation(
+    equation_set(),
+    handler_name(),
+    equation_name(),
+    catena_equations:equation()
+) -> equation_set().
+add_handler_equation(Set, Handler, Name, Equation)
+        when is_atom(Handler), is_atom(Name) ->
+    add_entry(Set, Name, Equation, #{handler => Handler}).
 
 %% @doc Add multiple equations to a set.
 -spec add_equations(equation_set(), [{equation_name(), catena_equations:equation()}]) ->
@@ -169,9 +177,9 @@ remove_equation(Set, Name) ->
     case maps:find(Name, Equations) of
         {ok, Entry} ->
             Eq = maps:get(equation, Entry),
-            LHSOps = extract_operations(catena_equations:lhs(Eq)),
-            RHSOps = extract_operations(catena_equations:rhs(Eq)),
-            AllOps = lists:usort(LHSOps ++ RHSOps),
+            Metadata = maps:get(metadata, Entry, #{}),
+            AllOps = entry_operations(Eq, Metadata),
+            Handlers = maps:get(handlers, Set, #{}),
 
             % Update operation index
             NewOperations = lists:foldl(fun(Op, Acc) ->
@@ -181,10 +189,15 @@ remove_equation(Set, Name) ->
                     error -> Acc
                 end
             end, maps:get(operations, Set), AllOps),
+            NewHandlers = case maps:find(handler, Metadata) of
+                {ok, Handler} -> remove_name_from_index(Handlers, Handler, Name);
+                error -> Handlers
+            end,
 
             Set#{
                 equations => maps:remove(Name, Equations),
-                operations => NewOperations
+                operations => NewOperations,
+                handlers => NewHandlers
             };
         error ->
             Set
@@ -219,6 +232,19 @@ lookup_equations(Set, Operation) ->
             []
     end.
 
+%% @doc Lookup handler-associated equations.
+-spec lookup_handler_equations(equation_set(), handler_name()) ->
+    [catena_equations:equation()].
+lookup_handler_equations(Set, Handler) ->
+    Handlers = maps:get(handlers, Set, #{}),
+    case maps:find(Handler, Handlers) of
+        {ok, Names} ->
+            Equations = maps:get(equations, Set),
+            [maps:get(equation, maps:get(Name, Equations)) || Name <- Names];
+        error ->
+            []
+    end.
+
 %%====================================================================
 %% Equation Validation
 %%====================================================================
@@ -234,28 +260,26 @@ validate_equation(Equation, _Options) ->
     LHS = catena_equations:lhs(Equation),
     RHS = catena_equations:rhs(Equation),
     Condition = catena_equations:condition(Equation),
+    LHSResult = check_well_formed(LHS),
+    RHSResult = check_well_formed(RHS),
+    GuardResult = validate_guard(Condition),
 
     Errors = []
-
-    % Check LHS is well-formed
-    ++ case check_well_formed(LHS) of
+    ++ case LHSResult of
         ok -> [];
         {error, Err} -> [#{type => ill_formed, details => {lhs, Err}}]
     end
-
-    % Check RHS is well-formed
-    ++ case check_well_formed(RHS) of
+    ++ case RHSResult of
         ok -> [];
         {error, Err} -> [#{type => ill_formed, details => {rhs, Err}}]
     end
-
-    % Check RHS variables are bound
-    ++ check_rhs_variables(LHS, RHS, Condition)
-
-    % Check guard is well-formed
-    ++ case validate_guard(Condition) of
+    ++ case GuardResult of
         ok -> [];
         {error, Err} -> [#{type => invalid_guard, details => Err}]
+    end
+    ++ case {LHSResult, RHSResult, GuardResult} of
+        {ok, ok, ok} -> check_rhs_variables(LHS, RHS, Condition);
+        _ -> []
     end,
 
     case Errors of
@@ -285,11 +309,40 @@ validate_set(Set) ->
 
     % Check for circular dependencies
     CircularErrors = check_circular_dependencies(Set),
+    ConflictErrors = [
+        #{type => conflict, details => Conflict}
+     || Conflict <- find_conflicts(Set)
+    ],
 
-    AllErrors = Errors ++ CircularErrors,
+    AllErrors = Errors ++ CircularErrors ++ ConflictErrors,
     case AllErrors of
         [] -> ok;
         _ -> {error, AllErrors}
+    end.
+
+%% @doc Validate the equations associated with a handler and expected operations.
+-spec validate_handler_equations(equation_set(), handler_name(), [catena_equations:operation()]) ->
+    validation_result().
+validate_handler_equations(Set, Handler, ExpectedOperations) ->
+    HandlerEquations = lookup_handler_equations(Set, Handler),
+    EquationErrors = lists:flatmap(fun(Eq) ->
+        case validate_equation(Eq) of
+            ok -> [];
+            {error, Errs} -> Errs
+        end
+    end, HandlerEquations),
+    CoverageErrors = case handler_coverage(Set, Handler, ExpectedOperations) of
+        {complete, _Covered} ->
+            [];
+        {error, {missing_operations, Missing, Covered}} ->
+            [#{
+                type => coverage,
+                details => #{handler => Handler, missing => Missing, covered => Covered}
+            }]
+    end,
+    case EquationErrors ++ CoverageErrors of
+        [] -> ok;
+        AllErrors -> {error, AllErrors}
     end.
 
 %% @doc Check if a pattern is well-formed.
@@ -300,15 +353,44 @@ check_well_formed({wildcard}) -> ok;
 check_well_formed({op, _Op, _Value, Arg}) ->
     check_well_formed(Arg);
 check_well_formed({seq, Patterns}) when is_list(Patterns) ->
-    case lists:map(fun check_well_formed/1, Patterns) of
-        [] -> ok;
-        [ok | _] -> ok;
-        [{error, _} = Err | _] -> Err
-    end;
+    validate_all(fun check_well_formed/1, Patterns);
 check_well_formed({bind, _Name, Pattern}) ->
     check_well_formed(Pattern);
 check_well_formed(Other) ->
     {error, {invalid_pattern, Other}}.
+
+%% @doc Check whether handler-associated equations cover the expected operations.
+-spec handler_coverage(equation_set(), handler_name(), [catena_equations:operation()]) ->
+    {complete, [catena_equations:operation()]} |
+    {error, {missing_operations, [catena_equations:operation()], [catena_equations:operation()]}}.
+handler_coverage(Set, Handler, ExpectedOperations) ->
+    Handlers = maps:get(handlers, Set, #{}),
+    Equations = maps:get(equations, Set),
+    Covered = case maps:find(Handler, Handlers) of
+        {ok, Names} ->
+            lists:usort(lists:flatmap(fun(Name) ->
+                Entry = maps:get(Name, Equations),
+                Eq = maps:get(equation, Entry),
+                Metadata = maps:get(metadata, Entry, #{}),
+                entry_operations(Eq, Metadata)
+            end, Names));
+        error ->
+            []
+    end,
+    Missing = lists:subtract(lists:usort(ExpectedOperations), Covered),
+    case Missing of
+        [] -> {complete, Covered};
+        _ -> {error, {missing_operations, Missing, Covered}}
+    end.
+
+%% @doc Find conflicting equations sharing the same operation and LHS.
+-spec find_conflicts(equation_set()) -> [map()].
+find_conflicts(Set) ->
+    Equations = maps:get(equations, Set),
+    Operations = maps:get(operations, Set),
+    maps:fold(fun(Operation, Names, Acc) ->
+        detect_conflicts(Operation, Names, Equations) ++ Acc
+    end, [], Operations).
 
 %%====================================================================
 %% Equation Query
@@ -395,6 +477,52 @@ extract_operations({bind, _Name, Pattern}) ->
     extract_operations(Pattern);
 extract_operations(_Other) -> [].
 
+add_entry(Set, Name, Equation, Metadata) ->
+    BaseSet = remove_equation(Set, Name),
+    Equations = maps:get(equations, BaseSet),
+    Operations = maps:get(operations, BaseSet),
+    Handlers = maps:get(handlers, BaseSet, #{}),
+
+    Entry = #{
+        name => Name,
+        equation => Equation,
+        metadata => Metadata
+    },
+    AllOps = entry_operations(Equation, Metadata),
+    NewOperations = lists:foldl(fun(Op, Acc) ->
+        add_name_to_index(Acc, Op, Name)
+    end, Operations, AllOps),
+    NewHandlers = case maps:find(handler, Metadata) of
+        {ok, Handler} -> add_name_to_index(Handlers, Handler, Name);
+        error -> Handlers
+    end,
+
+    BaseSet#{
+        equations => Equations#{Name => Entry},
+        operations => NewOperations,
+        handlers => NewHandlers
+    }.
+
+entry_operations(Equation, Metadata) ->
+    LHSOps = extract_operations(catena_equations:lhs(Equation)),
+    RHSOps = extract_operations(catena_equations:rhs(Equation)),
+    ExplicitOps = case maps:find(operation, Metadata) of
+        {ok, Operation} -> [Operation];
+        error -> []
+    end,
+    lists:usort(LHSOps ++ RHSOps ++ ExplicitOps).
+
+add_name_to_index(Index, Key, Name) ->
+    Existing = maps:get(Key, Index, []),
+    Index#{Key => [Name | lists:delete(Name, Existing)]}.
+
+remove_name_from_index(Index, Key, Name) ->
+    case maps:find(Key, Index) of
+        {ok, [Name]} -> maps:remove(Key, Index);
+        {ok, Names} -> Index#{Key => lists:delete(Name, Names)};
+        error -> Index
+    end.
+
 %% @private Check that RHS variables are bound on LHS or in guards.
 -spec check_rhs_variables(catena_equations:pattern(), catena_equations:pattern(),
     catena_equations:condition()) -> [validation_error()].
@@ -416,14 +544,15 @@ check_rhs_variables(LHS, RHS, Condition) ->
 %% @private Validate a guard condition.
 -spec validate_guard(catena_equations:condition()) -> ok | {error, term()}.
 validate_guard(undefined) -> ok;
+validate_guard({is_type, {_Name, _Type}}) -> ok;
 validate_guard({is_type, _Type}) -> ok;
 validate_guard({compare, _Op, _Values}) -> ok;
+validate_guard({'andalso', Guards}) ->
+    validate_all(fun validate_guard/1, Guards);
+validate_guard({'orelse', Guards}) ->
+    validate_all(fun validate_guard/1, Guards);
 validate_guard({logic_op, Op, Guards}) when Op =:= 'andalso'; Op =:= 'orelse' ->
-    case lists:map(fun validate_guard/1, Guards) of
-        [] -> ok;
-        [ok | _] -> ok;
-        [{error, _} = Err | _] -> Err
-    end;
+    validate_all(fun validate_guard/1, Guards);
 validate_guard({call, _Fun, _Args}) -> ok;
 validate_guard({logic_op, Op, _}) ->
     {error, {invalid_logic_op, Op}};
@@ -437,6 +566,25 @@ check_circular_dependencies(_Set) ->
     % building a dependency graph and checking for cycles
     % This will be expanded in future sections
     [].
+
+detect_conflicts(_Operation, [], _Equations) ->
+    [];
+detect_conflicts(Operation, [Name | Rest], Equations) ->
+    Entry = maps:get(Name, Equations),
+    Eq = maps:get(equation, Entry),
+    Current = [#{
+        operation => Operation,
+        equations => [Name, OtherName],
+        lhs => catena_equations:lhs(Eq)
+    } || OtherName <- Rest, equations_conflict(Eq, maps:get(equation, maps:get(OtherName, Equations)))],
+    Current ++ detect_conflicts(Operation, Rest, Equations).
+
+equations_conflict(Eq1, Eq2) ->
+    catena_equations:lhs(Eq1) =:= catena_equations:lhs(Eq2)
+        andalso (
+            catena_equations:rhs(Eq1) =/= catena_equations:rhs(Eq2)
+            orelse catena_equations:condition(Eq1) =/= catena_equations:condition(Eq2)
+        ).
 
 %% @private Check if two patterns are structurally compatible.
 %%
@@ -475,3 +623,11 @@ is_concrete_op({op, _, _, _}) -> true;
 is_concrete_op({seq, _}) -> true;
 is_concrete_op({bind, _, P}) -> is_concrete_op(P);
 is_concrete_op(_) -> false.
+
+validate_all(_Validator, []) ->
+    ok;
+validate_all(Validator, [Item | Rest]) ->
+    case Validator(Item) of
+        ok -> validate_all(Validator, Rest);
+        {error, _} = Error -> Error
+    end.

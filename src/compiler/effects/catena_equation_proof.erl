@@ -190,11 +190,10 @@ step_to_string(#{from := From, to := To, rule := Rule}) ->
 validate_rule(_Step, {refl, _Term}, _EqSet) -> ok;
 validate_rule(#{to := To, from := [A]}, {symm, [A, B]}, _EqSet) when To =:= B -> ok;
 validate_rule(#{to := C, from := [A, _]}, {trans, [A, _, C]}, _EqSet) -> ok;
-validate_rule(#{from := [A], to := B}, {congr, {Op, [A, B]}}, _EqSet) -> ok;
+validate_rule(#{from := [A], to := B}, {congr, {_Op, [A, B]}}, _EqSet) -> ok;
 validate_rule(#{from := [A, B], to := C}, {trans, [A, B, C]}, _EqSet) -> ok;
 validate_rule(Step, {eq, EqName}, EqSet) ->
     [LHS] = maps:get(from, Step),
-    RHS = maps:get(to, Step),
     case catena_equation_spec:get_equation(EqSet, EqName) of
         {ok, Eq} ->
             EqLHS = catena_equations:lhs(Eq),
@@ -328,10 +327,10 @@ try_decompose(Source, Target, EqSet, MaxSteps) ->
     end.
 
 %% @private Try decomposing the source term.
-decompose_source({op, Op, Val, Arg}, Target, EqSet, MaxSteps) ->
-    case find_proof(Arg, Target, EqSet, MaxSteps div 2) of
+decompose_source({op, Op, Val, Arg}, {op, Op, Val, TargetArg}, EqSet, MaxSteps) ->
+    case find_proof(Arg, TargetArg, EqSet, MaxSteps div 2) of
         {ok, Chain} ->
-            Step = rule_congr(Op, Arg, Target, hd(Chain)),
+            Step = rule_congr(Op, Arg, TargetArg, hd(Chain)),
             {ok, Chain ++ [Step]};
         {error, _} -> {error, no_proof}
     end;
@@ -341,12 +340,17 @@ decompose_source(_Source, _Target, _EqSet, _MaxSteps) ->
 %% @private Try decomposing the target term.
 try_decompose_target(Source, Target, EqSet, MaxSteps) ->
     case Target of
-        {op, Op, Val, Arg} when Source =/= Arg ->
-            case find_proof(Source, Arg, EqSet, MaxSteps div 2) of
-                {ok, Chain} ->
-                    Step = rule_congr(Op, Source, Arg, hd(Chain)),
-                    {ok, [Step | Chain]};
-                {error, _} -> {error, no_proof}
+        {op, Op, Val, Arg} ->
+            case Source of
+                {op, Op, Val, SourceArg} when SourceArg =/= Arg ->
+                    case find_proof(SourceArg, Arg, EqSet, MaxSteps div 2) of
+                        {ok, Chain} ->
+                            Step = rule_congr(Op, SourceArg, Arg, hd(Chain)),
+                            {ok, [Step | Chain]};
+                        {error, _} -> {error, no_proof}
+                    end;
+                _ ->
+                    {error, no_proof}
             end;
         _ -> {error, no_proof}
     end.
