@@ -12,6 +12,7 @@ catena_multi_shot_test_() ->
      [
         {"constructors", fun test_constructors/0},
         {"multi-shot capture", fun test_capture/0},
+        {"multi-shot resumption wrapping", fun test_wrap/0},
         {"multi-shot resume with deep copy", fun test_resume_deep_copy/0},
         {"multi-shot resume with shallow copy", fun test_resume_shallow_copy/0},
         {"multi-shot resume with selective copy", fun test_resume_selective_copy/0},
@@ -47,6 +48,7 @@ test_constructors() ->
     ?assertEqual(multi_shot, catena_multi_shot:kind()),
     ?assert(catena_multi_shot:is_available(Empty)),
     ?assertEqual(0, catena_multi_shot:get_resume_count(Empty)),
+    ?assertEqual({ok, #{test => data}}, catena_multi_shot:get_state(WithData)),
     ?assertMatch({ok, _}, catena_multi_shot:get_state(WithStrategy)).
 
 %%%---------------------------------------------------------------------
@@ -65,6 +67,22 @@ test_capture() ->
     %% Capture with strategy
     {ok, Cont3} = catena_multi_shot:capture(#{}, shallow),
     ?assert(catena_multi_shot:is_available(Cont3)).
+
+test_wrap() ->
+    Resumption = catena_resumption:new(
+        fun(Value) -> {wrapped, Value} end,
+        erlang:system_time(millisecond),
+        1
+    ),
+    Cont = catena_multi_shot:wrap(Resumption, shallow),
+
+    {ok, Result1, Count1} = catena_multi_shot:resume(Cont, first),
+    ?assertEqual(1, Count1),
+    ?assertEqual({wrapped, first}, maps:get(resumed, Result1)),
+
+    {ok, Result2, Count2} = catena_multi_shot:resume(Cont, second),
+    ?assertEqual(2, Count2),
+    ?assertEqual({wrapped, second}, maps:get(resumed, Result2)).
 
 %%%---------------------------------------------------------------------
 %%% Deep Copy Tests
@@ -87,7 +105,7 @@ test_resume_deep_copy() ->
 
 test_resume_shallow_copy() ->
     Cont = catena_multi_shot:new(#{shared => data}, shallow),
-    {ok, Result1, Count1} = catena_multi_shot:resume(Cont, 1),
+    {ok, _Result1, Count1} = catena_multi_shot:resume(Cont, 1),
     ?assertEqual(1, Count1),
 
     %% Second resume shares the same state
@@ -101,11 +119,11 @@ test_resume_shallow_copy() ->
 
 test_resume_selective_copy() ->
     Cont = catena_multi_shot:new(#{small => 1}, selective),
-    {ok, Result1, Count1} = catena_multi_shot:resume(Cont, 1),
+    {ok, _Result1, Count1} = catena_multi_shot:resume(Cont, 1),
     ?assertEqual(1, Count1),
 
     %% Small maps are shared
-    {ok, Result2, Count2} = catena_multi_shot:resume(Cont, 2),
+    {ok, _Result2, Count2} = catena_multi_shot:resume(Cont, 2),
     ?assertEqual(2, Count2).
 
 %%%---------------------------------------------------------------------

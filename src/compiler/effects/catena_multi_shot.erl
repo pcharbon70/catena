@@ -14,6 +14,8 @@
     capture/0,
     capture/1,
     capture/2,
+    wrap/1,
+    wrap/2,
     %% Multi-shot resume
     resume/2,
     %% State inspection
@@ -70,7 +72,7 @@
 }.
 
 %% @doc Result of resuming a multi-shot continuation.
--type resume_result() :: {ok, term(), non_neg_integer()}.
+-type resume_result() :: {ok, term(), non_neg_integer()} | {error, invalid_state | term()}.
 
 %%%---------------------------------------------------------------------
 %%% Table Management
@@ -177,6 +179,16 @@ capture(Metadata, Strategy) when is_map(Metadata), is_atom(Strategy) ->
             {error, {Type, Error, Stack}}
     end.
 
+%% @doc Wrap an existing resumption or wrapper in multi-shot semantics.
+-spec wrap(term()) -> multi_shot().
+wrap(Resumption) ->
+    wrap(Resumption, deep).
+
+%% @doc Wrap an existing resumption with an explicit copy strategy.
+-spec wrap(term(), copy_strategy()) -> multi_shot().
+wrap(Resumption, Strategy) ->
+    new(#{resumption => Resumption}, Strategy).
+
 %%%---------------------------------------------------------------------
 %%% Multi-Shot Resume
 %%%---------------------------------------------------------------------
@@ -197,7 +209,7 @@ resume(#{kind := multi_shot, state := #{id := Id, data := Data, copy_strategy :=
     },
     %% Store updated state
     ets:insert(?RESUME_TABLE, {Id, UpdatedState}),
-    {ok, #{value => Value, previous => CopiedData}, NewCount};
+    {ok, build_resume_payload(CopiedData, Value), NewCount};
 resume(_, _) ->
     {error, invalid_state}.
 
@@ -279,10 +291,11 @@ get_process_info() ->
 %% @doc Get stack trace safely.
 -spec safe_stack_trace() -> list().
 safe_stack_trace() ->
-    try
-        erlang:get_stacktrace()
-    catch
-        _:_ -> []
+    case erlang:process_info(self(), current_stacktrace) of
+        {current_stacktrace, StackTrace} when is_list(StackTrace) ->
+            StackTrace;
+        _ ->
+            []
     end.
 
 %% @doc Increment the resume count for a continuation.
@@ -336,6 +349,36 @@ selective_copy_value(Map) when is_map(Map), map_size(Map) > 5 ->
 selective_copy_value(Value) ->
     %% Share small maps and simple values
     Value.
+
+%% @doc Build the public resume payload for a multi-shot continuation.
+-spec build_resume_payload(term(), term()) -> term().
+build_resume_payload(CopiedData, Value) ->
+    case extract_resumption(CopiedData) of
+        {ok, Resumption} ->
+            case catena_resumption:resume(Resumption, Value) of
+                {error, _, _, _} = Error ->
+                    #{value => Value, error => Error, previous => CopiedData};
+                Result ->
+                    #{value => Value, resumed => Result, previous => CopiedData}
+            end;
+        error ->
+            #{value => Value, previous => CopiedData}
+    end.
+
+%% @doc Extract an underlying resumption from nested wrappers.
+-spec extract_resumption(term()) -> {ok, term()} | error.
+extract_resumption(Data) ->
+    case catena_resumption:is_resumption(Data) of
+        true ->
+            {ok, Data};
+        false when is_map(Data) ->
+            case maps:find(resumption, Data) of
+                {ok, Inner} -> extract_resumption(Inner);
+                error -> error
+            end;
+        false ->
+            error
+    end.
 
 %%%---------------------------------------------------------------------
 %%% Algebraic Laws Callbacks
