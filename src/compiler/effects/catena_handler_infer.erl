@@ -68,7 +68,7 @@
 -type handler_type() :: catena_handler_types:handler_type().
 -type operation_sig() :: catena_handler_types:operation_sig().
 -type effect_row() :: catena_row_types:effect_row().
--type type_ref() :: catena_types:ty() | atom().
+-type type_ref() :: catena_handler_types:type_ref().
 
 -type inference_state() :: #{
     vars => map(),
@@ -122,8 +122,8 @@ infer_from_implementation(Implementation) ->
 %% @private Infer handler type with state.
 infer_from_implementation(Implementation, State) ->
     Ops = infer_operation_sigs(Implementation),
-    {InputType, OutputType, State1} = infer_io_types(Implementation, State),
-    Effects = infer_effect_row(Implementation),
+    {InputType, OutputType, State1} = infer_io_types(Ops, State),
+    Effects = infer_effect_row(Ops),
 
     BaseHandler = catena_handler_types:handler_type(),
     Handler1 = catena_handler_types:with_operations(BaseHandler, Ops),
@@ -140,19 +140,11 @@ infer_from_implementation(Implementation, State) ->
 %% @doc Infer resumption type from operation signature.
 -spec infer_resumption_type(operation_sig(), effect_row()) -> operation_sig().
 infer_resumption_type(OpSig, HandlerEffects) ->
-    Params = maps:get(params, OpSig),
     Result = maps:get(result, OpSig),
     Effects = maps:get(effects, OpSig),
-
-    % Resumption parameter type is the result type of the operation
     ResumptionParamType = Result,
-
-    % Resumption return type needs continuation analysis
     ResumptionResultType = infer_resumption_return_type(Result, Effects),
-
-    % Combine effects
-    CombinedEffects = catena_row_operations:effect_union_rows(
-        Effects, HandlerEffects),
+    CombinedEffects = infer_resumption_effects(Effects, HandlerEffects),
 
     OpSig#{
         params => [ResumptionParamType],
@@ -169,10 +161,9 @@ infer_resumption_param_type(ResultType) ->
 %% @doc Infer resumption return type from result and effects.
 -spec infer_resumption_return_type(type_ref(), effect_row()) -> type_ref().
 infer_resumption_return_type(ResultType, Effects) ->
-    % Analyze effects to determine continuation type
     case catena_row_types:is_empty_row(Effects) of
         true -> ResultType;
-        false -> infer_polymorphic_result(ResultType)
+        false -> {type_var, resumption_return}
     end.
 
 %% @doc Infer resumption effects.
@@ -188,8 +179,6 @@ infer_resumption_effects(OpEffects, HandlerEffects) ->
 -spec infer_context_type(handler_type(), effect_row()) -> {ok, handler_type()} | {error, term()}.
 infer_context_type(HandlerType, OuterEffects) ->
     HandlerEffects = maps:get(effects, HandlerType),
-
-    % Subtract handler effects from outer effects
     case infer_effect_subtraction(HandlerEffects, OuterEffects) of
         {ok, RemainingEffects} ->
             ContextHandler = HandlerType#{effects => RemainingEffects},
@@ -201,24 +190,16 @@ infer_context_type(HandlerType, OuterEffects) ->
 %% @doc Perform effect row subtraction.
 -spec infer_effect_subtraction(effect_row(), effect_row()) -> {ok, effect_row()} | {error, term()}.
 infer_effect_subtraction(ToSubtract, From) ->
-    ToSubtractList = catena_row_types:row_to_list(ToSubtract),
-    FromList = catena_row_types:row_to_list(From),
-
-    % Check if all effects to subtract are in the source
-    case lists:all(fun(E) -> lists:member(E, FromList) end, ToSubtractList) of
+    case catena_row_operations:effect_subsumes(From, ToSubtract) of
         true ->
-            Remaining = lists:filter(fun(E) ->
-                not lists:member(E, ToSubtractList)
-            end, FromList),
-            {ok, catena_row_types:effect_row(Remaining)};
+            {ok, catena_row_operations:effect_difference(From, ToSubtract, #{strict => true})};
         false ->
-            {error, {effect_not_present, ToSubtractList}}
+            {error, {effect_not_present, catena_row_types:row_to_list(ToSubtract)}}
     end.
 
 %% @doc Validate handler context.
 -spec validate_context(handler_type()) -> ok | {error, term()}.
 validate_context(HandlerType) ->
-    % Validate that handler context is well-formed
     case catena_handler_types:is_valid_handler_type(HandlerType) of
         true -> ok;
         false -> {error, invalid_context}
@@ -227,10 +208,7 @@ validate_context(HandlerType) ->
 %% @doc Optimize handler context based on inferred types.
 -spec optimize_context(handler_type()) -> handler_type().
 optimize_context(HandlerType) ->
-    % Apply optimizations based on type information
     Effects = maps:get(effects, HandlerType),
-
-    % If effects are empty, handler is pure
     case catena_row_types:is_empty_row(Effects) of
         true -> optimize_pure_handler(HandlerType);
         false -> HandlerType
@@ -291,39 +269,61 @@ new_state() ->
 
 %% @private Get handler implementation from module.
 get_handler_implementation(Module, HandlerFun) ->
-    try
-        Arity = 2,  % Handlers take (value, resumption)
-        {Module, HandlerFun, Arity}
-    of
-        {_M, _F, _A} = Info -> {ok, Info}
-    catch
-        error:undef -> {error, function_not_found}
+    case erlang:function_exported(Module, HandlerFun, 0) of
+        true ->
+            case catch apply(Module, HandlerFun, []) of
+                Implementation when is_map(Implementation) ->
+                    {ok, Implementation};
+                {'EXIT', Reason} ->
+                    {error, {handler_loader_failed, Reason}};
+                Other ->
+                    {error, {invalid_handler_implementation, Other}}
+            end;
+        false ->
+            {error, function_not_found}
     end.
 
 %% @private Infer single operation signature.
+infer_single_operation(HandlerFun) when is_function(HandlerFun, 2) ->
+    SampleInput = unit,
+    DummyResumption = dummy_resumption(),
+    ResultType = case catch HandlerFun(SampleInput, DummyResumption) of
+        {'EXIT', _Reason} -> {type_var, operation_result};
+        Result -> type_of(Result)
+    end,
+    catena_handler_types:operation_sig([{type_var, operation_param}], ResultType);
 infer_single_operation(_HandlerFun) ->
-    % Simplified - returns generic operation signature
-    catena_handler_types:operation_sig().
+    catena_handler_types:operation_sig([{type_var, operation_param}], {type_var, operation_result}).
 
 %% @private Infer input/output types.
-infer_io_types(_Implementation, State) ->
-    % Generate fresh type variables
-    {State0, InputVar} = fresh_type_var_with_id({State, 1}),
-    {State1, OutputVar} = fresh_type_var_with_id({State0, 1}),
-
-    {catena_types:tvar(InputVar), catena_types:tvar(OutputVar), State1}.
+infer_io_types(Ops, State) ->
+    {State0, InputVar} = fresh_type_var_with_id(State),
+    ResultTypes = lists:usort([maps:get(result, Sig) || {_Op, Sig} <- maps:to_list(Ops)]),
+    OutputType = case ResultTypes of
+        [Single] -> Single;
+        _ -> {type_var, output}
+    end,
+    {{type_var, {input, InputVar}}, OutputType, State0}.
 
 %% @private Infer effect row from implementation.
-infer_effect_row(_Implementation) ->
-    catena_row_types:empty_row().
-
-%% @private Infer polymorphic result type.
-infer_polymorphic_result(ResultType) ->
-    ResultType.
+infer_effect_row(Ops) ->
+    lists:foldl(
+        fun({_Op, Sig}, Acc) ->
+            catena_row_operations:effect_union_rows(Acc, maps:get(effects, Sig))
+        end,
+        catena_row_types:empty_row(),
+        maps:to_list(Ops)
+    ).
 
 %% @private Optimize pure handler.
 optimize_pure_handler(HandlerType) ->
-    HandlerType#{constraints => #{total => true, deep => false, pure => true}}.
+    Constraints0 = maps:get(constraints, HandlerType, #{}),
+    Constraints = Constraints0#{
+        total => maps:get(total, Constraints0, true),
+        deep => maps:get(deep, Constraints0, false),
+        pure => true
+    },
+    HandlerType#{constraints => Constraints}.
 
 %% @private Generalize operation signature.
 generalize_operation_sig(OpSig) ->
@@ -351,6 +351,7 @@ substitute_in_sig(OpSig, Subst) ->
 
 %% @private Generalize a type.
 generalize_type({tcon, _} = T) -> T;
+generalize_type({type_var, _} = T) -> T;
 generalize_type(T) -> T.
 
 %% @private Substitute in a type.
@@ -359,11 +360,27 @@ substitute_type({tvar, Id}, Subst) ->
         {ok, Replacement} -> Replacement;
         error -> {tvar, Id}
     end;
+substitute_type({type_var, Name}, Subst) ->
+    case maps:find(Name, Subst) of
+        {ok, Replacement} -> Replacement;
+        error -> {type_var, Name}
+    end;
 substitute_type({tcon, _} = T, _Subst) -> T;
 substitute_type(T, _Subst) -> T.
 
 %% @private Generate fresh type variable ID.
-fresh_type_var(#{next_id := Id} = State) ->
-    State#{next_id => Id + 1}.
-fresh_type_var_with_id({#{next_id := Id} = State, _Offset}) ->
+fresh_type_var_with_id(#{next_id := Id} = State) ->
     {State#{next_id => Id + 1}, Id}.
+
+-spec dummy_resumption() -> catena_resumption:resumption().
+dummy_resumption() ->
+    catena_resumption:new(fun(Value) -> Value end, 0, 0, #{}).
+
+-spec type_of(term()) -> type_ref().
+type_of(Value) when is_atom(Value) -> atom;
+type_of(Value) when is_integer(Value) -> int;
+type_of(Value) when is_float(Value) -> float;
+type_of(Value) when is_binary(Value) -> binary;
+type_of(Value) when is_list(Value) -> list;
+type_of(Value) when is_map(Value) -> map;
+type_of(_) -> any.

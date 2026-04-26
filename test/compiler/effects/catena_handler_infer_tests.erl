@@ -49,7 +49,8 @@ test_infer_handler_type() ->
     ?assert(catena_handler_types:is_handler_type(HandlerType)),
     ?assert(maps:is_key(operations, HandlerType)),
     ?assert(maps:is_key(input, HandlerType)),
-    ?assert(maps:is_key(output, HandlerType)).
+    ?assert(maps:is_key(output, HandlerType)),
+    ?assertMatch({type_var, {input, _}}, maps:get(input, HandlerType)).
 
 %%%---------------------------------------------------------------------
 %%% Operation Signature Inference Tests
@@ -101,7 +102,7 @@ test_infer_resumption_return_type() ->
     % Operation with effects returns polymorphic result
     Effects = catena_row_types:effect_row([state]),
     ReturnType2 = catena_handler_infer:infer_resumption_return_type(IntType, Effects),
-    ?assert(is_atom(ReturnType2) orelse is_map(ReturnType2)).
+    ?assertMatch({type_var, resumption_return}, ReturnType2).
 
 test_infer_resumption_effects() ->
     OpEffects = catena_row_types:effect_row([io]),
@@ -125,7 +126,8 @@ test_infer_context_type() ->
     OuterEffects = catena_row_types:effect_row([state, io]),
 
     {ok, ContextHandler} = catena_handler_infer:infer_context_type(HandlerType, OuterEffects),
-    ?assert(catena_handler_types:is_handler_type(ContextHandler)).
+    ?assert(catena_handler_types:is_handler_type(ContextHandler)),
+    ?assertEqual([io], catena_row_types:row_to_list(maps:get(effects, ContextHandler))).
 
 test_infer_effect_subtraction() ->
     Effects = catena_row_types:effect_row([state, io]),
