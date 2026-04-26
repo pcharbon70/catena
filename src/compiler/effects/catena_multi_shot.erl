@@ -14,6 +14,8 @@
     capture/0,
     capture/1,
     capture/2,
+    wrap/1,
+    wrap/2,
     %% Multi-shot resume
     resume/2,
     %% State inspection
@@ -70,7 +72,7 @@
 }.
 
 %% @doc Result of resuming a multi-shot continuation.
--type resume_result() :: {ok, term(), non_neg_integer()}.
+-type resume_result() :: {ok, term(), non_neg_integer()} | {error, invalid_state | term()}.
 
 %%%---------------------------------------------------------------------
 %%% Table Management
@@ -177,6 +179,16 @@ capture(Metadata, Strategy) when is_map(Metadata), is_atom(Strategy) ->
             {error, {Type, Error, Stack}}
     end.
 
+%% @doc Wrap an existing resumption or wrapper in multi-shot semantics.
+-spec wrap(term()) -> multi_shot().
+wrap(Resumption) ->
+    wrap(Resumption, deep).
+
+%% @doc Wrap an existing resumption with an explicit copy strategy.
+-spec wrap(term(), copy_strategy()) -> multi_shot().
+wrap(Resumption, Strategy) ->
+    new(#{resumption => Resumption}, Strategy).
+
 %%%---------------------------------------------------------------------
 %%% Multi-Shot Resume
 %%%---------------------------------------------------------------------
@@ -197,7 +209,7 @@ resume(#{kind := multi_shot, state := #{id := Id, data := Data, copy_strategy :=
     },
     %% Store updated state
     ets:insert(?RESUME_TABLE, {Id, UpdatedState}),
-    {ok, #{value => Value, previous => CopiedData}, NewCount};
+    {ok, build_resume_payload(CopiedData, Value), NewCount};
 resume(_, _) ->
     {error, invalid_state}.
 
@@ -279,10 +291,11 @@ get_process_info() ->
 %% @doc Get stack trace safely.
 -spec safe_stack_trace() -> list().
 safe_stack_trace() ->
-    try
-        erlang:get_stacktrace()
-    catch
-        _:_ -> []
+    case erlang:process_info(self(), current_stacktrace) of
+        {current_stacktrace, StackTrace} when is_list(StackTrace) ->
+            StackTrace;
+        _ ->
+            []
     end.
 
 %% @doc Increment the resume count for a continuation.
@@ -300,42 +313,38 @@ increment_resume_count(Id) ->
 
 %% @doc Copy state based on the specified strategy.
 -spec copy_state(term(), copy_strategy()) -> term().
-copy_state(Data, deep) when is_map(Data) ->
-    maps:map(fun(_, V) -> deep_copy_value(V) end, Data);
-copy_state(Data, shallow) ->
-    Data;
-copy_state(Data, selective) ->
-    selective_copy(Data).
+copy_state(Data, Strategy) ->
+    catena_state_copy:copy_value(Data, Strategy).
 
-%% @doc Deep copy a value.
--spec deep_copy_value(term()) -> term().
-deep_copy_value(Map) when is_map(Map) ->
-    maps:map(fun(_, V) -> deep_copy_value(V) end, Map);
-deep_copy_value(List) when is_list(List) ->
-    [deep_copy_value(V) || V <- List];
-deep_copy_value(Tuple) when is_tuple(Tuple) ->
-    List = tuple_to_list(Tuple),
-    CopiedList = [deep_copy_value(V) || V <- List],
-    list_to_tuple(CopiedList);
-deep_copy_value(Value) ->
-    Value.
+%% @doc Build the public resume payload for a multi-shot continuation.
+-spec build_resume_payload(term(), term()) -> term().
+build_resume_payload(CopiedData, Value) ->
+    case extract_resumption(CopiedData) of
+        {ok, Resumption} ->
+            case catena_resumption:resume(Resumption, Value) of
+                {error, _, _, _} = Error ->
+                    #{value => Value, error => Error, previous => CopiedData};
+                Result ->
+                    #{value => Value, resumed => Result, previous => CopiedData}
+            end;
+        error ->
+            #{value => Value, previous => CopiedData}
+    end.
 
-%% @doc Selective copy that copies mutable structures but shares immutable ones.
--spec selective_copy(term()) -> term().
-selective_copy(Data) when is_map(Data) ->
-    %% Copy maps but share simple values
-    maps:map(fun(_, V) -> selective_copy_value(V) end, Data);
-selective_copy(Data) ->
-    Data.
-
-%% @doc Selective copy for individual values.
--spec selective_copy_value(term()) -> term().
-selective_copy_value(Map) when is_map(Map), map_size(Map) > 5 ->
-    %% Copy larger maps
-    maps:map(fun(_, V) -> selective_copy_value(V) end, Map);
-selective_copy_value(Value) ->
-    %% Share small maps and simple values
-    Value.
+%% @doc Extract an underlying resumption from nested wrappers.
+-spec extract_resumption(term()) -> {ok, term()} | error.
+extract_resumption(Data) ->
+    case catena_resumption:is_resumption(Data) of
+        true ->
+            {ok, Data};
+        false when is_map(Data) ->
+            case maps:find(resumption, Data) of
+                {ok, Inner} -> extract_resumption(Inner);
+                error -> error
+            end;
+        false ->
+            error
+    end.
 
 %%%---------------------------------------------------------------------
 %%% Algebraic Laws Callbacks

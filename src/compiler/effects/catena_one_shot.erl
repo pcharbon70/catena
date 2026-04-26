@@ -12,6 +12,7 @@
     %% One-shot capture
     capture/0,
     capture/1,
+    wrap/1,
     %% One-shot resume
     resume/2,
     try_resume/2,
@@ -66,7 +67,7 @@
 %% @doc Result of resuming a one-shot continuation.
 -type resume_result() ::
     {ok, term()} |
-    {error, already_consumed | invalid_state | no_data}.
+    {error, already_consumed | invalid_state | no_data | term()}.
 
 %%%---------------------------------------------------------------------
 %%% Table Management
@@ -108,19 +109,10 @@ new() ->
 new(Data) when is_map(Data) ->
     init_table(),
     Id = make_ref(),
-    #{
-        kind => one_shot,
-        state => #{
-            id => Id,
-            data => Data,
-            consumed => false,
-            capture_time => erlang:system_time(millisecond)
-        },
-        metadata => #{
-            created_at => erlang:system_time(millisecond),
-            created_by => self()
-        }
-    };
+    build_one_shot(Id, Data, #{
+        created_at => erlang:system_time(millisecond),
+        created_by => self()
+    });
 new(Data) ->
     new(#{data => Data}).
 
@@ -139,25 +131,26 @@ capture(Metadata) when is_map(Metadata) ->
     try
         init_table(),
         Id = make_ref(),
-        State = #{
-            id => Id,
-            data => capture_state(),
-            consumed => false,
-            capture_time => erlang:system_time(millisecond)
-        },
-        Continuation = #{
-            kind => one_shot,
-            state => State,
-            metadata => Metadata#{
-                captured_at => erlang:system_time(millisecond),
-                captured_by => self()
-            }
-        },
+        Continuation = build_one_shot(Id, capture_state(), Metadata#{
+            captured_at => erlang:system_time(millisecond),
+            captured_by => self()
+        }),
         {ok, Continuation}
     catch
         Type:Error:Stack ->
             {error, {Type, Error, Stack}}
     end.
+
+%% @doc Wrap an existing resumption or resumption wrapper in one-shot semantics.
+-spec wrap(term()) -> one_shot().
+wrap(Resumption) ->
+    init_table(),
+    Id = make_ref(),
+    build_one_shot(Id, Resumption, #{
+        wrapped => true,
+        created_at => erlang:system_time(millisecond),
+        created_by => self()
+    }).
 
 %%%---------------------------------------------------------------------
 %%% One-Shot Resume
@@ -267,10 +260,11 @@ get_process_info() ->
 %% @doc Get stack trace safely.
 -spec safe_stack_trace() -> list().
 safe_stack_trace() ->
-    try
-        erlang:get_stacktrace()
-    catch
-        _:_ -> []
+    case erlang:process_info(self(), current_stacktrace) of
+        {current_stacktrace, StackTrace} when is_list(StackTrace) ->
+            StackTrace;
+        _ ->
+            []
     end.
 
 %% @doc Check if a continuation ID has been consumed.
@@ -289,6 +283,63 @@ mark_consumed(Id) ->
 %% @doc Perform the actual resume operation.
 -spec do_resume(state(), term()) -> resume_result().
 do_resume(#{data := Data}, Value) ->
+    resume_captured(Data, Value).
+
+%% @doc Perform resume with state update.
+-spec do_resume_with_state(state(), term()) -> {resume_result(), state()}.
+do_resume_with_state(State, Value) ->
+    ConsumedState = State#{consumed => true},
+    Result = case State of
+        #{data := Data} -> resume_captured(Data, Value);
+        _ -> {ok, #{value => Value}}
+    end,
+    {Result, ConsumedState}.
+
+%% @doc Build a one-shot continuation value.
+-spec build_one_shot(reference(), term(), map()) -> one_shot().
+build_one_shot(Id, Data, Metadata) ->
+    #{
+        kind => one_shot,
+        state => #{
+            id => Id,
+            data => Data,
+            consumed => false,
+            capture_time => erlang:system_time(millisecond)
+        },
+        metadata => Metadata
+    }.
+
+%% @doc Resume captured state, delegating to a wrapped resumption when present.
+-spec resume_captured(term(), term()) -> resume_result().
+resume_captured(Data, Value) ->
+    case extract_resumption(Data) of
+        {ok, Resumption} ->
+            case catena_resumption:resume(Resumption, Value) of
+                {error, _, _, _} = Error -> {error, Error};
+                Result -> {ok, Result}
+            end;
+        error ->
+            resume_plain_data(Data, Value)
+    end.
+
+%% @doc Extract an underlying resumption from nested wrappers.
+-spec extract_resumption(term()) -> {ok, term()} | error.
+extract_resumption(Data) ->
+    case catena_resumption:is_resumption(Data) of
+        true ->
+            {ok, Data};
+        false when is_map(Data) ->
+            case maps:find(resumption, Data) of
+                {ok, Inner} -> extract_resumption(Inner);
+                error -> error
+            end;
+        false ->
+            error
+    end.
+
+%% @doc Resume plain captured data without a first-class resumption.
+-spec resume_plain_data(term(), term()) -> resume_result().
+resume_plain_data(Data, Value) ->
     case Data of
         #{process_info := _} ->
             {ok, #{value => Value, restored => Data}};
@@ -297,18 +348,6 @@ do_resume(#{data := Data}, Value) ->
         _ ->
             {ok, #{value => Value, previous => Data}}
     end.
-
-%% @doc Perform resume with state update.
--spec do_resume_with_state(state(), term()) -> {resume_result(), state()}.
-do_resume_with_state(State, Value) ->
-    ConsumedState = State#{consumed => true},
-    Result = case State of
-        #{data := Data} ->
-            {ok, #{value => Value, previous => Data}};
-        _ ->
-            {ok, #{value => Value}}
-    end,
-    {Result, ConsumedState}.
 
 %%%---------------------------------------------------------------------
 %%% Algebraic Laws Callbacks

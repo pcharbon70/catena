@@ -453,7 +453,7 @@ handle(Operation, HandlerFn, Computation, Options) when is_function(HandlerFn, 2
         {true, true} -> wrap_deep_one_shot(HandlerFn);
         {true, false} -> wrap_deep_multi_shot(HandlerFn);
         {false, true} -> wrap_shallow_one_shot(HandlerFn);
-        {false, false} -> HandlerFn  %% Default: shallow, multi-shot
+        {false, false} -> wrap_shallow_multi_shot(HandlerFn)
     end,
 
     ?EFFECT_SYSTEM:handle_with(Operation, WrappedHandler, Computation, maps:get(metadata, Options, #{})).
@@ -924,7 +924,7 @@ wrap_deep_one_shot(HandlerFn) ->
 %% @private Wrap handler for deep multi-shot semantics.
 wrap_deep_multi_shot(HandlerFn) ->
     fun(Value, Resumption) ->
-        WrappedResumption = catena_deep_handler:wrap(Resumption),
+        WrappedResumption = catena_multi_shot:wrap(catena_deep_handler:wrap(Resumption)),
         HandlerFn(Value, WrappedResumption)
     end.
 
@@ -932,5 +932,12 @@ wrap_deep_multi_shot(HandlerFn) ->
 wrap_shallow_one_shot(HandlerFn) ->
     fun(Value, Resumption) ->
         WrappedResumption = catena_one_shot:wrap(catena_shallow_handler:wrap(Resumption)),
+        HandlerFn(Value, WrappedResumption)
+    end.
+
+%% @private Wrap handler for shallow multi-shot semantics.
+wrap_shallow_multi_shot(HandlerFn) ->
+    fun(Value, Resumption) ->
+        WrappedResumption = catena_multi_shot:wrap(catena_shallow_handler:wrap(Resumption)),
         HandlerFn(Value, WrappedResumption)
     end.

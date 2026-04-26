@@ -12,6 +12,7 @@ catena_one_shot_test_() ->
      [
         {"constructors", fun test_constructors/0},
         {"one-shot capture", fun test_capture/0},
+        {"one-shot resumption wrapping", fun test_wrap/0},
         {"one-shot resume", fun test_resume/0},
         {"consumption tracking", fun test_consumption_tracking/0},
         {"double-resume prevention", fun test_double_resume/0},
@@ -41,6 +42,7 @@ test_constructors() ->
     WithData = catena_one_shot:new(#{test => data}),
 
     ?assertEqual({ok, #{}}, catena_one_shot:get_state(Empty)),
+    ?assertEqual({ok, #{test => data}}, catena_one_shot:get_state(WithData)),
     ?assertEqual(one_shot, catena_one_shot:kind()),
     ?assert(catena_one_shot:is_available(Empty)),
     ?assertNot(catena_one_shot:is_consumed(Empty)).
@@ -57,6 +59,19 @@ test_capture() ->
     %% Capture with metadata
     {ok, Cont2} = catena_one_shot:capture(#{source => test}),
     ?assert(catena_one_shot:is_available(Cont2)).
+
+test_wrap() ->
+    Resumption = catena_resumption:new(
+        fun(Value) -> {wrapped, Value} end,
+        erlang:system_time(millisecond),
+        1
+    ),
+    Cont = catena_one_shot:wrap(Resumption),
+
+    ?assert(catena_one_shot:is_available(Cont)),
+    {ok, {wrapped, resumed}} = catena_one_shot:resume(Cont, resumed),
+    ?assert(catena_one_shot:is_consumed(Cont)),
+    ?assertEqual({error, already_consumed}, catena_one_shot:resume(Cont, again)).
 
 %%%---------------------------------------------------------------------
 %%% Resume Tests

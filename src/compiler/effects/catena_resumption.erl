@@ -156,20 +156,34 @@ get_stack_depth() ->
 %%
 %% This executes the captured continuation with the provided value,
 %% returning the result of the computation.
--spec resume(resumption(), term()) -> term().
+-spec resume(resumption() | map(), term()) -> term().
 resume(#resumption{cont = Cont}, Value) ->
     try
         Cont(Value)
     catch
         Kind:Reason:Stack ->
             {error, Kind, Reason, Stack}
-    end.
+    end;
+resume(#{kind := one_shot} = Resumption, Value) ->
+    case catena_one_shot:resume(Resumption, Value) of
+        {ok, Result} -> Result;
+        {error, _} = Error -> Error
+    end;
+resume(#{kind := multi_shot} = Resumption, Value) ->
+    case catena_multi_shot:resume(Resumption, Value) of
+        {ok, Payload, _Count} -> unwrap_multi_shot_payload(Payload);
+        {error, _} = Error -> Error
+    end;
+resume(#{resumption := Resumption}, Value) ->
+    resume(Resumption, Value);
+resume(Resumption, _Value) ->
+    {error, {invalid_resumption, Resumption}}.
 
 %% @doc Resume a resumption with a timeout.
 %%
 %% If the resumption doesn't complete within the timeout, returns
 %% {timeout, Value}.
--spec resume_with_timeout(resumption(), term(), timeout()) ->
+-spec resume_with_timeout(resumption() | map(), term(), timeout()) ->
     term() | {timeout, term()}.
 resume_with_timeout(Resumption, Value, Timeout) ->
     Parent = self(),
@@ -250,3 +264,12 @@ is_valid_continuation(_) -> false.
 function_info(Cont) ->
     {arity, Arity} = erlang:fun_info(Cont, arity),
     {arity, Arity}.
+
+%% @private Normalize multi-shot wrapper results to the resumed computation value.
+-spec unwrap_multi_shot_payload(term()) -> term().
+unwrap_multi_shot_payload(#{resumed := Result}) ->
+    Result;
+unwrap_multi_shot_payload(#{error := Error}) ->
+    {error, Error};
+unwrap_multi_shot_payload(Payload) ->
+    Payload.

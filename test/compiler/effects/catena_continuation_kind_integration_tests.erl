@@ -26,6 +26,9 @@ catena_continuation_kind_integration_test_() ->
         {"multi-shot state sharing", fun test_multi_shot_state_sharing/0},
         {"multi-shot resource management", fun test_multi_shot_resource_management/0},
         {"multi-shot nested continuations", fun test_multi_shot_nested/0},
+        {"handler executes under one-shot kind", fun test_handler_one_shot_kind/0},
+        {"effects multi-shot wrapper", fun test_effects_multi_shot_wrapper/0},
+        {"effects one-shot wrapper", fun test_effects_one_shot_wrapper/0},
         {"backtracking with multi-shot", fun test_backtracking/0},
         {"ambivalent choice operator", fun test_ambivalent_choice/0},
         {"nondeterministic search", fun test_nondeterministic_search/0},
@@ -190,6 +193,60 @@ test_multi_shot_nested() ->
         {ok, _, _} = catena_multi_shot:resume(Inner, inner),
         {ok, _, _} = catena_multi_shot:resume(Outer, outer)
     end, lists:seq(1, 3)).
+
+test_handler_one_shot_kind() ->
+    Handler = catena_handler:new(test_op, fun(_Value, _Resumption) ->
+        catena_continuation_kind:current_kind()
+    end),
+    Resumption = catena_one_shot:wrap(
+        catena_resumption:new(
+            fun(Value) -> {resumed, Value} end,
+            erlang:system_time(millisecond),
+            1
+        )
+    ),
+    ?assertEqual(one_shot, catena_handler:execute(Handler, ignored, Resumption)).
+
+test_effects_multi_shot_wrapper() ->
+    ok = catena_effects:init(),
+    try
+        Result = catena_effects:handle(
+            phase10_multi_shot_op,
+            fun(_Value, Resumption) ->
+                {multi_shot, [
+                    catena_effects:resume(Resumption, 1),
+                    catena_effects:resume(Resumption, 2)
+                ]}
+            end,
+            fun() ->
+                catena_effects:perform(phase10_multi_shot_op, ignored)
+            end
+        ),
+        ?assertEqual({multi_shot, [{resumed, 1}, {resumed, 2}]}, Result)
+    after
+        catena_effects:shutdown()
+    end.
+
+test_effects_one_shot_wrapper() ->
+    ok = catena_effects:init(),
+    try
+        Result = catena_effects:handle(
+            phase10_one_shot_op,
+            fun(_Value, Resumption) ->
+                {
+                    catena_effects:resume(Resumption, first),
+                    catena_effects:resume(Resumption, second)
+                }
+            end,
+            fun() ->
+                catena_effects:perform(phase10_one_shot_op, ignored)
+            end,
+            #{one_shot => true}
+        ),
+        ?assertEqual({{resumed, first}, {error, already_consumed}}, Result)
+    after
+        catena_effects:shutdown()
+    end.
 
 %%%---------------------------------------------------------------------
 %%% Backtracking and Nondeterminism Tests

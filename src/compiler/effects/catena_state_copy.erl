@@ -211,14 +211,10 @@ is_valid_strategy(_) -> false.
 %% @doc Copy a value using the specified strategy.
 -spec copy_value(term(), copy_strategy() | strategy_spec()) -> term().
 copy_value(Term, Strategy) when is_atom(Strategy) ->
-    case Strategy of
-        deep -> deep_copy(Term);
-        shallow -> shallow_copy(Term);
-        selective -> selective_copy(Term);
-        _ -> Term
-    end;
+    apply_strategy(Term, Strategy, #{});
 copy_value(Term, Spec) when is_map(Spec) ->
-    selective_copy(Term, Spec).
+    Strategy = maps:get(strategy, Spec, selective),
+    apply_strategy(Term, Strategy, Spec).
 
 %% @doc Merge two copy results.
 -spec merge(copy_result(), copy_result()) -> copy_result().
@@ -294,3 +290,14 @@ identity(_, _) -> false.
 idempotent(deep) -> true;
 idempotent(shallow) -> true;
 idempotent(selective) -> true.
+
+%% @private Apply a copy strategy with optional strategy-specific settings.
+-spec apply_strategy(term(), copy_strategy(), map()) -> term().
+apply_strategy(Term, deep, Spec) ->
+    deep_copy(Term, Spec);
+apply_strategy(Term, shallow, Spec) ->
+    shallow_copy(Term, Spec);
+apply_strategy(Term, selective, Spec) ->
+    selective_copy(Term, Spec);
+apply_strategy(Term, _, _) ->
+    Term.
