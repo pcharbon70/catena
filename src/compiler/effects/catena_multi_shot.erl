@@ -313,42 +313,8 @@ increment_resume_count(Id) ->
 
 %% @doc Copy state based on the specified strategy.
 -spec copy_state(term(), copy_strategy()) -> term().
-copy_state(Data, deep) when is_map(Data) ->
-    maps:map(fun(_, V) -> deep_copy_value(V) end, Data);
-copy_state(Data, shallow) ->
-    Data;
-copy_state(Data, selective) ->
-    selective_copy(Data).
-
-%% @doc Deep copy a value.
--spec deep_copy_value(term()) -> term().
-deep_copy_value(Map) when is_map(Map) ->
-    maps:map(fun(_, V) -> deep_copy_value(V) end, Map);
-deep_copy_value(List) when is_list(List) ->
-    [deep_copy_value(V) || V <- List];
-deep_copy_value(Tuple) when is_tuple(Tuple) ->
-    List = tuple_to_list(Tuple),
-    CopiedList = [deep_copy_value(V) || V <- List],
-    list_to_tuple(CopiedList);
-deep_copy_value(Value) ->
-    Value.
-
-%% @doc Selective copy that copies mutable structures but shares immutable ones.
--spec selective_copy(term()) -> term().
-selective_copy(Data) when is_map(Data) ->
-    %% Copy maps but share simple values
-    maps:map(fun(_, V) -> selective_copy_value(V) end, Data);
-selective_copy(Data) ->
-    Data.
-
-%% @doc Selective copy for individual values.
--spec selective_copy_value(term()) -> term().
-selective_copy_value(Map) when is_map(Map), map_size(Map) > 5 ->
-    %% Copy larger maps
-    maps:map(fun(_, V) -> selective_copy_value(V) end, Map);
-selective_copy_value(Value) ->
-    %% Share small maps and simple values
-    Value.
+copy_state(Data, Strategy) ->
+    catena_state_copy:copy_value(Data, Strategy).
 
 %% @doc Build the public resume payload for a multi-shot continuation.
 -spec build_resume_payload(term(), term()) -> term().

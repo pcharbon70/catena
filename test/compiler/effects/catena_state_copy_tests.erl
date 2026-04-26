@@ -20,6 +20,7 @@ catena_state_copy_test_() ->
         {"strategy specification", fun test_strategy_specification/0},
         {"validation", fun test_validation/0},
         {"copy value utility", fun test_copy_value/0},
+        {"copy value with strategy spec", fun test_copy_value_with_strategy_spec/0},
         {"merge results", fun test_merge/0},
         {"optimize strategy", fun test_optimize_strategy/0},
         {"should share", fun test_should_share/0},
@@ -156,6 +157,16 @@ test_copy_value() ->
     ?assertEqual(Value, catena_state_copy:copy_value(Value, deep)),
     ?assertEqual(Value, catena_state_copy:copy_value(Value, shallow)),
     ?assertEqual(Value, catena_state_copy:copy_value(Value, selective)).
+
+test_copy_value_with_strategy_spec() ->
+    Value = #{a => #{b => [1, 2, 3]}, c => 4},
+    DeepSpec = #{strategy => deep, max_depth => 1},
+    ShallowSpec = #{strategy => shallow},
+    SelectiveSpec = #{strategy => selective, exclude => [a]},
+
+    ?assertEqual(Value, catena_state_copy:copy_value(Value, DeepSpec)),
+    ?assertEqual(Value, catena_state_copy:copy_value(Value, ShallowSpec)),
+    ?assertEqual(Value, catena_state_copy:copy_value(Value, SelectiveSpec)).
 
 %%%---------------------------------------------------------------------
 %%% Merge Results Tests
