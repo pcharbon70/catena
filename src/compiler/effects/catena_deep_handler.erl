@@ -40,7 +40,8 @@
 -export([
     scope_effects_deep/2,
     with_deep_handler/3,
-    execute_deep/3
+    execute_deep/3,
+    wrap/1
 ]).
 
 %% Deep handler scoping
@@ -68,12 +69,15 @@
     effect => effect_name(),
     handler => function(),
     scope => pid() | reference(),
-    depth => non_neg_integer()
+    depth => non_neg_integer(),
+    serial => non_neg_integer()
 }.
 -type deep_context() :: #{
     handlers => [deep_handler()],
     stack => [{effect_name(), deep_handler()}],
-    cache => #{effect_name() => deep_handler()}
+    cache => #{effect_name() => deep_handler()},
+    serial => non_neg_integer(),
+    trace => [map()]
 }.
 
 -export_type([
@@ -89,27 +93,31 @@
 %% Operations at all nesting levels are handled.
 -spec scope_effects_deep(deep_context(), function()) -> any().
 scope_effects_deep(Context, Fun) ->
-    Handlers = maps:get(handlers, Context, [#{depth => 0}]),
-    CurrentDepth = case Handlers of
-        [] -> 0;
-        [H | _] -> maps:get(depth, H, 0)
-    end,
-    _ = CurrentDepth,
+    Previous = get_deep_context(),
+    Installed = normalize_context(Context, Previous),
     try
+        put_deep_context(Installed),
         Fun()
     after
-        ok
+        put_deep_context(Previous)
     end.
 
 %% @doc Execute a function with a deep handler.
 %% The handler catches operations at all nesting levels within Fun.
 -spec with_deep_handler(effect_name(), function(), function()) -> any().
 with_deep_handler(EffectName, HandlerFun, UserFun) ->
-    Handler = create_deep_handler(EffectName, HandlerFun),
     Context = get_deep_context(),
+    Serial = maps:get(serial, Context, 0) + 1,
+    Handler = create_deep_handler(EffectName, HandlerFun, current_deep_depth(), Serial),
     Handlers = [Handler | maps:get(handlers, Context, [])],
     Stack = [{EffectName, Handler} | maps:get(stack, Context, [])],
-    UpdatedContext = Context#{handlers => Handlers, stack => Stack},
+    Cache = maps:put(EffectName, Handler, maps:get(cache, Context, #{})),
+    UpdatedContext = Context#{
+        handlers => Handlers,
+        stack => Stack,
+        cache => Cache,
+        serial => Serial
+    },
     put_deep_context(UpdatedContext),
     try
         UserFun()
@@ -122,23 +130,32 @@ with_deep_handler(EffectName, HandlerFun, UserFun) ->
 %% Deep handlers handle operations at any nesting level.
 -spec execute_deep(effect_operation(), deep_context(), non_neg_integer()) ->
     {handled, term()} | {unhandled, effect_operation()}.
-execute_deep({EffectName, Op, Args}, Context, _OperationDepth) ->
-    Handlers = maps:get(handlers, Context, []),
-    try_handle_deep(EffectName, Op, Args, Handlers).
-
-%% @private Try to handle with deep semantics (any handler on stack).
-try_handle_deep(EffectName, Op, Args, Handlers) ->
-    case find_handler_for_effect(EffectName, Handlers) of
+execute_deep({EffectName, Op, Args}, Context, OperationDepth) ->
+    case cached_handler_lookup(EffectName, Context) of
         {value, Handler} ->
-            HandlerFun = maps:get(handler, Handler),
-            try
-                Result = apply(HandlerFun, [Op, Args]),
-                {handled, Result}
-            catch
-                _:_ ->
+            case catena_handler_depth:handles_at_depth(
+                deep,
+                maps:get(depth, Handler, 0),
+                OperationDepth
+            ) of
+                true ->
+                    try_handle_deep(EffectName, Op, Args, Context, Handler);
+                false ->
                     {unhandled, {EffectName, Op, Args}}
             end;
         false ->
+            {unhandled, {EffectName, Op, Args}}
+    end.
+
+%% @private Try to handle with deep semantics (any handler on stack).
+try_handle_deep(EffectName, Op, Args, Context, Handler) ->
+    HandlerFun = maps:get(handler, Handler),
+    record_trace(Context, EffectName, Op, Args, Handler),
+    try
+        Result = HandlerFun(Op, Args),
+        {handled, Result}
+    catch
+        _:_ ->
             {unhandled, {EffectName, Op, Args}}
     end.
 
@@ -150,8 +167,15 @@ try_handle_deep(EffectName, Op, Args, Handlers) ->
 %% Unlike shallow boundaries, deep boundaries don't isolate operations.
 -spec deep_scope_boundary(function()) -> function().
 deep_scope_boundary(Fun) ->
-    % Deep boundaries are transparent - they don't affect handler lookup
-    Fun.
+    fun() ->
+        Context = get_deep_context(),
+        put_deep_context(Context),
+        try
+            Fun()
+        after
+            put_deep_context(Context)
+        end
+    end.
 
 %% @doc Check if currently in a deep handler scope.
 -spec is_in_deep_scope(deep_context()) -> boolean().
@@ -193,27 +217,32 @@ cached_handler_lookup(EffectName, Context) ->
     Cache = maps:get(cache, Context, #{}),
     case maps:find(EffectName, Cache) of
         {ok, Handler} ->
-            % Verify handler is still active (in handlers list)
-            Handlers = maps:get(handlers, Context, []),
-            case lists:member(Handler, Handlers) of
-                true -> {value, Handler};
-                false -> traverse_handlers(EffectName, Handlers)
-            end;
+            validate_cached_handler(EffectName, Handler, Context);
         error ->
-            traverse_handlers(EffectName, maps:get(handlers, Context, []))
+            maybe_cache_handler(EffectName, traverse_handlers(EffectName, maps:get(handlers, Context, [])))
     end.
+
+%% @doc Wrap a resumption with deep-handler metadata.
+-spec wrap(term()) -> map().
+wrap(Resumption) ->
+    #{
+        depth => deep,
+        lookup => catena_handler_depth:lookup_strategy(deep),
+        resumption => Resumption
+    }.
 
 %%====================================================================
 %% Private Functions
 %%====================================================================
 
 %% @private Create a new deep handler with depth tracking.
-create_deep_handler(EffectName, HandlerFun) ->
+create_deep_handler(EffectName, HandlerFun, Depth, Serial) ->
     #{
         effect => EffectName,
         handler => HandlerFun,
         scope => make_ref(),
-        depth => current_deep_depth()
+        depth => Depth,
+        serial => Serial
     }.
 
 %% @private Find a handler for a specific effect.
@@ -223,10 +252,56 @@ find_handler_for_effect(EffectName, Handlers) ->
 %% @private Get the current deep context from process dictionary.
 get_deep_context() ->
     case get(deep_context) of
-        undefined -> #{handlers => [], stack => [], cache => #{}};
+        undefined -> #{handlers => [], stack => [], cache => #{}, serial => 0, trace => []};
         Context -> Context
     end.
 
 %% @private Put the deep context into process dictionary.
 put_deep_context(Context) ->
     put(deep_context, Context).
+
+%% @private Normalize a caller-provided deep context against the current one.
+-spec normalize_context(deep_context(), deep_context()) -> deep_context().
+normalize_context(Context, Previous) ->
+    #{
+        handlers => maps:get(handlers, Context, maps:get(handlers, Previous, [])),
+        stack => maps:get(stack, Context, maps:get(stack, Previous, [])),
+        cache => maps:get(cache, Context, maps:get(cache, Previous, #{})),
+        serial => maps:get(serial, Context, maps:get(serial, Previous, 0)),
+        trace => maps:get(trace, Context, maps:get(trace, Previous, []))
+    }.
+
+%% @private Ensure a cached handler is still active and semantically valid.
+-spec validate_cached_handler(effect_name(), deep_handler(), deep_context()) ->
+    {value, deep_handler()} | false.
+validate_cached_handler(EffectName, Handler, Context) ->
+    Handlers = maps:get(handlers, Context, []),
+    case lists:member(Handler, Handlers) andalso maps:get(effect, Handler) =:= EffectName of
+        true -> {value, Handler};
+        false -> maybe_cache_handler(EffectName, traverse_handlers(EffectName, Handlers))
+    end.
+
+%% @private Update the process-local cache when a handler is found.
+-spec maybe_cache_handler(effect_name(), {value, deep_handler()} | false) ->
+    {value, deep_handler()} | false.
+maybe_cache_handler(_EffectName, false) ->
+    false;
+maybe_cache_handler(EffectName, {value, Handler} = Result) ->
+    Context = get_deep_context(),
+    Cache = maps:get(cache, Context, #{}),
+    put_deep_context(Context#{cache => maps:put(EffectName, Handler, Cache)}),
+    Result.
+
+%% @private Record handler telemetry in the process-local deep context.
+-spec record_trace(deep_context(), effect_name(), atom(), [term()], deep_handler()) -> ok.
+record_trace(Context, EffectName, Op, Args, Handler) ->
+    ActiveContext = get_deep_context(),
+    TraceEntry = #{
+        effect => EffectName,
+        operation => Op,
+        args => Args,
+        handler_scope => maps:get(scope, Handler, undefined),
+        depth => maps:get(depth, Handler, 0)
+    },
+    put_deep_context(ActiveContext#{trace => [TraceEntry | maps:get(trace, Context, [])]}),
+    ok.
