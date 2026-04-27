@@ -37,6 +37,9 @@ cleanup(_) ->
 test_handler_constructors() ->
     Empty = catena_handler_types:handler_type(),
     ?assert(catena_handler_types:is_handler_type(Empty)),
+    ?assertEqual({type_var, input}, maps:get(input, Empty)),
+    ?assertEqual({type_var, output}, maps:get(output, Empty)),
+    ?assertEqual(#{total => true, deep => false, pure => false}, maps:get(constraints, Empty)),
 
     Named = catena_handler_types:handler_type(my_handler),
     ?assertEqual(my_handler, maps:get(name, Named)),
@@ -49,6 +52,7 @@ test_handler_constructors() ->
 test_operation_constructors() ->
     Empty = catena_handler_types:operation_sig(),
     ?assert(catena_handler_types:is_operation_sig(Empty)),
+    ?assertEqual({type_var, result}, maps:get(result, Empty)),
 
     IntType = int,
     WithParams = catena_handler_types:operation_sig([atom, IntType], IntType),
@@ -115,7 +119,11 @@ test_validation() ->
 
     %% Valid operation signature
     ValidOp = catena_handler_types:operation_sig([atom], atom),
-    ?assert(catena_handler_types:is_valid_operation_sig(ValidOp)).
+    ?assert(catena_handler_types:is_valid_operation_sig(ValidOp)),
+
+    %% Invalid handler constraints
+    InvalidConstraints = ValidHandler#{constraints => #{total => 'maybe', deep => false, pure => false}},
+    ?assertNot(catena_handler_types:is_valid_handler_type(InvalidConstraints)).
 
 %%%---------------------------------------------------------------------
 %%% Composition Tests
@@ -140,6 +148,7 @@ test_composition() ->
     ?assertEqual(2, maps:size(ComposedOps)),
     ?assert(maps:is_key(get, ComposedOps)),
     ?assert(maps:is_key(put, ComposedOps)),
+    ?assertEqual(#{total => true, deep => false, pure => false}, maps:get(constraints, Composed)),
 
     %% Type mismatch case
     H3 = catena_handler_types:with_output(

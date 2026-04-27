@@ -53,6 +53,24 @@ test_check_handler_type() ->
     % Check signature (doesn't require module)
     ?assertEqual(ok, catena_handler_check:check_handler_signature(HandlerType)),
 
+    ValidImplementation = #{
+        get => fun(_Value, _Resume) -> 7 end,
+        put => fun(_Value, _Resume) -> ok end
+    },
+    ?assertEqual(
+        ok,
+        catena_handler_check:check_handler_implementation(HandlerType, ValidImplementation)
+    ),
+
+    InvalidImplementation = #{
+        get => fun(_Value) -> 7 end,
+        put => fun(_Value, _Resume) -> ok end
+    },
+    ?assertMatch(
+        {error, {type_mismatch, handler_implementation, _, _}},
+        catena_handler_check:check_handler_implementation(HandlerType, InvalidImplementation)
+    ),
+
     % Invalid handler type
     InvalidHandler = #{invalid => handler},
     ?assertMatch({error, {invalid_handler, _}},
@@ -209,7 +227,7 @@ test_error_formatting() ->
     % Missing operations error
     MissingError = {missing_operations, [get, put]},
     MissingFormatted = catena_handler_check:format_check_error(MissingError),
-    ?assertNotEqual(nomatch, binary:match(MissingFormatted, <<"Missing operations">>)),
+    ?assertEqual(<<"Missing operations: get, put">>, MissingFormatted),
 
     % Redundant operations error
     RedundantError = {redundant_operations, [send]},

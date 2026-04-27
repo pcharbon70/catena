@@ -70,7 +70,7 @@
 -type handler_type() :: catena_handler_types:handler_type().
 -type operation_sig() :: catena_handler_types:operation_sig().
 -type effect_row() :: catena_row_types:effect_row().
--type type_ref() :: catena_types:ty() | atom().
+-type type_ref() :: catena_handler_types:type_ref().
 -type execution_result() :: {ok, term()} | {error, term()}.
 -type coercion_result() :: {ok, handler_type()} | {error, term()}.
 
@@ -88,20 +88,25 @@
 %%====================================================================
 
 %% @doc Execute handler with full type checking.
--spec execute_typed(atom(), atom(), handler_type(), term()) -> execution_result().
+-spec execute_typed(atom(), function(), handler_type(), term()) -> execution_result().
 execute_typed(Operation, HandlerFn, HandlerType, InputValue) ->
-    % Validate handler type
-    case validate_before_execution(HandlerType, InputValue) of
-        {error, Reason} ->
-            {error, {pre_execution_check_failed, Reason}};
-        ok ->
-            % Get operation signature
-            Ops = maps:get(operations, HandlerType),
-            case maps:find(Operation, Ops) of
-                {ok, OpSig} ->
-                    execute_operation_checked(Operation, HandlerFn, OpSig, InputValue);
-                error ->
-                    {error, {unknown_operation, Operation}}
+    case {catena_handler_types:is_handler_type(HandlerType), is_function(HandlerFn, 2)} of
+        {false, _} ->
+            {error, {invalid_handler_type, HandlerType}};
+        {_, false} ->
+            {error, {invalid_handler_function, HandlerFn}};
+        {true, true} ->
+            case validate_before_execution(HandlerType, InputValue) of
+                {error, Reason} ->
+                    {error, {pre_execution_check_failed, Reason}};
+                ok ->
+                    Ops = maps:get(operations, HandlerType),
+                    case maps:find(Operation, Ops) of
+                        {ok, OpSig} ->
+                            execute_operation_checked(Operation, HandlerFn, OpSig, InputValue);
+                        error ->
+                            {error, {unknown_operation, Operation}}
+                    end
             end
     end.
 
@@ -109,7 +114,7 @@ execute_typed(Operation, HandlerFn, HandlerType, InputValue) ->
 -spec execute_with_checks(module(), atom(), term()) -> execution_result().
 execute_with_checks(Module, HandlerFun, Value) ->
     try
-        Result = Module:HandlerFun(Value, dummy_resumption),
+        Result = Module:HandlerFun(Value, dummy_resumption()),
         {ok, Result}
     catch
         Kind:Reason:Stack ->
@@ -119,10 +124,15 @@ execute_with_checks(Module, HandlerFun, Value) ->
 %% @doc Validate inputs before handler execution.
 -spec validate_before_execution(handler_type(), term()) -> ok | {error, term()}.
 validate_before_execution(HandlerType, InputValue) ->
-    InputType = maps:get(input, HandlerType),
-    case value_matches_type(InputType, InputValue) of
-        true -> ok;
-        false -> {error, {input_type_mismatch, InputType, type_of(InputValue)}}
+    case catena_handler_types:is_handler_type(HandlerType) of
+        false ->
+            {error, {invalid_handler_type, HandlerType}};
+        true ->
+            InputType = maps:get(input, HandlerType),
+            case value_matches_type(InputType, InputValue) of
+                true -> ok;
+                false -> {error, {input_type_mismatch, InputType, type_of(InputValue)}}
+            end
     end.
 
 %%====================================================================
@@ -273,13 +283,11 @@ recover_from_error(Error, _Context) ->
 
 %% @private Execute operation with type checking.
 execute_operation_checked(_Operation, HandlerFn, OpSig, InputValue) ->
-    % Validate input type
     Params = maps:get(params, OpSig),
     case validate_input_types(Params, [InputValue]) of
         ok ->
             try
-                Result = HandlerFn(InputValue, dummy_resumption),
-                % Validate output type
+                Result = HandlerFn(InputValue, dummy_resumption()),
                 ResultType = maps:get(result, OpSig),
                 case value_matches_type(ResultType, Result) of
                     true -> {ok, Result};
@@ -308,21 +316,27 @@ value_matches_type(Type, Value) ->
 
 %% @private Check if two types are compatible.
 type_matches(T1, T2) when T1 =:= T2 -> true;
+type_matches({type_var, _}, _) -> true;
+type_matches(_, {type_var, _}) -> true;
 type_matches(#{kind := t_var}, _) -> true;
 type_matches(_, #{kind := t_var}) -> true;
+type_matches(any, _) -> true;
+type_matches(_, any) -> true;
 type_matches(T1, T2) when is_map(T1), is_map(T2) ->
     maps:size(T1) =:= maps:size(T2);
 type_matches(_, _) -> false.
 
 %% @private Check if types are compatible (looser than match).
 type_compatible(T1, T2) when T1 =:= T2 -> true;
+type_compatible({type_var, _}, _) -> true;
+type_compatible(_, {type_var, _}) -> true;
+type_compatible(any, _) -> true;
+type_compatible(_, any) -> true;
 type_compatible(_, _) -> false.
 
 %% @private Check if effects subsume (actual effects subset of expected).
 effects_subsumes(ActualEffects, ExpectedEffects) ->
-    ActualList = catena_row_types:row_to_list(ActualEffects),
-    ExpectedList = catena_row_types:row_to_list(ExpectedEffects),
-    lists:all(fun(E) -> lists:member(E, ExpectedList) end, ActualList).
+    catena_row_operations:effect_subset(ActualEffects, ExpectedEffects).
 
 %% @private Check if all operations are compatible.
 all_operations_compatible(ActualOps, ExpectedOps) ->
@@ -339,11 +353,13 @@ all_operations_compatible(ActualOps, ExpectedOps) ->
 
 %% @private Check if operation signatures are compatible.
 operation_sigs_compatible(Actual, Expected) ->
-    % For simplicity, require exact match
-    maps:get(params, Actual) =:= maps:get(params, Expected) andalso
-    maps:get(result, Actual) =:= maps:get(result, Expected).
+    params_compatible(maps:get(params, Actual), maps:get(params, Expected)) andalso
+    type_compatible(maps:get(result, Actual), maps:get(result, Expected)) andalso
+    effects_subsumes(maps:get(effects, Actual), maps:get(effects, Expected)).
 
 %% @private Get type of value.
+type_of(true) -> bool;
+type_of(false) -> bool;
 type_of(Value) when is_integer(Value) -> int;
 type_of(Value) when is_float(Value) -> float;
 type_of(Value) when is_atom(Value) -> atom;
@@ -354,12 +370,15 @@ type_of(_) -> any.
 
 %% @private Format type for display.
 format_type(Type) when is_atom(Type) -> atom_to_binary(Type);
+format_type({type_var, Name}) ->
+    <<"'",
+      (atom_to_binary(Name))/binary>>;
 format_type(Type) -> list_to_binary(io_lib:format("~p", [Type])).
 
 %% @private Format effects for display.
 format_effects(Effects) ->
     List = catena_row_types:row_to_list(Effects),
-    Binaries = [atom_to_binary(E) || E <- List],
+    Binaries = [format_effect(E) || E <- List],
     <<"{", (list_to_binary(lists:join(<<", ">>, Binaries)))/binary, "}">>.
 
 %% @private Format handler for display.
@@ -371,3 +390,22 @@ format_handler(Handler) ->
 %% @private Format term for display.
 format_term(Term) when is_atom(Term) -> atom_to_binary(Term);
 format_term(Term) -> list_to_binary(io_lib:format("~p", [Term])).
+
+-spec params_compatible([type_ref()], [type_ref()]) -> boolean().
+params_compatible(Actual, Expected) when length(Actual) =:= length(Expected) ->
+    lists:all(
+        fun({ActualType, ExpectedType}) -> type_compatible(ActualType, ExpectedType) end,
+        lists:zip(Actual, Expected)
+    );
+params_compatible(_, _) ->
+    false.
+
+-spec format_effect(term()) -> binary().
+format_effect(Effect) when is_atom(Effect) ->
+    atom_to_binary(Effect);
+format_effect(Effect) ->
+    format_term(Effect).
+
+-spec dummy_resumption() -> catena_resumption:resumption().
+dummy_resumption() ->
+    catena_resumption:new(fun(Value) -> Value end, 0, 0, #{}).
