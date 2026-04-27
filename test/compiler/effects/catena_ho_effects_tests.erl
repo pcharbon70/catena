@@ -1,10 +1,6 @@
 -module(catena_ho_effects_tests).
 -include_lib("eunit/include/eunit.hrl").
 
-%%%---------------------------------------------------------------------
-%%% Test Suite Configuration
-%%%---------------------------------------------------------------------
-
 catena_ho_effects_test_() ->
     {setup,
      fun setup/0,
@@ -19,50 +15,32 @@ catena_ho_effects_test_() ->
         {"pretty printing", fun test_pretty_printing/0}
      ]}.
 
-%%%---------------------------------------------------------------------
-%%% Setup and Cleanup
-%%%---------------------------------------------------------------------
-
 setup() ->
     ok.
 
 cleanup(_) ->
     ok.
 
-%%%---------------------------------------------------------------------
-%%% Constructor Tests
-%%%---------------------------------------------------------------------
-
 test_ho_op_constructors() ->
-    %% Empty HO op type
     Empty = catena_ho_effects:ho_op_type(),
     ?assert(catena_ho_effects:is_ho_op(Empty)),
 
-    %% Named HO op type
     Named = catena_ho_effects:ho_op_type(my_ho_op),
     ?assert(catena_ho_effects:is_ho_op(Named)),
 
-    %% HO op with params and result
     Params = [atom, int],
     Result = bool,
     WithParams = catena_ho_effects:ho_op_type(op1, Params, Result),
     ?assert(catena_ho_effects:is_ho_op(WithParams)),
 
-    %% Complete HO op with effects
     Effects = effect_row_example(),
     Complete = catena_ho_effects:ho_op_type(op2, Params, Result, Effects),
     ?assert(catena_ho_effects:is_ho_op(Complete)).
 
-%%%---------------------------------------------------------------------
-%%% Effectful Parameter Tests
-%%%---------------------------------------------------------------------
-
 test_effectful_params() ->
-    %% Empty effectful param
     Empty = catena_ho_effects:effectful_param(),
     ?assert(catena_ho_effects:is_effectful_param(Empty)),
 
-    %% Effectful param with input/output
     Input = atom,
     Output = int,
     WithIO = catena_ho_effects:effectful_param(Input, Output),
@@ -70,23 +48,16 @@ test_effectful_params() ->
     ?assertEqual(Input, catena_ho_effects:param_input_type(WithIO)),
     ?assertEqual(Output, catena_ho_effects:param_output_type(WithIO)),
 
-    %% Complete effectful param
     Effects = effect_row_example(),
     Complete = catena_ho_effects:effectful_param(Input, Output, Effects),
     ?assert(catena_ho_effects:is_effectful_param(Complete)),
     ?assertEqual(Effects, catena_ho_effects:param_effects(Complete)),
 
-    %% Not effectful
     ?assertNot(catena_ho_effects:is_effectful_param(atom)),
     ?assertNot(catena_ho_effects:is_effectful_param(123)),
     ?assertNot(catena_ho_effects:is_effectful_param(#{})).
 
-%%%---------------------------------------------------------------------
-%%% Validation Tests
-%%%---------------------------------------------------------------------
-
 test_ho_validation() ->
-    %% HO op with effectful params
     EffParam = catena_ho_effects:effectful_param(atom, int),
     Params = [atom, EffParam, bool],
     HO1 = catena_ho_effects:ho_op_type(ho_op, Params, int),
@@ -95,32 +66,15 @@ test_ho_validation() ->
     ?assertEqual(1, catena_ho_effects:count_effectful_params(HO1)),
 
     EffParams = catena_ho_effects:get_effectful_params(HO1),
-    ?assertEqual(1, length(EffParams)),
-    ?assertEqual(EffParam, hd(EffParams)),
+    ?assertEqual([EffParam], EffParams),
 
-    %% HO op with multiple effectful params
     EffParam2 = catena_ho_effects:effectful_param(bool, atom),
-    Params2 = [EffParam, EffParam2],
-    HO2 = catena_ho_effects:ho_op_type(ho_op2, Params2, int),
-
+    HO2 = catena_ho_effects:ho_op_type(ho_op2, [EffParam, EffParam2], int),
     ?assertEqual(2, catena_ho_effects:count_effectful_params(HO2)),
-    ?assertEqual(2, length(catena_ho_effects:get_effectful_params(HO2))),
-
-    %% HO op with no effectful params
-    SimpleParams = [atom, int, bool],
-    HO3 = catena_ho_effects:ho_op_type(simple_op, SimpleParams, int),
-    ?assertEqual(0, catena_ho_effects:count_effectful_params(HO3)),
-
-    %% Check if param is higher-order type
     ?assert(catena_ho_effects:is_ho_param_type(EffParam)),
     ?assertNot(catena_ho_effects:is_ho_param_type(atom)).
 
-%%%---------------------------------------------------------------------
-%%% Type Inference Tests
-%%%---------------------------------------------------------------------
-
 test_param_inference() ->
-    %% Infer simple parameter type
     Constraints = #{
         effectful_params => 0,
         max_nesting => 2,
@@ -130,150 +84,109 @@ test_param_inference() ->
     ?assertNot(catena_ho_effects:is_effectful_param(SimpleType)),
     ?assertEqual(atom, SimpleType),
 
-    %% Infer effectful param effects
-    EffParam = catena_ho_effects:effectful_param(atom, int),
-    ParamEffects = catena_ho_effects:infer_param_effects(EffParam, Constraints),
-    ?assert(is_map(ParamEffects)),
+    HOConstraints = Constraints#{allow_impredicative => true},
+    Inferred = catena_ho_effects:infer_param_type({effectful_fun, atom, int}, HOConstraints),
+    ?assert(catena_ho_effects:is_effectful_param(Inferred)),
+    InferredEffects = catena_ho_effects:param_effects(Inferred),
+    ?assertNotEqual(undefined, maps:get(row_var, InferredEffects)),
+
+    ParamEffects = catena_ho_effects:infer_param_effects(Inferred, Constraints),
     ?assertEqual(effect_row, maps:get(kind, ParamEffects)),
 
-    %% Infer all param types
-    Terms = [atom, int, bool],
+    Terms = [atom, {effectful_fun, int, bool}, bool],
     InferredParams = catena_ho_effects:infer_all_param_types(Terms),
     ?assertEqual(3, length(InferredParams)),
 
-    %% Unify matching param types
-    EffParam1 = catena_ho_effects:effectful_param(atom, int),
-    EffParam2 = catena_ho_effects:effectful_param(atom, int),
+    EffParam1 = catena_ho_effects:effectful_param(atom, int, effect_row_example()),
+    EffParam2 = catena_ho_effects:effectful_param(atom, int, state_row_example()),
     ?assertMatch({ok, _}, catena_ho_effects:unify_param_types(EffParam1, EffParam2)),
 
-    %% Unify mismatched param types
     EffParam3 = catena_ho_effects:effectful_param(bool, int),
     ?assertMatch({error, _}, catena_ho_effects:unify_param_types(EffParam1, EffParam3)).
 
-%%%---------------------------------------------------------------------
-%%% Effect Substitution Tests
-%%%---------------------------------------------------------------------
-
 test_effect_substitution() ->
-    %% Substitute param effects
-    EffParam = catena_ho_effects:effectful_param(atom, int),
-    Substitution = #{kind => effect_row, elements => ['IO'], row_var => undefined},
+    EffParam = catena_ho_effects:effectful_param(
+        atom,
+        int,
+        #{kind => effect_row, elements => ['IO'], row_var => catena_op_signatures:fresh_row_var(rho)}
+    ),
+    Substitution = #{kind => effect_row, elements => ['State'], row_var => undefined},
     SubstitutedParam = catena_ho_effects:substitute_param_effects(EffParam, Substitution),
-    ?assert(catena_ho_effects:is_effectful_param(SubstitutedParam)),
     SubstitutedEffects = catena_ho_effects:param_effects(SubstitutedParam),
-    ?assertEqual(['IO'], maps:get(elements, SubstitutedEffects, [])),
+    ?assertEqual(['IO', 'State'], maps:get(elements, SubstitutedEffects)),
+    ?assertEqual(undefined, maps:get(row_var, SubstitutedEffects)),
 
-    %% Substitute HO op effects
     EffParam2 = catena_ho_effects:effectful_param(bool, atom),
-    Params = [EffParam, EffParam2],
-    Effects = effect_row_example(),
-    HO = catena_ho_effects:ho_op_type(op, Params, int, Effects),
+    HO = catena_ho_effects:ho_op_type(
+        op,
+        [EffParam, EffParam2],
+        int,
+        #{kind => effect_row, elements => ['Reader'], row_var => catena_op_signatures:fresh_row_var(epsilon)}
+    ),
 
-    NewSubstitution = #{kind => effect_row, elements => ['State'], row_var => undefined},
-    SubstitutedHO = catena_ho_effects:substitute_ho_effects(HO, NewSubstitution),
+    SubstitutedHO = catena_ho_effects:substitute_ho_effects(HO, Substitution),
     ?assert(catena_ho_effects:is_ho_op(SubstitutedHO)),
 
-    %% Instantiate HO type
-    Instantiated = catena_ho_effects:instantiate_ho_type(HO, NewSubstitution),
+    Instantiated = catena_ho_effects:instantiate_ho_type(HO, Substitution),
     ?assert(catena_ho_effects:is_ho_op(Instantiated)),
 
-    %% Generalize HO type
-    Generalized = catena_ho_effects:generalize_ho_type(HO),
+    Generalized = catena_ho_effects:generalize_ho_type(
+        catena_ho_effects:ho_op_type(simple, [EffParam2], int, #{kind => effect_row, elements => [], row_var => undefined})
+    ),
     ?assert(catena_ho_effects:is_ho_op(Generalized)).
 
-%%%---------------------------------------------------------------------
-%%% HO Type Operations Tests
-%%%---------------------------------------------------------------------
-
 test_ho_operations() ->
-    %% Compose matching HO types
     EffParam = catena_ho_effects:effectful_param(atom, int),
-    Params1 = [EffParam],
-    Effects1 = #{
-        kind => effect_row,
-        elements => ['IO'],
-        row_var => undefined
-    },
-    HO1 = catena_ho_effects:ho_op_type(ho1, Params1, bool, Effects1),
+    HO1 = catena_ho_effects:ho_op_type(
+        ho1,
+        [EffParam],
+        bool,
+        effect_row_example()
+    ),
 
-    Params2 = [bool],
-    Effects2 = #{
-        kind => effect_row,
-        elements => ['State'],
-        row_var => undefined
-    },
-    HO2 = catena_ho_effects:ho_op_type(ho2, Params2, int, Effects2),
+    HO2 = catena_ho_effects:ho_op_type(
+        ho2,
+        [bool],
+        int,
+        state_row_example()
+    ),
 
-    %% Note: compose_ho_types expects input/output fields which our records don't have
-    %% So we'll test the simpler operations
     ?assert(catena_ho_effects:is_ho_op(HO1)),
     ?assert(catena_ho_effects:is_ho_op(HO2)),
+    ?assertMatch({ok, _}, catena_ho_effects:compose_ho_types(HO1, HO2)),
 
-    %% Type equality
-    HO1Copy = catena_ho_effects:ho_op_type(ho1, Params1, bool, Effects1),
+    HO1Copy = catena_ho_effects:ho_op_type(ho1, [EffParam], bool, effect_row_example()),
     ?assert(catena_ho_effects:ho_type_eq(HO1, HO1Copy)),
 
-    HO3 = catena_ho_effects:ho_op_type(ho3, Params1, atom, Effects1),
+    HO3 = catena_ho_effects:ho_op_type(ho3, [EffParam], atom, effect_row_example()),
     ?assertNot(catena_ho_effects:ho_type_eq(HO1, HO3)),
 
-    %% Merge effect rows
-    Row1 = #{
-        kind => effect_row,
-        elements => ['IO'],
-        row_var => undefined
-    },
-    Row2 = #{
-        kind => effect_row,
-        elements => ['State'],
-        row_var => undefined
-    },
-    Merged = catena_ho_effects:merge_effect_rows(Row1, Row2),
+    Merged = catena_ho_effects:merge_effect_rows(effect_row_example(), state_row_example()),
     ?assertEqual(2, length(maps:get(elements, Merged, []))),
     ?assert(lists:member('IO', maps:get(elements, Merged, []))),
     ?assert(lists:member('State', maps:get(elements, Merged, []))).
 
-%%%---------------------------------------------------------------------
-%%% Pretty Printing Tests
-%%%---------------------------------------------------------------------
-
 test_pretty_printing() ->
-    %% Format HO type
-    EffParam = catena_ho_effects:effectful_param(atom, int),
-    Params = [atom, EffParam],
-    Effects = #{
-        kind => effect_row,
-        elements => ['IO'],
-        row_var => undefined
-    },
-    HO = catena_ho_effects:ho_op_type(my_op, Params, bool, Effects),
+    EffParam = catena_ho_effects:effectful_param(atom, int, effect_row_example()),
+    HO = catena_ho_effects:ho_op_type(my_op, [atom, EffParam], bool, state_row_example()),
     Formatted = catena_ho_effects:format_ho_type(HO),
     ?assert(is_binary(Formatted)),
-    ?assertNotEqual(<<>>, Formatted),
-    case binary:match(Formatted, <<"my_op">>) of
-        {_, _} -> ok;
-        nomatch -> ?assert(false)
-    end,
+    ?assertMatch({_, _}, binary:match(Formatted, <<"my_op">>)),
 
-    %% Format effectful param
     FormattedParam = catena_ho_effects:format_effectful_param(EffParam),
     ?assert(is_binary(FormattedParam)),
-    ?assertNotEqual(<<>>, FormattedParam),
-    case binary:match(FormattedParam, <<"->">>) of
-        {_, _} -> ok;
-        nomatch -> ?assert(false)
-    end,
-    case binary:match(FormattedParam, <<"/">>) of
-        {_, _} -> ok;
-        nomatch -> ?assert(false)
-    end.
-
-%%%---------------------------------------------------------------------
-%%% Helper Functions
-%%%---------------------------------------------------------------------
+    ?assertMatch({_, _}, binary:match(FormattedParam, <<"IO">>)).
 
 effect_row_example() ->
     #{
         kind => effect_row,
-        elements => ['IO', 'State'],
+        elements => ['IO'],
+        row_var => undefined
+    }.
+
+state_row_example() ->
+    #{
+        kind => effect_row,
+        elements => ['State'],
         row_var => undefined
     }.

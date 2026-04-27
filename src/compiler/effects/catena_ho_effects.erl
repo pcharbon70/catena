@@ -1,35 +1,10 @@
 %%%-------------------------------------------------------------------
 %%% @doc Catena Higher-Order Effect Types (Phase 13.2)
 %%%
-%%% This module implements types for higher-order effects (operations
-%%% with effectful parameters). Higher-order operations take effectful
-%%% functions as arguments, enabling operations like `iterate` that can
-%%% invoke effectful callbacks, or `catch` that can handle effectful
-%%% error handlers.
-%%%
-%%% == Higher-Order Operations ==
-%%%
-%%% A higher-order operation has at least one parameter that is an
-%%% effectful function type: `(a -> b / ε)`. The effect row `ε` represents
-%%% the effects that the parameterized function may perform.
-%%%
-%%% Example: iterate : (Int -> (Unit -> Unit / ε) -> Unit / {Iter | ε})
-%%%
-%%% == Effectful Parameter Type Inference ==
-%%%
-%%% When inferring types for higher-order operations, we need to:
-%%% 1. Track which parameters are effectful functions
-%%% 2. Infer the effect row for each effectful parameter
-%%% 3. Ensure effect variables are properly scoped
-%%% 4. Handle nested effectful parameters
-%%%
-%%% == Higher-Order Effect Substitution ==
-%%%
-%%% Effect variables in higher-order operation types can be substituted
-%%% with concrete effect sets, enabling polymorphism over effects. The
-%%% substitution must be applied consistently to all effectful parameters
-%%% and the operation's own effect row.
-%%%
+%%% Higher-order operations are operations whose parameters include
+%%% effectful functions. This module models those parameters explicitly
+%%% and reuses the real row-polymorphic effect rows introduced by
+%%% Phase 11.
 %%% @end
 %%%-------------------------------------------------------------------
 -module(catena_ho_effects).
@@ -101,30 +76,28 @@
 %%% Types
 %%%---------------------------------------------------------------------
 
-%% @doc Higher-order operation type.
+-type effect_row() :: catena_row_types:effect_row().
+-type type_ref() :: atom() | tuple() | map() | [type_ref()].
+
 -record(ho_op_type, {
     name :: atom() | undefined,
     params :: [param_type()],
-    result :: term(),
-    effects :: map(),
+    result :: type_ref(),
+    effects :: effect_row(),
     scope_id :: non_neg_integer() | undefined
 }).
 
 -type ho_op_type() :: #ho_op_type{}.
 
-%% @doc Effectful parameter type - a function with effects.
 -record(effectful_param, {
-    input :: term(),
-    output :: term(),
-    effects :: map()
+    input :: type_ref(),
+    output :: type_ref(),
+    effects :: effect_row()
 }).
 
 -type effectful_param() :: #effectful_param{}.
+-type param_type() :: type_ref() | effectful_param().
 
-%% @doc Parameter type - either simple type or effectful function.
--type param_type() :: term() | effectful_param().
-
-%% @doc Higher-order type constraints.
 -type ho_constraints() :: #{
     effectful_params => non_neg_integer(),
     max_nesting => non_neg_integer(),
@@ -135,345 +108,228 @@
 %%% Higher-Order Operation Type Constructors
 %%%---------------------------------------------------------------------
 
-%% @doc Create an empty higher-order operation type.
 -spec ho_op_type() -> ho_op_type().
 ho_op_type() ->
     #ho_op_type{
         name = undefined,
         params = [],
         result = catena_types:tcon('T'),
-        effects = empty_effect_row(),
+        effects = catena_row_types:empty_row(),
         scope_id = undefined
     }.
 
-%% @doc Create a higher-order operation type with a name.
 -spec ho_op_type(atom()) -> ho_op_type().
 ho_op_type(Name) when is_atom(Name) ->
-    #ho_op_type{
-        name = Name,
-        params = [],
-        result = catena_types:tcon('T'),
-        effects = empty_effect_row(),
-        scope_id = undefined
-    }.
+    (ho_op_type())#ho_op_type{name = Name}.
 
-%% @doc Create a higher-order operation type with params and result.
--spec ho_op_type(atom(), [param_type()], term()) -> ho_op_type().
+-spec ho_op_type(atom(), [param_type()], type_ref()) -> ho_op_type().
 ho_op_type(Name, Params, Result) when is_atom(Name), is_list(Params) ->
-    #ho_op_type{
-        name = Name,
+    (ho_op_type(Name))#ho_op_type{
         params = Params,
-        result = Result,
-        effects = empty_effect_row(),
-        scope_id = undefined
+        result = Result
     }.
 
-%% @doc Create a complete higher-order operation type.
--spec ho_op_type(atom(), [param_type()], term(), map()) -> ho_op_type().
+-spec ho_op_type(atom(), [param_type()], type_ref(), effect_row()) -> ho_op_type().
 ho_op_type(Name, Params, Result, Effects) when is_atom(Name), is_list(Params) ->
-    #ho_op_type{
-        name = Name,
-        params = Params,
-        result = Result,
-        effects = Effects,
-        scope_id = undefined
+    (ho_op_type(Name, Params, Result))#ho_op_type{
+        effects = normalize_effect_row(Effects)
     }.
 
 %%%---------------------------------------------------------------------
 %%% Effectful Parameter Types
 %%%---------------------------------------------------------------------
 
-%% @doc Create an empty effectful parameter type.
 -spec effectful_param() -> effectful_param().
 effectful_param() ->
     #effectful_param{
         input = catena_types:tcon('A'),
         output = catena_types:tcon('B'),
-        effects = empty_effect_row()
+        effects = catena_row_types:empty_row()
     }.
 
-%% @doc Create an effectful parameter with input/output types.
--spec effectful_param(term(), term()) -> effectful_param().
+-spec effectful_param(type_ref(), type_ref()) -> effectful_param().
 effectful_param(Input, Output) ->
     #effectful_param{
         input = Input,
         output = Output,
-        effects = empty_effect_row()
+        effects = catena_row_types:empty_row()
     }.
 
-%% @doc Create a complete effectful parameter with effects.
--spec effectful_param(term(), term(), map()) -> effectful_param().
+-spec effectful_param(type_ref(), type_ref(), effect_row()) -> effectful_param().
 effectful_param(Input, Output, Effects) ->
     #effectful_param{
         input = Input,
         output = Output,
-        effects = Effects
+        effects = normalize_effect_row(Effects)
     }.
 
-%% @doc Check if a parameter type is effectful.
 -spec is_effectful_param(term()) -> boolean().
-is_effectful_param(#effectful_param{}) -> true;
-is_effectful_param(_) -> false.
+is_effectful_param(#effectful_param{}) ->
+    true;
+is_effectful_param(_) ->
+    false.
 
-%% @doc Get the input type of an effectful parameter.
--spec param_input_type(effectful_param()) -> term().
-param_input_type(#effectful_param{input = Input}) -> Input.
+-spec param_input_type(effectful_param()) -> type_ref().
+param_input_type(#effectful_param{input = Input}) ->
+    Input.
 
-%% @doc Get the output type of an effectful parameter.
--spec param_output_type(effectful_param()) -> term().
-param_output_type(#effectful_param{output = Output}) -> Output.
+-spec param_output_type(effectful_param()) -> type_ref().
+param_output_type(#effectful_param{output = Output}) ->
+    Output.
 
-%% @doc Get the effects of an effectful parameter.
--spec param_effects(effectful_param()) -> map().
-param_effects(#effectful_param{effects = Effects}) -> Effects.
+-spec param_effects(effectful_param()) -> effect_row().
+param_effects(#effectful_param{effects = Effects}) ->
+    Effects.
 
 %%%---------------------------------------------------------------------
 %%% Higher-Order Operation Validation
 %%%---------------------------------------------------------------------
 
-%% @doc Check if a term is a higher-order operation type.
 -spec is_ho_op(term()) -> boolean().
-is_ho_op(#ho_op_type{}) -> true;
-is_ho_op(_) -> false.
+is_ho_op(#ho_op_type{}) ->
+    true;
+is_ho_op(_) ->
+    false.
 
-%% @doc Check if a parameter type is a higher-order type.
 -spec is_ho_param_type(term()) -> boolean().
-is_ho_param_type(#effectful_param{}) -> true;
-is_ho_param_type(_) -> false.
+is_ho_param_type(Term) ->
+    is_effectful_param(Term).
 
-%% @doc Count the number of effectful parameters in an operation.
 -spec count_effectful_params(ho_op_type()) -> non_neg_integer().
 count_effectful_params(#ho_op_type{params = Params}) ->
-    lists:foldl(fun
-        (#effectful_param{}, Acc) -> Acc + 1;
-        (_, Acc) -> Acc
-    end, 0, Params).
+    length([Param || Param <- Params, is_effectful_param(Param)]).
 
-%% @doc Get all effectful parameters from an operation.
 -spec get_effectful_params(ho_op_type()) -> [effectful_param()].
 get_effectful_params(#ho_op_type{params = Params}) ->
-    lists:filter(fun is_effectful_param/1, Params).
+    [Param || Param <- Params, is_effectful_param(Param)].
 
 %%%---------------------------------------------------------------------
 %%% Effectful Parameter Type Inference
 %%%---------------------------------------------------------------------
 
-%% @doc Infer the type of a parameter based on context.
 -spec infer_param_type(term(), ho_constraints()) -> param_type().
-infer_param_type(Term, Constraints) ->
-    case detect_function_type(Term) of
-        {ok, {Input, Output}} ->
-            infer_effectful_param(Input, Output, Constraints);
-        error ->
-            Term
-    end.
+infer_param_type(#effectful_param{} = Param, _Constraints) ->
+    Param;
+infer_param_type({effectful_fun, Input, Output}, Constraints) ->
+    effectful_param(Input, Output, inferred_effects(Constraints));
+infer_param_type({effectful_fun, Input, Output, Effects}, _Constraints) ->
+    effectful_param(Input, Output, Effects);
+infer_param_type(Term, Constraints) when is_function(Term) ->
+    infer_function_param(Term, Constraints);
+infer_param_type(Term, _Constraints) ->
+    Term.
 
-%% @private
-detect_function_type(Term) when is_function(Term) ->
-    {arity, Arity} = erlang:fun_info(Term, arity),
-    case Arity of
-        1 -> {ok, {catena_types:tcon('A'), catena_types:tcon('B')}};
-        _ -> error
-    end;
-detect_function_type(_) ->
-    error.
-
-%% @private
-infer_effectful_param(Input, Output, Constraints) ->
-    Effects = case maps:get(allow_impredicative, Constraints, false) of
-        true ->
-            %% Allow polymorphic effects
-            #{kind => effect_row, elements => [], row_var => catena_op_signatures:fresh_row_var()};
-        false ->
-            empty_effect_row()
-    end,
-    #effectful_param{
-        input = Input,
-        output = Output,
-        effects = Effects
-    }.
-
-%% @doc Infer the effects of a parameter based on usage.
--spec infer_param_effects(param_type(), ho_constraints()) -> map().
+-spec infer_param_effects(param_type(), ho_constraints()) -> effect_row().
 infer_param_effects(#effectful_param{effects = Effects}, _Constraints) ->
-    Effects;
+    normalize_effect_row(Effects);
+infer_param_effects({effectful_fun, _, _, Effects}, _Constraints) ->
+    normalize_effect_row(Effects);
 infer_param_effects(_SimpleParam, Constraints) ->
-    case maps:get(allow_impredicative, Constraints, false) of
-        true ->
-            #{kind => effect_row, elements => [], row_var => catena_op_signatures:fresh_row_var()};
-        false ->
-            empty_effect_row()
-    end.
+    inferred_effects(Constraints).
 
-%% @doc Infer types for all parameters of an operation.
 -spec infer_all_param_types([term()]) -> [param_type()].
 infer_all_param_types(Terms) when is_list(Terms) ->
-    Constraints = #{effectful_params => 0, max_nesting => 2, allow_impredicative => false},
-    [infer_param_type(T, Constraints) || T <- Terms].
+    Constraints = #{
+        effectful_params => 0,
+        max_nesting => 2,
+        allow_impredicative => false
+    },
+    [infer_param_type(Term, Constraints) || Term <- Terms].
 
-%% @doc Unify two parameter types.
 -spec unify_param_types(param_type(), param_type()) -> {ok, param_type()} | {error, term()}.
-unify_param_types(#effectful_param{input = I1, output = O1, effects = E1},
-                  #effectful_param{input = I2, output = O2, effects = E2}) ->
-    case {types_match(I1, I2), types_match(O1, O2)} of
-        {true, true} ->
-            MergedEffects = merge_effect_rows(E1, E2),
-            {ok, #effectful_param{input = I1, output = O1, effects = MergedEffects}};
-        _ ->
-            {error, type_mismatch}
-    end;
-unify_param_types(T1, T2) when T1 =:= T2 ->
-    {ok, T1};
-unify_param_types(T1, T2) ->
-    {error, {type_mismatch, T1, T2}}.
+unify_param_types(#effectful_param{} = Param1, #effectful_param{} = Param2) ->
+    unify_effectful_params(Param1, Param2);
+unify_param_types(Term, Term) ->
+    {ok, Term};
+unify_param_types(Term1, Term2) ->
+    {error, {type_mismatch, Term1, Term2}}.
 
 %%%---------------------------------------------------------------------
 %%% Higher-Order Effect Substitution
 %%%---------------------------------------------------------------------
 
-%% @doc Substitute effects in an effectful parameter.
--spec substitute_param_effects(effectful_param(), map()) -> effectful_param().
+-spec substitute_param_effects(effectful_param(), effect_row()) -> effectful_param().
 substitute_param_effects(#effectful_param{effects = Effects} = Param, Substitution) ->
-    Param#effectful_param{effects = apply_substitution(Effects, Substitution)}.
+    Param#effectful_param{effects = instantiate_row(Effects, Substitution)}.
 
-%% @private
-apply_substitution(Effects, Substitution) ->
-    maps:fold(fun(Key, Value, Acc) ->
-        maps:put(Key, Value, Acc)
-    end, Effects, Substitution).
-
-%% @doc Substitute effects in a higher-order operation type.
--spec substitute_ho_effects(ho_op_type(), map()) -> ho_op_type().
+-spec substitute_ho_effects(ho_op_type(), effect_row()) -> ho_op_type().
 substitute_ho_effects(#ho_op_type{params = Params, effects = Effects} = HO, Substitution) ->
-    NewParams = [substitute_in_param(P, Substitution) || P <- Params],
-    NewEffects = apply_substitution(Effects, Substitution),
-    HO#ho_op_type{params = NewParams, effects = NewEffects}.
+    HO#ho_op_type{
+        params = [substitute_param(Param, Substitution) || Param <- Params],
+        effects = instantiate_row(Effects, Substitution)
+    }.
 
-%% @private
-substitute_in_param(#effectful_param{effects = ParamEffects} = Param, Substitution) ->
-    Param#effectful_param{effects = apply_substitution(ParamEffects, Substitution)};
-substitute_in_param(SimpleParam, _Substitution) ->
-    SimpleParam.
-
-%% @doc Instantiate a higher-order type with concrete effects.
--spec instantiate_ho_type(ho_op_type(), map()) -> ho_op_type().
+-spec instantiate_ho_type(ho_op_type(), effect_row()) -> ho_op_type().
 instantiate_ho_type(HO, Instantiation) ->
     substitute_ho_effects(HO, Instantiation).
 
-%% @doc Generalize a higher-order type by introducing row variables.
 -spec generalize_ho_type(ho_op_type()) -> ho_op_type().
 generalize_ho_type(#ho_op_type{params = Params, effects = Effects} = HO) ->
-    NewParams = [generalize_param(P) || P <- Params],
-    NewEffects = generalize_effects(Effects),
-    HO#ho_op_type{params = NewParams, effects = NewEffects}.
-
-%% @private
-generalize_param(#effectful_param{effects = ParamEffects} = Param) ->
-    Param#effectful_param{effects = generalize_effects(ParamEffects)};
-generalize_param(SimpleParam) ->
-    SimpleParam.
-
-%% @private
-generalize_effects(Effects) ->
-    case maps:get(row_var, Effects, undefined) of
-        undefined ->
-            Effects#{row_var => catena_op_signatures:fresh_row_var()};
-        _ ->
-            Effects
-    end.
+    HO#ho_op_type{
+        params = [generalize_param(Param) || Param <- Params],
+        effects = generalize_row(Effects)
+    }.
 
 %%%---------------------------------------------------------------------
 %%% Higher-Order Effect Operations
 %%%---------------------------------------------------------------------
 
-%% @doc Compose two higher-order types.
-%% The result type of the first must match a parameter type of the second.
 -spec compose_ho_types(ho_op_type(), ho_op_type()) -> {ok, ho_op_type()} | {error, term()}.
-compose_ho_types(#ho_op_type{result = Res1, params = Params1, effects = Eff1},
-                 #ho_op_type{params = Params2, effects = Eff2} = HO2) ->
-    %% Simplified composition: combine parameters and effects
-    %% In a full implementation, we'd check for proper type matching
-    MergedEffects = merge_effect_rows(Eff1, Eff2),
-    MergedParams = Params1 ++ Params2,
-    {ok, HO2#ho_op_type{
-        params = MergedParams,
-        effects = MergedEffects
-    }};
-compose_ho_types(_, _) ->
-    {error, invalid_ho_types}.
+compose_ho_types(#ho_op_type{result = Result1, effects = Effects1},
+                 #ho_op_type{name = Name2, params = Params2, result = Result2, effects = Effects2}) ->
+    case Params2 of
+        [] ->
+            {ok, #ho_op_type{
+                name = Name2,
+                params = [],
+                result = Result2,
+                effects = merge_effect_rows(Effects1, Effects2),
+                scope_id = undefined
+            }};
+        [First | Rest] ->
+            case first_param_matches(Result1, First) of
+                true ->
+                    {ok, #ho_op_type{
+                        name = Name2,
+                        params = Rest,
+                        result = Result2,
+                        effects = merge_effect_rows(Effects1, Effects2),
+                        scope_id = undefined
+                    }};
+                false ->
+                    {error, {type_mismatch, Result1, First}}
+            end
+    end.
 
-%% @doc Check if two higher-order types are equal.
 -spec ho_type_eq(ho_op_type(), ho_op_type()) -> boolean().
-ho_type_eq(#ho_op_type{params = P1, result = R1, effects = E1},
-            #ho_op_type{params = P2, result = R2, effects = E2}) ->
-    param_types_eq(P1, P2) andalso
-    types_match(R1, R2) andalso
-    effect_rows_eq(E1, E2);
+ho_type_eq(#ho_op_type{params = Params1, result = Result1, effects = Effects1},
+           #ho_op_type{params = Params2, result = Result2, effects = Effects2}) ->
+    param_types_eq(Params1, Params2) andalso
+    types_equal(Result1, Result2) andalso
+    effect_rows_equal(Effects1, Effects2);
 ho_type_eq(_, _) ->
     false.
 
-%% @private
-param_types_eq([], []) -> true;
-param_types_eq([H1 | T1], [H2 | T2]) ->
-    case params_eq(H1, H2) of
-        true -> param_types_eq(T1, T2);
-        false -> false
-    end;
-param_types_eq(_, _) -> false.
-
-%% @private
-params_eq(#effectful_param{input = I1, output = O1, effects = E1},
-           #effectful_param{input = I2, output = O2, effects = E2}) ->
-    types_match(I1, I2) andalso types_match(O1, O2) andalso effect_rows_eq(E1, E2);
-params_eq(T1, T2) when T1 =:= T2 -> true;
-params_eq(_, _) -> false.
-
-%% @private
-types_match(T1, T2) when is_atom(T1), is_atom(T2) -> T1 =:= T2;
-types_match(T1, T2) when is_map(T1), is_map(T2) -> maps:size(T1) =:= maps:size(T2);
-types_match(_, _) -> false.
-
-%% @private
-effect_rows_eq(E1, E2) ->
-    maps:get(kind, E1, undefined) =:= maps:get(kind, E2, undefined) andalso
-    maps:get(elements, E1, []) =:= maps:get(elements, E2, []).
-
-%% @doc Merge two effect rows.
--spec merge_effect_rows(map(), map()) -> map().
-merge_effect_rows(#{kind := effect_row, elements := E1, row_var := RV1},
-                  #{kind := effect_row, elements := E2, row_var := RV2}) ->
-    MergedElements = lists:usort(E1 ++ E2),
-    MergedRowVar = case {RV1, RV2} of
-        {undefined, undefined} -> undefined;
-        {undefined, _} -> RV2;
-        {_, undefined} -> RV1;
-        _ -> RV1  % Keep first if both present
-    end,
-    #{
-        kind => effect_row,
-        elements => MergedElements,
-        row_var => MergedRowVar
-    };
-merge_effect_rows(E1, _) ->
-    E1.
+-spec merge_effect_rows(effect_row(), effect_row()) -> effect_row().
+merge_effect_rows(Row1, Row2) ->
+    catena_row_types:row_union(normalize_effect_row(Row1), normalize_effect_row(Row2)).
 
 %%%---------------------------------------------------------------------
 %%% Pretty Printing
 %%%---------------------------------------------------------------------
 
-%% @doc Format a higher-order operation type.
 -spec format_ho_type(ho_op_type()) -> binary().
 format_ho_type(#ho_op_type{name = Name, params = Params, result = Result, effects = Effects}) ->
-    NamePart = case Name of
-        undefined -> <<"ho_op">>;
-        _ -> list_to_binary(atom_to_list(Name))
-    end,
+    NamePart =
+        case Name of
+            undefined -> <<"ho_op">>;
+            _ -> list_to_binary(atom_to_list(Name))
+        end,
     ParamsPart = format_param_list(Params),
     ResultPart = format_type(Result),
     EffectsPart = format_effect_row(Effects),
     <<NamePart/binary, ": ", ParamsPart/binary, " -> ", ResultPart/binary, " / ", EffectsPart/binary>>.
 
-%% @doc Format an effectful parameter type.
 -spec format_effectful_param(effectful_param()) -> binary().
 format_effectful_param(#effectful_param{input = Input, output = Output, effects = Effects}) ->
     InputPart = format_type(Input),
@@ -481,66 +337,194 @@ format_effectful_param(#effectful_param{input = Input, output = Output, effects 
     EffectsPart = format_effect_row(Effects),
     <<"(", InputPart/binary, " -> ", OutputPart/binary, " / ", EffectsPart/binary, ")">>.
 
-%% @private
-format_param_list(Params) ->
-    Formatted = [format_param(P) || P <- Params],
-    case Formatted of
-        [] -> <<"()">>;
-        _ -> list_to_binary(["(" | [lists:join(<<", ">>, Formatted), ")"]])
+%%%---------------------------------------------------------------------
+%%% Internal Helpers
+%%%---------------------------------------------------------------------
+
+-spec normalize_effect_row(effect_row()) -> effect_row().
+normalize_effect_row(Row) ->
+    catena_row_types:row_normalize(Row).
+
+-spec inferred_effects(ho_constraints()) -> effect_row().
+inferred_effects(Constraints) ->
+    case maps:get(allow_impredicative, Constraints, false) of
+        true ->
+            catena_row_types:effect_row([], catena_op_signatures:fresh_row_var());
+        false ->
+            catena_row_types:empty_row()
     end.
 
-%% @private
-format_param(#effectful_param{} = EP) ->
-    format_effectful_param(EP);
-format_param(Simple) ->
-    format_type(Simple).
+-spec infer_function_param(function(), ho_constraints()) -> param_type().
+infer_function_param(Fun, Constraints) ->
+    case erlang:fun_info(Fun, arity) of
+        {arity, 1} ->
+            effectful_param(
+                {type_var, fun_input},
+                {type_var, fun_output},
+                inferred_effects(Constraints)
+            );
+        _ ->
+            {function, opaque}
+    end.
 
-%% @private
+-spec unify_effectful_params(effectful_param(), effectful_param()) ->
+    {ok, effectful_param()} | {error, term()}.
+unify_effectful_params(#effectful_param{input = Input1, output = Output1, effects = Effects1},
+                       #effectful_param{input = Input2, output = Output2, effects = Effects2}) ->
+    case types_equal(Input1, Input2) andalso types_equal(Output1, Output2) of
+        true ->
+            {ok, #effectful_param{
+                input = Input1,
+                output = Output1,
+                effects = merge_effect_rows(Effects1, Effects2)
+            }};
+        false ->
+            {error, {type_mismatch, {Input1, Output1}, {Input2, Output2}}}
+    end.
+
+-spec substitute_param(param_type(), effect_row()) -> param_type().
+substitute_param(#effectful_param{} = Param, Substitution) ->
+    substitute_param_effects(Param, Substitution);
+substitute_param(SimpleParam, _Substitution) ->
+    SimpleParam.
+
+-spec instantiate_row(effect_row(), effect_row()) -> effect_row().
+instantiate_row(Effects, Substitution) ->
+    NormalizedEffects = normalize_effect_row(Effects),
+    NormalizedSubstitution = normalize_effect_row(Substitution),
+    case maps:get(row_var, NormalizedEffects, undefined) of
+        undefined ->
+            catena_row_types:row_union(NormalizedEffects, NormalizedSubstitution);
+        RowVar ->
+            catena_op_signatures:sig_effects(
+                catena_op_signatures:substitute_row_var(
+                    catena_op_signatures:op_sig([], unit, NormalizedEffects),
+                    RowVar,
+                    NormalizedSubstitution
+                )
+            )
+    end.
+
+-spec generalize_param(param_type()) -> param_type().
+generalize_param(#effectful_param{effects = Effects} = Param) ->
+    Param#effectful_param{effects = generalize_row(Effects)};
+generalize_param(SimpleParam) ->
+    SimpleParam.
+
+-spec generalize_row(effect_row()) -> effect_row().
+generalize_row(Row) ->
+    Normalized = normalize_effect_row(Row),
+    case maps:get(row_var, Normalized, undefined) of
+        undefined ->
+            Normalized#{row_var => catena_op_signatures:fresh_row_var()};
+        _ ->
+            Normalized
+    end.
+
+-spec first_param_matches(type_ref(), param_type()) -> boolean().
+first_param_matches(Result, #effectful_param{input = Input}) ->
+    types_equal(Result, Input);
+first_param_matches(Result, Param) ->
+    types_equal(Result, Param).
+
+-spec param_types_eq([param_type()], [param_type()]) -> boolean().
+param_types_eq([], []) ->
+    true;
+param_types_eq([Param1 | Rest1], [Param2 | Rest2]) ->
+    params_eq(Param1, Param2) andalso param_types_eq(Rest1, Rest2);
+param_types_eq(_, _) ->
+    false.
+
+-spec params_eq(param_type(), param_type()) -> boolean().
+params_eq(#effectful_param{} = Param1, #effectful_param{} = Param2) ->
+    case unify_effectful_params(Param1, Param2) of
+        {ok, _} -> true;
+        _ -> false
+    end;
+params_eq(Param1, Param2) ->
+    types_equal(Param1, Param2).
+
+-spec types_equal(type_ref(), type_ref()) -> boolean().
+types_equal(Type1, Type2) when is_map(Type1), is_map(Type2) ->
+    maps:size(Type1) =:= maps:size(Type2) andalso
+    lists:all(
+        fun({Key, Value1}) ->
+            case maps:find(Key, Type2) of
+                {ok, Value2} -> types_equal(Value1, Value2);
+                error -> false
+            end
+        end,
+        maps:to_list(Type1)
+    );
+types_equal(Type1, Type2) when is_tuple(Type1), is_tuple(Type2) ->
+    tuple_size(Type1) =:= tuple_size(Type2) andalso
+    lists:all(
+        fun({Value1, Value2}) -> types_equal(Value1, Value2) end,
+        lists:zip(tuple_to_list(Type1), tuple_to_list(Type2))
+    );
+types_equal(Type1, Type2) when is_list(Type1), is_list(Type2) ->
+    length(Type1) =:= length(Type2) andalso
+    lists:all(
+        fun({Value1, Value2}) -> types_equal(Value1, Value2) end,
+        lists:zip(Type1, Type2)
+    );
+types_equal(Type1, Type2) ->
+    Type1 =:= Type2.
+
+-spec effect_rows_equal(effect_row(), effect_row()) -> boolean().
+effect_rows_equal(Row1, Row2) ->
+    catena_op_signatures:sig_eq(
+        catena_op_signatures:op_sig([], unit, normalize_effect_row(Row1)),
+        catena_op_signatures:op_sig([], unit, normalize_effect_row(Row2))
+    ).
+
+-spec format_param_list([param_type()]) -> binary().
+format_param_list([]) ->
+    <<"()">>;
+format_param_list(Params) ->
+    iolist_to_binary(["(", lists:join(<<", ">>, [format_param(Param) || Param <- Params]), ")"]).
+
+-spec format_param(param_type()) -> binary().
+format_param(#effectful_param{} = Param) ->
+    format_effectful_param(Param);
+format_param(Param) ->
+    format_type(Param).
+
+-spec format_type(type_ref()) -> binary().
 format_type(Type) when is_atom(Type) ->
     list_to_binary(atom_to_list(Type));
 format_type(Type) when is_map(Type) ->
     case maps:get(kind, Type, undefined) of
+        effect_row -> format_effect_row(Type);
+        row_var -> catena_op_signatures:format_row_var(Type);
         undefined -> <<"{}">>;
         Kind -> <<(list_to_binary(atom_to_list(Kind)))/binary, "{}">>
     end;
 format_type(Type) when is_tuple(Type) ->
-    Elements = tuple_to_list(Type),
-    Formatted = [format_type(E) || E <- Elements],
-    list_to_binary(["(" | [lists:join(<<", ">>, Formatted), ")"]]);
+    iolist_to_binary(["(", lists:join(<<", ">>, [format_type(Element) || Element <- tuple_to_list(Type)]), ")"]);
+format_type(Type) when is_list(Type) ->
+    iolist_to_binary(["[", lists:join(<<", ">>, [format_type(Element) || Element <- Type]), "]"]);
 format_type(_) ->
     <<"?">>.
 
-%% @private
-format_effect_row(#{kind := effect_row, elements := Es, row_var := RV}) ->
-    ElementsPart = case Es of
-        [] -> <<"">>;
-        _ -> format_effect_list(Es)
-    end,
-    RowVarPart = case RV of
-        undefined -> <<"">>;
-        _ -> catena_op_signatures:format_row_var(RV)
-    end,
+-spec format_effect_row(effect_row()) -> binary().
+format_effect_row(Row) ->
+    Normalized = normalize_effect_row(Row),
+    Elements = maps:get(elements, Normalized, []),
+    RowVar = maps:get(row_var, Normalized, undefined),
+    ElementsPart =
+        case Elements of
+            [] -> <<"">>;
+            _ -> iolist_to_binary(lists:join(<<", ">>, [list_to_binary(atom_to_list(Element)) || Element <- Elements]))
+        end,
+    RowVarPart =
+        case RowVar of
+            undefined -> <<"">>;
+            _ -> catena_op_signatures:format_row_var(RowVar)
+        end,
     case {ElementsPart, RowVarPart} of
         {<<>>, <<>>} -> <<"{}">>;
         {<<>>, _} -> <<"{", RowVarPart/binary, "}">>;
         {_, <<>>} -> <<"{", ElementsPart/binary, "}">>;
         {_, _} -> <<"{", ElementsPart/binary, " | ", RowVarPart/binary, "}">>
     end.
-
-%% @private
-format_effect_list(Effects) ->
-    Formatted = [list_to_binary(atom_to_list(E)) || E <- Effects],
-    lists:foldl(fun(E, Acc) ->
-        case Acc of
-            <<>> -> E;
-            _ -> <<Acc/binary, ", ", E/binary>>
-        end
-    end, <<>>, Formatted).
-
-%% @private
-empty_effect_row() ->
-    #{
-        kind => effect_row,
-        elements => [],
-        row_var => undefined
-    }.
