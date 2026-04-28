@@ -126,8 +126,15 @@ load_command_test_() ->
          [
              {"Load existing file",
               fun() ->
-                  Result = catena_repl:eval(":load examples/simple/identity.cat", State),
-                  ?assertMatch({ok, {loaded, _, _}, _}, Result)
+                  TempFile = "/tmp/catena_repl_load_" ++
+                      integer_to_list(erlang:unique_integer([positive])) ++ ".cat",
+                  ok = file:write_file(TempFile, <<"transform id x = x\n">>),
+                  try
+                      Result = catena_repl:eval(":load " ++ TempFile, State),
+                      ?assertMatch({ok, {loaded, _, _}, _}, Result)
+                  after
+                      ok = file:delete(TempFile)
+                  end
               end},
 
              {"Load missing file",

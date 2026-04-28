@@ -154,10 +154,11 @@ scope.
 
 ## Examples
 
-See `examples/effects/` for migration-oriented sample programs:
+When we restore the example corpus, the migration-oriented scenarios to keep
+covered are:
 
-- `state_counter.cat`
-- `error_recovery.cat`
-- `logging_pipeline.cat`
-- `async_worker.cat`
-- `resource_scope.cat`
+- state threading
+- error recovery
+- logging
+- async and process orchestration
+- resource scoping

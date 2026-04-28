@@ -4,6 +4,8 @@
 
 **Description:** This phase implements FlowChoice (ArrowChoice) for sum type branching and FlowApply (ArrowApply) for dynamic Flow application.
 
+This phase should now be interpreted in light of Catena's algebraic-effects work. In particular, any comparison between `FlowApply`, `Pipeline`, and effectful computation should distinguish dynamic structured application from handler/resumption semantics.
+
 ---
 
 ## Section 3.1: FlowChoice Trait
@@ -62,7 +64,7 @@
 - Add FlowApply trait definition extending Flow
 - Define `app : arr (arr a b, a) b` method
 - Add FlowApply trait documentation
-- Document relationship to Pipeline (Monad)
+- Document relationship to Pipeline (Monad) and explicitly contrast FlowApply with algebraic-effects handlers/resumptions
 - Export FlowApply trait from Prelude
 
 ### Task 3.2.2: FlowApply Laws
@@ -72,6 +74,7 @@
 - Add `flowApplyAppLaw`: application law
 - Add `flowApplyCompositionLaw`: composition with app
 - Document FlowApply laws
+- Document why FlowApply laws do not subsume algebraic-effects handling semantics
 - Add FlowApply law verification helpers
 
 ### Task 3.2.3: FlowApply Instances
@@ -81,7 +84,7 @@
 - Implement FlowApply for functions
 - Implement FlowApply for State (when State Flow exists)
 - Verify FlowApply laws for all instances
-- Document FlowApply use cases
+- Document FlowApply use cases and non-goals relative to algebraic effects
 
 ---
 
@@ -133,6 +136,7 @@
 - Test FlowApply `app` operation
 - Test FlowApply laws for all instances
 - Test FlowApply relationship to Pipeline
+- Test FlowApply documentation/examples against the intended non-handler semantics
 - Test FlowApply dynamic computation
 - Test FlowApply error cases
 

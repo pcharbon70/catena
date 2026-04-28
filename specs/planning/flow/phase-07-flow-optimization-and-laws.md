@@ -4,6 +4,8 @@
 
 **Description:** This phase implements Flow-specific optimizations and comprehensive law verification.
 
+Because Catena now has an implemented algebraic-effects track, this phase must treat effect sensitivity as part of optimization correctness rather than as a later optional concern.
+
 ---
 
 ## Section 7.1: Flow Optimizations
@@ -18,6 +20,7 @@
 - Implement `split f g >>> h` optimization patterns
 - Implement parallel composition fusion
 - Implement Flow-specific rewrites
+- Define explicit "do not rewrite across handler/effect boundaries without proof" guardrails
 - Add optimization tests
 
 ### Task 7.1.2: Flow Specialization
@@ -28,6 +31,7 @@
 - Specialize Maybe Flow to reduce allocations
 - Specialize Either Flow for efficient error handling
 - Specialize List Flow for vectorization opportunities
+- Define constraints for any specialization touching effect-aware or handler-carrying interpretations
 - Add specialization benchmarks
 
 ### Task 7.1.3: Flow Inlining
@@ -37,6 +41,7 @@
 - Inline simple `lift` operations
 - Inline `first` and `second` for known types
 - Inline derived operations where beneficial
+- Prevent inlining rules from obscuring or reordering effectful boundaries without an explicit soundness argument
 - Add inlining heuristics
 - Measure inlining impact
 
@@ -54,6 +59,7 @@
 - Add FlowChoice law generators
 - Add FlowApply law generators
 - Implement property-based law checking
+- Add effect-sensitive regression checks for any Flow law/optimization that interacts with effectful interpretations
 - Add law coverage metrics
 
 ### Task 7.2.2: System Law Verification
@@ -93,8 +99,9 @@
 - Verify FlowApply laws for function instance
 - Verify FlowApply laws for State instance
 - Verify FlowApply relationship to Pipeline
+- Document FlowApply vs algebraic-effects boundaries and non-goals
 - Add FlowApply law documentation
-- Document FlowApply vs Pipeline tradeoffs
+- Document FlowApply vs Pipeline vs algebraic-effects tradeoffs
 
 ---
 
@@ -120,6 +127,7 @@
 - Test Flow specialization preserves semantics
 - Test Flow inlining improves performance
 - Test Flow optimization doesn't break laws
+- Test Flow optimization doesn't cross effect-handler boundaries unsafely
 - Document optimization guarantees
 
 ### Task 7.3.3: Performance Targets
@@ -146,6 +154,7 @@
 - Test Flow specialization correctness
 - Test Flow inlining correctness
 - Test optimization doesn't break laws
+- Test optimization remains sound for effect-aware Flow interpretations
 - Test optimization performance impact
 
 ### Task 7.4.2: Law Verification Tests

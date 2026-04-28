@@ -4,11 +4,15 @@
 
 **Description:** This phase establishes the foundation for Flow by implementing the System trait (the pragmatic name for Category) and the core Flow trait with its fundamental operations.
 
+Even though this phase is about the pure Flow core, it should be specified in a way that remains compatible with Catena's current algebraic-effects baseline. The core traits should stay library-first and pure by default, while leaving room for effect-aware instances and documentation later in the plan.
+
+Current promoted implementation status: the foundational pure-core pieces are now materially present in the repo, including the `System` and `Flow` trait definitions, higher-arity kind validation needed for `arr`, the `>>>` / `<<<` / `***` / `&&&` operator surface, desugaring to library vocabulary, and a real structural `System` / `Flow` law surface in `Laws`. The remaining work in this phase is mainly instance-level follow-through, broader examples, and any additional derived operations that are still only planned.
+
 ---
 
 ## Section 1.1: System Trait (Category)
 
-**Description:** Define the System trait that provides the categorical foundation for Flow and EffectfulTransform (Kleisli arrows).
+**Description:** Define the System trait that provides the categorical foundation for Flow, the older EffectfulTransform (Kleisli) vocabulary, and any future effect-aware Flow interpretations.
 
 ### Task 1.1.1: System Type Definition
 **Description:** Define the System trait type in `lib/catena/stdlib/prelude.cat`.
@@ -18,14 +22,15 @@
 - Define `id : cat a a` method for identity morphism
 - Define `compose : cat b c -> cat a b -> cat a c` method for composition
 - Add System trait documentation with category laws
+- Note explicitly that pure System/Flow laws do not authorize reordering across effect-handler boundaries without separate justification
 - Export System trait from Prelude
 
 ### Task 1.1.2: System Laws
 **Description:** Add System law definitions to `lib/catena/stdlib/laws.cat`.
 
 **Subtasks:**
-- Add `systemIdentityLaw` transform: `compose id f === f`
-- Add `systemLeftIdentityLaw` transform: `compose f id === f`
+- Add `systemLeftIdentityLaw` transform: `compose id f === f`
+- Add `systemRightIdentityLaw` transform: `compose f id === f`
 - Add `systemAssociativityLaw` transform: `compose h (compose g f) === compose (compose h g) f`
 - Document System laws with examples
 - Add System law verification helpers
@@ -54,6 +59,7 @@
 - Define `lift : (a -> b) -> arr a b` method
 - Define `first : arr a b -> arr (a, c) (b, c)` method
 - Add Flow trait documentation with Arrow laws
+- Add design note distinguishing pure Flow structure from algebraic-effect handling semantics
 - Export Flow trait from Prelude
 
 ### Task 1.2.2: Flow Derived Operations
@@ -63,16 +69,15 @@
 - Define `second : arr a b -> arr (c, a) (c, b)` using `first` and swap
 - Define `arr` as alias to `lift` for familiarity
 - Define `***` (parallel) operator: `parallel : arr a b -> arr c d -> arr (a, c) (b, d)`
-- Define `&&&` (split) operator: `split : arr a b -> arr a c -> arr (a, (b, c))`
+- Define `&&&` (split) operator: `split : arr a b -> arr a c -> arr a (b, c)`
 - Add derived operation documentation
 
 ### Task 1.2.3: Flow Laws
 **Description:** Add Flow law definitions to `lib/catena/stdlib/laws.cat`.
 
 **Subtasks:**
-- Add `flowLiftLaw`: `lift (f . g) === compose (lift f) (lift g)`
-- Add `flowFirstLaw`: `compose (lift arr) (first f) === first (compose f (lift arr))`
-- Add `flowCompositionLaw`: `first (compose f g) === compose (first f) (first g)`
+- Add lift/core-category laws that cover `lift id`, `lift` composition, and `first` composition
+- Add structural `first` laws for projection, naturality/threading, and associativity over nested tuples
 - Document Flow laws with examples
 - Add Flow law verification helpers
 
