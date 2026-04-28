@@ -6,7 +6,7 @@ This document defines the lightweight governance model for Catena's `specs/` tre
 
 The goal is to keep `specs/`:
 
-- smaller than `notes/`
+- smaller than the full implementation surface
 - architecture-facing rather than diary-like
 - grounded in code and test reality
 - explicit about what is implemented, partial, or deferred
@@ -36,7 +36,7 @@ When these disagree, `specs/` should reconcile status from:
 
 ## Promotion Guidance
 
-Promote material from `notes/` into `specs/` when it is:
+Add or expand material in `specs/` when it is:
 
 - stable enough to serve as a project reference
 - broader than a single implementation session

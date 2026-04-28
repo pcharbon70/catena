@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-The notes and implementation work show a repeated design preference: Catena should keep the compiler core relatively small while expressing rich algebraic abstractions in the standard library. The `notes/features/minimal-core-keywords.md` workstream and the current `Prelude`, `Test`, and `Laws` modules all push in that direction.
+The repository and implementation work show a repeated design preference: Catena should keep the compiler core relatively small while expressing rich algebraic abstractions in the standard library. The current `Prelude`, `Test`, and `Laws` modules all push in that direction.
 
 ## Decision
 

@@ -6,14 +6,9 @@ Promoted status: materially implemented for the maintained repo workflow. The in
 
 ## Design Anchors
 
-- [Property testing Phase 1 plan](../../notes/planning/property-testing/phase-01.md)
-- [Property testing Phase 4 law testing plan](../../notes/planning/property-testing/phase-04.md)
-- [Rose tree completion summary](../../notes/summaries/rose-tree-unit-tests-complete-2025-11-29.md)
-- [Generator type and seed management summary](../../notes/summaries/generator-type-and-seed-management-2026-03-20.md)
-- [Generator categorical instances summary](../../notes/summaries/generator-categorical-instances-2026-03-20.md)
-- [Primitive combinators summary](../../notes/summaries/primitive-combinators-2026-03-20.md)
-- [Range types summary](../../notes/summaries/range-types-2026-03-20.md)
-- [Phase 2.3 testing summary](../../notes/summaries/phase-2.3-testing-summary.md)
+- [Current Status](../planning/current_status.md)
+- [Law Verification Staged Plan](../planning/law_verification_staged_plan.md)
+- [Testing And Quality Contract](../contracts/testing_and_quality_contract.md)
 - `src/proptest/catena_tree.erl`
 - `src/proptest/catena_range.erl`
 - `test/proptest/catena_tree_tests.erl`

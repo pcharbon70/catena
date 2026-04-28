@@ -228,4 +228,4 @@ catena_lexer:tokenize([34, 16#1F30D, 34])  ✅ ACCEPTED (🌍 emoji)
 # ========================================
 ```
 
-For detailed documentation, see: `notes/implementation/task-1.1.11-utf8-unicode-validation.md`
+For current validation coverage, see the active parser tests under `test/compiler/parser/`.

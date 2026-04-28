@@ -6,17 +6,9 @@ Promoted status: materially implemented and compiler-relevant today, with Phase 
 
 ## Design Anchors
 
-- [Standard library overview](../../notes/guides/standard-library-overview.md)
-- [Minimal core keywords](../../notes/features/minimal-core-keywords.md)
-- [Minimal core keywords summary](../../notes/summaries/minimal-core-keywords.md)
-- [Basic module imports](../../notes/features/basic-module-imports.md)
-- [Standard library validation review](../../notes/reviews/section-1.5-stdlib-validation-review.md)
-- [Section 1.5.1 summary](../../notes/summaries/section-1.5.1-stdlib-compilation-complete.md)
-- [Section 1.5.2 summary](../../notes/summaries/section-1.5.2-trait-instance-resolution.md)
-- [Section 1.5.3 summary](../../notes/summaries/section-1.5.3-hkt-validation.md)
-- [Section 1.5.4 law verification summary](../../notes/summaries/section-1.5.4-law-verification.md)
-- [Section 1.5.5 summary](../../notes/summaries/section-1.5.5-do-notation.md)
-- [Section 1.5.6 summary](../../notes/summaries/section-1.5.6-effect-integration.md)
+- [ADR-0002: Minimal Core And Library-First Surface](../adr/ADR-0002-minimal-core-and-library-first-surface.md)
+- [Current Status](../planning/current_status.md)
+- [Flow Core Surface](flow_core_surface.md)
 - `lib/catena/stdlib/prelude.cat`
 - `lib/catena/stdlib/test.cat`
 - `lib/catena/stdlib/laws.cat`
@@ -27,6 +19,7 @@ Promoted status: materially implemented and compiler-relevant today, with Phase 
 - The standard library is part of Catena's implemented language surface, not just future packaging work.
 - Category-theoretic abstractions are intentionally expressed in library code and traits before becoming compiler intrinsics.
 - The `Prelude`, `Test`, `Laws`, and effect modules are the main promoted stdlib surfaces today.
+- The pure `System`/`Flow` core is now part of that promoted stdlib surface and is specified in [flow_core_surface.md](flow_core_surface.md).
 - Minimal import support exists largely to unblock stdlib use and validation.
 - Law verification is currently staged: the repo already has pure law definitions in `Laws` and `Test.verify` as the current wrapper surface, but generic property-based law verification remains future work.
 
@@ -36,6 +29,8 @@ Promoted status: materially implemented and compiler-relevant today, with Phase 
 
 Catena's promoted language design is library-first for abstractions such as mapping, application, chaining, pipelines, testing, and laws. The compiler may support these abstractions, but the canonical semantic surface should live in library modules and traits whenever the current implementation allows it.
 
+This now explicitly includes the implemented pure Flow core (`System`, `Flow`, and the current desugared Flow operators) rather than leaving Flow solely in planning documents.
+
 ### AC-STDLIB-002 Canonical Modules
 
 The current promoted standard-library boundary includes at least:
@@ -43,6 +38,7 @@ The current promoted standard-library boundary includes at least:
 - `Prelude`
 - `Test`
 - `Laws`
+- the currently implemented pure Flow core within `Prelude` and `Laws`
 - effect modules under `lib/catena/stdlib/effect/`
 
 These modules are part of the working compiler/runtime story and must be treated as first-class language surface.
@@ -53,6 +49,7 @@ Implemented syntax sugar such as do-notation and operator aliases must lower tow
 
 - `chain` and `pure`-oriented do-notation lowering
 - operator forms corresponding to mapping, application, bind, and composition
+- pure Flow operators `>>>`, `<<<`, `***`, and `&&&`
 
 ### AC-STDLIB-004 Reconciled Phase 1.5 Status
 

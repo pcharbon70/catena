@@ -136,7 +136,7 @@ The Catena compiler follows a traditional multi-pass architecture:
 
 ## Implementation Phases
 
-The project follows a 6-phase proof-of-concept plan (see `notes/planning/proof-of-concept/`):
+The project follows a 6-phase proof-of-concept plan as summarized in `specs/planning/current_status.md`:
 
 - **Phase 1** (6.5 weeks, ✓ Complete): Lexer, Parser, Type System, Effect Runtime, Code Generation
 - **Phase 2** (3.5 weeks): REPL and Basic Runtime
@@ -197,12 +197,12 @@ Catena uses dual notation - keywords and symbolic operators:
 
 ## Documentation Structure
 
-- `notes/planning/` - Project planning and phase documentation
-- `notes/research/` - Language design research (modules, effects, type system, etc.)
-- `notes/implementation/` - Implementation notes and decisions
-- `notes/guides/` - Developer guides (test coverage, naming conventions, etc.)
-- `notes/summaries/` - Session summaries and completed work
-- `notes/reviews/` - Code review notes
+- `specs/research/` - Language design research (modules, effects, type system, etc.)
+- `specs/planning/` - Canonical planning and current-status documents
+- `specs/compiler/` - Compiler architecture and acceptance criteria
+- `specs/runtime/` - Runtime and REPL architecture
+- `specs/stdlib/` - Standard library and property-testing surfaces
+- `specs/tooling/` - Build, test, and quality workflow
 
 ## Historical PropEr Suites
 

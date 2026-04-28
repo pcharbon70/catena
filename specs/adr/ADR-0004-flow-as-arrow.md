@@ -89,5 +89,5 @@ end
 ## References
 
 - [Standard Library Surface](../stdlib/standard_library_surface.md)
-- [Flow Implementation Plan](../planning/flow-implementation-plan.md)
-- [Category Theory Library Plan](../../notes/planning/category-theory-library/category-library-plan.md)
+- [Flow Planning Index](../planning/flow/README.md)
+- [Flow Core Phase](../planning/flow/phase-01-flow-core-trait-and-system-foundation.md)

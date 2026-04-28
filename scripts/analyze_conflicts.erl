@@ -146,8 +146,8 @@ analyze_grammar() ->
     io:format("~n"),
 
     io:format("Documentation:~n"),
-    io:format("  See: notes/implementation/parser-conflicts-analysis.md~n"),
-    io:format("       Complete analysis with explanations for all conflicts~n"),
+    io:format("  See: specs/compiler/core_compiler_pipeline.md~n"),
+    io:format("       Canonical compiler pipeline context and parser integration scope~n"),
 
     io:format("~n"),
 

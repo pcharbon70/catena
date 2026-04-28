@@ -7,8 +7,8 @@ Promoted status: implemented with generated lexer/parser hooks, multiple test en
 ## Design Anchors
 
 - [AGENTS.md](../../AGENTS.md)
-- [Proof-of-concept Phase 2.4 summary](../../notes/summaries/phase-2.4-integration-tests.md)
-- [Rose tree completion summary](../../notes/summaries/rose-tree-unit-tests-complete-2025-11-29.md)
+- [Current Status](../planning/current_status.md)
+- [Testing And Quality Contract](../contracts/testing_and_quality_contract.md)
 - `rebar.config`
 - `Makefile`
 - `scripts/build.sh`

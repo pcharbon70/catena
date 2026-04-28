@@ -2,7 +2,7 @@
 
 ## Current Repo Status
 
-Based on `notes/planning/`, `notes/summaries/`, `notes/reviews/`, and the codebase itself, the current promoted status is:
+Based on the current `specs/` set, codebase, and test suite, the current promoted status is:
 
 - Proof-of-concept Phase 1 Sections 1.1 through 1.4 are materially implemented.
 - Proof-of-concept Phase 1.5 is partially reconciled:
@@ -14,11 +14,13 @@ Based on `notes/planning/`, `notes/summaries/`, `notes/reviews/`, and the codeba
 - Phase 2 work exists in code and summaries for the REPL, prelude, testing framework, and integration tests.
 - Phase 3 work exists in code and summaries for advanced patterns, decision trees, exhaustiveness/redundancy checking, and pattern integration tests.
 - Phase 4 is not complete, but a minimal import-resolution bridge exists.
+- A newer algebraic-effects track is materially implemented through orchestration, row-polymorphism integration, validation, and integration-test surfaces associated with Phases 7 through 14.
 - The internal property-testing framework has completed the rose-tree foundation for Phase 1.1, the generator/seed/size layer for Phase 1.2, the categorical generator layer for Phase 1.3, the primitive generator layer for Phase 1.4, and the range layer for Phase 1.5; the next major step is basic shrinking infrastructure.
 
 ## Immediate Targets
 
 - reconcile canonical specs and planning state around the implemented compiler/runtime/library surfaces
+- consolidate the promoted description of the implemented algebraic-effects machinery so specs, contracts, and planning stop treating it as purely deferred work
 - finish the remaining Phase 1.5 library-validation gaps
 - decide whether to resume the proof-of-concept track or continue the property-testing framework track next
 - continue migrating historical PropEr coverage into the internal property-testing architecture now that the repo-wide `rebar3 eunit` path is green again
@@ -27,11 +29,11 @@ Based on `notes/planning/`, `notes/summaries/`, `notes/reviews/`, and the codeba
 
 - full module-system completion
 - actor model integration on top of the existing effect/runtime foundation
-- effect polymorphism and advanced effect-system completion
+- broader front-end coverage and ergonomics for the already-implemented algebraic-effects system
 - generator, runner, and law-discipline layers for the internal property-testing framework
 
 ## Non-Goals Of This Specs Layer
 
-- replacing the detailed historical record in `notes/`
+- replacing code- and test-backed component detail with a second parallel status layer
 - pretending that all planning checklists are already reconciled
 - freezing experimental research areas that are still clearly exploratory

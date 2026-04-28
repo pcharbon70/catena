@@ -6,9 +6,9 @@ Promoted status: implemented as an explicit-context runtime with handler process
 
 ## Design Anchors
 
-- [Explicit effect context feature](../../notes/features/explicit-effect-context.md)
-- [Explicit effect context summary](../../notes/summaries/explicit-effect-context-summary.md)
-- [Proof-of-concept Phase 1 plan](../../notes/planning/proof-of-concept/phase-01.md)
+- [ADR-0003: Explicit Effect Context Runtime](../adr/ADR-0003-explicit-effect-context-runtime.md)
+- [Current Status](../planning/current_status.md)
+- [Runtime Contract](../contracts/runtime_contract.md)
 - `src/compiler/runtime/catena_effect_runtime.erl`
 - `test/compiler/runtime/catena_effect_runtime_tests.erl`
 - `test/integration/catena_effect_integration_tests.erl`
@@ -19,6 +19,7 @@ Promoted status: implemented as an explicit-context runtime with handler process
 - Effect handlers are implemented as BEAM processes that receive perform messages and reply with results.
 - Nested handler scopes are part of the design, so child contexts can shadow or extend parent handlers.
 - Builtin effect support exists today for `IO` and `Process`.
+- Higher-level algebraic-effects orchestration now exists in the compiler/effects tree, but it still builds on this explicit-context runtime boundary rather than replacing it.
 
 ## Acceptance Criteria
 
@@ -61,7 +62,7 @@ The effect runtime is only promoted as correct when it lines up with the compile
 
 - effect names used in runtime dispatch correspond to the language's effect declarations
 - handlers compose with nested scopes
-- handler removal/resolution semantics remain compatible with the type/effect system's current monomorphic effect tracking
+- handler removal/resolution semantics remain compatible with the type/effect system's current explicit effect tracking, including the implemented row-polymorphic/algebraic-effects surfaces
 
 ## Out Of Scope
 

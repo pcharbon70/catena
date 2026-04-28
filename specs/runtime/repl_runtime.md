@@ -6,10 +6,8 @@ Promoted status: implemented as a compiler-backed interactive environment with p
 
 ## Design Anchors
 
-- [Proof-of-concept Phase 2 plan](../../notes/planning/proof-of-concept/phase-02.md)
-- [Phase 2.1 REPL summary](../../notes/summaries/phase-2.1-repl-summary.md)
-- [Phase 2.2 prelude summary](../../notes/summaries/phase-2.2-prelude-summary.md)
-- [Phase 2.4 integration tests summary](../../notes/summaries/phase-2.4-integration-tests.md)
+- [Current Status](../planning/current_status.md)
+- [Runtime Contract](../contracts/runtime_contract.md)
 - `src/repl/catena_repl.erl`
 - `src/stdlib/catena_prelude.erl`
 - `test/repl/catena_repl_tests.erl`

@@ -8,8 +8,8 @@ Owns Catena syntax, semantics, vocabulary, and long-range design research.
 
 Primary sources:
 
-- `notes/research/`
-- `notes/planning/`
+- `specs/research/`
+- `specs/planning/`
 - promoted decisions in `specs/adr/`
 
 ### Compiler Boundary
@@ -49,13 +49,11 @@ Owns the mechanics used to build, test, and validate the repository:
 - build scripts and `rebar3` integration
 - test layout and quality workflow
 - security/resource-limit hardening in build/test surfaces
-- status reconciliation between notes, code, and specs
+- status reconciliation between code, tests, and specs
 
 ## Promotion Rule
 
-`notes/` can remain broader, more experimental, and occasionally inconsistent.
-
-`specs/` should promote the stable line between:
+`specs/` should define the stable line between:
 
 - what Catena is aiming for
 - what the repository already implements

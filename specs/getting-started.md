@@ -1,6 +1,6 @@
 # Specs Getting Started
 
-This guide explains how to work with Catena's `specs/` layer now that it has been backfilled from the existing `notes/` corpus and codebase.
+This guide explains how to work with Catena's `specs/` layer as the canonical architecture, planning, and governance surface for the codebase.
 
 ## 1. Read The Promoted Baseline First
 
@@ -31,12 +31,12 @@ Current families:
 
 When a decision affects multiple subsystems or workstreams, record it in `adr/` instead of burying it in feature notes.
 
-## 4. Keep `notes/` And `specs/` In Their Roles
+## 4. Keep `specs/` Canonical
 
-- `notes/` is the broad working archive: research, planning, implementation notes, reviews, and summaries.
-- `specs/` is the promoted layer: smaller, current, and architecture-facing.
+- `specs/` is the promoted layer: current, architecture-facing, and tied to live code and tests.
+- Prefer updating existing spec documents over creating parallel status or design narratives elsewhere.
 
-If a planning checklist and the code-backed summaries disagree, reconcile the result in `specs/` and then update the planning docs when practical.
+If older status language and the code-backed implementation disagree, reconcile the result in `specs/`.
 
 ## 5. Add Or Update Component Specs When Surfaces Stabilize
 
