@@ -196,7 +196,7 @@ parse_with_timeout(Tokens, MaxTime, StartTime) ->
 %% @example
 %% ```
 %% %% Success case
-%% {ok, AST} = parse_file("examples/maybe.cat").
+%% {ok, AST} = parse_file("path/to/module.cat").
 %%%
 %% %% File not found
 %% {error, {file_error, "missing.cat", enoent}} =

@@ -6,11 +6,8 @@ Promoted status: implemented across parsing, typing, static analysis, and code g
 
 ## Design Anchors
 
-- [Proof-of-concept Phase 3 plan](../../notes/planning/proof-of-concept/phase-03.md)
-- [Phase 3.1 advanced patterns summary](../../notes/summaries/phase-3.1-advanced-patterns-summary.md)
-- [Phase 3.2 decision trees summary](../../notes/summaries/phase-3.2-decision-trees-2025-11-25.md)
-- [Phase 3.3 exhaustiveness summary](../../notes/summaries/phase-3.3-exhaustiveness-checking-2025-11-25.md)
-- [Phase 3.4 integration summary](../../notes/summaries/phase-3.4-integration-tests-2025-11-25.md)
+- [Current Status](../planning/current_status.md)
+- [Compiler Contract](../contracts/compiler_contract.md)
 - `src/compiler/semantic/catena_pattern_check.erl`
 - `src/compiler/codegen/catena_pattern_decision_tree.erl`
 - `src/compiler/codegen/catena_codegen_pattern.erl`

@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-The effect runtime originally relied on process-dictionary style handler state. The notes under `notes/features/explicit-effect-context.md` and its summary describe why that model was a poor fit for nesting, spawned processes, and testability.
+The effect runtime originally relied on process-dictionary style handler state. The current runtime design and implementation show why that model was a poor fit for nesting, spawned processes, and testability.
 
 ## Decision
 

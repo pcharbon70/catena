@@ -1,8 +1,6 @@
 # Specs Index
 
-This directory is the canonical architecture-and-governance layer for Catena.
-
-Catena already has a large design and implementation archive under `notes/`. This `specs/` tree backfills the smaller, promoted view of what the repository currently is, how its main parts fit together, and where the project is actually up to.
+This `specs/` tree is the canonical architecture-and-governance layer for the repository. It provides the promoted view of what Catena currently is, how its main parts fit together, and where the project is actually up to.
 
 The structure follows the layered model used by `../epic/jido_os/specs`, adapted to a language/compiler project:
 
@@ -53,6 +51,7 @@ The structure follows the layered model used by `../epic/jido_os/specs`, adapted
 - [adr/ADR-0001-control-plane-authority.md](adr/ADR-0001-control-plane-authority.md)
 - [adr/ADR-0002-minimal-core-and-library-first-surface.md](adr/ADR-0002-minimal-core-and-library-first-surface.md)
 - [adr/ADR-0003-explicit-effect-context-runtime.md](adr/ADR-0003-explicit-effect-context-runtime.md)
+- [adr/ADR-0004-flow-as-arrow.md](adr/ADR-0004-flow-as-arrow.md)
 
 ## Conformance
 
@@ -65,6 +64,10 @@ The structure follows the layered model used by `../epic/jido_os/specs`, adapted
 - [planning/current_status.md](planning/current_status.md)
 - [planning/law_verification_staged_plan.md](planning/law_verification_staged_plan.md)
 - [operations/README.md](operations/README.md)
+
+## Research
+
+- [research/README.md](research/README.md)
 
 ## Domain Indexes
 

@@ -128,31 +128,31 @@ All scripts include timestamp checking and only rebuild when source files have c
 
 ## Documentation
 
-Comprehensive research documents are available in [`notes/research/`](notes/research/):
+Comprehensive research documents are available in [`specs/research/`](specs/research/):
 
-- **[1.01 - Original Idea](notes/research/1.01-original_idea/1.01.1-original_idea.md)** - Core design philosophy
-- **[1.02 - Modules](notes/research/1.02-modules/1.02.1-modules.md)** - Advanced module system design
-- **[1.03 - Immutability](notes/research/1.03-immutability/1.03.1-immutability.md)** - Immutability as foundation
-- **[1.04 - Documentation](notes/research/1.04-documentation/1.04.1-documentation.md)** - Documentation as language construct
-- **[1.05 - Packages](notes/research/1.05-packages/1.05.1-packages.md)** - Ecosystem integration
-- **[1.06 - Testing](notes/research/1.06-testing/1.06.1-testing.md)** - Built-in testing framework
-- **[1.07 - Error Handling](notes/research/1.07-error-handling/1.07.1-error-handling.md)** - Type systems meet "let it crash"
-- **[1.08 - Advanced Concurrency](notes/research/1.08-advanced-concurrency/1.08.1-advanced-concurrency.md)** - Session types and choreographic programming
-- **[1.09 - Reflection and Introspection](notes/research/1.09-reflection-and-introspection/1.09.1-reflection-and-introspection.md)** - Runtime reflection
-- **[1.10 - Pattern Matching](notes/research/1.10-pattern-matching/1.10.1-pattern-matching.md)** - Advanced pattern features
-- **[1.11 - Domain-Specific Languages](notes/research/1.11-domain-specific-langage/1.11.1-domain-specific-langage.md)** - First-class DSL support
-- **[1.12 - Build System](notes/research/1.12-build-system/1.12.1-build-system.md)** - Compilation pipeline
-- **[1.13 - Foreign Function Interface](notes/research/1.13-foreign-function-interface/1.13.1-foreign-function-interface.md)** - Safe native code interop
-- **[1.14 - Development Tools](notes/research/1.14-development-tools/1.14.1-development-tools.md)** - Debugging and tooling
-- **[1.15 - Advanced Type System](notes/research/1.15-advanced-type-system/1.15.1-advanced-type-system.md)** - Category theory-based type system
-- **[1.16 - Performance Optimization Directives](notes/research/1.16-performance-optimization-directives/1.16.1-performance-optimization-directives.md)** - BEAM-specific optimizations
-- **[1.17 - Side Effects Design](notes/research/1.17-side-effects-design/1.17.1-side-effects-design.md)** - Algebraic effects and handlers
-- **[1.18 - Library Updates](notes/research/1.18-library-updates/1.18.1-library-updates.md)** - Standard library evolution
-- **[1.19 - Security](notes/research/1.19-security/1.19.1-preventing-rce.md)** - Security architecture and RCE prevention
-- **[1.20 - Standard Library](notes/research/1.20-standard-library/1.20.1-standard-library.md)** - Category theory foundations (Setoid, Functor, Monad, etc.)
-- **[1.21 - Distribution Layer](notes/research/1.21-distribution-layer/1.21.2-partisan.md)** - Partisan integration and scalable distribution
+- **[1.01 - Original Idea](specs/research/1.01-original_idea/1.01.1-original_idea.md)** - Core design philosophy
+- **[1.02 - Modules](specs/research/1.02-modules/1.02.1-modules.md)** - Advanced module system design
+- **[1.03 - Immutability](specs/research/1.03-immutability/1.03.1-immutability.md)** - Immutability as foundation
+- **[1.04 - Documentation](specs/research/1.04-documentation/1.04.1-documentation.md)** - Documentation as language construct
+- **[1.05 - Packages](specs/research/1.05-packages/1.05.1-packages.md)** - Ecosystem integration
+- **[1.06 - Testing](specs/research/1.06-testing/1.06.1-testing.md)** - Built-in testing framework
+- **[1.07 - Error Handling](specs/research/1.07-error-handling/1.07.1-error-handling.md)** - Type systems meet "let it crash"
+- **[1.08 - Advanced Concurrency](specs/research/1.08-advanced-concurrency/1.08.1-advanced-concurrency.md)** - Session types and choreographic programming
+- **[1.09 - Reflection and Introspection](specs/research/1.09-reflection-and-introspection/1.09.1-reflection-and-introspection.md)** - Runtime reflection
+- **[1.10 - Pattern Matching](specs/research/1.10-pattern-matching/1.10.1-pattern-matching.md)** - Advanced pattern features
+- **[1.11 - Domain-Specific Languages](specs/research/1.11-domain-specific-langage/1.11.1-domain-specific-langage.md)** - First-class DSL support
+- **[1.12 - Build System](specs/research/1.12-build-system/1.12.1-build-system.md)** - Compilation pipeline
+- **[1.13 - Foreign Function Interface](specs/research/1.13-foreign-function-interface/1.13.1-foreign-function-interface.md)** - Safe native code interop
+- **[1.14 - Development Tools](specs/research/1.14-development-tools/1.14.1-development-tools.md)** - Debugging and tooling
+- **[1.15 - Advanced Type System](specs/research/1.15-advanced-type-system/1.15.1-advanced-type-system.md)** - Category theory-based type system
+- **[1.16 - Performance Optimization Directives](specs/research/1.16-performance-optimization-directives/1.16.1-performance-optimization-directives.md)** - BEAM-specific optimizations
+- **[1.17 - Side Effects Design](specs/research/1.17-side-effects-design/1.17.1-side-effects-design.md)** - Algebraic effects and handlers
+- **[1.18 - Library Updates](specs/research/1.18-library-updates/1.18.1-library-updates.md)** - Standard library evolution
+- **[1.19 - Security](specs/research/1.19-security/1.19.1-preventing-rce.md)** - Security architecture and RCE prevention
+- **[1.20 - Standard Library](specs/research/1.20-standard-library/1.20.1-standard-library.md)** - Category theory foundations (Setoid, Functor, Monad, etc.)
+- **[1.21 - Distribution Layer](specs/research/1.21-distribution-layer/1.21.2-partisan.md)** - Partisan integration and scalable distribution
 
-See the [research directory README](notes/research/README.md) for a detailed overview and recommended reading order.
+See the [research directory README](specs/research/README.md) for a detailed overview and recommended reading order.
 
 ## Example Code
 
@@ -241,46 +241,46 @@ Test coverage reporting is integrated using Erlang's built-in `cover` tool. Afte
 
 **Current Coverage:** ~86% overall for compiler modules (248 tests, all passing)
 
-See [Test Coverage Guide](notes/guides/test-coverage-guide.md) for detailed information on:
+See [Build And Test Tooling](specs/tooling/build_and_test_tooling.md) for detailed information on:
 - Interpreting coverage results
 - Improving test coverage
 - Coverage targets and best practices
 
 ## Contributing
 
-This project is currently in the research and early implementation phase. A **proof-of-concept compiler is under active development** following a structured 17-week implementation plan.
+This project is currently in the research and early implementation phase. A **proof-of-concept compiler is under active development** following the reconciled planning and status documents under `specs/`.
 
 ### Implementation Roadmap
 
 The proof-of-concept is divided into 6 phases spanning approximately 4.25 months:
 
-| Phase | Duration | Focus Area | Document |
-|-------|----------|------------|----------|
-| **Phase 1** | 6.5 weeks | Core Language Infrastructure | [phase-01.md](notes/planning/proof-of-concept/phase-01.md) |
-| | | Lexer, Parser, Type-and-Effect System, Effect Runtime, Code Generation | |
-| **Phase 2** | 3.5 weeks | REPL and Basic Runtime | [phase-02.md](notes/planning/proof-of-concept/phase-02.md) |
-| | | Effect-Aware REPL, Prelude, Builtin Effects (IO, Process) | |
-| **Phase 3** | 3.5 weeks | Pattern Matching Engine | [phase-03.md](notes/planning/proof-of-concept/phase-03.md) |
-| | | Advanced Patterns, Pure Guards, Decision Trees, Exhaustiveness | |
-| **Phase 4** | 2.5 weeks | Module System | [phase-04.md](notes/planning/proof-of-concept/phase-04.md) |
-| | | Modules, Effect Propagation, Interface Files, Separate Compilation | |
-| **Phase 5** | 3.5 weeks | Actor Model Integration | [phase-05.md](notes/planning/proof-of-concept/phase-05.md) |
-| | | Actor-Effect Unification, Supervision, Fault Tolerance | |
-| **Phase 6** | 5 weeks | Effect System Completion (Post-PoC) | [phase-06-effect-completion.md](notes/planning/proof-of-concept/phase-06-effect-completion.md) |
-| | | Effect Polymorphism, Effect Library, Optimizations, Advanced Features | |
+| Phase | Duration | Focus Area |
+|-------|----------|------------|
+| **Phase 1** | 6.5 weeks | Core Language Infrastructure |
+| | | Lexer, Parser, Type-and-Effect System, Effect Runtime, Code Generation |
+| **Phase 2** | 3.5 weeks | REPL and Basic Runtime |
+| | | Effect-Aware REPL, Prelude, Builtin Effects (IO, Process) |
+| **Phase 3** | 3.5 weeks | Pattern Matching Engine |
+| | | Advanced Patterns, Pure Guards, Decision Trees, Exhaustiveness |
+| **Phase 4** | 2.5 weeks | Module System |
+| | | Modules, Effect Propagation, Interface Files, Separate Compilation |
+| **Phase 5** | 3.5 weeks | Actor Model Integration |
+| | | Actor-Effect Unification, Supervision, Fault Tolerance |
+| **Phase 6** | 5 weeks | Effect System Completion (Post-PoC) |
+| | | Effect Polymorphism, Effect Library, Optimizations, Advanced Features |
 
 **Quick Links:**
-- [📋 Proof-of-Concept Overview](notes/planning/proof-of-concept/proof-of-concept.md) - High-level goals and architecture
-- [🧭 Phase Navigation](notes/planning/proof-of-concept/phase-navigation.md) - Detailed phase descriptions and dependencies
-- [📁 Planning Directory](notes/planning/README.md) - Complete planning documentation
+- [Specs Index](specs/README.md) - Canonical architecture and scope
+- [Current Status](specs/planning/current_status.md) - Reconciled implementation state
+- [Targets](specs/targets.md) - Immediate and medium-term goals
 
 ### How to Contribute
 
 Contributions are welcome in several forms:
 
-- **Research Feedback** - Review and provide feedback on design documents in `notes/research/`
+- **Research Feedback** - Review and provide feedback on design documents in `specs/research/`
 - **Additional Research** - Explore new topics related to category theory, BEAM integration, or language design
-- **Implementation** - Contribute to the proof-of-concept compiler (see phase documents for current progress)
+- **Implementation** - Contribute to the proof-of-concept compiler (see `specs/planning/current_status.md` for current progress)
 - **Testing** - Help develop test cases and property-based testing strategies
 - **Documentation** - Improve existing documentation or add examples
 

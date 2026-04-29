@@ -6,14 +6,11 @@ Accepted
 
 ## Context
 
-Catena has a large amount of design and implementation material in `notes/`, but that archive mixes long-range research, historical status, and code-adjacent working notes. The repository needs a smaller canonical layer that states what currently owns what.
+Catena has accumulated design, planning, and implementation material across multiple workstreams over time. The repository needs a smaller canonical layer that states what currently owns what.
 
 ## Decision
 
-Catena will treat:
-
-- `notes/` as the broad research, planning, implementation, and review archive
-- `specs/` as the promoted architecture-and-governance layer
+Catena will treat `specs/` as the promoted architecture-and-governance layer.
 
 Within `specs/`, authority resolves in this order:
 

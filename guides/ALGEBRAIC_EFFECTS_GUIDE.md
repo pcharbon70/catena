@@ -120,16 +120,14 @@ This validates:
 
 ## Examples
 
-See `examples/effects/` for:
+The example programs were removed for now, but the scenario set to restore
+later is:
 
 - state threading
 - error recovery
 - logging
 - async and process orchestration
 - resource scoping
-
-Each example is marked as either current parser-compatible core syntax or
-full Phase 14 model syntax.
 
 ## Practical Guidance
 

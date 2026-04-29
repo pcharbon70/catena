@@ -30,7 +30,7 @@ Catena is not a service platform in the same way `jido_os` is, but it does have 
 
 - build scripts that regenerate generated sources
 - EUnit and integration test layout
-- documentation and planning workflow around `notes/`
+- documentation and planning workflow centered on `specs/`
 
 ## Current Design Bias
 

@@ -2,7 +2,7 @@
 
 Catena is a category theory-inspired functional programming language targeting the BEAM VM.
 
-The research corpus under `notes/research/` covers a much larger design space than the codebase currently implements. This document records the current promoted design baseline that is both visible in the notes and materially reflected in the repository.
+The research corpus under `specs/research/` covers a much larger design space than the codebase currently implements. This document records the current promoted design baseline that is both visible in the notes and materially reflected in the repository.
 
 ## Stable Design Themes
 
@@ -24,7 +24,7 @@ The research corpus under `notes/research/` covers a much larger design space th
 - the current proof-of-concept uses Hindley-Milner-style inference
 - trait constraints and higher-kinded type validation are part of the current design
 - effects are tracked explicitly in function types
-- the proof-of-concept effect system is intentionally monomorphic; effect polymorphism is deferred
+- the repo now includes implemented algebraic-effects machinery in the compiler/type layers, including row-polymorphism-oriented effect operations and validation surfaces
 
 ### Runtime Direction
 
@@ -36,7 +36,7 @@ The research corpus under `notes/research/` covers a much larger design space th
 
 - the standard library defines the category-theory surface in Catena syntax
 - `Prelude`, `Test`, `Laws`, and effect modules are part of the current library surface
-- an internal property-testing framework is being built inside the repo, with the rose-tree foundation already implemented in Erlang
+- an internal property-testing framework is being built inside the repo, with rose-tree, generator, and range foundations implemented in Erlang
 
 ## Current Implemented Baseline
 
@@ -46,11 +46,12 @@ The repository currently contains real code and tests for:
 - substantial standard-library validation work
 - REPL, prelude, and testing framework work associated with Phase 2
 - advanced pattern features, decision trees, and exhaustiveness/redundancy checking associated with Phase 3
-- the first implemented slice of the internal property-testing framework (`src/proptest/catena_tree.erl`)
+- a newer algebraic-effects track through Phase 14-style orchestration, validation, and integration-test surfaces
+- an implemented property-testing foundation spanning `src/proptest/catena_tree.erl`, `src/proptest/catena_gen.erl`, and `src/proptest/catena_range.erl`
 
 ## Still Planned Or Partial
 
 - full Phase 4 module system beyond basic imports
 - actor model integration as a first-class Catena surface
-- effect polymorphism and advanced effect completion work
+- full language-surface consolidation and long-tail ergonomics for the newer algebraic-effects machinery
 - the remaining generator, runner, and law-testing layers of the internal property-testing framework

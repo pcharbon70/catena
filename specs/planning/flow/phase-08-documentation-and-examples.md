@@ -4,6 +4,8 @@
 
 **Description:** This phase creates comprehensive documentation and example programs for Flow.
 
+Because Catena now has implemented algebraic-effects machinery, the documentation phase must explain not just Flow in isolation, but also how Flow relates to `Pipeline` and to algebraic-effects handling.
+
 ---
 
 ## Section 8.1: Flow Reference Documentation
@@ -19,6 +21,7 @@
 - Document FlowChoice trait with examples
 - Document FlowApply trait with examples
 - Document all Flow operations
+- Document where Flow stops and algebraic-effects handling begins
 - Document all Flow operators
 
 ### Task 8.1.2: Flow Instance Reference
@@ -70,14 +73,14 @@
 - Document stream processing patterns
 
 ### Task 8.2.3: Flow vs Pipeline Guide
-**Description:** Write a guide comparing Flow and Pipeline.
+**Description:** Write a guide comparing Flow, Pipeline, and algebraic effects.
 
 **Subtasks:**
-- Explain when to use Flow vs Pipeline
-- Compare Flow and Pipeline examples
+- Explain when to use Flow vs Pipeline vs algebraic effects
+- Compare Flow, Pipeline, and algebraic-effects examples
 - Document tradeoffs and considerations
 - Provide decision flowchart
-- Add migration guide between Flow and Pipeline
+- Add guidance for combining Flow with effect handlers without conflating the abstractions
 
 ---
 
@@ -129,6 +132,7 @@
 - Test tutorial examples
 - Test pattern guide examples
 - Test comparison guide examples
+- Test Flow/effects comparison examples for conceptual consistency with the current effect system
 - Test all example programs
 
 ### Task 8.4.2: Tutorial Validation
@@ -159,7 +163,7 @@
 - `docs/flow-reference.md` — Complete Flow reference
 - `docs/flow-tutorial.md` — Flow tutorial
 - `docs/flow-patterns.md` — Flow patterns guide
-- `docs/flow-vs-pipeline.md` — Flow vs Pipeline comparison
+- `docs/flow-vs-pipeline-and-effects.md` — Flow vs Pipeline vs algebraic effects comparison
 - `docs/flow-laws.md` — Flow law reference
 - `docs/flow-optimization.md` — Flow optimization guide
 
@@ -189,7 +193,7 @@ This phase is complete when:
 3. All Flow laws are documented with proofs and verification guides
 4. Beginner-friendly tutorial exists with exercises and solutions
 5. Patterns guide covers all major Flow usage patterns
-6. Flow vs Pipeline comparison guide exists with decision criteria
+6. Flow vs Pipeline vs algebraic effects comparison guide exists with decision criteria
 7. Core examples demonstrate all Flow operations
 8. Practical examples show real-world Flow usage
 9. Advanced examples showcase Flow's unique capabilities

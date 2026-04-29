@@ -9,7 +9,7 @@ It exists because the repository currently has:
 - real law definitions in the standard library
 - real test wrappers for law checks
 - structural tests proving those surfaces compile and normalize correctly
-- an unfinished path from those surfaces to generic property-based law verification
+- an unfinished path from those stdlib-native surfaces to fully reconciled executable law verification, even though the internal Erlang/proptest framework has moved materially further ahead
 
 The goal is to describe the intended path without overstating what is already executable.
 
@@ -20,13 +20,22 @@ Catena's current baseline for law verification is:
 - `lib/catena/stdlib/laws.cat` defines pure law transforms for `Mapper`, `Pipeline`, `Comparable`, and `Combiner`
 - `lib/catena/stdlib/test.cat` defines `verify` as the current standard-library wrapper for turning a Bool-producing law check into a test value
 - `test/compiler/integration/catena_stdlib_laws_tests.erl` verifies the `Laws` module parses, exports the expected transforms, and preserves the intended law arities and AST shape
+- `src/proptest/catena_laws.erl`, `catena_trait_laws.erl`, `catena_discipline.erl`, and `catena_law_tests.erl` provide a generic Erlang-side law framework
+- `test/proptest/catena_trait_laws_tests.erl` and `test/proptest/catena_law_integration_tests.erl` exercise that internal framework end-to-end
 - full execution of reusable imported law suites is still partial
-- generic generator-backed law verification is not yet implemented
+- generic generator-backed law verification now exists in the internal Erlang/proptest framework, but the stdlib/Catena-native execution path is still incomplete
+
+This creates two overlapping realities:
+
+- the stdlib/Catena-native law path is still only partially executable
+- the internal Erlang/proptest law framework is materially further along
 
 Promoted interpretation:
 
 - Stage 1 law definition work exists
-- Stage 2 and later execution/generality work remain to be done
+- Stage 2 remains partial on the stdlib-native path
+- Stage 3 and Stage 4 are materially implemented in the internal Erlang/proptest framework
+- Stage 5 remains future ergonomics and workflow integration work
 
 ## Stage 1: Structural Law Definition
 
@@ -43,7 +52,7 @@ This stage proves the language and stdlib can represent the laws, but it does no
 
 ## Stage 2: Executable Concrete Law Suites
 
-Status: next law-verification step on the proof-of-concept track
+Status: partial and still the clearest unfinished step on the stdlib-native path
 
 The second stage makes today's law surface executable for concrete known instances before the generic property-testing framework is complete.
 
@@ -68,7 +77,7 @@ The second stage makes today's law surface executable for concrete known instanc
 
 ## Stage 3: Generator And Runner Foundation
 
-Status: blocked on the next property-testing work
+Status: materially implemented in the internal Erlang/proptest framework
 
 The third stage builds the internal foundation required for generic law verification:
 
@@ -79,17 +88,16 @@ The third stage builds the internal foundation required for generic law verifica
 
 This stage is where Catena moves from finite fixture checking toward data-driven law checking with integrated shrinking.
 
-### Immediate Dependencies
+Current promoted reading:
 
-- preserve the now-green default `rebar3 eunit` path while migrating historical PropEr coverage into internal replacements
-- continue the `src/proptest/*` track beyond `catena_tree`
-- decide whether the older `src/testing/*` runner is wrapped, replaced, or bridged during migration
+- the generator/runner/reporting foundation now exists in `src/proptest/*`
+- the remaining work is less about foundation and more about bridging that foundation back into the stdlib-native law-verification story cleanly
 
 ## Stage 4: Generic Law Specifications And Disciplines
 
-Status: planned in the property-testing roadmap
+Status: materially implemented on the Erlang/proptest side
 
-This stage aligns with `notes/planning/property-testing/phase-04.md` and turns law verification into a reusable framework.
+This stage aligns with the Phase 4 property-testing track and turns law verification into a reusable framework.
 
 ### Deliverables
 
@@ -105,9 +113,14 @@ This stage aligns with `notes/planning/property-testing/phase-04.md` and turns l
 - failures produce law-aware reports and counterexamples
 - generic law suites no longer depend on hand-authored concrete fixture lists
 
+Current promoted reading:
+
+- this stage exists today in the internal framework, even though the older phase markdown remains largely unchecked
+- the missing work is broader integration and canonical documentation, not the complete absence of a generic law framework
+
 ## Stage 5: Ergonomic Derivation And Workflow Integration
 
-Status: later follow-on
+Status: partial/follow-on
 
 Once Catena grows the right macro/metadata capabilities, law verification can become more ergonomic.
 
@@ -120,13 +133,18 @@ Once Catena grows the right macro/metadata capabilities, law verification can be
 
 This stage is explicitly downstream of the generic framework, not a prerequisite for it.
 
+Current promoted reading:
+
+- explicit function-based helpers now exist before macro/derive sugar
+- the broader ergonomic workflow story remains incomplete
+
 ## Recommended Execution Order
 
 1. Maintain the green default repo test path while continuing the PropEr migration.
 2. Complete Stage 2 by making current `Laws + Test.verify` executable for concrete suites.
-3. Continue Property Testing Phase 1.2 through the generator/runner foundation.
-4. Implement the generic law-specification and discipline framework from the property-testing Phase 4 plan.
-5. Add ergonomic derivation only after the underlying framework is solid.
+3. Reconcile the staged-law docs with the already-implemented `src/proptest/*` framework rather than pretending Stages 3 and 4 are still absent.
+4. Bridge the stdlib-native law path and the internal law framework more explicitly where that improves contributor understanding and test coverage.
+5. Add broader ergonomic derivation only after the underlying framework and integration boundaries are solid.
 
 ## What This Plan Avoids
 

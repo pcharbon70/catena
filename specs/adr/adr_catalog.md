@@ -6,9 +6,10 @@ This catalog is the canonical inventory of Catena's promoted ADR set.
 
 | ADR | Status | Decision Area | Summary |
 | --- | --- | --- | --- |
-| [ADR-0001](ADR-0001-control-plane-authority.md) | accepted | spec authority and control planes | Defines `specs/` as the promoted canonical layer over the broader `notes/` archive and clarifies ownership boundaries for architecture decisions. |
+| [ADR-0001](ADR-0001-control-plane-authority.md) | accepted | spec authority and control planes | Defines `specs/` as the canonical architecture layer and clarifies ownership boundaries for architecture decisions. |
 | [ADR-0002](ADR-0002-minimal-core-and-library-first-surface.md) | accepted | language/core design | Commits Catena to a minimal core and library-first surface, preferring trait/library semantics over unnecessary compiler intrinsics. |
 | [ADR-0003](ADR-0003-explicit-effect-context-runtime.md) | accepted | runtime/effects | Commits the effect runtime to explicit context passing and rejects hidden process-local handler authority as the canonical model. |
+| [ADR-0004](ADR-0004-flow-as-arrow.md) | accepted | naming/library design | Commits Catena to `Flow` as the pragmatic name for Arrow and requires related planning and library surfaces to use that vocabulary. |
 
 ## Catalog Rules
 

@@ -10,10 +10,9 @@ This spec promotes the compiler pipeline that Catena currently ships in code. It
 
 ## Design Anchors
 
-- [Compiler pipeline architecture](../../notes/implementation/compiler-pipeline.md)
-- [Proof-of-concept Phase 1 plan](../../notes/planning/proof-of-concept/phase-01.md)
-- [Basic module imports](../../notes/features/basic-module-imports.md)
-- [Review fixes summary](../../notes/summaries/review-fixes-2025-11-28.md)
+- [Catena Design Baseline](../design.md)
+- [Current Status](../planning/current_status.md)
+- [Compiler Contract](../contracts/compiler_contract.md)
 - `src/compiler/catena_compile.erl`
 - `src/compiler/catena_module_loader.erl`
 - `src/compiler/semantic/*`
