@@ -8,7 +8,7 @@ coherent, connects the public type helpers to implemented inference machinery,
 and publishes a deterministic Phase 4 baseline without absorbing failures
 owned by later phases.
 
-**Status:** In progress.
+**Status:** Complete.
 
 **Dependencies:** Phase 3 complete.
 
@@ -162,63 +162,63 @@ system configuration field.
 inference/generalization machinery, repair the theoretical validation fixture,
 and publish the complete Phase 4 evidence.
 
-- [ ] **Section 4.3 Complete**
+- [x] **Section 4.3 Complete**
 
 ### Task 4.3.1: Connect Public Type Helpers
 
 **Description:** Replace placeholder or nonexistent calls with the repository's
 implemented effect inference state and polymorphic effect APIs.
 
-- [ ] **Task 4.3.1 Complete**
+- [x] **Task 4.3.1 Complete**
 
 #### Subtask 4.3.1.1: Infer and Check Effects
 
 **Description:** Infer expression effects from a fresh inference state and
 return structured errors from the public boundary.
 
-- [ ] **Subtask 4.3.1.1 Complete**
+- [x] **Subtask 4.3.1.1 Complete**
 
 #### Subtask 4.3.1.2: Generalize Effect Variables
 
 **Description:** Quantify free effect variables while leaving concrete types
 unchanged.
 
-- [ ] **Subtask 4.3.1.2 Complete**
+- [x] **Subtask 4.3.1.2 Complete**
 
 ### Task 4.3.2: Restore Validation Conformance
 
 **Description:** Make theoretical handler-model validation use depth metadata
 that matches the implemented shallow-handler contract.
 
-- [ ] **Task 4.3.2 Complete**
+- [x] **Task 4.3.2 Complete**
 
 #### Subtask 4.3.2.1: Verify Aggregate Validation
 
 **Description:** Require theoretical, property, and conformance reports to pass
 together through the aggregate validation entry point.
 
-- [ ] **Subtask 4.3.2.1 Complete**
+- [x] **Subtask 4.3.2.1 Complete**
 
 ### Task 4.3.3: Publish Phase 4 Verification
 
 **Description:** Run focused effect/type/runtime suites and two complete active
 suite runs, then update promoted specifications and the failure inventory.
 
-- [ ] **Task 4.3.3 Complete**
+- [x] **Task 4.3.3 Complete**
 
 #### Subtask 4.3.3.1: Record Deterministic Evidence
 
 **Description:** Capture tool versions, commands, totals, and remaining
 later-phase failures in a Phase 4 baseline document.
 
-- [ ] **Subtask 4.3.3.1 Complete**
+- [x] **Subtask 4.3.3.1 Complete**
 
 #### Subtask 4.3.3.2: Reconcile Promoted Status
 
 **Description:** Update current status and component specifications so they
 describe both the verified boundary and its remaining continuation limits.
 
-- [ ] **Subtask 4.3.3.2 Complete**
+- [x] **Subtask 4.3.3.2 Complete**
 
 **Acceptance Criteria:**
 
@@ -233,7 +233,7 @@ describe both the verified boundary and its remaining continuation limits.
 resumptions, type helpers, validation, and promoted documentation agree at the
 verified integration boundary.
 
-- [ ] Public effect execution matches builtin runner documentation
-- [ ] Handler and resumption orchestration has one tested observable contract
-- [ ] Type helpers and validation use implemented compiler machinery
-- [ ] Current-status and component specs match repeatable suite evidence
+- [x] Public effect execution matches builtin runner documentation
+- [x] Handler and resumption orchestration has one tested observable contract
+- [x] Type helpers and validation use implemented compiler machinery
+- [x] Current-status and component specs match repeatable suite evidence

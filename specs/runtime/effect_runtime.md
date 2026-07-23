@@ -19,13 +19,23 @@ Promoted status: implemented as an explicit-context runtime with handler process
 - Effect handlers are implemented as BEAM processes that receive perform messages and reply with results.
 - Nested handler scopes are part of the design, so child contexts can shadow or extend parent handlers.
 - Builtin effect support exists today for `IO` and `Process`.
-- Higher-level algebraic-effects orchestration now exists in the compiler/effects tree, but it still builds on this explicit-context runtime boundary rather than replacing it.
+- The builtin `Process` handler exposes `spawn`, `spawn_link`, `send`, `self`,
+  `link`, `unlink`, `monitor`, `demonitor`, `whereis`, `register`,
+  `is_process_alive`, and `trap_exit`.
+- Higher-level algebraic-effects orchestration exists in the compiler/effects
+  tree as a separate Erlang-facing facade. It uses process-local handler scopes
+  for direct component execution and does not replace the explicit-context
+  generated-code boundary.
 
 ## Acceptance Criteria
 
 ### AC-ERT-001 Explicit Context Authority
 
-The promoted runtime model for effect execution is explicit context passing. Any implementation that depends on hidden process-local state for handler lookup is outside the canonical design unless a later ADR supersedes it.
+The promoted generated-code runtime model for effect execution is explicit
+context passing. Process-local handler lookup in the higher-level
+`catena_effects` orchestration facade is an internal/component execution
+surface, not a replacement runtime authority, unless a later ADR supersedes
+this boundary.
 
 ### AC-ERT-002 Handler Lifecycle
 

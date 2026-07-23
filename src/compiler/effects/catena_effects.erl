@@ -803,18 +803,20 @@ run_error(Computation, ErrorHandler) ->
 run_error(Computation, ErrorHandler, Options) ->
     Handler = fun
         ({throw, Error}, _Resume) ->
-            ErrorHandler(Error);
+            {catena_effect_error, Error};
         ({'catch', InnerComp, InnerHandler}, _Resume) ->
             try InnerComp() of
                 Result -> Result
             catch
-                throw:{catena_effect_abort, ErrorResult} ->
-                    InnerHandler(ErrorResult)
+                throw:{catena_effect_abort, {catena_effect_error, Error}} ->
+                    InnerHandler(Error)
             end
     end,
     try
         handle(error, Handler, Computation, Options)
     catch
+        throw:{catena_effect_abort, {catena_effect_error, Error}} ->
+            ErrorHandler(Error);
         throw:{catena_effect_abort, Result} ->
             Result
     end.

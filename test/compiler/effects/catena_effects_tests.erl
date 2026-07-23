@@ -150,9 +150,14 @@ error_short_circuit() ->
     )).
 
 error_aliases() ->
-    ?assertEqual({error, failed}, catena_effects:catch_error(
-        fun() -> catena_effects:throw(failed) end,
-        fun(Error) -> {error, Error} end
+    ?assertEqual({inner, failed}, catena_effects:catch_error(
+        fun() ->
+            catena_effects:error_catch(
+                fun() -> catena_effects:throw(failed) end,
+                fun(Error) -> {inner, Error} end
+            )
+        end,
+        fun(Error) -> {outer, Error} end
     )).
 
 custom_handler() ->
