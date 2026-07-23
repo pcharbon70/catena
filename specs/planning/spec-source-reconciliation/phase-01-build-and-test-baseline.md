@@ -68,28 +68,52 @@ active source or test files declare the same Erlang module.
 **Description:** Make rebar3 authoritative for complete compilation and active
 EUnit discovery, with Make targets acting as transparent wrappers.
 
-- [ ] **Section 1.2 Complete**
+- [x] **Section 1.2 Complete**
 
 ### Task 1.2.1: Complete Rebar Test Discovery
 
 **Description:** Include every maintained test directory and correct generated
 module coverage configuration.
 
-- [ ] **Task 1.2.1 Complete**
+- [x] **Task 1.2.1 Complete**
+
+**Subtasks:**
+
+- [x] 1.2.1.1 Discover maintained tests recursively from the `test/` profile
+- [x] 1.2.1.2 Generate lexer and parser modules through native Rebar stages
+- [x] 1.2.1.3 Exclude the actual generated modules from coverage
 
 ### Task 1.2.2: Replace Partial Make Targets
 
 **Description:** Remove manually enumerated source and test subsets from the
 Makefile and delegate canonical operations to rebar3.
 
-- [ ] **Task 1.2.2 Complete**
+- [x] **Task 1.2.2 Complete**
+
+**Subtasks:**
+
+- [x] 1.2.2.1 Delegate compilation to `rebar3 compile`
+- [x] 1.2.2.2 Delegate the active suite to `rebar3 eunit`
+- [x] 1.2.2.3 Preserve module-name checks on compile, test, and coverage paths
 
 ### Task 1.2.3: Document Canonical Commands
 
 **Description:** Align contributor guidance with the commands that actually
 compile and test the complete active repository.
 
-- [ ] **Task 1.2.3 Complete**
+- [x] **Task 1.2.3 Complete**
+
+**Subtasks:**
+
+- [x] 1.2.3.1 Identify rebar3 as the canonical entry point
+- [x] 1.2.3.2 Describe Make targets as convenience wrappers
+- [x] 1.2.3.3 Explain native lexer and parser generation
+
+**Acceptance Criteria:**
+
+- `make compile` compiles the complete active source tree through rebar3
+- `make test` discovers every maintained EUnit directory recursively
+- Generated lexer and parser modules are ignored rather than versioned
 
 ## Section 1.3: Stable Failure Baseline
 
