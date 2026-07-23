@@ -60,13 +60,8 @@
     module => atom(),
     location => location()
 }.
--type import() :: #{
-    module => atom(),
-    items => all | [atom()],
-    qualified => boolean(),
-    alias => atom() | undefined,
-    location => location()
-}.
+-type import() ::
+    {import, atom(), all | [atom()], boolean(), atom() | undefined, location()}.
 
 %%%=============================================================================
 %%% Symbol Table Construction
@@ -100,10 +95,6 @@ extract_exports(Exports) when is_list(Exports) ->
 extract_exports(_) ->
     [].
 
-%% @doc Extract export items from export list
-extract_export_items({export_list, Items}) ->
-    [extract_export_name(Item) || Item <- Items].
-
 %% @doc Extract name from export item
 extract_export_name({export_trait, Name}) -> Name;
 extract_export_name({export_type, Name}) -> Name;
@@ -121,12 +112,20 @@ build_definitions(Declarations, ModuleName) ->
 %% @doc Extract definitions from a declaration
 extract_definitions(Decl, ModuleName, Acc) ->
     case Decl of
+        {type_decl, Name, _Params, _Constructors, _Derives, Location} ->
+            Acc#{Name => #{type => exported, module => ModuleName, location => Location}};
         {type_decl, Name, _Params, _Constructors, Location} ->
             Acc#{Name => #{type => exported, module => ModuleName, location => Location}};
         {transform_decl, Name, _Type, _Clauses, Location} ->
             Acc#{Name => #{type => exported, module => ModuleName, location => Location}};
+        {trait_decl, Name, _Params, _Extends, _Members, Location} ->
+            Acc#{Name => #{type => exported, module => ModuleName, location => Location}};
         {trait_decl, Name, Location} ->
             Acc#{Name => #{type => exported, module => ModuleName, location => Location}};
+        {effect_decl, Name, _Operations, Location} ->
+            Acc#{Name => #{type => exported, module => ModuleName, location => Location}};
+        {instance_decl, _, _, _, _, _} ->
+            Acc;
         {instance_decl, _, _, _} ->
             Acc;
         _ ->
@@ -184,7 +183,7 @@ resolve_imports(Imports, SymbolTables, LocalDefinitions) ->
 -spec resolve_single_import(import(), symbol_table(), #{atom() => definition()}, #{atom() => definition()}) ->
                       #{atom() => definition()}.
 resolve_single_import(#{module := ModuleName, items := Items, qualified := Qualified, alias := Alias},
-                       SymbolTables, _LocalDefinitions, Acc) ->
+                       SymbolTables, LocalDefinitions, Acc) ->
     case maps:get(ModuleName, SymbolTables, undefined) of
         undefined ->
             %% Module not found in symbol tables
@@ -210,19 +209,17 @@ resolve_single_import(#{module := ModuleName, items := Items, qualified := Quali
                     %% Unqualified import: add all with their original names
                     maps:fold(
                         fun(Name, Def, AccIn) ->
-                            AccIn#{Name => Def}
+                            add_imported_definition(Name, Def, LocalDefinitions, AccIn)
                         end,
                         Acc,
                         AvailableDefinitions
                     );
-                Items =:= all andalso Qualified andalso Alias =:= undefined ->
-                    %% Qualified import without alias: not useful, skip
-                    Acc;
-                Items =:= all andalso Qualified andalso Alias =/= undefined ->
+                Items =:= all andalso Qualified ->
                     %% Qualified import with alias: create alias entries
+                    Prefix = import_prefix(ModuleName, Alias),
                     maps:fold(
                         fun(Name, Def, AccIn) ->
-                            AliasedName = list_to_atom(atom_to_list(Alias) ++ "." ++ atom_to_list(Name)),
+                            AliasedName = qualify_name(Prefix, Name),
                             AccIn#{AliasedName => Def#{original_module => ModuleName}}
                         end,
                         Acc,
@@ -232,16 +229,17 @@ resolve_single_import(#{module := ModuleName, items := Items, qualified := Quali
                     %% Selective unqualified import: add specific items
                     maps:fold(
                         fun(Name, Def, AccIn) ->
-                            AccIn#{Name => Def}
+                            add_imported_definition(Name, Def, LocalDefinitions, AccIn)
                         end,
                         Acc,
                         AvailableDefinitions
                     );
-                is_list(Items) andalso Qualified andalso Alias =/= undefined ->
+                is_list(Items) andalso Qualified ->
                     %% Qualified selective import: add with alias prefix
+                    Prefix = import_prefix(ModuleName, Alias),
                     maps:fold(
                         fun(Name, Def, AccIn) ->
-                            AliasedName = list_to_atom(atom_to_list(Alias) ++ "." ++ atom_to_list(Name)),
+                            AliasedName = qualify_name(Prefix, Name),
                             AccIn#{AliasedName => Def#{original_module => ModuleName}}
                         end,
                         Acc,
@@ -250,7 +248,29 @@ resolve_single_import(#{module := ModuleName, items := Items, qualified := Quali
                 true ->
                     Acc
             end
+    end;
+resolve_single_import({import, ModuleName, Items, Qualified, Alias, _Location},
+                      SymbolTables, LocalDefinitions, Acc) ->
+    resolve_single_import(
+        #{
+            module => ModuleName,
+            items => Items,
+            qualified => Qualified,
+            alias => Alias
+        },
+        SymbolTables,
+        LocalDefinitions,
+        Acc
+    ).
+
+add_imported_definition(Name, Def, LocalDefinitions, Acc) ->
+    case maps:is_key(Name, LocalDefinitions) of
+        true -> Acc;
+        false -> Acc#{Name => Def}
     end.
+
+import_prefix(ModuleName, undefined) -> ModuleName;
+import_prefix(_ModuleName, Alias) -> Alias.
 
 %% @doc Resolve a name in the context of a specific module.
 %% Returns the definition if found, or an error if not found.
@@ -352,7 +372,10 @@ format_name_error({error, Reason}, _Context) ->
 extract_location({import, _, _, _, _, Location}) -> Location;
 extract_location({type_decl, _, _, _, _, Location}) -> Location;
 extract_location({transform_decl, _, _, _, _, Location}) -> Location;
+extract_location({trait_decl, _, _, _, _, Location}) -> Location;
 extract_location({trait_decl, _, _, Location}) -> Location;
+extract_location({effect_decl, _, _, Location}) -> Location;
+extract_location({instance_decl, _, _, _, _, Location}) -> Location;
 extract_location({instance_decl, _, _, _, Location}) -> Location;
 extract_location({export_decl, _}) -> {1, 0};
 extract_location({module_decl, _, _, Location}) -> Location;

@@ -63,28 +63,28 @@ corrected validator.
 list-based exports through name resolution and compilation so imported
 constructors are actually available to type inference.
 
-- [ ] **Section 2.2 Complete**
+- [x] **Section 2.2 Complete**
 
 ### Task 2.2.1: Normalize Parsed Module Metadata
 
 **Description:** Make tests and semantic consumers use the canonical import and
 export AST forms emitted by the parser.
 
-- [ ] **Task 2.2.1 Complete**
+- [x] **Task 2.2.1 Complete**
 
 ### Task 2.2.2: Compile With Imported Constructors
 
 **Description:** Load exported type constructors from parsed imports and merge
 them into the local type environment with local bindings taking precedence.
 
-- [ ] **Task 2.2.2 Complete**
+- [x] **Task 2.2.2 Complete**
 
 ### Task 2.2.3: Validate Import Boundaries
 
 **Description:** Exercise simple, dotted, selective, qualified, and missing
 module imports at parser and compilation boundaries.
 
-- [ ] **Task 2.2.3 Complete**
+- [x] **Task 2.2.3 Complete**
 
 **Acceptance Criteria:**
 

@@ -254,13 +254,21 @@ process_imports(Imports) ->
 
 process_imports([], _SearchPaths, Env) ->
     {ok, Env};
-process_imports([{import, ModuleName, _Loc} | Rest], SearchPaths, Env) ->
+process_imports([{import, ModuleName, Items, Qualified, Alias, _Loc} | Rest],
+                SearchPaths, Env) ->
     case catena_module_loader:load_module(ModuleName, SearchPaths) of
         {ok, ModuleAST} ->
             case build_module_exports_env(ModuleAST) of
                 {ok, ModuleEnv} ->
-                    %% Merge module env into accumulated env
-                    MergedEnv = catena_type_env:merge(Env, ModuleEnv),
+                    ImportEnv = prepare_import_env(
+                        ModuleName,
+                        Items,
+                        Qualified,
+                        Alias,
+                        ModuleEnv
+                    ),
+                    %% Later imports shadow earlier imports.
+                    MergedEnv = catena_type_env:merge(Env, ImportEnv),
                     process_imports(Rest, SearchPaths, MergedEnv);
                 {error, _} = Error ->
                     Error
@@ -268,9 +276,40 @@ process_imports([{import, ModuleName, _Loc} | Rest], SearchPaths, Env) ->
         {error, _} = Error ->
             Error
     end;
+process_imports([{import, ModuleName, Loc} | Rest], SearchPaths, Env) ->
+    %% Legacy compatibility for manually constructed ASTs.
+    process_imports(
+        [{import, ModuleName, all, false, undefined, Loc} | Rest],
+        SearchPaths,
+        Env
+    );
 process_imports([_Other | Rest], SearchPaths, Env) ->
     %% Skip invalid import entries
     process_imports(Rest, SearchPaths, Env).
+
+prepare_import_env(ModuleName, Items, Qualified, Alias, ModuleEnv) ->
+    SelectedEnv = case Items of
+        all ->
+            ModuleEnv;
+        ItemList when is_list(ItemList) ->
+            maps:with(ItemList, ModuleEnv)
+    end,
+    case Qualified of
+        false ->
+            SelectedEnv;
+        true ->
+            Prefix = case Alias of
+                undefined -> ModuleName;
+                _ -> Alias
+            end,
+            maps:from_list([
+                {qualify_import_name(Prefix, Name), Scheme}
+             || {Name, Scheme} <- maps:to_list(SelectedEnv)
+            ])
+    end.
+
+qualify_import_name(Prefix, Name) ->
+    list_to_atom(atom_to_list(Prefix) ++ "." ++ atom_to_list(Name)).
 
 %% @doc Add a declaration to the type environment.
 add_decl_to_env({type_decl, Name, Params, Constructors, _Derives, _Location}, Env) ->
