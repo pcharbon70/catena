@@ -96,6 +96,8 @@ validate_transform(Name, Type, Clauses, Loc) ->
             ok
     end,
 
+    validate_clause_arities(Name, Clauses),
+
     %% Validate each clause
     lists:foreach(fun(Clause) ->
         validate_clause(Name, Clause)
@@ -105,11 +107,150 @@ validate_transform(Name, Type, Clauses, Loc) ->
 
 %% @doc Validate a single transform clause.
 -spec validate_clause(atom(), term()) -> ok.
-validate_clause(_Name, {transform_clause, _Patterns, _Guards, _Body, _Loc}) ->
-    %% Basic validation - clause structure is correct
+validate_clause(Name, {transform_clause, Patterns, Guards, Body, _Loc}) ->
+    validate_patterns(Patterns),
+    validate_guards(Name, Guards),
+    validate_expression_patterns(Body),
     ok;
 validate_clause(Name, Other) ->
     throw({semantic_error, {invalid_clause, Name, Other}}).
+
+validate_clause_arities(_Name, []) ->
+    ok;
+validate_clause_arities(Name, [{transform_clause, Patterns, _, _, _} | Rest]) ->
+    ExpectedArity = length(Patterns),
+    case lists:dropwhile(
+        fun
+            ({transform_clause, OtherPatterns, _, _, _}) ->
+                length(OtherPatterns) =:= ExpectedArity;
+            (_) ->
+                false
+        end,
+        Rest
+    ) of
+        [] ->
+            ok;
+        [{transform_clause, OtherPatterns, _, _, OtherLocation} | _] ->
+            throw({semantic_error,
+                {inconsistent_clause_arity,
+                    Name,
+                    ExpectedArity,
+                    length(OtherPatterns),
+                    OtherLocation}});
+        [Other | _] ->
+            throw({semantic_error, {invalid_clause, Name, Other}})
+    end.
+
+validate_patterns(Patterns) ->
+    lists:foreach(fun validate_pattern/1, Patterns).
+
+validate_pattern({pat_constructor, _Name, Arguments, _Location}) ->
+    validate_patterns(Arguments);
+validate_pattern({pat_list, Elements, _Location}) ->
+    validate_patterns(Elements);
+validate_pattern({pat_cons, Head, Tail, _Location}) ->
+    validate_pattern(Head),
+    validate_pattern(Tail);
+validate_pattern({pat_tuple, Elements, _Location}) ->
+    validate_patterns(Elements);
+validate_pattern({pat_as, _Name, Pattern, _Location}) ->
+    validate_pattern(Pattern);
+validate_pattern({pat_record, Fields, _Location}) ->
+    validate_patterns([Pattern || {_Field, Pattern} <- Fields]);
+validate_pattern({pat_or, [], Location}) ->
+    throw({semantic_error, {empty_or_pattern, Location}});
+validate_pattern({pat_or, [First | Rest], Location}) ->
+    validate_pattern(First),
+    ExpectedBindings = pattern_bindings(First),
+    lists:foreach(
+        fun(Alternative) ->
+            validate_pattern(Alternative),
+            ActualBindings = pattern_bindings(Alternative),
+            case ActualBindings =:= ExpectedBindings of
+                true ->
+                    ok;
+                false ->
+                    throw({semantic_error,
+                        {or_pattern_binding_mismatch,
+                            sets:to_list(ExpectedBindings),
+                            sets:to_list(ActualBindings),
+                            Location}})
+            end
+        end,
+        Rest
+    );
+validate_pattern(_Pattern) ->
+    ok.
+
+pattern_bindings({pat_var, Name, _Location}) when Name =/= true, Name =/= false ->
+    sets:from_list([Name]);
+pattern_bindings({pat_constructor, _Name, Arguments, _Location}) ->
+    union_pattern_bindings(Arguments);
+pattern_bindings({pat_list, Elements, _Location}) ->
+    union_pattern_bindings(Elements);
+pattern_bindings({pat_cons, Head, Tail, _Location}) ->
+    sets:union(pattern_bindings(Head), pattern_bindings(Tail));
+pattern_bindings({pat_tuple, Elements, _Location}) ->
+    union_pattern_bindings(Elements);
+pattern_bindings({pat_as, Name, Pattern, _Location}) ->
+    sets:add_element(Name, pattern_bindings(Pattern));
+pattern_bindings({pat_or, [First | _], _Location}) ->
+    pattern_bindings(First);
+pattern_bindings({pat_record, Fields, _Location}) ->
+    union_pattern_bindings([Pattern || {_Field, Pattern} <- Fields]);
+pattern_bindings(_Pattern) ->
+    sets:new().
+
+union_pattern_bindings(Patterns) ->
+    lists:foldl(
+        fun(Pattern, Bindings) ->
+            sets:union(Bindings, pattern_bindings(Pattern))
+        end,
+        sets:new(),
+        Patterns
+    ).
+
+validate_guards(_Name, undefined) ->
+    ok;
+validate_guards(Name, Guards) when is_list(Guards) ->
+    lists:foreach(fun(Guard) -> validate_guard(Name, Guard) end, Guards);
+validate_guards(Name, Guard) ->
+    validate_guard(Name, Guard).
+
+validate_guard(Name, Guard) ->
+    case catena_infer_effect:check_guard_purity(Guard) of
+        ok ->
+            validate_expression_patterns(Guard);
+        {error, {impure_guard, _Guard, Effects}} ->
+            throw({semantic_error,
+                {impure_guard, Name, Effects, expression_location(Guard)}})
+    end.
+
+validate_expression_patterns({match_expr, Scrutinee, Clauses, _Location}) ->
+    validate_expression_patterns(Scrutinee),
+    lists:foreach(fun validate_match_clause/1, Clauses);
+validate_expression_patterns(Term) when is_tuple(Term) ->
+    validate_expression_patterns(tuple_to_list(Term));
+validate_expression_patterns(Terms) when is_list(Terms) ->
+    lists:foreach(fun validate_expression_patterns/1, Terms);
+validate_expression_patterns(_Term) ->
+    ok.
+
+validate_match_clause({match_clause, Pattern, Guards, Body, _Location}) ->
+    validate_pattern(Pattern),
+    validate_guards(match, Guards),
+    validate_expression_patterns(Body);
+validate_match_clause(_Other) ->
+    ok.
+
+expression_location(Term) when is_tuple(Term), tuple_size(Term) > 1 ->
+    Last = element(tuple_size(Term), Term),
+    case Last of
+        {location, _, _} -> Last;
+        _ -> undefined
+    end;
+expression_location(_Term) ->
+    undefined.
 
 %% @doc Format a semantic error for display.
 -spec format_error(term()) -> string().
@@ -123,5 +264,20 @@ format_error({empty_transform, Name, Line}) when is_integer(Line) ->
     io_lib:format("Transform '~s' at line ~p has no implementation", [Name, Line]);
 format_error({invalid_clause, Name, _Clause}) ->
     io_lib:format("Invalid clause for transform '~s'", [Name]);
+format_error({inconsistent_clause_arity, Name, Expected, Actual, Location}) ->
+    io_lib:format(
+        "Transform '~s' has inconsistent clause arity: expected ~p, got ~p at ~p",
+        [Name, Expected, Actual, Location]
+    );
+format_error({impure_guard, Name, Effects, Location}) ->
+    io_lib:format(
+        "Pattern guard in '~s' must be pure; inferred ~p at ~p",
+        [Name, Effects, Location]
+    );
+format_error({or_pattern_binding_mismatch, Expected, Actual, Location}) ->
+    io_lib:format(
+        "Or-pattern alternatives bind different names: expected ~p, got ~p at ~p",
+        [Expected, Actual, Location]
+    );
 format_error(Other) ->
     io_lib:format("Semantic error: ~p", [Other]).

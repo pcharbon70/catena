@@ -54,21 +54,21 @@ without an explicit list.
 integration paths so parser success alone cannot admit invalid guards,
 inconsistent clauses, or lossy pattern lowering.
 
-- [ ] **Section 3.2 Complete**
+- [x] **Section 3.2 Complete**
 
 ### Task 3.2.1: Enforce Guard Purity
 
 **Description:** Recognize canonical effectful guard expressions and reject
 them during semantic analysis before type inference or code generation.
 
-- [ ] **Task 3.2.1 Complete**
+- [x] **Task 3.2.1 Complete**
 
 ### Task 3.2.2: Validate Clause and Or-Pattern Bindings
 
 **Description:** Require consistent transform arity and identical bound-name
 sets across every or-pattern alternative.
 
-- [ ] **Task 3.2.2 Complete**
+- [x] **Task 3.2.2 Complete**
 
 ### Task 3.2.3: Validate Pattern Code Generation
 
@@ -76,7 +76,7 @@ sets across every or-pattern alternative.
 as-pattern, or-pattern, guard, and match-expression lowering through Core
 Erlang validation.
 
-- [ ] **Task 3.2.3 Complete**
+- [x] **Task 3.2.3 Complete**
 
 **Acceptance Criteria:**
 
