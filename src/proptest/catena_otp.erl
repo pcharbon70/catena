@@ -42,7 +42,7 @@
          verify_callback/3,
          with_behavior/2]).
 
--include("catena_process.hrl").
+-include("catena_prop_process.hrl").
 -include("catena_gen.hrl").
 
 %%====================================================================

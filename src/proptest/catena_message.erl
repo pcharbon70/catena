@@ -34,7 +34,7 @@
          stop_trace/0,
          get_trace/0]).
 
--include("catena_process.hrl").
+-include("catena_prop_process.hrl").
 -include("catena_gen.hrl").
 
 -define(TRACE_KEY, catena_message_trace).

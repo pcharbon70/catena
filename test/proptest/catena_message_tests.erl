@@ -2,7 +2,7 @@
 -module(catena_message_tests).
 
 -include_lib("eunit/include/eunit.hrl").
--include("../../src/proptest/catena_process.hrl").
+-include("../../src/proptest/catena_prop_process.hrl").
 -include("../../src/proptest/catena_gen.hrl").
 
 %%====================================================================
@@ -82,11 +82,11 @@ sends_message_returns_true_when_sent_test() ->
         after infinity -> ok
         end
     end,
-    Proc = catena_process:spawn_test_process(Fun),
+    Proc = catena_prop_process:spawn_test_process(Fun),
     Pid = Proc#test_process.pid,
     Result = catena_message:sends_message(Pid, test_msg, 500),
     ?assert(Result),
-    catena_process:stop_process(Proc),
+    catena_prop_process:stop_process(Proc),
     ok.
 
 sends_messages_in_order_all_sent_test() ->
@@ -108,20 +108,20 @@ sends_messages_in_order_all_sent_test() ->
         after infinity -> ok
         end
     end,
-    Proc = catena_process:spawn_test_process(Fun),
+    Proc = catena_prop_process:spawn_test_process(Fun),
     Pid = Proc#test_process.pid,
     Result = catena_message:sends_messages_in_order(Pid, [msg1, msg2, msg3], 500),
     ?assert(Result),
-    catena_process:stop_process(Proc),
+    catena_prop_process:stop_process(Proc),
     ok.
 
 sends_messages_in_order_empty_test() ->
     Fun = fun() -> receive after infinity -> ok end end,
-    Proc = catena_process:spawn_test_process(Fun),
+    Proc = catena_prop_process:spawn_test_process(Fun),
     Pid = Proc#test_process.pid,
     Result = catena_message:sends_messages_in_order(Pid, [], 100),
     ?assert(Result),
-    catena_process:stop_process(Proc),
+    catena_prop_process:stop_process(Proc),
     ok.
 
 no_message_loss_all_received_test() ->
@@ -137,10 +137,10 @@ no_message_loss_all_received_test() ->
         end
     end,
 
-    Proc = catena_process:spawn_test_process(Fun),
+    Proc = catena_prop_process:spawn_test_process(Fun),
     Pid = Proc#test_process.pid,
     ?assertEqual({sent, 2}, catena_message:no_message_loss(Pid, [msg1, msg2], 500)),
-    catena_process:stop_process(Proc),
+    catena_prop_process:stop_process(Proc),
     ok.
 
 start_trace_records_send_and_receive_test() ->
@@ -150,7 +150,7 @@ start_trace_records_send_and_receive_test() ->
         after infinity -> ok
         end
     end,
-    Proc = catena_process:spawn_test_process(Fun),
+    Proc = catena_prop_process:spawn_test_process(Fun),
     Pid = Proc#test_process.pid,
     {ok, _Tracer} = catena_message:start_trace(Pid),
     Pid ! ping,
@@ -158,7 +158,7 @@ start_trace_records_send_and_receive_test() ->
     {ok, Trace} = catena_message:get_trace(),
     ?assert(length(Trace) > 0),
     ?assertEqual(ok, catena_message:stop_trace()),
-    catena_process:stop_process(Proc),
+    catena_prop_process:stop_process(Proc),
     ok.
 
 %%====================================================================
@@ -178,11 +178,11 @@ receives_message_gets_message_test() ->
         after infinity -> ok
         end
     end,
-    Proc = catena_process:spawn_test_process(Fun),
+    Proc = catena_prop_process:spawn_test_process(Fun),
     Pid = Proc#test_process.pid,
     Result = catena_message:receives_message(500, Pid),
     ?assertMatch({ok, {test, message}}, Result),
-    catena_process:stop_process(Proc),
+    catena_prop_process:stop_process(Proc),
     ok.
 
 receives_message_timeout_test() ->
@@ -197,13 +197,13 @@ receives_message_matching_finds_match_test() ->
         Self ! {other, data},
         receive after infinity -> ok end
     end,
-    Proc = catena_process:spawn_test_process(Fun),
+    Proc = catena_prop_process:spawn_test_process(Fun),
     timer:sleep(100),
     Result = catena_message:receives_message_matching(
         fun({important, _}) -> true; (_) -> false end,
         500),
     ?assertMatch({ok, {important, _}}, Result),
-    catena_process:stop_process(Proc),
+    catena_prop_process:stop_process(Proc),
     ok.
 
 receives_all_messages_gets_all_test() ->
@@ -217,13 +217,13 @@ receives_all_messages_gets_all_test() ->
         Self ! msg3,
         receive after infinity -> ok end
     end,
-    Proc = catena_process:spawn_test_process(Fun),
+    Proc = catena_prop_process:spawn_test_process(Fun),
     timer:sleep(100),
     Result = catena_message:receives_all_messages(100),
     ?assertMatch({ok, [_|_]}, Result),
     {ok, Msgs} = Result,
     ?assertEqual(3, length(Msgs)),
-    catena_process:stop_process(Proc),
+    catena_prop_process:stop_process(Proc),
     ok.
 
 flush_messages_clears_mailbox_test() ->
@@ -319,7 +319,7 @@ message_roundtrip_test() ->
         end
     end,
 
-    Proc = catena_process:spawn_test_process(Echo),
+    Proc = catena_prop_process:spawn_test_process(Echo),
     Pid = Proc#test_process.pid,
 
     %% Send a message
@@ -332,5 +332,5 @@ message_roundtrip_test() ->
         ?assert(false, echo_timeout)
     end,
 
-    catena_process:stop_process(Proc),
+    catena_prop_process:stop_process(Proc),
     ok.

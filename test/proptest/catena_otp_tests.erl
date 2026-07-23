@@ -6,7 +6,7 @@
 -behaviour(gen_statem).
 
 -include_lib("eunit/include/eunit.hrl").
--include("../../src/proptest/catena_process.hrl").
+-include("../../src/proptest/catena_prop_process.hrl").
 -include("../../src/proptest/catena_gen.hrl").
 -include("../../src/proptest/catena_otp.hrl").
 

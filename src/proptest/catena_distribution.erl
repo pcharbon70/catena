@@ -35,7 +35,7 @@
          node_info/1,
          ping_node/1]).
 
--include("catena_process.hrl").
+-include("catena_prop_process.hrl").
 -include("catena_gen.hrl").
 
 -define(NODES_TABLE, catena_distribution_nodes).

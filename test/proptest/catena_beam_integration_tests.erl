@@ -6,7 +6,7 @@
 -module(catena_beam_integration_tests).
 
 -include_lib("eunit/include/eunit.hrl").
--include("../../src/proptest/catena_process.hrl").
+-include("../../src/proptest/catena_prop_process.hrl").
 -include("../../src/proptest/catena_distribution.hrl").
 -include("../../src/proptest/catena_gen.hrl").
 -include("../../src/proptest/catena_otp.hrl").
@@ -16,9 +16,9 @@
 %%====================================================================
 
 genserver_workflow_test() ->
-    Proc = catena_process:spawn_test_process(fun() -> counter_server(0) end),
+    Proc = catena_prop_process:spawn_test_process(fun() -> counter_server(0) end),
     ServerPid = Proc#test_process.pid,
-    ?assertEqual(ok, catena_process:assert_alive(Proc)),
+    ?assertEqual(ok, catena_prop_process:assert_alive(Proc)),
 
     %% Initial state
     ServerPid ! {get, self()},
@@ -44,8 +44,8 @@ genserver_workflow_test() ->
     after 500 -> ?assert(false, timeout_waiting_for_count_3)
     end,
 
-    catena_process:stop_process(Proc),
-    ?assertEqual(ok, catena_process:assert_dead(ServerPid)),
+    catena_prop_process:stop_process(Proc),
+    ?assertEqual(ok, catena_prop_process:assert_dead(ServerPid)),
     ok.
 
 %%====================================================================
@@ -89,7 +89,7 @@ supervisor_crash_workflow_test() ->
 %%====================================================================
 
 message_protocol_test() ->
-    ProtocolProc = catena_process:spawn_test_process(fun protocol_loop/0),
+    ProtocolProc = catena_prop_process:spawn_test_process(fun protocol_loop/0),
     Pid = ProtocolProc#test_process.pid,
     {ok, _Tracer} = catena_message:start_trace(Pid),
     ?assert(catena_message:sends_message(Pid, ping, 200)),
@@ -99,7 +99,7 @@ message_protocol_test() ->
     ?assertEqual({ok, true},
         catena_message:follows_protocol([ping, msg1, msg2], [ping, {repeat, msg1}, msg2], #{allow_extra => false, ordered => true})),
     ?assertEqual(ok, catena_message:stop_trace()),
-    catena_process:stop_process(ProtocolProc),
+    catena_prop_process:stop_process(ProtocolProc),
     ok.
 
 %%====================================================================
@@ -193,10 +193,10 @@ distribution_partition_workflow_test() ->
 %%====================================================================
 
 cleanup_normal_scenario_test() ->
-    Proc = catena_process:spawn_test_process(fun() -> simple_loop() end),
-    ?assertEqual(ok, catena_process:assert_alive(Proc)),
-    ?assertEqual(ok, catena_process:stop_process(Proc)),
-    ?assertEqual(ok, catena_process:assert_dead(Proc)),
+    Proc = catena_prop_process:spawn_test_process(fun() -> simple_loop() end),
+    ?assertEqual(ok, catena_prop_process:assert_alive(Proc)),
+    ?assertEqual(ok, catena_prop_process:stop_process(Proc)),
+    ?assertEqual(ok, catena_prop_process:assert_dead(Proc)),
     ok.
 
 cleanup_crash_scenario_test() ->

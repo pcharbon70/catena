@@ -2,7 +2,7 @@
 -module(catena_distribution_tests).
 
 -include_lib("eunit/include/eunit.hrl").
--include("../../src/proptest/catena_process.hrl").
+-include("../../src/proptest/catena_prop_process.hrl").
 -include("../../src/proptest/catena_gen.hrl").
 -include("../../src/proptest/catena_distribution.hrl").
 

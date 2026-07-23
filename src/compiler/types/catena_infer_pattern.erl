@@ -24,7 +24,7 @@
 
 %% @doc Infer the type of a pattern
 %% Returns the pattern's type and bindings it introduces
--spec infer(catena_ast:pattern(), catena_type_env:env(), catena_infer_state:infer_state()) ->
+-spec infer(catena_infer_ast:pattern(), catena_type_env:env(), catena_infer_state:infer_state()) ->
     {catena_types:type(), catena_type_env:env(), catena_infer_state:infer_state()}.
 
 % Pattern: Wildcard
@@ -109,7 +109,7 @@ infer({por, Patterns}, Env, State) ->
 
 %% @doc Infer types for multiple patterns
 %% Collects all bindings from all patterns
--spec infer_patterns([catena_ast:pattern()], catena_type_env:env(), catena_infer_state:infer_state()) ->
+-spec infer_patterns([catena_infer_ast:pattern()], catena_type_env:env(), catena_infer_state:infer_state()) ->
     {[catena_types:type()], catena_type_env:env(), catena_infer_state:infer_state()}.
 infer_patterns(Patterns, Env, State) ->
     infer_patterns_acc(Patterns, Env, State, [], catena_type_env:empty()).
@@ -125,7 +125,7 @@ infer_patterns_acc([P | Rest], Env, State, TypesAcc, BindingsAcc) ->
     infer_patterns_acc(Rest, Env, State1, [Type | TypesAcc], CombinedBindings).
 
 %% @doc Infer types for record pattern fields
--spec infer_record_fields([{atom(), catena_ast:pattern()}], catena_type_env:env(),
+-spec infer_record_fields([{atom(), catena_infer_ast:pattern()}], catena_type_env:env(),
                          catena_infer_state:infer_state()) ->
     {[{atom(), catena_types:type()}], catena_type_env:env(), catena_infer_state:infer_state()}.
 infer_record_fields(Fields, Env, State) ->
@@ -143,7 +143,7 @@ infer_record_fields_acc([{Label, Pattern} | Rest], Env, State, FieldsAcc, Bindin
 
 %% @doc Infer type for or-patterns
 %% All alternatives must have the same type and bind the same variables
--spec infer_or_pattern([catena_ast:pattern()], catena_type_env:env(), catena_infer_state:infer_state()) ->
+-spec infer_or_pattern([catena_infer_ast:pattern()], catena_type_env:env(), catena_infer_state:infer_state()) ->
     {catena_types:type(), catena_type_env:env(), catena_infer_state:infer_state()}.
 infer_or_pattern([], _Env, _State) ->
     error({empty_or_pattern});
@@ -160,7 +160,7 @@ infer_or_pattern([Pattern | Rest], Env, State) ->
     {Type, Bindings, State2}.
 
 %% @doc Check that all or-pattern alternatives have consistent types and bindings
--spec check_or_pattern_consistency([catena_ast:pattern()], catena_type_env:env(),
+-spec check_or_pattern_consistency([catena_infer_ast:pattern()], catena_type_env:env(),
                                    catena_infer_state:infer_state(),
                                    catena_types:type(), catena_type_env:env()) ->
     {catena_infer_state:infer_state()}.
@@ -183,7 +183,7 @@ check_or_pattern_consistency([Pattern | Rest], Env, State, ExpectedType, Expecte
 
 %% @doc Check that or-pattern alternative binds same variables as expected
 -spec check_or_pattern_bindings(catena_type_env:env(), catena_type_env:env(),
-                                catena_ast:pattern()) -> ok.
+                                catena_infer_ast:pattern()) -> ok.
 check_or_pattern_bindings(Bindings, ExpectedBindings, Pattern) ->
     BindingVars = lists:sort(maps:keys(Bindings)),
     ExpectedVars = lists:sort(maps:keys(ExpectedBindings)),

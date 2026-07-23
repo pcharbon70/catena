@@ -33,7 +33,7 @@
 %% Type = catena_infer_utils:literal_type({int, 42}).
 %% %% → {tcon, int}
 %% ```
--spec literal_type(catena_ast:literal()) -> catena_types:type().
+-spec literal_type(catena_infer_ast:literal()) -> catena_types:type().
 literal_type({int, _}) ->
     {tcon, int};
 literal_type({float, _}) ->

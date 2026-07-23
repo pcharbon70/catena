@@ -1,17 +1,18 @@
 %%%-------------------------------------------------------------------
-%%% @doc Simplified AST for Type Inference
+%%% @doc Simplified AST vocabulary for Type Inference
 %%%
 %%% This module provides simplified Abstract Syntax Tree structures
 %%% for use during type inference. These structures are simpler than
 %%% the full parser AST and focus only on the information needed for
 %%% type checking.
 %%%
-%%% This is a minimal PoC implementation that will be replaced by
-%%% integration with the full parser in future tasks.
+%%% This module is intentionally separate from the full parser AST exposed by
+%%% catena_ast. It names the normalized vocabulary consumed by the inference
+%%% modules without colliding in the BEAM module namespace.
 %%%
 %%% @end
 %%%-------------------------------------------------------------------
--module(catena_ast).
+-module(catena_infer_ast).
 
 -export_type([
     expr/0,

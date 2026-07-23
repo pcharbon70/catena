@@ -6,6 +6,8 @@ Current promoted planning view:
 
 - [current_status.md](current_status.md)
 - [law_verification_staged_plan.md](law_verification_staged_plan.md)
+- [spec-source-reconciliation/](spec-source-reconciliation/) - phased work to
+  align promoted specifications with executable repository evidence
 - `algebraic-effects/` - restored Phase 7 through Phase 14 algebraic-effects phase documents
 - `proof-of-concept/` - restored proof-of-concept phase documents
 - `property-testing/` - restored property-testing phase documents
