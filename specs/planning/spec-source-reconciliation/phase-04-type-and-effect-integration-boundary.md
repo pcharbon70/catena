@@ -90,42 +90,42 @@ keeping the test independent of operation order.
 **Description:** Make handler scopes, continuation wrappers, configuration, and
 cross-component orchestration agree on one observable contract.
 
-- [ ] **Section 4.2 Complete**
+- [x] **Section 4.2 Complete**
 
 ### Task 4.2.1: Expose Coherent Handler Scopes
 
 **Description:** Complete the public scope-management façade used by
 diagnostics and integration callers.
 
-- [ ] **Task 4.2.1 Complete**
+- [x] **Task 4.2.1 Complete**
 
 #### Subtask 4.2.1.1: Delegate Scope Operations
 
 **Description:** Add public push and pop operations that preserve the effect
 system's existing stack return values.
 
-- [ ] **Subtask 4.2.1.1 Complete**
+- [x] **Subtask 4.2.1.1 Complete**
 
 ### Task 4.2.2: Normalize Resumption Semantics
 
 **Description:** Treat captured resumptions as opaque values and make the
 current direct-style placeholder resume with the supplied operation result.
 
-- [ ] **Task 4.2.2 Complete**
+- [x] **Task 4.2.2 Complete**
 
 #### Subtask 4.2.2.1: Resume Wrapped Continuations
 
 **Description:** Validate deep, shallow, one-shot, and multi-shot wrappers
 through the common resumption API rather than invoking wrapper maps directly.
 
-- [ ] **Subtask 4.2.2.1 Complete**
+- [x] **Subtask 4.2.2.1 Complete**
 
 #### Subtask 4.2.2.2: Document the CPS Boundary
 
 **Description:** Record that true delimited-continuation capture remains a
 compiler/CPS concern and is not simulated by ordinary Erlang stack capture.
 
-- [ ] **Subtask 4.2.2.2 Complete**
+- [x] **Subtask 4.2.2.2 Complete**
 
 ### Task 4.2.3: Reconcile System Integration Scenarios
 
@@ -133,21 +133,21 @@ compiler/CPS concern and is not simulated by ordinary Erlang stack capture.
 builtin runners install all required handlers, and hefty values are asserted
 using their public predicates.
 
-- [ ] **Task 4.2.3 Complete**
+- [x] **Task 4.2.3 Complete**
 
 #### Subtask 4.2.3.1: Repair Orchestration Fixtures
 
 **Description:** Remove no-op handler fixtures and invalid assumptions about
 runner return shapes.
 
-- [ ] **Subtask 4.2.3.1 Complete**
+- [x] **Subtask 4.2.3.1 Complete**
 
 #### Subtask 4.2.3.2: Apply Configuration Options
 
 **Description:** Make the public `enable_hefty` option update the corresponding
 system configuration field.
 
-- [ ] **Subtask 4.2.3.2 Complete**
+- [x] **Subtask 4.2.3.2 Complete**
 
 **Acceptance Criteria:**
 

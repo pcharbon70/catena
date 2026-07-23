@@ -508,7 +508,7 @@ continuation_test_() ->
 
 test_capture_resumption() ->
     Resumption = catena_effects:capture_resumption(),
-    ?assert(is_function(Resumption)).
+    ?assert(catena_resumption:is_resumption(Resumption)).
 
 test_resume() ->
     catena_effects:push_handler_scope(),

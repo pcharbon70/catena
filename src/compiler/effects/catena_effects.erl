@@ -90,7 +90,9 @@
     register_handler/3,
     unregister_handler/1,
     lookup_handler/1,
-    current_handlers/0
+    current_handlers/0,
+    push_handler_scope/0,
+    pop_handler_scope/0
 ]).
 
 %%====================================================================
@@ -503,6 +505,16 @@ lookup_handler(Operation) ->
 current_handlers() ->
     ?EFFECT_SYSTEM:current_handlers().
 
+%% @doc Push an empty public handler scope.
+-spec push_handler_scope() -> ok.
+push_handler_scope() ->
+    ?EFFECT_SYSTEM:push_handler_scope().
+
+%% @doc Pop the current public handler scope.
+-spec pop_handler_scope() -> {ok, map()} | {error, empty}.
+pop_handler_scope() ->
+    ?EFFECT_SYSTEM:pop_handler_scope().
+
 %%====================================================================
 %% Continuation Management
 %%====================================================================
@@ -515,7 +527,10 @@ capture_resumption() ->
 %% @doc Resume a computation with a value.
 -spec resume(term(), term()) -> term().
 resume(Resumption, Value) ->
-    catena_resumption:resume(Resumption, Value).
+    case catena_resumption:resume(Resumption, Value) of
+        {resumed, Result} -> Result;
+        Result -> Result
+    end.
 
 %% @doc Abort the computation with a value.
 -spec abort(term()) -> no_return().

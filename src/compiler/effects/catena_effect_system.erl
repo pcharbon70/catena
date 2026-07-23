@@ -788,7 +788,7 @@ apply_options(Config, [{Key, Value} | Rest]) ->
             Config#system_config{optimization_level = Value};
         enable_equations when is_boolean(Value) ->
             Config#system_config{enable_equations = Value};
-        enable_heavy when is_boolean(Value) ->
+        enable_hefty when is_boolean(Value) ->
             Config#system_config{enable_hefty = Value};
         enable_row_poly when is_boolean(Value) ->
             Config#system_config{enable_row_poly = Value};
