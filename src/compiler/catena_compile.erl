@@ -147,7 +147,7 @@ add_builtins(Env) ->
 
     %% List concat: ++ : List a -> List a -> List a
     {{tvar, A1}, State1} = catena_types:fresh_var(State),
-    ListA1 = catena_types:tapp(catena_types:tcon('List'), [catena_types:tvar(A1)]),
+    ListA1 = catena_types:tapp(catena_types:tcon(list), [catena_types:tvar(A1)]),
     PlusPlusType = catena_types:tfun(
         ListA1,
         catena_types:tfun(ListA1, ListA1, catena_types:empty_effects()),
@@ -174,7 +174,7 @@ add_builtins(Env) ->
 
     %% Cons: :: : a -> List a -> List a
     {{tvar, A2}, _State2} = catena_types:fresh_var(State1),
-    ListA2 = catena_types:tapp(catena_types:tcon('List'), [catena_types:tvar(A2)]),
+    ListA2 = catena_types:tapp(catena_types:tcon(list), [catena_types:tvar(A2)]),
     ConsType = catena_types:tfun(
         catena_types:tvar(A2),
         catena_types:tfun(ListA2, ListA2, catena_types:empty_effects()),
@@ -184,7 +184,7 @@ add_builtins(Env) ->
 
     %% Empty list: [] : List a
     {{tvar, A3}, _State3} = catena_types:fresh_var(State1),
-    EmptyListType = catena_types:tapp(catena_types:tcon('List'), [catena_types:tvar(A3)]),
+    EmptyListType = catena_types:tapp(catena_types:tcon(list), [catena_types:tvar(A3)]),
     EmptyListScheme = catena_type_scheme:generalize(EmptyListType, sets:new()),
     catena_type_env:extend(Env4, '[]', EmptyListScheme).
 
@@ -254,13 +254,21 @@ process_imports(Imports) ->
 
 process_imports([], _SearchPaths, Env) ->
     {ok, Env};
-process_imports([{import, ModuleName, _Loc} | Rest], SearchPaths, Env) ->
+process_imports([{import, ModuleName, Items, Qualified, Alias, _Loc} | Rest],
+                SearchPaths, Env) ->
     case catena_module_loader:load_module(ModuleName, SearchPaths) of
         {ok, ModuleAST} ->
             case build_module_exports_env(ModuleAST) of
                 {ok, ModuleEnv} ->
-                    %% Merge module env into accumulated env
-                    MergedEnv = catena_type_env:merge(Env, ModuleEnv),
+                    ImportEnv = prepare_import_env(
+                        ModuleName,
+                        Items,
+                        Qualified,
+                        Alias,
+                        ModuleEnv
+                    ),
+                    %% Later imports shadow earlier imports.
+                    MergedEnv = catena_type_env:merge(Env, ImportEnv),
                     process_imports(Rest, SearchPaths, MergedEnv);
                 {error, _} = Error ->
                     Error
@@ -268,9 +276,40 @@ process_imports([{import, ModuleName, _Loc} | Rest], SearchPaths, Env) ->
         {error, _} = Error ->
             Error
     end;
+process_imports([{import, ModuleName, Loc} | Rest], SearchPaths, Env) ->
+    %% Legacy compatibility for manually constructed ASTs.
+    process_imports(
+        [{import, ModuleName, all, false, undefined, Loc} | Rest],
+        SearchPaths,
+        Env
+    );
 process_imports([_Other | Rest], SearchPaths, Env) ->
     %% Skip invalid import entries
     process_imports(Rest, SearchPaths, Env).
+
+prepare_import_env(ModuleName, Items, Qualified, Alias, ModuleEnv) ->
+    SelectedEnv = case Items of
+        all ->
+            ModuleEnv;
+        ItemList when is_list(ItemList) ->
+            maps:with(ItemList, ModuleEnv)
+    end,
+    case Qualified of
+        false ->
+            SelectedEnv;
+        true ->
+            Prefix = case Alias of
+                undefined -> ModuleName;
+                _ -> Alias
+            end,
+            maps:from_list([
+                {qualify_import_name(Prefix, Name), Scheme}
+             || {Name, Scheme} <- maps:to_list(SelectedEnv)
+            ])
+    end.
+
+qualify_import_name(Prefix, Name) ->
+    list_to_atom(atom_to_list(Prefix) ++ "." ++ atom_to_list(Name)).
 
 %% @doc Add a declaration to the type environment.
 add_decl_to_env({type_decl, Name, Params, Constructors, _Derives, _Location}, Env) ->
@@ -294,9 +333,8 @@ add_decl_to_env({transform_decl, Name, Type, _Clauses, _Location}, Env) ->
             end
     end;
 
-add_decl_to_env({trait_decl, _Name, _Params, _Extends, _Members, _Location}, Env) ->
-    %% TODO: Register trait methods
-    {ok, Env};
+add_decl_to_env({trait_decl, _Name, _Params, _Extends, Members, _Location}, Env) ->
+    add_trait_members_to_env(Members, Env);
 
 add_decl_to_env({instance_decl, _Trait, _Type, _Constraints, _Methods, _Location}, Env) ->
     %% TODO: Validate instance methods
@@ -305,6 +343,24 @@ add_decl_to_env({instance_decl, _Trait, _Type, _Constraints, _Methods, _Location
 add_decl_to_env(_Other, Env) ->
     %% Skip unknown declarations
     {ok, Env}.
+
+%% @doc Register trait method signatures so defaults and instances can call
+%% methods from the same trait or an inherited trait.
+add_trait_members_to_env([], Env) ->
+    {ok, Env};
+add_trait_members_to_env([{trait_sig, Name, Type, _Loc} | Rest], Env) ->
+    case convert_type_sig(Type) of
+        {ok, InternalType} ->
+            Scheme = generalize_type(InternalType),
+            add_trait_members_to_env(
+                Rest,
+                catena_type_env:extend(Env, Name, Scheme)
+            );
+        {error, _} = Error ->
+            Error
+    end;
+add_trait_members_to_env([_Other | Rest], Env) ->
+    add_trait_members_to_env(Rest, Env).
 
 %% @doc Add type constructors to environment.
 %% For type Maybe a = None | Some a, adds:
@@ -359,8 +415,12 @@ build_constructor_type([ArgType | Rest], TypeParams, ResultType) ->
 %% @doc Convert a constructor argument type to internal representation.
 convert_constructor_arg({type_var, Name}, _TypeParams) ->
     catena_types:tvar(param_to_var(Name));
+convert_constructor_arg({type_var, Name, _Loc}, _TypeParams) ->
+    catena_types:tvar(param_to_var(Name));
 convert_constructor_arg({type_con, Name}, _TypeParams) ->
-    catena_types:tcon(Name);
+    catena_types:tcon(internal_type_name(Name));
+convert_constructor_arg({type_con, Name, _Loc}, _TypeParams) ->
+    catena_types:tcon(internal_type_name(Name));
 convert_constructor_arg({type_app, Con, Args}, TypeParams) ->
     InternalCon = convert_constructor_arg(Con, TypeParams),
     InternalArgs = [convert_constructor_arg(A, TypeParams) || A <- Args],
@@ -371,6 +431,8 @@ convert_constructor_arg({type_app, Con, Args}, TypeParams) ->
             %% Fallback for complex cases
             catena_types:tapp(InternalCon, InternalArgs)
     end;
+convert_constructor_arg({type_app, Con, Args, _Loc}, TypeParams) ->
+    convert_constructor_arg({type_app, Con, Args}, TypeParams);
 convert_constructor_arg(_Other, _TypeParams) ->
     %% Fallback for unknown types
     catena_types:tcon(unknown).
@@ -409,26 +471,39 @@ convert_type_sig({type_fun, From, To, _Loc}) ->
     end;
 convert_type_sig({type_effect, Type, _Effects, _Loc}) ->
     convert_type_sig(Type);
+convert_type_sig({constrained_type, _Constraints, Type, _Loc}) ->
+    convert_type_sig(Type);
+convert_type_sig({type_forall, _Variables, Type, _Loc}) ->
+    convert_type_sig(Type);
 convert_type_sig({type_var, Name, _Loc}) ->
     {ok, catena_types:tvar(param_to_var(Name))};
 convert_type_sig({type_var, Name}) ->
     {ok, catena_types:tvar(param_to_var(Name))};
 convert_type_sig({type_con, Name, _Loc}) ->
-    {ok, catena_types:tcon(Name)};
+    {ok, catena_types:tcon(internal_type_name(Name))};
 convert_type_sig({type_con, Name}) ->
-    {ok, catena_types:tcon(Name)};
+    {ok, catena_types:tcon(internal_type_name(Name))};
+convert_type_sig({type_app, Con, Args, _Loc}) ->
+    convert_type_sig({type_app, Con, Args});
 convert_type_sig({type_app, Con, Args}) ->
     case convert_type_sig(Con) of
-        {ok, {tcon, ConName}} ->
+        {ok, InternalCon} ->
             case convert_type_args(Args) of
                 {ok, ArgTypes} ->
-                    {ok, catena_types:tapp(catena_types:tcon(ConName), ArgTypes)};
+                    {ok, catena_types:tapp(InternalCon, ArgTypes)};
                 Error -> Error
             end;
-        {ok, _Other} ->
-            {error, {invalid_type_application, Con}};
         Error -> Error
     end;
+convert_type_sig({type_tuple, Elements, _Loc}) ->
+    case convert_type_args(Elements) of
+        {ok, ElementTypes} ->
+            {ok, catena_types:ttuple(ElementTypes)};
+        Error ->
+            Error
+    end;
+convert_type_sig({type_record, Fields, _Row, _Loc}) ->
+    convert_record_type(Fields, []);
 convert_type_sig(Other) ->
     {error, {unknown_type, Other}}.
 
@@ -444,6 +519,24 @@ convert_type_args([Arg | Rest]) ->
             end;
         Error -> Error
     end.
+
+convert_record_type([], Acc) ->
+    {ok, catena_types:trecord(lists:reverse(Acc), closed)};
+convert_record_type([{Name, Type} | Rest], Acc) ->
+    case convert_type_sig(Type) of
+        {ok, InternalType} ->
+            convert_record_type(Rest, [{Name, InternalType} | Acc]);
+        Error ->
+            Error
+    end.
+
+internal_type_name('Bool') -> bool;
+internal_type_name('Int') -> int;
+internal_type_name('Float') -> float;
+internal_type_name('String') -> string;
+internal_type_name('Unit') -> unit;
+internal_type_name('List') -> list;
+internal_type_name(Name) -> Name.
 
 convert_effects(undefined) ->
     catena_types:empty_effects();
@@ -586,6 +679,10 @@ patterns_to_lambda([Pattern | Rest], Body) ->
     end.
 
 %% @doc Convert parser expression to type inference expression.
+convert_expr({var, true, _Loc}) ->
+    {lit, {bool, true}};
+convert_expr({var, false, _Loc}) ->
+    {lit, {bool, false}};
 convert_expr({var, Name, _Loc}) ->
     {var, Name};
 convert_expr({literal, Type, Value, Loc}) ->
@@ -628,9 +725,10 @@ convert_expr({record_expr, Fields, _Base, _Loc}) ->
     {record, [{Name, convert_expr(Expr)} || {Name, Expr} <- Fields]};
 convert_expr({field_access, Expr, FieldName, _Loc}) ->
     {field, convert_expr(Expr), FieldName};
-convert_expr({binary_op, Op, Left, Right, _Loc}) ->
-    %% Convert binary op to function application
-    {app, {app, {var, Op}, convert_expr(Left)}, convert_expr(Right)};
+convert_expr({binary_op, Op, Left, Right, Loc}) ->
+    {binary_op, Op, convert_expr(Left), convert_expr(Right), Loc};
+convert_expr({cons_expr, Head, Tail, Loc}) ->
+    {cons, convert_expr(Head), convert_expr(Tail), Loc};
 convert_expr(_Other) ->
     %% Fallback for unhandled expressions
     {lit, {int, 0}}.
@@ -661,11 +759,50 @@ convert_application(Func, Args) ->
     ).
 
 convert_match_clause({match_clause, Pattern, undefined, Body, _Loc}) ->
-    {Pattern, convert_expr(Body)};
+    {convert_pattern(Pattern), convert_expr(Body)};
 convert_match_clause({match_clause, Pattern, Guard, Body, _Loc}) ->
-    {Pattern, convert_expr(Guard), convert_expr(Body)};
+    {convert_pattern(Pattern), convert_expr(Guard), convert_expr(Body)};
 convert_match_clause(Other) ->
     Other.
+
+%% @doc Convert parser patterns to the representation consumed by inference.
+convert_pattern({pat_var, true, _Loc}) ->
+    {plit, {bool, true}};
+convert_pattern({pat_var, false, _Loc}) ->
+    {plit, {bool, false}};
+convert_pattern({pat_var, Name, _Loc}) ->
+    {pvar, Name};
+convert_pattern({pat_wildcard, _Loc}) ->
+    {pwild};
+convert_pattern({pat_constructor, Name, Args, _Loc}) ->
+    {pvariant, Name, [convert_pattern(Arg) || Arg <- Args]};
+convert_pattern({pat_literal, Value, integer, _Loc}) ->
+    {plit, {int, Value}};
+convert_pattern({pat_literal, Value, float, _Loc}) ->
+    {plit, {float, Value}};
+convert_pattern({pat_literal, Value, string, _Loc}) ->
+    {plit, {string, Value}};
+convert_pattern({pat_literal, Value, bool, _Loc}) ->
+    {plit, {bool, Value}};
+convert_pattern({pat_tuple, Patterns, _Loc}) ->
+    {ptuple, [convert_pattern(Pattern) || Pattern <- Patterns]};
+convert_pattern({pat_record, Fields, _Loc}) ->
+    {precord, [{Name, convert_pattern(Pattern)} || {Name, Pattern} <- Fields]};
+convert_pattern({pat_list, Patterns, _Loc}) ->
+    convert_list_pattern(Patterns);
+convert_pattern({pat_cons, Head, Tail, _Loc}) ->
+    {pvariant, '::', [convert_pattern(Head), convert_pattern(Tail)]};
+convert_pattern({pat_as, Name, Pattern, _Loc}) ->
+    {pas, Name, convert_pattern(Pattern)};
+convert_pattern({pat_or, Patterns, _Loc}) ->
+    {por, [convert_pattern(Pattern) || Pattern <- Patterns]};
+convert_pattern(Pattern) ->
+    Pattern.
+
+convert_list_pattern([]) ->
+    {pvariant, '[]', []};
+convert_list_pattern([Pattern | Rest]) ->
+    {pvariant, '::', [convert_pattern(Pattern), convert_list_pattern(Rest)]}.
 
 extract_declared_effects(undefined) ->
     undefined;

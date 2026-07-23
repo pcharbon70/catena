@@ -2,12 +2,15 @@
 
 ## Status
 
-Promoted status: materially implemented and compiler-relevant today, with Phase 1.5 partially complete but further along than the raw planning checklist indicates.
+Promoted status: materially implemented and compiler-relevant today. Its
+compilation, import, trait-resolution, and higher-kinded validation boundaries
+are verified; generic law verification remains staged.
 
 ## Design Anchors
 
 - [ADR-0002: Minimal Core And Library-First Surface](../adr/ADR-0002-minimal-core-and-library-first-surface.md)
 - [Current Status](../planning/current_status.md)
+- [Phase 2 Test Baseline](../planning/spec-source-reconciliation/phase-02-test-baseline.md)
 - [Flow Core Surface](flow_core_surface.md)
 - `lib/catena/stdlib/prelude.cat`
 - `lib/catena/stdlib/test.cat`
@@ -20,7 +23,8 @@ Promoted status: materially implemented and compiler-relevant today, with Phase 
 - Category-theoretic abstractions are intentionally expressed in library code and traits before becoming compiler intrinsics.
 - The `Prelude`, `Test`, `Laws`, and effect modules are the main promoted stdlib surfaces today.
 - The pure `System`/`Flow` core is now part of that promoted stdlib surface and is specified in [flow_core_surface.md](flow_core_surface.md).
-- Minimal import support exists largely to unblock stdlib use and validation.
+- Parser-native imports support simple, dotted, selective, and qualified forms;
+  exported constructors are visible to compilation through that boundary.
 - Law verification is currently staged: the repo already has pure law definitions in `Laws` and `Test.verify` as the current wrapper surface, but generic property-based law verification remains future work.
 
 ## Acceptance Criteria
@@ -75,6 +79,10 @@ For `1.5.4`, "partial" specifically means:
 ### AC-STDLIB-005 Importable And Compiler-Visible
 
 The standard library must remain importable through the current module-loader path so compiler tests, interactive use, and future module work can rely on a stable library boundary.
+
+The compiler-facing import contract is the parser's six-field representation.
+Selective imports expose only requested names, qualified imports use their
+module or alias prefix, and local definitions retain precedence.
 
 ### AC-STDLIB-006 Minimal Core Means Minimal Core
 

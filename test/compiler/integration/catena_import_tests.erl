@@ -76,7 +76,10 @@ import_parser_test_() ->
            Source = "module Test\nimport Prelude\ntransform id x = x",
            {ok, Tokens, _} = catena_lexer:string(Source),
            {ok, {module, _, _, Imports, _, _}} = catena_parser:parse(Tokens),
-           ?assertEqual([{import, 'Prelude', {location, 2, 0}}], Imports)
+           ?assertEqual(
+               [{import, 'Prelude', all, false, undefined, {location, 2, 0}}],
+               Imports
+           )
        end},
 
       {"parse dotted import",
@@ -84,7 +87,10 @@ import_parser_test_() ->
            Source = "module Test\nimport Effect.IO\ntransform id x = x",
            {ok, Tokens, _} = catena_lexer:string(Source),
            {ok, {module, _, _, Imports, _, _}} = catena_parser:parse(Tokens),
-           ?assertEqual([{import, 'Effect.IO', {location, 2, 0}}], Imports)
+           ?assertEqual(
+               [{import, 'Effect.IO', all, false, undefined, {location, 2, 0}}],
+               Imports
+           )
        end},
 
       {"parse multiple imports",
@@ -93,7 +99,13 @@ import_parser_test_() ->
            {ok, Tokens, _} = catena_lexer:string(Source),
            {ok, {module, _, _, Imports, _, _}} = catena_parser:parse(Tokens),
            ?assertEqual(2, length(Imports)),
-           ?assertMatch([{import, 'Prelude', _}, {import, 'Effect.IO', _}], Imports)
+           ?assertMatch(
+               [
+                   {import, 'Prelude', all, false, undefined, _},
+                   {import, 'Effect.IO', all, false, undefined, _}
+               ],
+               Imports
+           )
        end},
 
       {"imports separated from declarations",
@@ -115,7 +127,7 @@ import_processing_test_() ->
      [
       {"process_imports creates environment with constructors",
        fun() ->
-           Imports = [{import, 'Prelude', {location, 1, 0}}],
+           Imports = [{import, 'Prelude', all, false, undefined, {location, 1, 0}}],
            {ok, Env} = catena_compile:process_imports(Imports),
            %% Should have Maybe constructors
            ?assertMatch({ok, _}, catena_type_env:lookup(Env, 'Some')),
@@ -124,7 +136,7 @@ import_processing_test_() ->
 
       {"process_imports includes Either constructors",
        fun() ->
-           Imports = [{import, 'Prelude', {location, 1, 0}}],
+           Imports = [{import, 'Prelude', all, false, undefined, {location, 1, 0}}],
            {ok, Env} = catena_compile:process_imports(Imports),
            ?assertMatch({ok, _}, catena_type_env:lookup(Env, 'Left')),
            ?assertMatch({ok, _}, catena_type_env:lookup(Env, 'Right'))
@@ -132,7 +144,7 @@ import_processing_test_() ->
 
       {"process_imports includes Result constructors",
        fun() ->
-           Imports = [{import, 'Prelude', {location, 1, 0}}],
+           Imports = [{import, 'Prelude', all, false, undefined, {location, 1, 0}}],
            {ok, Env} = catena_compile:process_imports(Imports),
            ?assertMatch({ok, _}, catena_type_env:lookup(Env, 'Ok')),
            ?assertMatch({ok, _}, catena_type_env:lookup(Env, 'Err'))
@@ -140,7 +152,7 @@ import_processing_test_() ->
 
       {"process_imports includes Ordering constructors",
        fun() ->
-           Imports = [{import, 'Prelude', {location, 1, 0}}],
+           Imports = [{import, 'Prelude', all, false, undefined, {location, 1, 0}}],
            {ok, Env} = catena_compile:process_imports(Imports),
            ?assertMatch({ok, _}, catena_type_env:lookup(Env, 'LT')),
            ?assertMatch({ok, _}, catena_type_env:lookup(Env, 'EQ')),
@@ -149,7 +161,9 @@ import_processing_test_() ->
 
       {"process_imports error for non-existent module",
        fun() ->
-           Imports = [{import, 'NonExistent', {location, 1, 0}}],
+           Imports = [
+               {import, 'NonExistent', all, false, undefined, {location, 1, 0}}
+           ],
            ?assertMatch({error, {module_not_found, 'NonExistent', _}},
                         catena_compile:process_imports(Imports))
        end},
@@ -158,6 +172,26 @@ import_processing_test_() ->
        fun() ->
            {ok, Env} = catena_compile:process_imports([]),
            ?assertEqual(catena_type_env:empty(), Env)
+       end},
+
+      {"selective imports expose only requested names",
+       fun() ->
+           Imports = [
+               {import, 'Prelude', ['Some'], false, undefined, {location, 1, 0}}
+           ],
+           {ok, Env} = catena_compile:process_imports(Imports),
+           ?assertMatch({ok, _}, catena_type_env:lookup(Env, 'Some')),
+           ?assertEqual(none, catena_type_env:lookup(Env, 'None'))
+       end},
+
+      {"qualified imports use their alias prefix",
+       fun() ->
+           Imports = [
+               {import, 'Prelude', ['Some'], true, 'P', {location, 1, 0}}
+           ],
+           {ok, Env} = catena_compile:process_imports(Imports),
+           ?assertMatch({ok, _}, catena_type_env:lookup(Env, 'P.Some')),
+           ?assertEqual(none, catena_type_env:lookup(Env, 'Some'))
        end}
      ]}.
 

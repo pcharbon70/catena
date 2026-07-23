@@ -156,7 +156,12 @@ apply_with_context(_Subst, {tcon, Name}, _Depth, _Visited) ->
 apply_with_context(Subst, {tapp, Constructor, Args}, Depth, Visited) ->
     NewConstructor = apply_with_context(Subst, Constructor, Depth + 1, Visited),
     NewArgs = [apply_with_context(Subst, Arg, Depth + 1, Visited) || Arg <- Args],
-    {tapp, NewConstructor, NewArgs};
+    case NewConstructor of
+        {tapp, RootConstructor, PrefixArgs} ->
+            {tapp, RootConstructor, PrefixArgs ++ NewArgs};
+        _ ->
+            {tapp, NewConstructor, NewArgs}
+    end;
 
 apply_with_context(Subst, {tfun, From, To, Effects}, Depth, Visited) ->
     NewFrom = apply_with_context(Subst, From, Depth + 1, Visited),

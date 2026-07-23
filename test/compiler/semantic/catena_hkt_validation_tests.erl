@@ -147,6 +147,25 @@ trait_kind_checking_test_() ->
                loc()},
            {ok, Kinds} = catena_kind:check_trait_kind(Trait),
            ?assertEqual([{arr, {arrow, star, {arrow, star, star}}}], Kinds)
+       end},
+
+      {"Default methods preserve kind evidence from signatures",
+       fun() ->
+           Trait = {trait_decl, 'MapperWithDefault', [f], [],
+               [{trait_sig, map,
+                   {type_fun,
+                       {type_var, a, loc()},
+                       {type_app, {type_var, f, loc()},
+                           [{type_var, a, loc()}], loc()},
+                       loc()},
+                   loc()},
+                {trait_default, mapIdentity,
+                    [{pat_var, x, loc()}],
+                    {var, x, loc()},
+                    loc()}],
+               loc()},
+           {ok, Kinds} = catena_kind:check_trait_kind(Trait),
+           ?assertEqual([{f, {arrow, star, star}}], Kinds)
        end}
      ]}.
 

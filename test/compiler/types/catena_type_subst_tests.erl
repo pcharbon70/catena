@@ -69,6 +69,7 @@ application_test_() ->
       ?_test(test_apply_to_con()),
       ?_test(test_apply_to_fun()),
       ?_test(test_apply_to_app()),
+      ?_test(test_apply_to_partially_applied_constructor()),
       ?_test(test_apply_to_tuple()),
       ?_test(test_apply_to_record())
     ].
@@ -125,6 +126,25 @@ test_apply_to_app() ->
     ),
 
     ?assertEqual(Expected, catena_type_subst:apply(S, ListAlpha)).
+
+test_apply_to_partially_applied_constructor() ->
+    EitherError = catena_types:tapp(
+        catena_types:tcon('Either'),
+        [catena_types:tcon(error)]
+    ),
+    S = catena_type_subst:singleton(1, EitherError),
+    Applied = catena_types:tapp(
+        catena_types:tvar(1),
+        [catena_types:tcon(value)]
+    ),
+
+    ?assertEqual(
+        catena_types:tapp(
+            catena_types:tcon('Either'),
+            [catena_types:tcon(error), catena_types:tcon(value)]
+        ),
+        catena_type_subst:apply(S, Applied)
+    ).
 
 test_apply_to_tuple() ->
     S = catena_type_subst:singleton(1, catena_types:tcon(integer)),

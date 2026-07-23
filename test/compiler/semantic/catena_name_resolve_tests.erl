@@ -12,7 +12,7 @@
 %% Simple module AST for testing
 simple_module_ast() ->
     {module, test_module,
-     {export_decl, {export_list, []}},
+     [],
      [],
      [{transform_decl, foo, {type_ref, int}, [], {1, 0}}],
      {1, 0}}.
@@ -20,7 +20,7 @@ simple_module_ast() ->
 %% Module with exports AST
 module_with_exports_ast() ->
     {module, test_module,
-     {export_decl, {export_list, [{export_transform, foo}, {export_transform, bar}]}},
+     [{export_transform, foo}, {export_transform, bar}],
      [],
      [{transform_decl, foo, {type_ref, int}, [], {1, 0}},
       {transform_decl, bar, {type_ref, int}, [], {2, 0}},
@@ -30,7 +30,7 @@ module_with_exports_ast() ->
 %% Module with imports AST
 module_with_imports_ast() ->
     {module, test_module,
-     {export_decl, {export_list, []}},
+     [],
      [{import, prelude, all, false, undefined, {1, 0}},
       {import, data_list, all, true, list, {2, 0}},
       {import, effect_io, [read_file, write_file], false, undefined, {3, 0}}],
@@ -43,7 +43,7 @@ module_with_imports_ast() ->
 
 build_symbol_table_empty_module_test() ->
     AST = {module, test_module,
-           {export_decl, {export_list, []}},
+           [],
            [],
            [],
            {1, 0}},
@@ -86,6 +86,25 @@ build_symbol_table_with_definitions_test() ->
     ?assertEqual(exported, maps:get(type, FooDef)),
     ?assertEqual(test_module, maps:get(module, FooDef)).
 
+build_symbol_table_from_parser_ast_test() ->
+    Source =
+        "module Parsed\n"
+        "export type Maybe\n"
+        "export trait Mapper\n"
+        "type Maybe a = None | Some a\n"
+        "trait Mapper f where\n"
+        "  map : (a -> b) -> f a -> f b\n"
+        "end",
+    {ok, Tokens, _} = catena_lexer:string(Source),
+    {ok, AST} = catena_parser:parse(Tokens),
+
+    SymbolTable = catena_name_resolve:build_symbol_table(AST),
+    ModuleInfo = maps:get('Parsed', SymbolTable),
+    Definitions = maps:get(definitions, ModuleInfo),
+
+    ?assert(maps:is_key('Maybe', Definitions)),
+    ?assert(maps:is_key('Mapper', Definitions)).
+
 %%%=============================================================================
 %%% resolve_module/2 Tests
 %%%=============================================================================
@@ -107,6 +126,35 @@ resolve_module_not_found_test() ->
     SymbolTable = #{},
     Result = catena_name_resolve:resolve_module(nonexistent, SymbolTable),
     ?assertMatch({error, {module_not_found, nonexistent}}, Result).
+
+resolve_module_with_parser_import_test() ->
+    ImportedDefinition = #{
+        type => exported,
+        module => dependency,
+        location => {1, 0}
+    },
+    SymbolTable = #{
+        test_module => #{
+            exports => [],
+            imports => [
+                {import, dependency, [foo], false, undefined, {1, 0}}
+            ],
+            definitions => #{}
+        },
+        dependency => #{
+            exports => [foo],
+            imports => [],
+            definitions => #{foo => ImportedDefinition}
+        }
+    },
+
+    {ok, Resolved} =
+        catena_name_resolve:resolve_module(test_module, SymbolTable),
+
+    ?assertEqual(
+        {ok, ImportedDefinition},
+        catena_name_resolve:resolve_name(foo, test_module, Resolved)
+    ).
 
 %%%=============================================================================
 %%% resolve_name/3 Tests

@@ -253,6 +253,23 @@ unify_type_app_different_constructors_test() ->
 
     ?assertMatch({unification_error, {tcon, list}, {tcon, option}}, Error).
 
+unify_partially_applied_constructor_test() ->
+    State = catena_infer_state:new(),
+    HigherKinded = {tapp, {tvar, 1}, [{tvar, 2}]},
+    Either = {tapp, {tcon, 'Either'}, [{tcon, error}, {tcon, value}]},
+
+    {ok, Subst, _State1} =
+        catena_infer_unify:unify(HigherKinded, Either, State),
+
+    ?assertEqual(
+        {tapp, {tcon, 'Either'}, [{tcon, error}]},
+        catena_type_subst:apply(Subst, {tvar, 1})
+    ),
+    ?assertEqual(
+        {tcon, value},
+        catena_type_subst:apply(Subst, {tvar, 2})
+    ).
+
 unify_arity_mismatch_test() ->
     State = catena_infer_state:new(),
 

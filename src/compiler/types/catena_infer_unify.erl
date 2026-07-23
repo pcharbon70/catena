@@ -166,6 +166,34 @@ unify_types({tfun, From1, To1, Effects1}, {tfun, From2, To2, Effects2}) ->
 
 % Rule: Type Application
 % C T1 ... Tn ≡ C S1 ... Sn  requires  Ti ≡ Si for all i
+% A constructor variable may also unify with a partially applied constructor:
+% f a ≡ Either e a  binds f to Either e.
+unify_types({tapp, {tvar, _} = Con1, Args1}, {tapp, Con2, Args2})
+  when length(Args1) < length(Args2) ->
+    PrefixLength = length(Args2) - length(Args1),
+    {PrefixArgs, RemainingArgs} = lists:split(PrefixLength, Args2),
+    PartialConstructor = {tapp, Con2, PrefixArgs},
+    case unify_types(Con1, PartialConstructor) of
+        {ok, Subst1} ->
+            Args1Sub = [catena_type_subst:apply(Subst1, Arg) || Arg <- Args1],
+            Args2Sub = [catena_type_subst:apply(Subst1, Arg) || Arg <- RemainingArgs],
+            unify_args(Args1Sub, Args2Sub, Subst1);
+        {error, _} = Error ->
+            Error
+    end;
+unify_types({tapp, Con1, Args1}, {tapp, {tvar, _} = Con2, Args2})
+  when length(Args2) < length(Args1) ->
+    PrefixLength = length(Args1) - length(Args2),
+    {PrefixArgs, RemainingArgs} = lists:split(PrefixLength, Args1),
+    PartialConstructor = {tapp, Con1, PrefixArgs},
+    case unify_types(Con2, PartialConstructor) of
+        {ok, Subst1} ->
+            Args1Sub = [catena_type_subst:apply(Subst1, Arg) || Arg <- RemainingArgs],
+            Args2Sub = [catena_type_subst:apply(Subst1, Arg) || Arg <- Args2],
+            unify_args(Args1Sub, Args2Sub, Subst1);
+        {error, _} = Error ->
+            Error
+    end;
 unify_types({tapp, Con1, Args1}, {tapp, Con2, Args2}) ->
     case unify_types(Con1, Con2) of
         {ok, Subst1} ->

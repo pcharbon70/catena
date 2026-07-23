@@ -252,6 +252,36 @@ infer_variant_multiple_args_test() ->
     % Should bind both x and y
     ?assertEqual([x, y], lists:sort(maps:keys(Bindings))).
 
+infer_known_nullary_constructor_test() ->
+    MaybeType = {tapp, {tcon, 'Maybe'}, [{tvar, 10}]},
+    Env = catena_type_env:singleton(
+        'None',
+        catena_type_scheme:poly([10], MaybeType)
+    ),
+    State = catena_infer_state:new(),
+
+    {Type, Bindings, _State1} =
+        catena_infer_pattern:infer({pvariant, 'None', []}, Env, State),
+
+    ?assertMatch({tapp, {tcon, 'Maybe'}, [{tvar, _}]}, Type),
+    ?assertEqual([], maps:keys(Bindings)).
+
+infer_known_unary_constructor_test() ->
+    Element = {tvar, 10},
+    MaybeType = {tapp, {tcon, 'Maybe'}, [Element]},
+    SomeType = {tfun, Element, MaybeType, catena_types:empty_effects()},
+    Env = catena_type_env:singleton(
+        'Some',
+        catena_type_scheme:poly([10], SomeType)
+    ),
+    State = catena_infer_state:new(),
+
+    {Type, Bindings, _State1} =
+        catena_infer_pattern:infer({pvariant, 'Some', [{pvar, value}]}, Env, State),
+
+    ?assertMatch({tapp, {tcon, 'Maybe'}, [{tvar, _}]}, Type),
+    ?assertEqual([value], maps:keys(Bindings)).
+
 %%====================================================================
 %% Duplicate Binding Detection Tests
 %%====================================================================

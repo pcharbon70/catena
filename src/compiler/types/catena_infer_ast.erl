@@ -86,7 +86,10 @@
     {pvariant, atom(), [pattern()]} |
 
     % As-pattern (pattern with name)
-    {pas, atom(), pattern()}.
+    {pas, atom(), pattern()} |
+
+    % Or-pattern (alternatives with the same bindings)
+    {por, [pattern()]}.
 
 %% @doc Literal values
 -type literal() ::
