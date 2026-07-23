@@ -28,7 +28,7 @@
 %% **Pattern 1 Error:** Returns {error, Error, State} for inference errors
 %% since this function threads inference state through the expression
 %% inference process.
--spec infer(catena_ast:expr(), catena_type_env:env(), catena_infer_state:infer_state()) ->
+-spec infer(catena_infer_ast:expr(), catena_type_env:env(), catena_infer_state:infer_state()) ->
     {catena_types:type(), catena_infer_state:infer_state()} |
     {error, catena_type_error:type_error(), catena_infer_state:infer_state()}.
 
@@ -490,7 +490,7 @@ generalize(Type, Env, State) ->
 %%%===================================================================
 
 %% @doc Infer types for a list of expressions
--spec infer_exprs([catena_ast:expr()], catena_type_env:env(), catena_infer_state:infer_state()) ->
+-spec infer_exprs([catena_infer_ast:expr()], catena_type_env:env(), catena_infer_state:infer_state()) ->
     {[catena_types:type()], catena_infer_state:infer_state()} |
     {error, catena_type_error:type_error(), catena_infer_state:infer_state()}.
 infer_exprs(Exprs, Env, State) ->
@@ -507,7 +507,7 @@ infer_exprs_acc([E | Rest], Env, State, TypesAcc) ->
     end.
 
 %% @doc Infer types for record fields
--spec infer_record_fields([{atom(), catena_ast:expr()}], catena_type_env:env(),
+-spec infer_record_fields([{atom(), catena_infer_ast:expr()}], catena_type_env:env(),
                          catena_infer_state:infer_state()) ->
     {[{atom(), catena_types:type()}], catena_infer_state:infer_state()} |
     {error, catena_type_error:type_error(), catena_infer_state:infer_state()}.
@@ -625,7 +625,7 @@ infer_binary_op(Op, _LeftType, _RightType, State) ->
     {error, Error, State1}.
 
 %% @doc Infer types for list elements, unifying with expected type
--spec infer_list_elements([catena_ast:expr()], catena_types:type(),
+-spec infer_list_elements([catena_infer_ast:expr()], catena_types:type(),
                           catena_type_env:env(), catena_infer_state:infer_state()) ->
     {catena_types:type(), catena_infer_state:infer_state()} |
     {error, catena_type_error:type_error(), catena_infer_state:infer_state()}.
@@ -649,7 +649,7 @@ infer_list_elements([Elem | Rest], ElemType, Env, State) ->
     end.
 
 %% @doc Infer type of match expression
--spec infer_match(catena_ast:expr(), [{catena_ast:pattern(), catena_ast:expr()}],
+-spec infer_match(catena_infer_ast:expr(), [{catena_infer_ast:pattern(), catena_infer_ast:expr()}],
                   catena_type_env:env(), catena_infer_state:infer_state()) ->
     {catena_types:type(), catena_infer_state:infer_state()} |
     {error, catena_type_error:type_error(), catena_infer_state:infer_state()}.
@@ -666,8 +666,8 @@ infer_match(Scrutinee, Clauses, Env, State) ->
     end.
 
 %% @doc Infer types for match clauses
--spec infer_match_clauses([{catena_ast:pattern(), catena_ast:expr()} |
-                           {catena_ast:pattern(), catena_ast:expr(), catena_ast:expr()}],
+-spec infer_match_clauses([{catena_infer_ast:pattern(), catena_infer_ast:expr()} |
+                           {catena_infer_ast:pattern(), catena_infer_ast:expr(), catena_infer_ast:expr()}],
                           catena_types:type(), catena_types:type(),
                           catena_type_env:env(), catena_infer_state:infer_state()) ->
     {catena_types:type(), catena_infer_state:infer_state()} |
@@ -685,8 +685,8 @@ infer_match_clauses([Clause | Rest], ScrutineeType, ResultType, Env, State) ->
     end.
 
 %% @doc Infer type for a single match clause
--spec infer_match_clause({catena_ast:pattern(), catena_ast:expr()} |
-                          {catena_ast:pattern(), catena_ast:expr(), catena_ast:expr()},
+-spec infer_match_clause({catena_infer_ast:pattern(), catena_infer_ast:expr()} |
+                          {catena_infer_ast:pattern(), catena_infer_ast:expr(), catena_infer_ast:expr()},
                          catena_types:type(), catena_types:type(),
                          catena_type_env:env(), catena_infer_state:infer_state()) ->
     {catena_types:type(), catena_infer_state:infer_state()} |

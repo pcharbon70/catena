@@ -23,7 +23,10 @@ Based on the current `specs/` set, codebase, and test suite, the current promote
 - consolidate the promoted description of the implemented algebraic-effects machinery so specs, contracts, and planning stop treating it as purely deferred work
 - finish the remaining Phase 1.5 library-validation gaps
 - decide whether to resume the proof-of-concept track or continue the property-testing framework track next
-- continue migrating historical PropEr coverage into the internal property-testing architecture now that the repo-wide `rebar3 eunit` path is green again
+- resolve the published 122-failure baseline phase by phase while preserving
+  complete `rebar3 eunit` discovery
+- continue migrating historical PropEr coverage into the internal
+  property-testing architecture without hiding active-suite failures
 
 ## Medium-Term Targets
 

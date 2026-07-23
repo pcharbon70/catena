@@ -2,7 +2,7 @@
 -module(catena_concurrency_tests).
 
 -include_lib("eunit/include/eunit.hrl").
--include("../../src/proptest/catena_process.hrl").
+-include("../../src/proptest/catena_prop_process.hrl").
 -include("../../src/proptest/catena_gen.hrl").
 -include("../../src/proptest/catena_concurrency.hrl").
 
@@ -35,14 +35,14 @@ execute_schedule_empty_test() ->
 
 execute_schedule_single_step_test() ->
     Fun = fun() -> receive after infinity -> ok end end,
-    Proc = catena_process:spawn_test_process(Fun),
+    Proc = catena_prop_process:spawn_test_process(Fun),
     Pid = Proc#test_process.pid,
 
     Step = #step{process = Pid, action = is_process_alive, args = []},
     Schedule = catena_concurrency:new_schedule([Step]),
 
     ?assertMatch({ok, [_]}, catena_concurrency:execute_schedule([Pid], Schedule)),
-    catena_process:stop_process(Proc),
+    catena_prop_process:stop_process(Proc),
     ok.
 
 record_schedule_captures_execution_test() ->
@@ -139,39 +139,39 @@ happens_before_returns_false_for_independent_ops_test() ->
 detect_race_both_alive_test() ->
     Fun1 = fun() -> receive after infinity -> ok end end,
     Fun2 = fun() -> receive after infinity -> ok end end,
-    Proc1 = catena_process:spawn_test_process(Fun1),
-    Proc2 = catena_process:spawn_test_process(Fun2),
+    Proc1 = catena_prop_process:spawn_test_process(Fun1),
+    Proc2 = catena_prop_process:spawn_test_process(Fun2),
     {ok, HasRace} = catena_concurrency:detect_race(Proc1#test_process.pid, Proc2#test_process.pid, shared_state),
     ?assert(HasRace),
-    catena_process:stop_process(Proc1),
-    catena_process:stop_process(Proc2),
+    catena_prop_process:stop_process(Proc1),
+    catena_prop_process:stop_process(Proc2),
     ok.
 
 detect_race_one_dead_test() ->
     Fun = fun() -> receive after infinity -> ok end end,
-    Proc = catena_process:spawn_test_process(Fun),
+    Proc = catena_prop_process:spawn_test_process(Fun),
     Result = catena_concurrency:detect_race(Proc#test_process.pid, list_to_pid("<0.999.0>"), target),
     ?assertMatch({error, _}, Result),
-    catena_process:stop_process(Proc),
+    catena_prop_process:stop_process(Proc),
     ok.
 
 check_concurrent_access_multiple_test() ->
     Fun = fun() -> receive after infinity -> ok end end,
-    Proc1 = catena_process:spawn_test_process(Fun),
-    Proc2 = catena_process:spawn_test_process(Fun),
+    Proc1 = catena_prop_process:spawn_test_process(Fun),
+    Proc2 = catena_prop_process:spawn_test_process(Fun),
     {ok, HasAccess} = catena_concurrency:check_concurrent_access(
         [Proc1#test_process.pid, Proc2#test_process.pid], target),
     ?assert(HasAccess),
-    catena_process:stop_process(Proc1),
-    catena_process:stop_process(Proc2),
+    catena_prop_process:stop_process(Proc1),
+    catena_prop_process:stop_process(Proc2),
     ok.
 
 check_concurrent_access_single_test() ->
     Fun = fun() -> receive after infinity -> ok end end,
-    Proc = catena_process:spawn_test_process(Fun),
+    Proc = catena_prop_process:spawn_test_process(Fun),
     {ok, HasAccess} = catena_concurrency:check_concurrent_access([Proc#test_process.pid], target),
     ?assertNot(HasAccess),
-    catena_process:stop_process(Proc),
+    catena_prop_process:stop_process(Proc),
     ok.
 
 %%====================================================================
@@ -190,10 +190,10 @@ release_lock_releases_lock_test() ->
 
 detect_deadlock_no_deadlock_test() ->
     Fun = fun() -> receive after infinity -> ok end end,
-    Proc = catena_process:spawn_test_process(Fun),
+    Proc = catena_prop_process:spawn_test_process(Fun),
     {ok, HasDeadlock} = catena_concurrency:detect_deadlock([Proc#test_process.pid]),
     ?assertNot(HasDeadlock),
-    catena_process:stop_process(Proc),
+    catena_prop_process:stop_process(Proc),
     ok.
 
 detect_cycles_empty_test() ->

@@ -51,7 +51,7 @@
 
 %% @doc Infer the type of an expression with empty environment
 %% This is the most convenient entry point for simple cases
--spec infer_expr(catena_ast:expr()) -> result().
+-spec infer_expr(catena_infer_ast:expr()) -> result().
 infer_expr(Expr) ->
     infer_expr(Expr, catena_type_env:empty()).
 
@@ -60,12 +60,12 @@ infer_expr(Expr) ->
 %% 1. Initialize inference state
 %% 2. Infer expression type
 %% 3. Handle errors or return result
--spec infer_expr(catena_ast:expr(), catena_type_env:env()) -> result().
+-spec infer_expr(catena_infer_ast:expr(), catena_type_env:env()) -> result().
 infer_expr(Expr, Env) ->
     infer_expr_with_env(Expr, Env).
 
 %% @doc Internal implementation that does the actual work
--spec infer_expr_with_env(catena_ast:expr(), catena_type_env:env()) -> result().
+-spec infer_expr_with_env(catena_infer_ast:expr(), catena_type_env:env()) -> result().
 infer_expr_with_env(Expr, Env) ->
     % Step 1: Initialize fresh inference state
     State0 = catena_infer_state:new(),
@@ -120,12 +120,12 @@ infer_expr_with_env(Expr, Env) ->
 %%   {'letrec', const, {'lam', 'x', {'lit', {int, 42}}}}  % let rec const = λx. 42
 %% ]
 %% ```
--spec check_program([{atom(), catena_ast:expr()}]) -> program_result().
+-spec check_program([{atom(), catena_infer_ast:expr()}]) -> program_result().
 check_program(Bindings) ->
     check_program(Bindings, catena_type_env:empty(), #{}).
 
 %% @doc Internal implementation for program checking
--spec check_program([{atom(), catena_ast:expr()}], catena_type_env:env(), #{atom() => catena_types:type()}) -> program_result().
+-spec check_program([{atom(), catena_infer_ast:expr()}], catena_type_env:env(), #{atom() => catena_types:type()}) -> program_result().
 check_program([], _Env, Types) ->
     {ok, Types};
 check_program([{Name, Expr} | Rest], Env, Types) ->
@@ -146,7 +146,7 @@ check_program([{Name, Expr} | Rest], Env, Types) ->
 
 %% @doc Infer a lambda expression with the given parameter type
 %% This is a helper for common patterns
--spec infer_lambda(atom(), catena_types:type(), catena_ast:expr()) -> result().
+-spec infer_lambda(atom(), catena_types:type(), catena_infer_ast:expr()) -> result().
 infer_lambda(ParamName, ParamType, Body) ->
     % Create environment with the parameter
     ParamScheme = catena_type_scheme:mono(ParamType),
@@ -165,7 +165,7 @@ infer_lambda(ParamName, ParamType, Body) ->
 
 %% @doc Check if an expression has a specific type (type annotation check)
 %% Returns true if the inferred type matches the expected type
--spec check_type(catena_ast:expr(), catena_types:type()) -> boolean().
+-spec check_type(catena_infer_ast:expr(), catena_types:type()) -> boolean().
 check_type(Expr, ExpectedType) ->
     case infer_expr(Expr) of
         {ok, InferredType} ->

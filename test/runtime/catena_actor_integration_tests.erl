@@ -19,6 +19,7 @@
 %%%=============================================================================
 
 cleanup_all() ->
+    flush_mailbox(),
     lists:foreach(fun(N) ->
         case whereis(N) of
             undefined -> ok;
@@ -132,9 +133,7 @@ message_chain_test() ->
     % Wait for completion
     receive
         {pubsub, <<"pipeline.complete">>, #{stage := stage3, data := FinalData}} ->
-            ?assertEqual(<<"test_input_processed_stage2_processed">>, FinalData);
-        Other ->
-            error({unexpected_message, Other})
+            ?assertEqual(<<"test_input_processed_stage2_processed">>, FinalData)
     after 500 ->
         error(pipeline_timeout)
     end,
@@ -254,20 +253,15 @@ registry_pubsub_integration_test() ->
     % Subscribe to notifications
     ok = catena_pubsub:subscribe(PubSub, self(), <<"actor.events">>),
 
-    % Clear any messages in mailbox
-    receive
-        _ -> ok
-    after 0 ->
-        ok
-    end,
+    % Clear lifecycle messages left by earlier actor tests.
+    flush_mailbox(),
 
     % Send command to actor
     Actor ! {do_work, test_data},
 
     % Receive notification via pubsub
     receive
-        {pubsub, <<"actor.events">>, #{event := work_done, result := {ok, test_data}}} -> ok;
-        Other -> error({unexpected_message, Other})
+        {pubsub, <<"actor.events">>, #{event := work_done, result := {ok, test_data}}} -> ok
     after 500 ->
         error(did_not_receive_notification)
     end,
@@ -432,6 +426,13 @@ pubsub_actor_loop(Reg, PubSub) ->
 %% Do some work
 do_work(Data) ->
     {ok, Data}.
+
+flush_mailbox() ->
+    receive
+        _ -> flush_mailbox()
+    after 0 ->
+        ok
+    end.
 
 %% Counting listener loop
 counting_listener_loop() ->

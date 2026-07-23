@@ -20,6 +20,16 @@ setup() ->
 cleanup(_) ->
     catena_effects:shutdown().
 
+isolated(Test) ->
+    fun() ->
+        setup(),
+        try
+            Test()
+        after
+            cleanup(ok)
+        end
+    end.
+
 %%====================================================================
 %% System Lifecycle Tests
 %%====================================================================
@@ -30,10 +40,10 @@ lifecycle_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Initialize system", fun test_init/0},
-                {"Check initialized state", fun test_is_initialized/0},
-                {"Configure system", fun test_configure/0},
-                {"Shutdown system", fun test_shutdown/0}
+                {"Initialize system", isolated(fun test_init/0)},
+                {"Check initialized state", isolated(fun test_is_initialized/0)},
+                {"Configure system", isolated(fun test_configure/0)},
+                {"Shutdown system", isolated(fun test_shutdown/0)}
             ]
         end
     }.
@@ -72,10 +82,10 @@ effect_registration_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Register effect", fun test_register_effect/0},
-                {"Register effect with metadata", fun test_register_effect_with_metadata/0},
-                {"List effects", fun test_list_effects/0},
-                {"Unregister effect", fun test_unregister_effect/0}
+                {"Register effect", isolated(fun test_register_effect/0)},
+                {"Register effect with metadata", isolated(fun test_register_effect_with_metadata/0)},
+                {"List effects", isolated(fun test_list_effects/0)},
+                {"Unregister effect", isolated(fun test_unregister_effect/0)}
             ]
         end
     }.
@@ -113,10 +123,10 @@ handler_management_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Register handler", fun test_register_handler/0},
-                {"Lookup handler", fun test_lookup_handler/0},
-                {"Unregister handler", fun test_unregister_handler/0},
-                {"Current handlers", fun test_current_handlers/0}
+                {"Register handler", isolated(fun test_register_handler/0)},
+                {"Lookup handler", isolated(fun test_lookup_handler/0)},
+                {"Unregister handler", isolated(fun test_unregister_handler/0)},
+                {"Current handlers", isolated(fun test_current_handlers/0)}
             ]
         end
     }.
@@ -160,10 +170,10 @@ state_effect_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Run state computation", fun test_run_state/0},
-                {"State get and put", fun test_state_get_put/0},
-                {"State modify", fun test_state_modify/0},
-                {"Eval state", fun test_eval_state/0}
+                {"Run state computation", isolated(fun test_run_state/0)},
+                {"State get and put", isolated(fun test_state_get_put/0)},
+                {"State modify", isolated(fun test_state_modify/0)},
+                {"Eval state", isolated(fun test_eval_state/0)}
             ]
         end
     }.
@@ -222,9 +232,9 @@ reader_effect_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Run reader computation", fun test_run_reader/0},
-                {"Reader ask", fun test_reader_ask/0},
-                {"Reader local", fun test_reader_local/0}
+                {"Run reader computation", isolated(fun test_run_reader/0)},
+                {"Reader ask", isolated(fun test_reader_ask/0)},
+                {"Reader local", isolated(fun test_reader_local/0)}
             ]
         end
     }.
@@ -272,9 +282,9 @@ writer_effect_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Run writer computation", fun test_run_writer/0},
-                {"Writer tell", fun test_writer_tell/0},
-                {"Writer collect output", fun test_writer_collect/0}
+                {"Run writer computation", isolated(fun test_run_writer/0)},
+                {"Writer tell", isolated(fun test_writer_tell/0)},
+                {"Writer collect output", isolated(fun test_writer_collect/0)}
             ]
         end
     }.
@@ -322,9 +332,9 @@ error_effect_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Run error computation - success path", fun test_run_error_success/0},
-                {"Run error computation - error path", fun test_run_error_error/0},
-                {"Error throw and catch", fun test_error_throw_catch/0}
+                {"Run error computation - success path", isolated(fun test_run_error_success/0)},
+                {"Run error computation - error path", isolated(fun test_run_error_error/0)},
+                {"Error throw and catch", isolated(fun test_error_throw_catch/0)}
             ]
         end
     }.
@@ -366,10 +376,10 @@ effect_operations_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Perform operation", fun test_perform/0},
-                {"Try perform - success", fun test_try_perform_success/0},
-                {"Try perform - failure", fun test_try_perform_failure/0},
-                {"Handle computation", fun test_handle/0}
+                {"Perform operation", isolated(fun test_perform/0)},
+                {"Try perform - success", isolated(fun test_try_perform_success/0)},
+                {"Try perform - failure", isolated(fun test_try_perform_failure/0)},
+                {"Handle computation", isolated(fun test_handle/0)}
             ]
         end
     }.
@@ -412,10 +422,10 @@ optimization_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Optimize program", fun test_optimize/0},
-                {"Optimize with level", fun test_optimize_with_level/0},
-                {"Add equation", fun test_add_equation/0},
-                {"Apply equations", fun test_apply_equations/0}
+                {"Optimize program", isolated(fun test_optimize/0)},
+                {"Optimize with level", isolated(fun test_optimize_with_level/0)},
+                {"Add equation", isolated(fun test_add_equation/0)},
+                {"Apply equations", isolated(fun test_apply_equations/0)}
             ]
         end
     }.
@@ -452,9 +462,9 @@ diagnostics_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Get diagnostics", fun test_diagnostics/0},
-                {"Get stats", fun test_stats/0},
-                {"Handler stack", fun test_handler_stack/0}
+                {"Get diagnostics", isolated(fun test_diagnostics/0)},
+                {"Get stats", isolated(fun test_stats/0)},
+                {"Handler stack", isolated(fun test_handler_stack/0)}
             ]
         end
     }.
@@ -489,9 +499,9 @@ continuation_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Capture resumption", fun test_capture_resumption/0},
-                {"Resume computation", fun test_resume/0},
-                {"Continuation kind checks", fun test_continuation_kind/0}
+                {"Capture resumption", isolated(fun test_capture_resumption/0)},
+                {"Resume computation", isolated(fun test_resume/0)},
+                {"Continuation kind checks", isolated(fun test_continuation_kind/0)}
             ]
         end
     }.
@@ -526,9 +536,9 @@ type_system_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Infer effect type", fun test_infer_effect_type/0},
-                {"Check effect type", fun test_check_effect_type/0},
-                {"Generalize effects", fun test_generalize_effects/0}
+                {"Infer effect type", isolated(fun test_infer_effect_type/0)},
+                {"Check effect type", isolated(fun test_check_effect_type/0)},
+                {"Generalize effects", isolated(fun test_generalize_effects/0)}
             ]
         end
     }.
@@ -540,10 +550,7 @@ test_infer_effect_type() ->
 test_check_effect_type() ->
     Env = #{},
     Result = catena_effects:check_effect_type({expr}, Env),
-    case Result of
-        {ok, _} -> ok;
-        {error, _} -> ok
-    end.
+    ?assertMatch({ok, _}, Result).
 
 test_generalize_effects() ->
     Result = catena_effects:generalize_effects({type, expr}),

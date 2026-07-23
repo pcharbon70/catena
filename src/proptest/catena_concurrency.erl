@@ -38,7 +38,7 @@
          await_all/1,
          await_any/1]).
 
--include("catena_process.hrl").
+-include("catena_prop_process.hrl").
 -include("catena_gen.hrl").
 -include("catena_concurrency.hrl").
 

@@ -169,10 +169,21 @@ Current promoted status:
 
 ## Current Quality State
 
-The default `rebar3 eunit` entry point is clean again after quarantining the legacy PropEr-based property suites outside the active `test/` compile tree and fixing the remaining active-suite regressions that surfaced afterward.
+The default `rebar3 eunit` entry point now discovers, compiles, and executes the
+complete active test tree. It is deterministic but not green. Two consecutive
+verified runs on 2026-07-23 each reported 4,668 passing, 122 failing, and zero
+skipped tests.
 
 Promoted interpretation:
 
-- the repo-wide `rebar3 eunit` path is green for active repo surfaces
+- `make compile` and `rebar3 compile` compile the active source tree
+- `make test` and `rebar3 eunit` expose the complete active EUnit result
+- the 122 remaining failures are assigned to later spec-source reconciliation
+  phases in the
+  [Phase 1 test baseline](spec-source-reconciliation/phase-01-test-baseline.md)
 - the internal property-testing transition is still underway
 - historical PropEr suites remain preserved under `test_legacy/proper/` as migration targets rather than active default tests
+
+The component status summaries above describe implementation inventory and
+maturity. They must not be read as a claim that every promoted integration is
+currently passing its complete test family.

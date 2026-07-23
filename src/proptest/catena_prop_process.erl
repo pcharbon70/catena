@@ -3,15 +3,15 @@
 %% This module provides tools for spawning test processes, controlling their
 %% execution, and verifying their behavior. Processes can be tested in isolation
 %% with controlled environments and deterministic scheduling options.
--module(catena_process).
+-module(catena_prop_process).
 
 -behaviour(gen_server).
 
 %% Define the registry server name separately
--define(REGISTRY_NAME, catena_process_registry).
+-define(REGISTRY_NAME, catena_prop_process_registry).
 
 -include("catena_gen.hrl").
--include("catena_process.hrl").
+-include("catena_prop_process.hrl").
 
 %% Test Process Management
 -export([spawn_test_process/1,

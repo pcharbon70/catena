@@ -1,4 +1,4 @@
-%% @doc Records for Process Testing
+%% @doc Records for Property Process Testing
 %%
 %% This header file contains record definitions for process testing.
 %% Include this in test files that use process testing features.

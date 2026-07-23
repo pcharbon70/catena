@@ -111,12 +111,16 @@ The Catena compiler uses leex (lexer) and yecc (parser) to generate Erlang modul
 
 ### Using rebar3
 
-The build scripts are automatically invoked as pre-compile hooks:
+Rebar3 is the canonical build and test entry point. Its native Leex and Yecc
+compiler stages regenerate the lexer and parser before Erlang compilation:
 
 ```bash
 rebar3 compile  # Automatically builds lexer and parser, then compiles
 rebar3 eunit    # Run unit tests
 ```
+
+The corresponding `make compile` and `make test` targets are thin wrappers
+around these commands and include the module-name integrity check.
 
 ### Build Scripts
 
@@ -216,7 +220,8 @@ Catena draws inspiration from:
 
 ### Building and Testing
 
-The project uses a Makefile for common development tasks:
+The project uses rebar3 as its source of truth, with Makefile wrappers for
+common development tasks:
 
 ```bash
 # Compile all source modules

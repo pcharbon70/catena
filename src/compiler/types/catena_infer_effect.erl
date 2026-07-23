@@ -126,7 +126,7 @@ check_pure(_Type, {effect_set, Effects}) ->
 %% @doc Check that a guard expression is pure (no effects)
 %% Guards in pattern matching must not have side effects.
 %% Returns ok if pure, {error, Reason} if effectful.
--spec check_guard_purity(catena_ast:expr()) -> ok | {error, term()}.
+-spec check_guard_purity(catena_infer_ast:expr()) -> ok | {error, term()}.
 check_guard_purity(Guard) ->
     Effects = infer_guard_effects(Guard),
     case is_pure(Effects) of
@@ -138,7 +138,7 @@ check_guard_purity(Guard) ->
 
 %% @doc Infer effects from a guard expression recursively
 %% This walks the guard expression tree to detect any effectful operations
--spec infer_guard_effects(catena_ast:expr()) -> effect_set().
+-spec infer_guard_effects(catena_infer_ast:expr()) -> effect_set().
 infer_guard_effects({literal, _, _, _}) ->
     pure();
 infer_guard_effects({var, _, _}) ->
@@ -177,7 +177,7 @@ infer_guard_effects(_Other) ->
 %% - perform operations (state, IO, exceptions)
 %% - FFI calls
 %% - async operations
--spec infer_expr_effects(catena_ast:expr()) -> effect_set().
+-spec infer_expr_effects(catena_infer_ast:expr()) -> effect_set().
 infer_expr_effects({lit, _}) ->
     % Literals are pure
     pure();

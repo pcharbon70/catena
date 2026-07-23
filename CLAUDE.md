@@ -16,10 +16,10 @@ Catena is a category theory-inspired functional programming language for the BEA
 # Build lexer and parser (automatically runs before compile)
 ./scripts/build.sh
 
-# Compile all source modules
+# Compile all source modules through rebar3
 make compile
 
-# Run all tests
+# Run the complete active EUnit suite through rebar3
 make test
 
 # Run tests with coverage reporting
@@ -31,14 +31,15 @@ make coverage-report
 # Clean build artifacts
 make clean
 
-# Using rebar3 (runs build.sh automatically via pre-hooks)
+# Canonical commands (rebar3 generates the lexer and parser)
 rebar3 compile
 rebar3 eunit
 ```
 
 ### Build Architecture
 
-The build system has a two-stage process:
+Rebar3 is the canonical build/test authority; the Make targets are thin
+wrappers. The build system has a two-stage process:
 
 1. **Generated Code** (via leex/yecc):
    - `src/compiler/lexer/catena_lexer.xrl` → generates `catena_lexer.erl`

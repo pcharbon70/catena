@@ -21,6 +21,16 @@ setup() ->
 cleanup(_) ->
     catena_effects:shutdown().
 
+isolated(Test) ->
+    fun() ->
+        setup(),
+        try
+            Test()
+        after
+            cleanup(ok)
+        end
+    end.
+
 %%====================================================================
 %% Handler and Resumption Integration Tests
 %%====================================================================
@@ -31,9 +41,9 @@ handler_resumption_integration_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Handler receives resumption", fun test_handler_receives_resumption/0},
-                {"Resumption continues computation", fun test_resumption_continues/0},
-                {"Multiple resumptions (multi-shot)", fun test_multi_shot_resumption/0}
+                {"Handler receives resumption", isolated(fun test_handler_receives_resumption/0)},
+                {"Resumption continues computation", isolated(fun test_resumption_continues/0)},
+                {"Multiple resumptions (multi-shot)", isolated(fun test_multi_shot_resumption/0)}
             ]
         end
     }.
@@ -93,8 +103,8 @@ deep_shallow_integration_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Shallow handler doesn't intercept nested", fun test_shallow_handler/0},
-                {"Deep handler intercepts nested", fun test_deep_handler/0}
+                {"Shallow handler doesn't intercept nested", isolated(fun test_shallow_handler/0)},
+                {"Deep handler intercepts nested", isolated(fun test_deep_handler/0)}
             ]
         end
     }.
@@ -148,8 +158,8 @@ row_polymorphism_integration_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Effect set operations", fun test_effect_set_operations/0},
-                {"Row variable generalization", fun test_row_generalization/0}
+                {"Effect set operations", isolated(fun test_effect_set_operations/0)},
+                {"Row variable generalization", isolated(fun test_row_generalization/0)}
             ]
         end
     }.
@@ -185,8 +195,8 @@ typed_handler_integration_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Handler type inference", fun test_handler_inference/0},
-                {"Handler type checking", fun test_handler_checking/0}
+                {"Handler type inference", isolated(fun test_handler_inference/0)},
+                {"Handler type checking", isolated(fun test_handler_checking/0)}
             ]
         end
     }.
@@ -218,8 +228,8 @@ higher_order_integration_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Effectful function parameter", fun test_effectful_param/0},
-                {"Hefty tree construction", fun test_hefty_construction/0}
+                {"Effectful function parameter", isolated(fun test_effectful_param/0)},
+                {"Hefty tree construction", isolated(fun test_hefty_construction/0)}
             ]
         end
     }.
@@ -257,8 +267,8 @@ equation_optimization_integration_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Apply equations to program", fun test_apply_equations/0},
-                {"Optimize with equations", fun test_optimize_with_equations/0}
+                {"Apply equations to program", isolated(fun test_apply_equations/0)},
+                {"Optimize with equations", isolated(fun test_optimize_with_equations/0)}
             ]
         end
     }.
@@ -289,9 +299,9 @@ end_to_end_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"State management scenario", fun test_state_management/0},
-                {"Error handling scenario", fun test_error_handling/0},
-                {"Combined effects scenario", fun test_combined_effects/0}
+                {"State management scenario", isolated(fun test_state_management/0)},
+                {"Error handling scenario", isolated(fun test_error_handling/0)},
+                {"Combined effects scenario", isolated(fun test_combined_effects/0)}
             ]
         end
     }.
@@ -375,9 +385,9 @@ state_consistency_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Handler stack consistency", fun test_handler_stack_consistency/0},
-                {"Effect registry consistency", fun test_registry_consistency/0},
-                {"Stats consistency", fun test_stats_consistency/0}
+                {"Handler stack consistency", isolated(fun test_handler_stack_consistency/0)},
+                {"Effect registry consistency", isolated(fun test_registry_consistency/0)},
+                {"Stats consistency", isolated(fun test_stats_consistency/0)}
             ]
         end
     }.
@@ -453,8 +463,8 @@ error_recovery_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Handler error recovery", fun test_handler_error_recovery/0},
-                {"System recovery after error", fun test_system_recovery/0}
+                {"Handler error recovery", isolated(fun test_handler_error_recovery/0)},
+                {"System recovery after error", isolated(fun test_system_recovery/0)}
             ]
         end
     }.

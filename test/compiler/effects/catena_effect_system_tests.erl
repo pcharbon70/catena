@@ -23,16 +23,26 @@ cleanup(_) ->
     catena_effect_system:shutdown(),
     ok.
 
+isolated(Test) ->
+    fun() ->
+        setup(),
+        try
+            Test()
+        after
+            cleanup(ok)
+        end
+    end.
+
 %%====================================================================
 %% System Lifecycle Tests
 %%====================================================================
 
 system_lifecycle_test_() ->
     [
-        {"Initialize system", fun test_init/0},
-        {"Check initialized state", fun test_is_initialized/0},
-        {"Shutdown system", fun test_shutdown/0},
-        {"Reinitialize after shutdown", fun test_reinit/0}
+        {"Initialize system", isolated(fun test_init/0)},
+        {"Check initialized state", isolated(fun test_is_initialized/0)},
+        {"Shutdown system", isolated(fun test_shutdown/0)},
+        {"Reinitialize after shutdown", isolated(fun test_reinit/0)}
     ].
 
 test_init() ->
@@ -62,10 +72,10 @@ test_reinit() ->
 
 configuration_test_() ->
     [
-        {"Get default configuration", fun test_get_config/0},
-        {"Configure optimization level", fun test_configure_optimization/0},
-        {"Enable/disable equations", fun test_configure_equations/0},
-        {"Enable/disable hefty", fun test_configure_hefty/0}
+        {"Get default configuration", isolated(fun test_get_config/0)},
+        {"Configure optimization level", isolated(fun test_configure_optimization/0)},
+        {"Enable/disable equations", isolated(fun test_configure_equations/0)},
+        {"Enable/disable hefty", isolated(fun test_configure_hefty/0)}
     ].
 
 test_get_config() ->
@@ -103,10 +113,10 @@ handler_stack_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Push and pop handler scope", fun test_push_pop_scope/0},
-                {"Multiple handler scopes", fun test_multiple_scopes/0},
-                {"Scope depth tracking", fun test_scope_depth/0},
-                {"Reset scopes", fun test_reset_scopes/0}
+                {"Push and pop handler scope", isolated(fun test_push_pop_scope/0)},
+                {"Multiple handler scopes", isolated(fun test_multiple_scopes/0)},
+                {"Scope depth tracking", isolated(fun test_scope_depth/0)},
+                {"Reset scopes", isolated(fun test_reset_scopes/0)}
             ]
         end
     }.
@@ -148,11 +158,11 @@ effect_registration_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Register effect", fun test_register_effect/0},
-                {"Lookup effect", fun test_lookup_effect/0},
-                {"List effects", fun test_list_effects/0},
-                {"Unregister effect", fun test_unregister_effect/0},
-                {"Check effect exists", fun test_effect_exists/0}
+                {"Register effect", isolated(fun test_register_effect/0)},
+                {"Lookup effect", isolated(fun test_lookup_effect/0)},
+                {"List effects", isolated(fun test_list_effects/0)},
+                {"Unregister effect", isolated(fun test_unregister_effect/0)},
+                {"Check effect exists", isolated(fun test_effect_exists/0)}
             ]
         end
     }.
@@ -196,10 +206,10 @@ handler_registration_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Register handler", fun test_register_handler/0},
-                {"Lookup handler", fun test_lookup_handler/0},
-                {"Unregister handler", fun test_unregister_handler/0},
-                {"Get current handlers", fun test_current_handlers/0}
+                {"Register handler", isolated(fun test_register_handler/0)},
+                {"Lookup handler", isolated(fun test_lookup_handler/0)},
+                {"Unregister handler", isolated(fun test_unregister_handler/0)},
+                {"Get current handlers", isolated(fun test_current_handlers/0)}
             ]
         end
     }.
@@ -244,10 +254,10 @@ equation_management_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Add equation", fun test_add_equation/0},
-                {"Find equations", fun test_find_equations/0},
-                {"Remove equation", fun test_remove_equation/0},
-                {"All equations", fun test_all_equations/0}
+                {"Add equation", isolated(fun test_add_equation/0)},
+                {"Find equations", isolated(fun test_find_equations/0)},
+                {"Remove equation", isolated(fun test_remove_equation/0)},
+                {"All equations", isolated(fun test_all_equations/0)}
             ]
         end
     }.
@@ -289,9 +299,9 @@ handler_execution_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Handle with simple handler", fun test_handle_with/0},
-                {"Handle with abort", fun test_handle_with_abort/0},
-                {"Handle with resume", fun test_handle_with_resume/0}
+                {"Handle with simple handler", isolated(fun test_handle_with/0)},
+                {"Handle with abort", isolated(fun test_handle_with_abort/0)},
+                {"Handle with resume", isolated(fun test_handle_with_resume/0)}
             ]
         end
     }.
@@ -330,10 +340,10 @@ optimization_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Optimize program", fun test_optimize_program/0},
-                {"Optimize with equations", fun test_optimize_with_equations/0},
-                {"Fuse effects", fun test_fuse_effects/0},
-                {"Inline handlers", fun test_inline_handlers/0}
+                {"Optimize program", isolated(fun test_optimize_program/0)},
+                {"Optimize with equations", isolated(fun test_optimize_with_equations/0)},
+                {"Fuse effects", isolated(fun test_fuse_effects/0)},
+                {"Inline handlers", isolated(fun test_inline_handlers/0)}
             ]
         end
     }.
@@ -374,10 +384,10 @@ system_state_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Get system state", fun test_system_state/0},
-                {"Handler stack dump", fun test_handler_stack_dump/0},
-                {"Effect registry dump", fun test_effect_registry_dump/0},
-                {"Diagnostics", fun test_diagnostics/0}
+                {"Get system state", isolated(fun test_system_state/0)},
+                {"Handler stack dump", isolated(fun test_handler_stack_dump/0)},
+                {"Effect registry dump", isolated(fun test_effect_registry_dump/0)},
+                {"Diagnostics", isolated(fun test_diagnostics/0)}
             ]
         end
     }.
@@ -413,8 +423,8 @@ stats_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Get initial stats", fun test_initial_stats/0},
-                {"Stats update after perform", fun test_stats_after_perform/0}
+                {"Get initial stats", isolated(fun test_initial_stats/0)},
+                {"Stats update after perform", isolated(fun test_stats_after_perform/0)}
             ]
         end
     }.
@@ -452,8 +462,8 @@ default_handler_test_() ->
         fun cleanup/1,
         fun(_) ->
             [
-                {"Set default handler", fun test_set_default_handler/0},
-                {"Get default handler", fun test_get_default_handler/0}
+                {"Set default handler", isolated(fun test_set_default_handler/0)},
+                {"Get default handler", isolated(fun test_get_default_handler/0)}
             ]
         end
     }.
@@ -468,40 +478,3 @@ test_get_default_handler() ->
     catena_effect_system:set_default_handler(get_default_op, HandlerFn),
     {ok, _} = catena_effect_system:get_default_handler(get_default_op),
     {error, not_found} = catena_effect_system:get_default_handler(no_default).
-
-%%====================================================================
-%% Main Test Generator - Ensures Sequential Execution
-%%====================================================================
-
-%% @doc Main test generator that ensures all tests run sequentially
-%% with proper setup/teardown.
-main_test_() ->
-    {setup,
-        fun() ->
-            %% Initialize the effect system for all tests
-            catena_effect_system:init(),
-            ok
-        end,
-        fun(_) ->
-            %% Cleanup after all tests
-            catena_effect_system:shutdown(),
-            ok
-        end,
-        {generator,
-            fun() ->
-                [
-                    system_lifecycle_test_(),
-                    configuration_test_(),
-                    handler_stack_test_(),
-                    effect_registration_test_(),
-                    handler_registration_test_(),
-                    equation_management_test_(),
-                    handler_execution_test_(),
-                    optimization_test_(),
-                    system_state_test_(),
-                    stats_test_(),
-                    default_handler_test_()
-                ]
-            end
-        }
-    }.

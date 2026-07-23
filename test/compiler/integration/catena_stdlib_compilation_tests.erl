@@ -111,13 +111,7 @@ parse_export_declarations_test() ->
              "export type Maybe\n"
              "export transform map\n",
     {ok, Tokens} = catena_lexer:tokenize(Source),
-    case catena_parser:parse(Tokens) of
-        {ok, _AST} -> ok;
-        {error, Reason} ->
-            io:format("Parse error for exports: ~p~n", [Reason]),
-            %% Note: export syntax may not be implemented
-            ok
-    end.
+    ?assertMatch({ok, _}, catena_parser:parse(Tokens)).
 
 %% Test parsing constrained instance
 parse_constrained_instance_test() ->
@@ -125,13 +119,7 @@ parse_constrained_instance_test() ->
              "  transform equals x y = true\n"
              "end\n",
     {ok, Tokens} = catena_lexer:tokenize(Source),
-    case catena_parser:parse(Tokens) of
-        {ok, _AST} -> ok;
-        {error, Reason} ->
-            io:format("Parse error for constrained instance: ~p~n", [Reason]),
-            %% Note: constrained instances may not be implemented
-            ok
-    end.
+    ?assertMatch({ok, _}, catena_parser:parse(Tokens)).
 
 %% Test parsing higher-kinded trait
 parse_hkt_trait_test() ->
@@ -155,12 +143,7 @@ parse_transform_with_sig_test() ->
     Source = "transform unit : String -> (Unit -> Bool) -> Test\n"
              "transform unit name testFn = name\n",
     {ok, Tokens} = catena_lexer:tokenize(Source),
-    case catena_parser:parse(Tokens) of
-        {ok, _AST} -> ok;
-        {error, Reason} ->
-            io:format("Parse error for transform with sig: ~p~n", [Reason]),
-            ok
-    end.
+    ?assertMatch({ok, _}, catena_parser:parse(Tokens)).
 
 %% Test parsing match expression
 %% NOTE: Parser uses pattern-only match (no scrutinee)
@@ -180,13 +163,7 @@ parse_multiple_constraints_test() ->
              "  join : m (m a) -> m a\n"
              "end\n",
     {ok, Tokens} = catena_lexer:tokenize(Source),
-    case catena_parser:parse(Tokens) of
-        {ok, _AST} -> ok;
-        {error, Reason} ->
-            io:format("Parse error for multiple constraints: ~p~n", [Reason]),
-            %% Note: multiple constraints may not be implemented
-            ok
-    end.
+    ?assertMatch({ok, _}, catena_parser:parse(Tokens)).
 
 %% =============================================================================
 %% Full File Parsing Tests
