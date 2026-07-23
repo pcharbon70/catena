@@ -12,7 +12,10 @@ Based on the current `specs/` set, codebase, and test suite, the current promote
   - 1.5.6 is mostly implemented through effect/Kleisli integration work.
   - 1.5.7 operator desugaring is implemented.
 - Phase 2 work exists in code and summaries for the REPL, prelude, testing framework, and integration tests.
-- Phase 3 work exists in code and summaries for advanced patterns, decision trees, exhaustiveness/redundancy checking, and pattern integration tests.
+- Phase 3 parser-native patterns now reach executable Core Erlang through the
+  public typed compiler path. Decision-tree and exhaustiveness/redundancy
+  surfaces exist and are tested separately rather than being implied as
+  default pipeline stages.
 - Phase 4 is not complete, but a minimal import-resolution bridge exists.
 - A newer algebraic-effects track is materially implemented through orchestration, row-polymorphism integration, validation, and integration-test surfaces associated with Phases 7 through 14.
 - The internal property-testing framework has completed the rose-tree foundation for Phase 1.1, the generator/seed/size layer for Phase 1.2, the categorical generator layer for Phase 1.3, the primitive generator layer for Phase 1.4, and the range layer for Phase 1.5; the next major step is basic shrinking infrastructure.

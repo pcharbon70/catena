@@ -7,7 +7,7 @@ code-generation boundary, enforces promoted pattern contracts during
 compilation, and publishes a verified Phase 3 baseline without hiding failures
 owned by later phases.
 
-**Status:** In progress.
+**Status:** Complete.
 
 **Dependencies:** Phase 2 complete.
 
@@ -90,21 +90,21 @@ Erlang validation.
 requires successful semantic, kind, and type validation, then publish the
 focused and complete-suite Phase 3 evidence.
 
-- [ ] **Section 3.3 Complete**
+- [x] **Section 3.3 Complete**
 
 ### Task 3.3.1: Add Source-to-Core Entry Points
 
 **Description:** Add string and file compiler APIs that reuse the canonical
 frontend stages before invoking Core Erlang generation.
 
-- [ ] **Task 3.3.1 Complete**
+- [x] **Task 3.3.1 Complete**
 
 ### Task 3.3.2: Preserve Stage-Specific Failures
 
 **Description:** Keep lexer, parser, semantic, kind, type, import, and codegen
 errors distinguishable at the public Core compilation boundary.
 
-- [ ] **Task 3.3.2 Complete**
+- [x] **Task 3.3.2 Complete**
 
 ### Task 3.3.3: Publish Phase 3 Verification
 
@@ -112,7 +112,7 @@ errors distinguishable at the public Core compilation boundary.
 active suite, record deterministic totals, and update promoted compiler and
 quality status.
 
-- [ ] **Task 3.3.3 Complete**
+- [x] **Task 3.3.3 Complete**
 
 **Acceptance Criteria:**
 
@@ -126,7 +126,7 @@ quality status.
 Erlang through the public compiler boundary, pattern invariants are enforced
 in that path, and the repository records a deterministic revised baseline.
 
-- [ ] Canonical frontend AST lowers without placeholder backend nodes
-- [ ] Pattern guard, binding, and advanced lowering contracts pass
-- [ ] Public source-to-Core compilation validates typed source first
-- [ ] Current-status and compiler specs match verified behavior
+- [x] Canonical frontend AST lowers without placeholder backend nodes
+- [x] Pattern guard, binding, and advanced lowering contracts pass
+- [x] Public source-to-Core compilation validates typed source first
+- [x] Current-status and compiler specs match verified behavior

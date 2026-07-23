@@ -55,7 +55,7 @@ The following is part of the current promoted repo status:
 
 - `rebar3 eunit` discovers, compiles, and executes the maintained suite
 - its current nonzero result and exact failure inventory are published in the
-  Phase 2 test baseline
+  Phase 3 test baseline
 - the default path no longer depends on or compiles runnable PropEr-era test modules from `test_legacy/proper/`
 
 This criterion prevents a partial or filtered command from being promoted as a
