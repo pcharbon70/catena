@@ -5,7 +5,7 @@ which every active Erlang module has a unique name, canonical commands expose
 the complete active test surface, and remaining failures are recorded instead
 of being hidden behind partial test entry points.
 
-**Status:** In progress.
+**Status:** Complete.
 
 **Dependencies:** None.
 
@@ -120,28 +120,53 @@ compile and test the complete active repository.
 **Description:** Ensure failures are observable and reproducible, then publish
 the remaining baseline without claiming the repository is green.
 
-- [ ] **Section 1.3 Complete**
+- [x] **Section 1.3 Complete**
 
 ### Task 1.3.1: Remove Swallowed Test Failures
 
 **Description:** Replace permissive tests that convert unexpected parser or
 compiler errors into success with explicit assertions.
 
-- [ ] **Task 1.3.1 Complete**
+- [x] **Task 1.3.1 Complete**
+
+**Subtasks:**
+
+- [x] 1.3.1.1 Replace permissive parser branches with explicit assertions
+- [x] 1.3.1.2 Make effect-type validation assert its expected success result
+- [x] 1.3.1.3 Verify unsupported syntax is reported as a test failure
 
 ### Task 1.3.2: Stabilize Shared Test State
 
 **Description:** Isolate process registries, mailboxes, and lifecycle fixtures
 so the full suite produces deterministic results.
 
-- [ ] **Task 1.3.2 Complete**
+- [x] **Task 1.3.2 Complete**
+
+**Subtasks:**
+
+- [x] 1.3.2.1 Run process-local effect setup inside each EUnit test process
+- [x] 1.3.2.2 Isolate runtime mailboxes and registered process names
+- [x] 1.3.2.3 Seed weighted state-machine sampling deterministically
 
 ### Task 1.3.3: Publish the Verified Baseline
 
 **Description:** Record the canonical command results and revise promoted
 tooling/status claims to match the evidence.
 
-- [ ] **Task 1.3.3 Complete**
+- [x] **Task 1.3.3 Complete**
+
+**Subtasks:**
+
+- [x] 1.3.3.1 Run the canonical suite twice and compare results
+- [x] 1.3.3.2 Record every remaining failing module and owning phase
+- [x] 1.3.3.3 Remove promoted claims that the default suite is green
+
+**Acceptance Criteria:**
+
+- Two consecutive `make test` runs report the same totals
+- The verified baseline names every failing module
+- Remaining failures are assigned to later reconciliation phases
+- Promoted quality and tooling documents link to the baseline
 
 ## Phase Completion Gate
 
@@ -149,7 +174,11 @@ tooling/status claims to match the evidence.
 canonical entry point, the full active suite has a deterministic result, and
 every remaining failure is assigned to a later reconciliation phase.
 
-- [ ] All active source and test modules compile
-- [ ] The canonical full-suite command is deterministic
-- [ ] No test silently accepts an unexpected failure
-- [ ] Current-status and tooling specs match the verified baseline
+- [x] All active source and test modules compile
+- [x] The canonical full-suite command is deterministic
+- [x] No test silently accepts an unexpected failure
+- [x] Current-status and tooling specs match the verified baseline
+
+**Verified Result:** See the
+[Phase 1 test baseline](phase-01-test-baseline.md) for the commands, totals,
+failure inventory, and ownership assignments.

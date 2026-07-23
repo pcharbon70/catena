@@ -161,8 +161,11 @@ command_generation_with_weights_test() ->
     SM = catena_statem:state_machine(<<"test">>, counter_statem, Options),
     State = #{count => 0},
 
-    %% Generate multiple commands and check distribution
-    Commands = [catena_statem:generate_command(SM, State) || _ <- lists:seq(1, 50)],
+    %% Generate a reproducible sample and check distribution.
+    Commands = [
+        element(1, catena_statem:generate_command(SM, State, Seed))
+     || Seed <- lists:seq(1, 50)
+    ],
     Names = [N || {call, _, N, _} <- Commands],
 
     %% increment has weight 5, decrement has weight 3, reset has weight 1

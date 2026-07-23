@@ -15,7 +15,7 @@ conformance checks that keep the two views synchronized.
 
 ## Phases
 
-- [Phase 1: Build and Test Baseline](phase-01-build-and-test-baseline.md)
+- [x] [Phase 1: Build and Test Baseline](phase-01-build-and-test-baseline.md)
 - Phase 2: Standard Library and Frontend Validation
 - Phase 3: Compiler, Codegen, and Pattern Integration
 - Phase 4: Type and Effect Integration Boundary
