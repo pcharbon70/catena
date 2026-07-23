@@ -1,186 +1,239 @@
 %%%-------------------------------------------------------------------
-%%% @doc Unit tests for catena_effects (Phase 6.2)
+%%% @doc Public execution-contract tests for catena_effects.
 %%%
-%%% Tests for the expanded effect library including:
-%%% - State effect (get/put/modify)
-%%% - Reader effect (ask/local)
-%%% - Writer effect (tell/listen/pass)
-%%% - Async effect (spawn/await/yield)
-%%% - Error effect (throw/catch)
-%%%
+%%% The unified effect API performs operations through installed handlers.
+%%% Raw `{effect, ...}` descriptors belong to the optimizer and distribution
+%%% components and are intentionally not constructed by this module.
 %%% @end
 %%%-------------------------------------------------------------------
 -module(catena_effects_tests).
+
 -include_lib("eunit/include/eunit.hrl").
 
-%%%=============================================================================
-%%% State Effect Tests
-%%%=============================================================================
+effect_library_test_() ->
+    [
+        {"builtin effects are registered", isolated(fun builtin_effects_registered/0)},
+        {"state get returns current state", isolated(fun state_get/0)},
+        {"state put updates state", isolated(fun state_put/0)},
+        {"state modify updates state", isolated(fun state_modify/0)},
+        {"state get-and-put returns prior state", isolated(fun state_get_and_put/0)},
+        {"eval state returns computation value", isolated(fun eval_state/0)},
+        {"reader ask returns environment", isolated(fun reader_ask/0)},
+        {"reader ask-local maps environment", isolated(fun reader_ask_local/0)},
+        {"reader local executes in scope", isolated(fun reader_local/0)},
+        {"writer tell accumulates output", isolated(fun writer_tell/0)},
+        {"writer listen isolates inner output", isolated(fun writer_listen/0)},
+        {"writer pass returns its value", isolated(fun writer_pass/0)},
+        {"error runner preserves success", isolated(fun error_success/0)},
+        {"error runner short-circuits", isolated(fun error_short_circuit/0)},
+        {"error aliases use the runner", isolated(fun error_aliases/0)},
+        {"custom handler executes", isolated(fun custom_handler/0)},
+        {"try-perform returns handled value", isolated(fun try_perform_success/0)},
+        {"try-perform reports unhandled effect", isolated(fun try_perform_failure/0)},
+        {"deep handler executes", isolated(fun deep_handler/0)},
+        {"shallow handler executes", isolated(fun shallow_handler/0)},
+        {"async spawn delegates to handler", isolated(fun async_spawn/0)},
+        {"async await delegates to handler", isolated(fun async_await/0)},
+        {"async yield delegates to handler", isolated(fun async_yield/0)},
+        {"builtin runners compose", isolated(fun builtin_runners_compose/0)},
+        {"diagnostics include execution stats", isolated(fun diagnostics/0)},
+        {"perform fails loudly without handler", isolated(fun unhandled_perform/0)}
+    ].
 
-state_get_test() ->
-    Effect = catena_effects:state_get(),
-    ?assertMatch({effect, {state, get}}, Effect).
+isolated(Test) ->
+    fun() ->
+        catch catena_effects:shutdown(),
+        ok = catena_effects:init(),
+        try
+            Test()
+        after
+            catena_effects:shutdown()
+        end
+    end.
 
-state_put_test() ->
-    Effect = catena_effects:state_put(42),
-    ?assertMatch({effect, {state, {put, 42}}}, Effect).
+builtin_effects_registered() ->
+    Effects = catena_effects:list_effects(),
+    ?assertEqual(
+        [async, error, reader, state, writer],
+        lists:sort(Effects)
+    ).
 
-state_modify_test() ->
-    Fun = fun(X) -> X + 1 end,
-    Effect = catena_effects:state_modify(Fun),
-    ?assertMatch({effect, {state, {modify, _}}}, Effect).
+state_get() ->
+    ?assertEqual({5, 5}, catena_effects:run_state(
+        fun catena_effects:state_get/0,
+        5
+    )).
 
-state_get_and_put_test() ->
-    Fun = fun(X) -> {X, X * 2} end,
-    Effect = catena_effects:state_get_and_put(Fun),
-    ?assertMatch({effect, {state, {get_and_put, _}}}, Effect).
+state_put() ->
+    ?assertEqual({42, 42}, catena_effects:run_state(
+        fun() -> catena_effects:state_put(42) end,
+        0
+    )).
 
-state_type_test() ->
-    Effect = catena_effects:state(my_state),
-    ?assertEqual({effect, {state, my_state}}, Effect).
+state_modify() ->
+    ?assertEqual({6, 6}, catena_effects:run_state(
+        fun() -> catena_effects:state_modify(fun(Value) -> Value + 1 end) end,
+        5
+    )).
 
-%%%=============================================================================
-%%% Reader Effect Tests
-%%%=============================================================================
+state_get_and_put() ->
+    ?assertEqual({5, 10}, catena_effects:run_state(
+        fun() -> catena_effects:state_get_and_put(fun(Value) -> Value * 2 end) end,
+        5
+    )).
 
-reader_ask_test() ->
-    Effect = catena_effects:reader_ask(),
-    ?assertMatch({effect, {reader, ask}}, Effect).
+eval_state() ->
+    ?assertEqual(done, catena_effects:eval_state(
+        fun() ->
+            catena_effects:state_put(9),
+            done
+        end,
+        0
+    )).
 
-reader_local_test() ->
-    Fun = fun() -> ok end,
-    Effect = catena_effects:reader_local(Fun),
-    ?assertMatch({effect, {reader, {local, _}}}, Effect).
+reader_ask() ->
+    ?assertEqual(environment, catena_effects:run_reader(
+        fun catena_effects:reader_ask/0,
+        environment
+    )).
 
-reader_ask_local_test() ->
-    Fun = fun(Env) -> Env end,
-    Effect = catena_effects:reader_ask_local(Fun),
-    ?assertMatch({effect, {reader, {ask_local, _}}}, Effect).
+reader_ask_local() ->
+    ?assertEqual(42, catena_effects:run_reader(
+        fun() -> catena_effects:reader_ask_local(fun(Value) -> Value * 2 end) end,
+        21
+    )).
 
-reader_type_test() ->
-    Effect = catena_effects:reader(config),
-    ?assertEqual({effect, {reader, config}}, Effect).
+reader_local() ->
+    ?assertEqual(environment, catena_effects:run_reader(
+        fun() ->
+            catena_effects:reader_local(fun catena_effects:reader_ask/0)
+        end,
+        environment
+    )).
 
-%%%=============================================================================
-%%% Writer Effect Tests
-%%%=============================================================================
+writer_tell() ->
+    ?assertEqual({ok, [first, second]}, catena_effects:run_writer(
+        fun() ->
+            catena_effects:writer_tell(first),
+            catena_effects:writer_tell(second)
+        end
+    )).
 
-writer_tell_test() ->
-    Effect = catena_effects:writer_tell(log_message),
-    ?assertMatch({effect, {writer, {tell, log_message}}}, Effect).
+writer_listen() ->
+    ?assertEqual({{inner, [message]}, []}, catena_effects:run_writer(
+        fun() ->
+            catena_effects:writer_listen(fun() ->
+                catena_effects:writer_tell(message),
+                inner
+            end)
+        end
+    )).
 
-writer_listen_test() ->
-    Fun = fun(Output) -> Output end,
-    Effect = catena_effects:writer_listen(Fun),
-    ?assertMatch({effect, {writer, {listen, _}}}, Effect).
+writer_pass() ->
+    ?assertEqual({value, []}, catena_effects:run_writer(
+        fun() -> catena_effects:writer_pass(value) end
+    )).
 
-writer_pass_test() ->
-    Effect = catena_effects:writer_pass(value),
-    ?assertMatch({effect, {writer, {pass, value}}}, Effect).
+error_success() ->
+    ?assertEqual(success, catena_effects:run_error(
+        fun() -> success end,
+        fun(Error) -> {caught, Error} end
+    )).
 
-writer_type_test() ->
-    Effect = catena_effects:writer(log),
-    ?assertEqual({effect, {writer, log}}, Effect).
+error_short_circuit() ->
+    ?assertEqual({caught, failed}, catena_effects:run_error(
+        fun() ->
+            catena_effects:error_throw(failed),
+            unreachable
+        end,
+        fun(Error) -> {caught, Error} end
+    )).
 
-%%%=============================================================================
-%%% Async Effect Tests
-%%%=============================================================================
+error_aliases() ->
+    ?assertEqual({error, failed}, catena_effects:catch_error(
+        fun() -> catena_effects:throw(failed) end,
+        fun(Error) -> {error, Error} end
+    )).
 
-async_spawn_test() ->
-    Fun = fun() -> result end,
-    Effect = catena_effects:async_spawn(Fun),
-    ?assertMatch({effect, {async, {spawn, _}}}, Effect).
+custom_handler() ->
+    ?assertEqual({handled, value}, catena_effects:handle(
+        custom,
+        fun(Value, _Resumption) -> {handled, Value} end,
+        fun() -> catena_effects:perform(custom, value) end
+    )).
 
-async_await_test() ->
-    Effect = catena_effects:async_await(future_ref),
-    ?assertMatch({effect, {async, {await, future_ref}}}, Effect).
+try_perform_success() ->
+    ?assertEqual({ok, value}, catena_effects:handle(
+        custom,
+        fun(Value, _Resumption) -> Value end,
+        fun() -> catena_effects:try_perform(custom, value) end
+    )).
 
-async_yield_test() ->
-    Effect = catena_effects:async_yield(intermediate_value),
-    ?assertMatch({effect, {async, {yield, intermediate_value}}}, Effect).
+try_perform_failure() ->
+    ?assertEqual(
+        {error, {unhandled_effect, missing}},
+        catena_effects:try_perform(missing, value)
+    ).
 
-async_type_test() ->
-    Effect = catena_effects:async(),
-    ?assertEqual({effect, {async}}, Effect).
+deep_handler() ->
+    ?assertEqual(deep, catena_effects:handle_deep(
+        custom,
+        fun(_Value, _Resumption) -> deep end,
+        fun() -> catena_effects:perform(custom, value) end
+    )).
 
-%%%=============================================================================
-%%% Error Effect Tests
-%%%=============================================================================
+shallow_handler() ->
+    ?assertEqual(shallow, catena_effects:handle_shallow(
+        custom,
+        fun(_Value, _Resumption) -> shallow end,
+        fun() -> catena_effects:perform(custom, value) end
+    )).
 
-error_throw_test() ->
-    Effect = catena_effects:error_throw(my_error),
-    ?assertMatch({effect, {error, {throw, my_error}}}, Effect).
+async_spawn() ->
+    ?assertEqual(completed, catena_effects:handle(
+        async,
+        fun({spawn, Computation}, _Resumption) -> Computation() end,
+        fun() -> catena_effects:async_spawn(fun() -> completed end) end
+    )).
 
-error_catch_test() ->
-    ErrorFun = fun() -> ok end,
-    HandlerFun = fun() -> recovered end,
-    Effect = catena_effects:error_catch(ErrorFun, HandlerFun),
-    ?assertMatch({effect, {error, {'catch', _, _}}}, Effect).
+async_await() ->
+    ?assertEqual({awaited, future}, catena_effects:handle(
+        async,
+        fun({await, Future}, _Resumption) -> {awaited, Future} end,
+        fun() -> catena_effects:async_await(future) end
+    )).
 
-error_type_test() ->
-    Effect = catena_effects:error(validation),
-    ?assertEqual({effect, {error, validation}}, Effect).
+async_yield() ->
+    ?assertEqual({yielded, value}, catena_effects:handle(
+        async,
+        fun({yield, Value}, _Resumption) -> {yielded, Value} end,
+        fun() -> catena_effects:async_yield(value) end
+    )).
 
-%%%=============================================================================
-%%% Effect Combinator Tests
-%%%=============================================================================
+builtin_runners_compose() ->
+    ?assertEqual({{6, 6}, [updated]}, catena_effects:run_writer(
+        fun() ->
+            catena_effects:run_state(
+                fun() ->
+                    New = catena_effects:state_modify(fun(Value) -> Value + 1 end),
+                    catena_effects:writer_tell(updated),
+                    New
+                end,
+                5
+            )
+        end
+    )).
 
-combine_effects_test() ->
-    StateEff = catena_effects:state(my_state),
-    ReaderEff = catena_effects:reader(config),
-    Combined = catena_effects:combine_effects([StateEff, ReaderEff]),
-    ?assertMatch({effect, {combined, [_, _]}}, Combined).
+diagnostics() ->
+    _ = catena_effects:run_state(fun catena_effects:state_get/0, 0),
+    Diagnostics = catena_effects:diagnostics(),
+    Stats = catena_effects:stats(),
+    ?assert(maps:get(initialized, Diagnostics)),
+    ?assert(maps:get(performs, Stats) >= 1),
+    ?assert(maps:get(handler_executions, Stats) >= 1).
 
-run_with_test() ->
-    Effect = catena_effects:state(my_state),
-    Computation = fun() -> result end,
-    RunEffect = catena_effects:run_with(Effect, Computation),
-    ?assertMatch({effect, {run_with, _, _}}, RunEffect).
-
-handle_pure_test() ->
-    Computation = fun() -> pure_result end,
-    Effect = catena_effects:handle_pure(Computation),
-    ?assertMatch({effect, {handle_pure, _}}, Effect).
-
-%%%=============================================================================
-%%% Integration Tests
-%%%=============================================================================
-
-state_reader_integration_test() ->
-    % Test combining State and Reader effects
-    StateEff = catena_effects:state(counter),
-    ReaderEff = catena_effects:reader(initial_value),
-
-    Combined = catena_effects:combine_effects([StateEff, ReaderEff]),
-    ?assertMatch({effect, {combined, [_, _]}}, Combined),
-
-    % Verify we can extract individual effects from the combined list
-    EffectsList = element(2, element(2, Combined)),
-    ?assertMatch({effect, {state, counter}}, lists:nth(1, EffectsList)),
-    ?assertMatch({effect, {reader, initial_value}}, lists:nth(2, EffectsList)).
-
-writer_async_integration_test() ->
-    % Test Writer effect for logging async operations
-    WriterEff = catena_effects:writer(log),
-    AsyncEff = catena_effects:async(),
-
-    Combined = catena_effects:combine_effects([WriterEff, AsyncEff]),
-    ?assertMatch({effect, {combined, [_, _]}}, Combined),
-
-    % Verify both effects are present from the combined list
-    EffectsList = element(2, element(2, Combined)),
-    ?assertMatch({effect, {writer, log}}, lists:nth(1, EffectsList)),
-    ?assertMatch({effect, {async}}, lists:nth(2, EffectsList)).
-
-error_state_integration_test() ->
-    % Test Error effect with State effect for rollback
-    ErrorEff = catena_effects:error(validation),
-    StateEff = catena_effects:state(current_state),
-
-    Combined = catena_effects:combine_effects([ErrorEff, StateEff]),
-    ?assertMatch({effect, {combined, [_, _]}}, Combined),
-
-    % Verify both effects are present from the combined list
-    EffectsList = element(2, element(2, Combined)),
-    ?assertMatch({effect, {error, validation}}, lists:nth(1, EffectsList)),
-    ?assertMatch({effect, {state, current_state}}, lists:nth(2, EffectsList)).
+unhandled_perform() ->
+    ?assertError(
+        {unhandled_effect, missing},
+        catena_effects:perform(missing, value)
+    ).

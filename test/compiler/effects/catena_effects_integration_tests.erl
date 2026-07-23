@@ -64,51 +64,68 @@ effect_polymorphism_constraints_test() ->
 %%%=============================================================================
 
 state_effect_lifecycle_test() ->
-    % Test state effect operations
-    GetEffect = catena_effects:state_get(),
-    ?assertMatch({effect, {state, get}}, GetEffect),
-
-    PutEffect = catena_effects:state_put(42),
-    ?assertMatch({effect, {state, {put, 42}}}, PutEffect),
-
-    ModifyFun = fun(X) -> X + 1 end,
-    ModifyEffect = catena_effects:state_modify(ModifyFun),
-    ?assertMatch({effect, {state, {modify, _}}}, ModifyEffect).
+    with_effects(fun() ->
+        ?assertEqual({43, 43}, catena_effects:run_state(
+            fun() ->
+                catena_effects:state_put(42),
+                catena_effects:state_modify(fun(X) -> X + 1 end),
+                catena_effects:state_get()
+            end,
+            0
+        ))
+    end).
 
 reader_writer_effects_test() ->
-    % Test reader and writer effects
-    AskEffect = catena_effects:reader_ask(),
-    ?assertMatch({effect, {reader, ask}}, AskEffect),
-
-    TellEffect = catena_effects:writer_tell(log_message),
-    ?assertMatch({effect, {writer, {tell, log_message}}}, TellEffect),
-
-    ListenFun = fun(Output) -> Output end,
-    ListenEffect = catena_effects:writer_listen(ListenFun),
-    ?assertMatch({effect, {writer, {listen, _}}}, ListenEffect).
+    with_effects(fun() ->
+        ?assertEqual({config, [log_message]}, catena_effects:run_writer(
+            fun() ->
+                catena_effects:run_reader(
+                    fun() ->
+                        catena_effects:writer_tell(log_message),
+                        catena_effects:reader_ask()
+                    end,
+                    config
+                )
+            end
+        ))
+    end).
 
 async_error_effects_test() ->
-    % Test async and error effects
-    SpawnFun = fun() -> result end,
-    SpawnEffect = catena_effects:async_spawn(SpawnFun),
-    ?assertMatch({effect, {async, {spawn, _}}}, SpawnEffect),
-
-    AwaitEffect = catena_effects:async_await(ref),
-    ?assertMatch({effect, {async, {await, ref}}}, AwaitEffect),
-
-    ThrowEffect = catena_effects:error_throw(my_error),
-    ?assertMatch({effect, {error, {throw, my_error}}}, ThrowEffect).
+    with_effects(fun() ->
+        AsyncResult = catena_effects:handle(
+            async,
+            fun
+                ({spawn, Computation}, _Resumption) -> Computation();
+                ({await, Future}, _Resumption) -> {awaited, Future}
+            end,
+            fun() ->
+                Spawned = catena_effects:async_spawn(fun() -> result end),
+                {Spawned, catena_effects:async_await(ref)}
+            end
+        ),
+        ?assertEqual({result, {awaited, ref}}, AsyncResult),
+        ?assertEqual({caught, my_error}, catena_effects:run_error(
+            fun() -> catena_effects:error_throw(my_error) end,
+            fun(Error) -> {caught, Error} end
+        ))
+    end).
 
 effect_combinators_test() ->
-    % Test effect combinators
-    StateEff = catena_effects:state(my_state),
-    ReaderEff = catena_effects:reader(config),
-
-    Combined = catena_effects:combine_effects([StateEff, ReaderEff]),
-    ?assertMatch({effect, {combined, [_, _]}}, Combined),
-
-    RunWith = catena_effects:run_with(StateEff, fun() -> ok end),
-    ?assertMatch({effect, {run_with, _, _}}, RunWith).
+    with_effects(fun() ->
+        Result = catena_effects:run_reader(
+            fun() ->
+                catena_effects:run_state(
+                    fun() ->
+                        Delta = catena_effects:reader_ask(),
+                        catena_effects:state_modify(fun(Value) -> Value + Delta end)
+                    end,
+                    10
+                )
+            end,
+            5
+        ),
+        ?assertEqual({15, 15}, Result)
+    end).
 
 %%%=============================================================================
 %%% Effect Optimizations Integration (6.3)
@@ -215,19 +232,19 @@ remote_node_test() ->
 polymorphic_effects_with_library_test() ->
     % Test using effect polymorphism with expanded library
     EVar = catena_effect_poly:evar(1),
-
-    % Create polymorphic state effect
-    StateType = catena_effects:state(poly_state),
-
-    % Both can coexist in type system
     ?assert(catena_effect_poly:is_effect_var(EVar)),
-    ?assertMatch({effect, {state, poly_state}}, StateType).
+    with_effects(fun() ->
+        ?assertEqual({poly_state, poly_state}, catena_effects:run_state(
+            fun catena_effects:state_get/0,
+            poly_state
+        ))
+    end).
 
 effects_with_optimizations_test() ->
-    % Test optimizing effects from the library
+    % Optimizers consume their own descriptor representation.
     Effects = [
-        catena_effects:state_put(1),
-        catena_effects:state_put(2)
+        {effect, {state, {put, 1}}},
+        {effect, {state, {put, 2}}}
     ],
 
     Program = lists:map(fun(E) -> E end, Effects),
@@ -252,8 +269,8 @@ full_effect_lifecycle_test() ->
     % 1. Create polymorphic effect variable
     {{evar, _EVarId}, _State} = catena_effect_poly:fresh_evar(catena_infer_state:new()),
 
-    % 2. Create concrete effect from library
-    Effect = catena_effects:state_put(42),
+    % 2. Create an optimizer/distribution descriptor
+    Effect = {effect, {state, {put, 42}}},
 
     % 3. Optimize the effect (single effect returns no_change)
     Program = [Effect],
@@ -269,16 +286,31 @@ full_effect_lifecycle_test() ->
     ?assertEqual(Effect, Deserialized).
 
 multiple_effects_combination_test() ->
-    % Test combining multiple different effect types
-    Effects = [
-        catena_effects:state(counter),
-        catena_effects:reader(config),
-        catena_effects:writer(log),
-        catena_effects:error(validation)
-    ],
-
-    Combined = catena_effects:combine_effects(Effects),
-    ?assertMatch({effect, {combined, Effects}}, Combined).
+    with_effects(fun() ->
+        Result = catena_effects:run_error(
+            fun() ->
+                catena_effects:run_writer(
+                    fun() ->
+                        catena_effects:run_reader(
+                            fun() ->
+                                catena_effects:run_state(
+                                    fun() ->
+                                        Env = catena_effects:reader_ask(),
+                                        catena_effects:writer_tell(Env),
+                                        catena_effects:state_get()
+                                    end,
+                                    counter
+                                )
+                            end,
+                            config
+                        )
+                    end
+                )
+            end,
+            fun(Error) -> {error, Error} end
+        ),
+        ?assertEqual({{counter, counter}, [config]}, Result)
+    end).
 
 effect_system_consistency_test() ->
     % Test that all effect system components are consistent
@@ -286,12 +318,11 @@ effect_system_consistency_test() ->
     EVar = catena_effect_poly:evar(1),
     ?assert(catena_effect_poly:is_effect_var(EVar)),
 
-    % State effects should be serializable
-    StateEffect = catena_effects:state_get(),
-    ?assert(catena_effect_distributed:is_serializable(StateEffect)),
+    StateDescriptor = {effect, {state, get}},
+    ?assert(catena_effect_distributed:is_serializable(StateDescriptor)),
 
     % Optimizations should recognize effect structure
-    Program = [StateEffect],
+    Program = [StateDescriptor],
     {no_change, _} = catena_effect_opt:fuse_effects(Program),
 
     % Advanced features should handle effects
@@ -309,14 +340,27 @@ effect_type_safety_test() ->
     ?assertNot(catena_effect_poly:satisfies_constraint(InvalidExpr, RowC)).
 
 effect_error_handling_test() ->
-    % Test error handling across effect system
-    ErrorEffect = catena_effects:error_throw(test_error),
-    ?assertMatch({effect, {error, {throw, test_error}}}, ErrorEffect),
+    with_effects(fun() ->
+        ?assertEqual({caught, test_error}, catena_effects:run_error(
+            fun() -> catena_effects:error_throw(test_error) end,
+            fun(Error) -> {caught, Error} end
+        ))
+    end),
 
-    % Remote operations should handle errors
+    % Distributed effects consume the descriptor representation.
+    ErrorDescriptor = {effect, {error, {throw, test_error}}},
     Result = catena_effect_distributed:remote_effect(
         'nonexistent@node',
-        ErrorEffect,
+        ErrorDescriptor,
         []
     ),
     ?assertMatch({error, {node_unavailable, _}}, Result).
+
+with_effects(Computation) ->
+    catch catena_effects:shutdown(),
+    ok = catena_effects:init(),
+    try
+        Computation()
+    after
+        catena_effects:shutdown()
+    end.
