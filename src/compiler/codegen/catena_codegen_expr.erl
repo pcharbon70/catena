@@ -29,6 +29,7 @@
     translate_if/2,
     translate_list/2,
     translate_tuple/2,
+    translate_record/2,
 
     %% Effect translations
     translate_perform/2,
@@ -80,6 +81,20 @@ translate_expr({list_expr, Elements, Loc}, State) ->
 %% Tuple literals
 translate_expr({tuple_expr, Elements, Loc}, State) ->
     translate_tuple({tuple_expr, Elements, Loc}, State);
+
+%% Record literals
+translate_expr({record_expr, Fields, Loc}, State) ->
+    translate_record({record_expr, Fields, Loc}, State);
+
+%% Match expressions
+translate_expr({match_expr, Scrutinee, Clauses, _Loc}, State) ->
+    {CoreScrutinee, State1} = translate_expr(Scrutinee, State),
+    catena_codegen_pattern:compile_match(
+        CoreScrutinee,
+        Clauses,
+        State1,
+        #{optimize => true, warn_incomplete => true}
+    );
 
 %% Perform expression (effect invocation)
 translate_expr({perform_expr, Effect, Operation, Args, Loc}, State) ->
@@ -224,7 +239,11 @@ translate_let({let_expr, Bindings, Body, _Loc}, State) ->
 %% For simple variable patterns; complex patterns need pattern compilation
 pattern_to_var({var, Name, _Loc}) ->
     cerl:c_var(Name);
+pattern_to_var({pat_var, Name, _Loc}) ->
+    cerl:c_var(Name);
 pattern_to_var({wildcard, _Loc}) ->
+    cerl:c_var('_');
+pattern_to_var({pat_wildcard, _Loc}) ->
     cerl:c_var('_');
 pattern_to_var(_Complex) ->
     %% Complex patterns need pattern matching - placeholder for now
@@ -360,7 +379,9 @@ translate_lambda({lambda, Params, Body, _Loc}, State) ->
     {Fun, State1}.
 
 param_name({var, Name, _}) -> Name;
+param_name({pat_var, Name, _}) -> Name;
 param_name({typed_var, Name, _, _}) -> Name;
+param_name({pat_typed_var, Name, _, _}) -> Name;
 param_name(_) -> '_'.
 
 %%====================================================================
@@ -395,6 +416,18 @@ translate_list({list_expr, Elements, _Loc}, State) ->
 translate_tuple({tuple_expr, Elements, _Loc}, State) ->
     {CoreElements, State1} = translate_exprs(Elements, State),
     {cerl:c_tuple(CoreElements), State1}.
+
+%% @doc Translate record literals to Core Erlang maps.
+translate_record({record_expr, Fields, _Loc}, State) ->
+    {CorePairs, State1} = lists:mapfoldl(
+        fun({Field, Value}, CurrentState) ->
+            {CoreValue, NextState} = translate_expr(Value, CurrentState),
+            {cerl:c_map_pair(cerl:c_atom(Field), CoreValue), NextState}
+        end,
+        State,
+        Fields
+    ),
+    {cerl:c_map(CorePairs), State1}.
 
 %%====================================================================
 %% Effect Operation Translation (1.3.1.5)

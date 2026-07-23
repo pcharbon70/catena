@@ -193,7 +193,12 @@ erase_clause({clause, Patterns, Guards, Body, Loc}) ->
     ErasedPatterns = [erase_pattern(P) || P <- Patterns],
     ErasedGuards = [erase_expr(G) || G <- Guards],
     ErasedBody = erase_expr(Body),
-    {clause, ErasedPatterns, ErasedGuards, ErasedBody, Loc}.
+    {clause, ErasedPatterns, ErasedGuards, ErasedBody, Loc};
+erase_clause({clause, Patterns, Guards, Body}) ->
+    ErasedPatterns = [erase_pattern(P) || P <- Patterns],
+    ErasedGuards = [erase_expr(G) || G <- Guards],
+    ErasedBody = erase_expr(Body),
+    {clause, ErasedPatterns, ErasedGuards, ErasedBody}.
 
 %% Erase a handler
 erase_handler({handler_clause, Effect, Operations, Loc}) ->
@@ -247,6 +252,10 @@ erase_pattern({pat_tuple, Elements, Loc}) ->
 %% As-pattern
 erase_pattern({pat_as, Name, Pattern, Loc}) ->
     {pat_as, Name, erase_pattern(Pattern), Loc};
+
+%% Or-pattern
+erase_pattern({pat_or, Patterns, Loc}) ->
+    {pat_or, [erase_pattern(Pattern) || Pattern <- Patterns], Loc};
 
 %% Record pattern
 erase_pattern({pat_record, Fields, Loc}) ->
