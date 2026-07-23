@@ -107,9 +107,11 @@ parse_parameterized_effect_test() ->
 
 %% Test parsing export declarations
 parse_export_declarations_test() ->
-    Source = "export trait Comparable\n"
+    Source = "module Test\n"
+             "export trait Comparable\n"
              "export type Maybe\n"
-             "export transform map\n",
+             "export transform map\n"
+             "transform map x = x\n",
     {ok, Tokens} = catena_lexer:tokenize(Source),
     ?assertMatch({ok, _}, catena_parser:parse(Tokens)).
 
@@ -159,7 +161,7 @@ parse_match_expression_test() ->
 
 %% Test parsing multiple trait constraints
 parse_multiple_constraints_test() ->
-    Source = "trait Pipeline m : Applicator m, Chainable m where\n"
+    Source = "trait Pipeline m extend Applicator m, Chainable m where\n"
              "  join : m (m a) -> m a\n"
              "end\n",
     {ok, Tokens} = catena_lexer:tokenize(Source),

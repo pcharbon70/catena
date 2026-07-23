@@ -171,16 +171,17 @@ Current promoted status:
 
 The default `rebar3 eunit` entry point now discovers, compiles, and executes the
 complete active test tree. It is deterministic but not green. Two consecutive
-verified runs on 2026-07-23 each reported 4,668 passing, 122 failing, and zero
+verified runs on 2026-07-23 each reported 4,706 passing, 93 failing, and zero
 skipped tests.
 
 Promoted interpretation:
 
 - `make compile` and `rebar3 compile` compile the active source tree
 - `make test` and `rebar3 eunit` expose the complete active EUnit result
-- the 122 remaining failures are assigned to later spec-source reconciliation
+- the six Phase 2 standard-library/frontend modules pass all 170 focused tests
+- the 93 remaining failures are assigned to later spec-source reconciliation
   phases in the
-  [Phase 1 test baseline](spec-source-reconciliation/phase-01-test-baseline.md)
+  [Phase 2 test baseline](spec-source-reconciliation/phase-02-test-baseline.md)
 - the internal property-testing transition is still underway
 - historical PropEr suites remain preserved under `test_legacy/proper/` as migration targets rather than active default tests
 

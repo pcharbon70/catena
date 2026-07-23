@@ -18,7 +18,7 @@ trait Combiner a where
 end
 
 -- Accumulator: Combiner with identity element
-trait Accumulator a : Combiner a where
+trait Accumulator a extend Combiner a where
   empty : a
 end
 
@@ -28,18 +28,18 @@ trait Mapper f where
 end
 
 -- Applicator: Mapper with pure and apply (Applicative)
-trait Applicator f : Mapper f where
+trait Applicator f extend Mapper f where
   pure : a -> f a,
   apply : f (a -> b) -> f a -> f b
 end
 
 -- Chainable: Sequential binding (Chain)
-trait Chainable m : Mapper m where
+trait Chainable m extend Mapper m where
   chain : (a -> m b) -> m a -> m b
 end
 
 -- Pipeline: Composable effectful computations (Monad)
-trait Pipeline m : Applicator m, Chainable m where
+trait Pipeline m extend Applicator m, Chainable m where
   join : m (m a) -> m a
 end
 
@@ -52,31 +52,31 @@ type Either a b = Left a | Right b
 
 -- Instances for Maybe
 instance Mapper Maybe where
-  transform map f x = match
+  transform map f x = match x of
     | None -> None
-    | Some(a) -> Some (f a)
+    | Some a -> Some (f a)
   end
 end
 
 instance Applicator Maybe where
   transform pure x = Some x,
 
-  transform apply mf mx = match
+  transform apply mf mx = match mf of
     | None -> None
-    | Some(f) -> map f mx
+    | Some f -> map f mx
   end
 end
 
 instance Chainable Maybe where
-  transform chain f x = match
+  transform chain f x = match x of
     | None -> None
-    | Some(a) -> f a
+    | Some a -> f a
   end
 end
 
 instance Pipeline Maybe where
-  transform join x = match
+  transform join x = match x of
     | None -> None
-    | Some(m) -> m
+    | Some m -> m
   end
 end

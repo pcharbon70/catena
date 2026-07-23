@@ -10,7 +10,7 @@ currently non-green active EUnit surface.
 
 - [AGENTS.md](../../AGENTS.md)
 - [Current Status](../planning/current_status.md)
-- [Phase 1 Test Baseline](../planning/spec-source-reconciliation/phase-01-test-baseline.md)
+- [Phase 2 Test Baseline](../planning/spec-source-reconciliation/phase-02-test-baseline.md)
 - [Testing And Quality Contract](../contracts/testing_and_quality_contract.md)
 - `rebar.config`
 - `Makefile`
@@ -55,7 +55,7 @@ The following is part of the current promoted repo status:
 
 - `rebar3 eunit` discovers, compiles, and executes the maintained suite
 - its current nonzero result and exact failure inventory are published in the
-  Phase 1 test baseline
+  Phase 2 test baseline
 - the default path no longer depends on or compiles runnable PropEr-era test modules from `test_legacy/proper/`
 
 This criterion prevents a partial or filtered command from being promoted as a

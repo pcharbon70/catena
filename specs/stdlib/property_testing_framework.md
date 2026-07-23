@@ -157,7 +157,7 @@ Documentation and tooling specs must continue to note the true transition state:
 
 - the default repo-wide `rebar3 eunit` entry point covers the complete active
   suite and reports the current
-  [non-green baseline](../planning/spec-source-reconciliation/phase-01-test-baseline.md)
+  [non-green baseline](../planning/spec-source-reconciliation/phase-02-test-baseline.md)
 - the historical PropEr area no longer contains runnable suites, only documentary artifacts
 - the remaining gaps are advanced internal-framework breadth and workflow ergonomics, not active dependence on PropEr in the default path
 

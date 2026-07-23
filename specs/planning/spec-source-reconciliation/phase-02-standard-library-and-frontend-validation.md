@@ -6,7 +6,7 @@ baseline. It restores higher-kinded trait validation, makes parsed
 import/export forms flow through compilation, and aligns conformance fixtures
 with the canonical language syntax used by the active standard library.
 
-**Status:** In progress.
+**Status:** Complete.
 
 **Dependencies:** Phase 1 complete.
 
@@ -98,21 +98,21 @@ module imports at parser and compilation boundaries.
 exports and `extend` trait inheritance, then publish the reduced full-suite
 baseline.
 
-- [ ] **Section 2.3 Complete**
+- [x] **Section 2.3 Complete**
 
 ### Task 2.3.1: Validate Module-Scoped Exports
 
 **Description:** Test export declarations in the module-header context required
 by the grammar and used by active standard-library files.
 
-- [ ] **Task 2.3.1 Complete**
+- [x] **Task 2.3.1 Complete**
 
 ### Task 2.3.2: Validate Trait Inheritance Syntax
 
 **Description:** Use the canonical `extend` keyword for single and multiple
 trait constraints and remove stale colon-based fixtures.
 
-- [ ] **Task 2.3.2 Complete**
+- [x] **Task 2.3.2 Complete**
 
 ### Task 2.3.3: Publish Phase 2 Verification
 
@@ -120,7 +120,7 @@ trait constraints and remove stale colon-based fixtures.
 the new totals, and update promoted quality status without hiding later-phase
 failures.
 
-- [ ] **Task 2.3.3 Complete**
+- [x] **Task 2.3.3 Complete**
 
 **Acceptance Criteria:**
 
@@ -134,7 +134,7 @@ failures.
 standard-library Prelude compilation succeeds, and the remaining active-suite
 failures belong only to later reconciliation phases.
 
-- [ ] All Phase 2 focused modules pass
-- [ ] Prelude parsing, kind validation, imports, and type checking pass
-- [ ] The complete active-suite baseline is updated
-- [ ] Current-status and standard-library specs match verified behavior
+- [x] All Phase 2 focused modules pass
+- [x] Prelude parsing, kind validation, imports, and type checking pass
+- [x] The complete active-suite baseline is updated
+- [x] Current-status and standard-library specs match verified behavior
