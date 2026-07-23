@@ -184,13 +184,14 @@ check_trait_kind(_) ->
 %% @doc Infer kind of a type variable from how it's used in methods
 infer_var_kind_from_methods(Var, Methods) ->
     MaxArity = lists:foldl(
-        fun(Method) ->
-            case Method of
+        fun(Method, CurrentMax) ->
+            MethodArity = case Method of
                 {trait_sig, _Name, Type, _Loc} ->
-                    erlang:max(max_var_application_arity(Var, Type), 0);
+                    max_var_application_arity(Var, Type);
                 _ ->
                     0
-            end
+            end,
+            erlang:max(CurrentMax, MethodArity)
         end,
         0,
         Methods

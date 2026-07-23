@@ -73,14 +73,22 @@ infer({precord, Fields}, Env, State) ->
 % Pattern: Variant Constructor
 % C p1 ... pn : [... | C T1 ... Tn | ...]
 % where pi : Ti
-% For PoC, we create a fresh variant type with this constructor
 infer({pvariant, Constructor, ArgPatterns}, Env, State) ->
     {ArgTypes, Bindings, State1} = infer_patterns(ArgPatterns, Env, State),
-
-    % Create variant type with this constructor
-    Type = {tvariant, [{Constructor, ArgTypes}]},
-
-    {Type, Bindings, State1};
+    case catena_type_env:lookup(Env, Constructor) of
+        {ok, Scheme} ->
+            {ConstructorType, Constraints, State2} =
+                catena_type_scheme:instantiate(Scheme, State1),
+            State3 = catena_infer_state:add_constraints(Constraints, State2),
+            {Type, State4} =
+                apply_constructor_pattern(Constructor, ConstructorType, ArgTypes, State3),
+            {Type, Bindings, State4};
+        none ->
+            % Structural fallback retained for isolated patterns without a
+            % constructor environment.
+            Type = {tvariant, [{Constructor, ArgTypes}]},
+            {Type, Bindings, State1}
+    end;
 
 % Pattern: As-pattern
 % (p as x) : T where p : T
@@ -158,6 +166,30 @@ infer_or_pattern([Pattern | Rest], Env, State) ->
     {State2} = check_or_pattern_consistency(Rest, Env, State1, Type, Bindings),
 
     {Type, Bindings, State2}.
+
+%% @doc Apply the inferred pattern arguments to a constructor type.
+-spec apply_constructor_pattern(atom(), catena_types:type(), [catena_types:type()],
+                                catena_infer_state:infer_state()) ->
+    {catena_types:type(), catena_infer_state:infer_state()}.
+apply_constructor_pattern(_Constructor, ResultType, [], State) ->
+    Subst = catena_infer_state:get_subst(State),
+    {catena_type_subst:apply(Subst, ResultType), State};
+apply_constructor_pattern(Constructor, {tfun, Expected, Rest, _Effects},
+                          [Actual | ActualRest], State) ->
+    case catena_infer_unify:unify(Expected, Actual, State) of
+        {ok, _Subst, State1} ->
+            Subst = catena_infer_state:get_subst(State1),
+            apply_constructor_pattern(
+                Constructor,
+                catena_type_subst:apply(Subst, Rest),
+                ActualRest,
+                State1
+            );
+        {error, Reason, ErrorState} ->
+            error({constructor_pattern_type_mismatch, Constructor, Reason, ErrorState})
+    end;
+apply_constructor_pattern(Constructor, ConstructorType, ArgTypes, _State) ->
+    error({constructor_pattern_arity_mismatch, Constructor, ConstructorType, length(ArgTypes)}).
 
 %% @doc Check that all or-pattern alternatives have consistent types and bindings
 -spec check_or_pattern_consistency([catena_infer_ast:pattern()], catena_type_env:env(),
@@ -241,5 +273,3 @@ check_type_conflicts([Var | Rest], Env1, Env2) ->
             % Types conflict, return error
             {error, {duplicate_binding, Var, Scheme1, Scheme2}}
     end.
-
-
