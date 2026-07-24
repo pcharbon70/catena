@@ -115,6 +115,19 @@ frontend_failure_returns_no_partial_artifact_test() ->
     ),
     ?assertEqual(non_existing, code:which('BrokenBeamApi')).
 
+invalid_unit_and_source_set_inputs_fail_closed_test() ->
+    ?assertEqual(
+        {error, {invalid_compilation_unit, unchecked_backend_input}},
+        catena_beam_artifact:from_unit(#{})
+    ),
+    ?assertMatch(
+        {error, {invalid_source_set, _, _}},
+        catena_compile:compile_source_set_to_beam(
+            not_a_source_set,
+            #{}
+        )
+    ).
+
 with_loaded_artifact(Artifact, Assertion) ->
     Module = maps:get(runtime_module, Artifact),
     {module, Module} = code:load_binary(

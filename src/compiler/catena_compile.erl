@@ -15,6 +15,8 @@
     compile_file_to_core/2,
     compile_file_to_beam/1,
     compile_file_to_beam/2,
+    compile_source_set_to_beam/1,
+    compile_source_set_to_beam/2,
     compile_string/1,
     compile_string/2,
     compile_string_to_unit/1,
@@ -71,6 +73,40 @@ compile_file_to_beam(Path, Opts) ->
     case read_source_file(Path) of
         {ok, Source} ->
             compile_string_to_beam(Source, file_options(Path, Opts));
+        {error, _} = Error ->
+            Error
+    end.
+
+%% @doc Compile a closed source-module set to validated BEAM artifacts.
+-spec compile_source_set_to_beam(#{atom() => string() | binary()}) ->
+    {ok, map()} | {error, term()}.
+compile_source_set_to_beam(SourceSet) ->
+    compile_source_set_to_beam(SourceSet, #{}).
+
+%% @doc Compile a closed source-module set with shared compiler options.
+%%
+%% Dependencies are ordered before compilation. The public result contains
+%% only the ordered list and the same stable artifacts returned by the string
+%% and file APIs.
+-spec compile_source_set_to_beam(
+    #{atom() => string() | binary()},
+    map()
+) -> {ok, map()} | {error, term()}.
+compile_source_set_to_beam(SourceSet, Opts) ->
+    case catena_module_compile:compile_source_set(SourceSet, Opts) of
+        {ok, #{order := Order, artifacts := Artifacts}} ->
+            {ok, #{
+                order => Order,
+                artifacts => maps:map(
+                    fun(_Module, Artifact) ->
+                        maps:without(
+                            [unit, dependencies, order_index],
+                            Artifact
+                        )
+                    end,
+                    Artifacts
+                )
+            }};
         {error, _} = Error ->
             Error
     end.

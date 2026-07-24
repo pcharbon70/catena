@@ -175,6 +175,143 @@ beam_compiler_diagnostic_retains_original_detail_test() ->
     ?assert(maps:is_key(otp_detail, Error)),
     ?assert(maps:is_key(otp_errors, Details)).
 
+diagnostic_normalizer_handles_warning_and_group_shapes_test() ->
+    [BeamDiagnostic] = catena_artifact_diagnostic:normalize(
+        beam_compilation,
+        warning,
+        {17, beam_validator, sample_warning},
+        #{module => 'NormalizerFixture'}
+    ),
+    ?assertEqual(warning, maps:get(severity, BeamDiagnostic)),
+    ?assertEqual(
+        beam_compilation_failed,
+        maps:get(category, BeamDiagnostic)
+    ),
+    ?assertEqual(
+        {location, 17, 1},
+        maps:get(location, BeamDiagnostic)
+    ),
+    ?assertEqual(
+        [],
+        catena_artifact_diagnostic:normalize(
+            core_validation,
+            warning,
+            [[], {"empty.cat", []}],
+            #{}
+        )
+    ).
+
+origin_fallbacks_cover_line_and_synthetic_metadata_test() ->
+    State = catena_codegen_utils:new_state(#{
+        module_name => 'OriginFallback',
+        source_file => "origin-fallback.cat"
+    }),
+    Synthetic = catena_core_origin:synthetic(
+        cerl:c_var(generated),
+        generated_closure,
+        {location, 4, 2},
+        State
+    ),
+    {ok, SyntheticOrigin} =
+        catena_core_origin:annotation(Synthetic),
+    ?assertEqual(synthetic, maps:get(origin, SyntheticOrigin)),
+    ?assertEqual(
+        "origin-fallback.cat",
+        maps:get(file, SyntheticOrigin)
+    ),
+    ?assertEqual(error, catena_core_origin:annotation(cerl:c_atom(clean))),
+    Generated = [#{
+        origin => user,
+        construct => transform,
+        module => 'OriginFallback',
+        transform => run,
+        generated_identity => {run, 0},
+        location => {location, 12, 4}
+    }],
+    Context = #{
+        module => 'OriginFallback',
+        origins => #{
+            source_locations => #{module => {location, 1, 1}},
+            generated => Generated
+        }
+    },
+    ?assertEqual(
+        {location, 12, 4},
+        maps:get(
+            location,
+            catena_core_origin:nearest(
+                {"fallback.cat", [
+                    {12, core_lint, sample_reason}
+                ]},
+                Context
+            )
+        )
+    ),
+    ?assertEqual(
+        {location, 21, 1},
+        maps:get(
+            location,
+            catena_core_origin:nearest(
+                {21, beam_validator, other_reason},
+                Context
+            )
+        )
+    ),
+    ?assertEqual(
+        {run, 0},
+        maps:get(
+            generated_identity,
+            catena_core_origin:nearest(
+                #{nested => [ignored, {run, 0}]},
+                Context
+            )
+        )
+    ).
+
+origin_inventory_classifies_unknown_generated_functions_test() ->
+    Source =
+        "module OriginInventoryFixture\n"
+        "transform run = 1\n",
+    {ok, Unit} = catena_compile:compile_string_to_unit(Source),
+    Core = cerl:c_module(
+        cerl:c_atom('OriginInventoryFixture'),
+        [],
+        [],
+        [
+            {
+                cerl:c_fname(run, 0),
+                cerl:c_fun([], cerl:c_int(1))
+            },
+            {
+                cerl:c_fname('$catena_dictionary', 2),
+                cerl:c_fun(
+                    [cerl:c_var(left), cerl:c_var(right)],
+                    cerl:c_atom(undefined)
+                )
+            },
+            {
+                cerl:c_fname('$catena_effect_entry$missing', 1),
+                cerl:c_fun(
+                    [cerl:c_var(context)],
+                    cerl:c_atom(undefined)
+                )
+            },
+            {
+                cerl:c_fname('$catena_generated_helper', 0),
+                cerl:c_fun([], cerl:c_atom(undefined))
+            }
+        ]
+    ),
+    Inventory = catena_core_origin:inventory(Unit, Core),
+    Generated = maps:get(generated, Inventory),
+    ?assertEqual(
+        [effect_runtime_entry, generated_function, trait_dictionary, transform],
+        lists:sort([
+            maps:get(construct, Origin)
+            || Origin <- Generated
+        ])
+    ).
+
 collect_origins(Core) ->
     lists:reverse(
         cerl_trees:fold(

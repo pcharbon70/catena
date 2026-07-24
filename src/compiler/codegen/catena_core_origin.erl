@@ -93,9 +93,8 @@ inventory(Unit, CoreModule) ->
 -spec annotation(cerl:cerl()) -> {ok, origin()} | error.
 annotation(Node) ->
     case [
-        Origin
-        || {catena_origin, Origin} <- cerl:get_ann(Node),
-           is_map(Origin)
+        decode_origin(Encoded)
+        || {catena_origin, Encoded} <- cerl:get_ann(Node)
     ] of
         [Origin | _] ->
             {ok, Origin};
@@ -131,7 +130,7 @@ annotate(Node, Origin) ->
            not is_catena_origin(Annotation)
     ],
     cerl:set_ann(Node, otp_annotations(Origin) ++ Existing ++ [
-        {catena_origin, Origin}
+        {catena_origin, encode_origin(Origin)}
     ]).
 
 origin(OriginKind, Construct, Location, State, Extra) ->
@@ -162,6 +161,41 @@ file_annotation(File) -> [{file, File}].
 
 is_catena_origin({catena_origin, _}) -> true;
 is_catena_origin(_) -> false.
+
+%% Core text syntax cannot round-trip map literals in annotations on all
+%% supported OTP releases. Keep the wire annotation tuple-only and decode it
+%% before exposing the stable Catena origin map.
+encode_origin(Origin) ->
+    {
+        catena_origin_v1,
+        maps:get(origin, Origin),
+        maps:get(construct, Origin),
+        maps:get(module, Origin, undefined),
+        maps:get(transform, Origin, undefined),
+        maps:get(generated_identity, Origin, undefined),
+        maps:get(location, Origin, undefined),
+        maps:get(file, Origin, "nofile")
+    }.
+
+decode_origin({
+    catena_origin_v1,
+    Origin,
+    Construct,
+    Module,
+    Transform,
+    GeneratedIdentity,
+    Location,
+    File
+}) ->
+    #{
+        origin => Origin,
+        construct => Construct,
+        module => Module,
+        transform => Transform,
+        generated_identity => GeneratedIdentity,
+        location => Location,
+        file => File
+    }.
 
 generated_origin({Name, Arity} = Identity, Module, Symbols, Unit) ->
     case source_transform(Name, Arity, Symbols) of

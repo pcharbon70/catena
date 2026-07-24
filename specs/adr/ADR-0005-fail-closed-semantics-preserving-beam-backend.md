@@ -171,7 +171,8 @@ BEAM-supported status.
   rather than passing an analyzed AST alone.
 - Existing backend unit tests that bypass validation will need to be clearly
   scoped or migrated.
-- Full conformance requires a broader source-to-BEAM integration suite.
+- The dedicated source-to-BEAM conformance suite adds an ongoing maintenance
+  obligation whenever the promoted feature ledger changes.
 
 ### Neutral Consequences
 
@@ -196,6 +197,19 @@ BEAM-supported status.
 6. Grow executable conformance from the current arithmetic and constructor
    baseline until every promoted backend feature has positive and negative
    evidence.
+
+## Implementation Status
+
+The seven-phase backend-hardening roadmap completed on 2026-07-24. The
+validated compilation unit, explicit symbol/disposition boundaries,
+exhaustive fail-closed lowering, runtime-backed effects, executable
+imports/traits, versioned public BEAM artifacts, source-origin diagnostics,
+and dedicated `SCN-011` conformance evidence implement the decision.
+
+Deferred test/property artifacts, source-language actor/process integration,
+on-disk output, packaging, release assembly, and optimization remain outside
+the promoted backend boundary. Where a deferred construct reaches application
+artifact generation, it is rejected rather than approximated.
 
 ## Related Decisions
 
