@@ -18,6 +18,8 @@ The research corpus under `specs/research/` covers a much larger design space th
 - lexer and parser generation use `leex` and `yecc`
 - the compiler pipeline is `lexer -> parser -> semantic/desugar -> kind checking -> type/effect inference -> code generation`
 - code generation targets Core Erlang and then BEAM compilation
+- the promoted backend direction is fail-closed: every construct is lowered,
+  intentionally erased, runtime-lowered, or rejected before artifact success
 
 ### Type And Effect Direction
 
@@ -54,4 +56,6 @@ The repository currently contains real code and tests for:
 - full Phase 4 module system beyond basic imports
 - actor model integration as a first-class Catena surface
 - full language-surface consolidation and long-tail ergonomics for the newer algebraic-effects machinery
+- complete source-to-BEAM semantic coverage, including resolved named calls,
+  exhaustive lowering, and a public validated BEAM artifact API
 - the remaining generator, runner, and law-testing layers of the internal property-testing framework

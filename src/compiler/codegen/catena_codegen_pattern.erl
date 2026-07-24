@@ -188,11 +188,9 @@ compile_pattern({pat_as, Name, Pattern, _Loc}, State) ->
 %% Or-pattern: p1 | p2 | ... | pn
 %% Or-patterns must be expanded at the clause level, not pattern level
 %% This compile_pattern is only called for individual alternatives
-compile_pattern({pat_or, _Patterns, _Loc}, State) ->
-    %% Or-patterns should be handled by compile_clause/expand_or_patterns
-    %% If we get here, something went wrong - log warning and use wildcard
-    logger:warning("Or-pattern reached compile_pattern - should be expanded at clause level"),
-    {cerl:c_var('_'), State};
+compile_pattern({pat_or, _Patterns, _Loc} = Pattern, _State) ->
+    %% Or-patterns must be expanded by compile_clauses/3.
+    unsupported(or_pattern, Pattern);
 
 %% Record pattern: {field: x, ...}
 compile_pattern({pat_record, Fields, _Loc}, State) ->
@@ -203,10 +201,8 @@ compile_pattern({pat_record, Fields, _Loc}, State) ->
     {Map, State1};
 
 %% Fallback for unknown patterns
-compile_pattern(Unknown, State) ->
-    %% Create a wildcard for unknown patterns (with warning)
-    logger:warning("Unknown pattern type during code generation: ~p", [Unknown]),
-    {cerl:c_var('_'), State}.
+compile_pattern(Unknown, _State) ->
+    unsupported(pattern, Unknown).
 
 %% Helper for record field patterns
 compile_record_patterns(Fields, State) ->
@@ -218,6 +214,20 @@ compile_record_patterns(Fields, State) ->
         end,
         State,
         Fields
+    ).
+
+unsupported(Construct, Pattern) ->
+    Context =
+        catena_backend_error:context(
+            pattern_compilation,
+            Construct,
+            Pattern
+        ),
+    throw(
+        catena_backend_error:unsupported_backend_construct(
+            Construct,
+            Context
+        )
     ).
 
 %%====================================================================

@@ -52,6 +52,7 @@ The structure follows the layered model used by `../epic/jido_os/specs`, adapted
 - [adr/ADR-0002-minimal-core-and-library-first-surface.md](adr/ADR-0002-minimal-core-and-library-first-surface.md)
 - [adr/ADR-0003-explicit-effect-context-runtime.md](adr/ADR-0003-explicit-effect-context-runtime.md)
 - [adr/ADR-0004-flow-as-arrow.md](adr/ADR-0004-flow-as-arrow.md)
+- [adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md](adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md)
 
 ## Conformance
 
@@ -64,6 +65,7 @@ The structure follows the layered model used by `../epic/jido_os/specs`, adapted
 - [planning/README.md](planning/README.md)
 - [planning/current_status.md](planning/current_status.md)
 - [planning/law_verification_staged_plan.md](planning/law_verification_staged_plan.md)
+- [planning/backend-hardening/README.md](planning/backend-hardening/README.md)
 - [operations/README.md](operations/README.md)
 
 ## Research
@@ -73,6 +75,7 @@ The structure follows the layered model used by `../epic/jido_os/specs`, adapted
 ## Domain Indexes
 
 - [compiler/README.md](compiler/README.md)
+- [compiler/core_erlang_and_beam_backend.md](compiler/core_erlang_and_beam_backend.md)
 - [runtime/README.md](runtime/README.md)
 - [stdlib/README.md](stdlib/README.md)
 - [tooling/README.md](tooling/README.md)

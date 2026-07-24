@@ -23,6 +23,12 @@ This includes:
 - kind, type, trait, and effect analysis
 - pattern compilation and code generation
 - limited import processing that is already part of the implemented pipeline
+- validated symbol/call resolution, explicit erasure dispositions, and
+  fail-closed Core Erlang/BEAM artifact generation
+
+The compiler boundary may erase static information, but it must not silently
+approximate or omit runtime semantics. Runtime-backed features cross into the
+runtime boundary through explicit, resolved calls.
 
 ### Runtime Boundary
 

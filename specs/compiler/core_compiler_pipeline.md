@@ -16,6 +16,8 @@ frontend validation to Core Erlang output.
 - [Catena Design Baseline](../design.md)
 - [Current Status](../planning/current_status.md)
 - [Compiler Contract](../contracts/compiler_contract.md)
+- [Core Erlang And BEAM Backend](core_erlang_and_beam_backend.md)
+- [ADR-0005: Fail-Closed, Semantics-Preserving BEAM Backend](../adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md)
 - `src/compiler/catena_compile.erl`
 - `src/compiler/catena_module_loader.erl`
 - `src/compiler/semantic/*`
@@ -32,6 +34,10 @@ frontend validation to Core Erlang output.
   frontend and type-checking path, then return a Core Erlang module.
 - Import processing is intentionally minimal: Catena supports loading modules from the standard library and current project search paths, then merging exported environments into the local type environment.
 - `catena_codegen_lower` is the explicit canonical-AST-to-backend boundary.
+- The current typed-module success acts as a validation gate, but code
+  generation still consumes the analyzed AST. Backend hardening replaces that
+  loose handoff with the validated compilation-unit boundary defined by the
+  Core Erlang and BEAM backend spec.
 
 ## Acceptance Criteria
 
@@ -98,6 +104,15 @@ Any compiler-facing status or design document must describe the current pipeline
   build workflow
 
 This criterion exists to keep the promoted spec aligned with the actual code instead of the aspirational roadmap alone.
+
+### AC-CPIPE-007 Fail-Closed Backend Handoff
+
+The public Core Erlang and future BEAM APIs must hand the backend a validated
+compilation unit with the source, symbol, arity, type, declaration-disposition,
+and location information required by
+[Core Erlang And BEAM Backend](core_erlang_and_beam_backend.md). Passing type
+validation and then lowering an unrelated or insufficiently described AST is
+not the completed backend boundary.
 
 ## Out Of Scope
 

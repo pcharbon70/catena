@@ -16,6 +16,7 @@ specs. Their machine-readable EUnit evidence lives in
 | `SCN-008` | Exercise Internal Property Testing | Catena-owned generators, shrinking, properties, runners, reporting, adapters, and advanced helper boundaries execute coherently. |
 | `SCN-009` | Build And Test The Repo | Generated-source hooks, module checks, focused workflows, governance checks, and the complete active suite remain reviewable through canonical commands. |
 | `SCN-010` | Verify Trait Laws | Structural and concrete Catena laws plus known-instance generic law checks execute through the maintained stdlib/property-testing bridge. |
+| `SCN-011` | Execute BEAM Backend Conformance | Each promoted backend feature compiles from Catena source through validated Core Erlang to a loadable BEAM binary with the expected result, while unsupported or unresolved semantics fail before artifact emission. |
 
 ## Executable Evidence
 

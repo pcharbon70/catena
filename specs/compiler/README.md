@@ -3,6 +3,8 @@
 This index covers the promoted compiler-domain surfaces.
 
 - [core_compiler_pipeline.md](core_compiler_pipeline.md)
+- [core_erlang_and_beam_backend.md](core_erlang_and_beam_backend.md)
+- [beam_backend_feature_ledger.md](beam_backend_feature_ledger.md)
 - [type_and_effect_system.md](type_and_effect_system.md)
 - [pattern_matching_engine.md](pattern_matching_engine.md)
 

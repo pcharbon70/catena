@@ -57,6 +57,9 @@ generate_module(ModuleAST, Opts) ->
         %% Erase types from declarations
         ErasedDecls = erase_types(Decls),
 
+        %% Every declaration must have an explicit emission disposition.
+        ok = validate_declaration_dispositions(ErasedDecls, Name),
+
         %% Filter out erased declarations
         ActiveDecls = [D || D <- ErasedDecls, D =/= erased],
 
@@ -79,8 +82,12 @@ generate_module(ModuleAST, Opts) ->
 
         {ok, CoreModule}
     catch
+        error:{backend_error, _, _} = Diagnostic:_Stack ->
+            {error, Diagnostic};
         error:Reason:_Stack ->
             {error, {codegen_error, Reason}};
+        throw:{backend_error, _, _} = Diagnostic ->
+            {error, Diagnostic};
         throw:Reason ->
             {error, {codegen_error, Reason}}
     end.
@@ -88,6 +95,33 @@ generate_module(ModuleAST, Opts) ->
 %% Erase types from declarations
 erase_types(Decls) ->
     [catena_codegen_erase:erase_decl(D) || D <- Decls].
+
+validate_declaration_dispositions(Decls, ModuleName) ->
+    lists:foreach(
+        fun
+            (erased) ->
+                ok;
+            ({transform, _, _, _, _}) ->
+                ok;
+            ({transform_typed, _, _, _, _, _}) ->
+                ok;
+            (Declaration) ->
+                Context =
+                    catena_backend_error:context(
+                        declaration_disposition,
+                        declaration,
+                        Declaration,
+                        #{module => ModuleName}
+                    ),
+                throw(
+                    catena_backend_error:invalid_declaration_disposition(
+                        Declaration,
+                        Context
+                    )
+                )
+        end,
+        Decls
+    ).
 
 %%====================================================================
 %% Module Structure Generation (1.3.4.1)
@@ -195,11 +229,19 @@ compile_param({pat_wildcard, _Loc}, State) ->
     catena_codegen_utils:fresh_var(State);
 compile_param({pat_typed_var, Name, _Type, _Loc}, State) ->
     {cerl:c_var(Name), State};
-compile_param(Other, State) ->
-    %% For complex patterns, generate fresh var
-    %% (full pattern matching handled elsewhere)
-    logger:warning("Complex parameter pattern in code generation: ~p", [Other]),
-    catena_codegen_utils:fresh_var(State).
+compile_param(Other, _State) ->
+    Context =
+        catena_backend_error:context(
+            function_compilation,
+            parameter_pattern,
+            Other
+        ),
+    throw(
+        catena_backend_error:unsupported_backend_construct(
+            parameter_pattern,
+            Context
+        )
+    ).
 
 maybe_wrap_effect_runtime(Body, CoreBody) ->
     case requires_effect_runtime(Body) of

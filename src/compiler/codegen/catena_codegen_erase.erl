@@ -63,6 +63,10 @@ erase_decl({type_decl, _Name, _TypeVars, _Constructors, _Derives, _Loc}) ->
     %% Type declarations are completely erased
     erased;
 
+erase_decl({type_decl, _Name, _TypeVars, _Constructors, _Loc}) ->
+    %% Legacy backend form without an explicit derives list
+    erased;
+
 erase_decl({trait_decl, _Name, _TypeVar, _Supertraits, _Methods, _Loc}) ->
     %% Trait declarations are erased (methods become regular functions)
     erased;

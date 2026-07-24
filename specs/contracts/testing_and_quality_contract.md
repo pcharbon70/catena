@@ -11,3 +11,4 @@ This contract defines the `REQ-TEST-*` family for Catena's build, test, and qual
 - `REQ-TEST-005`: Known quality gaps in the default build/test workflow SHOULD be documented canonically until they are resolved.
 - `REQ-TEST-006`: Planning sections that claim completion SHOULD ideally have corresponding tests, summaries, or code surfaces that make that completion reviewable.
 - `REQ-TEST-007`: The maintained workflow MUST expose executable spec-governance and scenario-conformance commands that validate promoted catalog relationships and run representative evidence without replacing the complete active suite.
+- `REQ-TEST-008`: Every Catena construct promoted as BEAM-supported MUST have positive source-to-Core-to-BEAM execution evidence, while deferred and invalid backend paths that could otherwise be approximated or omitted MUST have negative artifact-generation evidence.
