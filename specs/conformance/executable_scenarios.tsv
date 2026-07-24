@@ -15,5 +15,6 @@ SCN-007	catena_stdlib_validation_tests	test/compiler/types/catena_stdlib_validat
 SCN-008	catena_property_convergence_tests	test/testing/catena_property_convergence_tests.erl
 SCN-008	catena_phase3_integration_tests	test/proptest/catena_phase3_integration_tests.erl
 SCN-009	catena_workflow_validation_tests	test/testing/catena_workflow_validation_tests.erl
+SCN-009	catena_specs_governance_tests	test/tooling/catena_specs_governance_tests.erl
 SCN-010	catena_stdlib_laws_tests	test/compiler/integration/catena_stdlib_laws_tests.erl
 SCN-010	catena_stdlib_law_bridge_tests	test/testing/catena_stdlib_law_bridge_tests.erl

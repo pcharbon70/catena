@@ -84,7 +84,7 @@ live promoted standard-library specification.
 enforce the relationships declared in Section 7.1 and expose them through
 canonical repository commands.
 
-- [ ] **Section 7.2 Complete**
+- [x] **Section 7.2 Complete**
 
 ### Task 7.2.1: Validate Governance Relationships
 
@@ -92,42 +92,42 @@ canonical repository commands.
 references, evidence rows, component acceptance-criteria mappings, ADR
 cataloging, and local Markdown links.
 
-- [ ] **Task 7.2.1 Complete**
+- [x] **Task 7.2.1 Complete**
 
 #### Subtask 7.2.1.1: Implement Structured Validation
 
 **Description:** Return stable success counts or actionable typed errors from
 a reusable Erlang governance module.
 
-- [ ] **Subtask 7.2.1.1 Complete**
+- [x] **Subtask 7.2.1.1 Complete**
 
 #### Subtask 7.2.1.2: Verify Failure Detection
 
 **Description:** Add focused tests for the live repository and deliberately
 invalid fixture repositories.
 
-- [ ] **Subtask 7.2.1.2 Complete**
+- [x] **Subtask 7.2.1.2 Complete**
 
 ### Task 7.2.2: Expose Canonical Commands
 
 **Description:** Provide command-line and Make entry points for governance-only
 checks, focused executable scenarios, and the complete verification workflow.
 
-- [ ] **Task 7.2.2 Complete**
+- [x] **Task 7.2.2 Complete**
 
 #### Subtask 7.2.2.1: Add The Specs Checker
 
 **Description:** Add a CLI wrapper that prints the validated governance counts
 and exits nonzero with actionable errors.
 
-- [ ] **Subtask 7.2.2.1 Complete**
+- [x] **Subtask 7.2.2.1 Complete**
 
 #### Subtask 7.2.2.2: Add Conformance And Verify Targets
 
 **Description:** Run manifest-selected EUnit modules for conformance and
 compose specs plus the complete test suite for full verification.
 
-- [ ] **Subtask 7.2.2.2 Complete**
+- [x] **Subtask 7.2.2.2 Complete**
 
 **Acceptance Criteria:**
 

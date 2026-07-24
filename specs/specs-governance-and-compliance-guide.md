@@ -20,6 +20,40 @@ The goal is to keep `specs/`:
 5. Cross-cutting ownership changes should update an ADR in the same change set and keep `adr/adr_catalog.md` in sync.
 6. Component specs should only add `AC-*` entries when the surface is concrete enough to verify against the repo.
 
+## Executable Governance
+
+The local governance gate enforces the relationships described by the baseline rules:
+
+```bash
+# Validate requirement families, scenarios, executable evidence,
+# component acceptance criteria, ADR coverage, paths, and Markdown links.
+make check-specs
+
+# Run only the EUnit modules named by the executable scenario manifest.
+make conformance
+
+# Run specs governance followed by the complete test suite.
+make verify
+```
+
+The executable evidence manifest is
+[`conformance/executable_scenarios.tsv`](conformance/executable_scenarios.tsv).
+Each row must reference a defined `SCN-*` identifier, an existing Erlang test
+source, and the module declared by that source. The manifest is the single
+source used by `make conformance`; a scenario can therefore have several
+focused evidence modules without duplicating command configuration.
+
+`make check-specs` fails when:
+
+- a concrete requirement family is missing from the catalog or matrix
+- a scenario is missing from the catalog, matrix, or evidence manifest
+- an evidence source or declared module does not match the manifest
+- a component with `AC-*` criteria is absent from the matrix
+- acceptance-criterion identifiers are duplicated
+- an ADR is absent from the ADR catalog
+- a path named by the conformance matrix does not exist
+- a local Markdown link under `specs/` is broken
+
 ## Reconciliation Rule
 
 Catena currently has planning/status drift in a few places:
@@ -45,5 +79,6 @@ Add or expand material in `specs/` when it is:
 
 ## Current Scope
 
-This repository does not yet enforce a CI governance gate for `specs/`.
-Until that exists, keeping `specs/` accurate is a documentation discipline rather than an automated policy check.
+The executable governance and conformance gates are available locally.
+CI enforcement is introduced separately so the command contract can be
+validated before it becomes a required remote check.
