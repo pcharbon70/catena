@@ -2,8 +2,9 @@
 
 ## Status
 
-Phase 1 ending baseline, derived from the parser grammar, normalized AST, and
-executable backend evidence on 2026-07-24.
+Phase 2 ending baseline, derived from the parser grammar, validated compilation
+unit, normalized AST, declaration dispositions, and executable backend evidence
+on 2026-07-24.
 
 This ledger is the maintained inventory required by
 [ADR-0005](../adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md).
@@ -25,8 +26,10 @@ term.
 The source inventory comes from
 `src/compiler/parser/catena_parser.yrl`. Normalization evidence comes from
 `src/compiler/semantic/catena_desugar.erl` and
-`src/compiler/codegen/catena_codegen_lower.erl`. Backend evidence comes from
-the `catena_codegen_*` modules and the tests linked below.
+`src/compiler/codegen/catena_codegen_lower.erl`. Validated authority and
+declaration classification come from `catena_compilation_unit` and
+`catena_declaration_disposition`. Backend evidence comes from the
+`catena_codegen_*` modules and the tests linked below.
 
 ## Module And Declaration Inventory
 
@@ -35,16 +38,16 @@ the `catena_codegen_*` modules and the tests linked below.
 | Module header and nested module name | Core module identity | Proven | `catena_codegen_lower_tests`, `catena_core_pipeline_tests` |
 | Exported transform | Core export with source arity | Proven | `catena_codegen_lower_tests`, `catena_core_pipeline_tests` |
 | Exported type, trait, or effect | Frontend metadata only | Static-erased | `catena_codegen_erase:erase_decl/1`; executable export semantics are deferred |
-| Import: open, qualified, aliased, or selective | Frontend environment metadata; no executable linkage | Deferred | `catena_compile`; Phase 6 roadmap |
-| Type declaration and constructors | Declaration erased after constructor metadata is consumed | Static-erased | `catena_codegen_erase_tests`, constructor rows below |
+| Import: open, qualified, aliased, or selective | Explicit unsupported disposition retaining linkage metadata; no executable linkage | Deferred | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests`; Phase 6 roadmap |
+| Type declaration and constructors | Static-erased only after constructor representation metadata is retained | Static-erased | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests`, constructor rows below |
 | Transform with implementation, including guarded and multi-clause forms | Function plus case clauses | Proven for simple and constructor clauses; otherwise Lowering-only | `catena_codegen_lower_tests`, `catena_core_pipeline_tests` |
-| Signature-only transform | Removed by lowering without executable requirement analysis | Deferred | `catena_codegen_lower:lower_decl/1`; Phase 2 roadmap |
-| Effect declaration and operations | Declaration metadata erased | Static-erased | `catena_codegen_erase:erase_decl/1` |
-| Trait declaration, extends list, signatures, and default members | Declaration erased; dispatch metadata is incomplete | Deferred | `catena_codegen_erase:erase_decl/1`; Phase 6 roadmap |
-| Instance declaration and methods | Provisional dictionary transform | Lowering-only | `catena_codegen_erase_tests`; dispatch is not source-to-BEAM proven |
-| Test declaration | Explicitly rejected for application artifact generation | Deferred | `catena_backend_hardening_phase1_tests`; Phase 2 roadmap |
-| Property declaration with `forall` bindings | Explicitly rejected for application artifact generation | Deferred | `catena_backend_hardening_phase1_tests`; Phase 2 roadmap |
-| Unknown or unclassified declaration | `invalid_declaration_disposition` before module success | Deferred | `catena_backend_baseline_tests` |
+| Signature-only transform | Static-erased only when not runtime-exported; an exported signature fails with `missing_transform_implementation` | Deferred | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests` |
+| Effect declaration and operations | Static-erased after operation metadata is retained | Static-erased | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests` |
+| Trait declaration, extends list, signatures, and default members | Explicit unsupported disposition retaining dispatch metadata | Deferred | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests`; Phase 6 roadmap |
+| Instance declaration and methods | Explicit unsupported disposition retaining dictionary metadata | Deferred | `catena_declaration_disposition_tests`; Phase 6 roadmap |
+| Test declaration | Explicit unsupported disposition and application-artifact rejection | Deferred | `catena_backend_hardening_phase1_tests`, `catena_backend_hardening_phase2_tests` |
+| Property declaration with `forall` bindings | Explicit unsupported disposition and application-artifact rejection | Deferred | `catena_backend_hardening_phase1_tests`, `catena_backend_hardening_phase2_tests` |
+| Unknown or unclassified declaration | `invalid_declaration_disposition` before lowering or module success | Deferred | `catena_backend_baseline_tests`, `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests` |
 
 ## Expression Inventory
 

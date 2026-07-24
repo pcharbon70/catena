@@ -13,6 +13,7 @@
 
 -export([
     %% Main generation
+    generate_validated_module/1,
     generate_module/1,
     generate_module/2,
 
@@ -42,11 +43,39 @@
 %% Main Generation
 %%====================================================================
 
-%% @doc Generate a Core Erlang module from Catena AST
+%% @doc Generate Core Erlang from the validated compiler handoff.
+%%
+%% Production source compilation enters the backend here.  The unit contract
+%% guarantees that normalized source, typed results, symbols, disposition
+%% slots, source locations, and compiler options remain available together.
+-spec generate_validated_module(catena_compilation_unit:t()) ->
+    {ok, cerl:cerl()} | {error, term()}.
+generate_validated_module(Unit) ->
+    case catena_compilation_unit:is_compilation_unit(Unit) of
+        true ->
+            case catena_declaration_disposition:prepare_for_codegen(Unit) of
+                {ok, BackendAST} ->
+                    CompilerOpts = catena_compilation_unit:options(Unit),
+                    CodegenOpts = maps:get(codegen_opts, CompilerOpts, #{}),
+                    generate_module(BackendAST, CodegenOpts);
+                {error, _} = Error ->
+                    Error
+            end;
+        false ->
+            {error, {invalid_compilation_unit, unchecked_backend_input}}
+    end.
+
+%% @doc Generate a Core Erlang module directly from backend-shaped Catena AST.
+%%
+%% This low-level compatibility helper is for code-generation unit tests and
+%% internal lowering work.  It is not the safe production compilation boundary;
+%% source callers must use catena_compile, which enters through
+%% generate_validated_module/1.
 -spec generate_module(module_ast()) -> {ok, cerl:cerl()} | {error, term()}.
 generate_module(ModuleAST) ->
     generate_module(ModuleAST, #{}).
 
+%% @doc Low-level raw-AST generation with backend options.
 -spec generate_module(module_ast(), gen_opts()) -> {ok, cerl:cerl()} | {error, term()}.
 generate_module(ModuleAST, Opts) ->
     try

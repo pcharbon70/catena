@@ -3,7 +3,8 @@
 ## Status
 
 Promoted status: implemented through typed-module compilation and an explicit,
-type-validated source-to-Core Erlang API.
+type-validated source-to-Core Erlang API whose backend handoff is a validated
+compilation unit.
 
 ## Purpose
 
@@ -32,12 +33,15 @@ frontend validation to Core Erlang output.
 - The public compile path currently returns `{ok, {typed_module, Name, TypedDecls, Env}}` or a stage-specific error.
 - `compile_string_to_core/1,2` and `compile_file_to_core/1,2` reuse the same
   frontend and type-checking path, then return a Core Erlang module.
+- `compile_string_to_unit/1,2` is the maintained compiler-internal handoff for
+  artifact backends. It retains normalized source, typed declarations, the
+  effective environment, imports, exports, options, validation evidence,
+  symbols, locations, and declaration dispositions.
 - Import processing is intentionally minimal: Catena supports loading modules from the standard library and current project search paths, then merging exported environments into the local type environment.
 - `catena_codegen_lower` is the explicit canonical-AST-to-backend boundary.
-- The current typed-module success acts as a validation gate, but code
-  generation still consumes the analyzed AST. Backend hardening replaces that
-  loose handoff with the validated compilation-unit boundary defined by the
-  Core Erlang and BEAM backend spec.
+- The typed-module and Core APIs share one frontend-success assembly path.
+  Production Core generation accepts the resulting validated unit; direct raw
+  AST generation remains a documented low-level codegen test helper.
 
 ## Acceptance Criteria
 

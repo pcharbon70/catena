@@ -20,3 +20,4 @@ SCN-010	catena_stdlib_laws_tests	test/compiler/integration/catena_stdlib_laws_te
 SCN-010	catena_stdlib_law_bridge_tests	test/testing/catena_stdlib_law_bridge_tests.erl
 SCN-011	catena_core_pipeline_tests	test/compiler/integration/catena_core_pipeline_tests.erl
 SCN-011	catena_backend_hardening_phase1_tests	test/compiler/integration/catena_backend_hardening_phase1_tests.erl
+SCN-011	catena_backend_hardening_phase2_tests	test/compiler/integration/catena_backend_hardening_phase2_tests.erl
