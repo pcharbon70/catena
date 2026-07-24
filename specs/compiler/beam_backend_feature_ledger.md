@@ -2,8 +2,8 @@
 
 ## Status
 
-Phase 1 baseline, derived from the parser grammar and the normalized AST on
-2026-07-24.
+Phase 1 ending baseline, derived from the parser grammar, normalized AST, and
+executable backend evidence on 2026-07-24.
 
 This ledger is the maintained inventory required by
 [ADR-0005](../adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md).
@@ -42,9 +42,9 @@ the `catena_codegen_*` modules and the tests linked below.
 | Effect declaration and operations | Declaration metadata erased | Static-erased | `catena_codegen_erase:erase_decl/1` |
 | Trait declaration, extends list, signatures, and default members | Declaration erased; dispatch metadata is incomplete | Deferred | `catena_codegen_erase:erase_decl/1`; Phase 6 roadmap |
 | Instance declaration and methods | Provisional dictionary transform | Lowering-only | `catena_codegen_erase_tests`; dispatch is not source-to-BEAM proven |
-| Test declaration | No application-artifact disposition; can be silently filtered | Known-failing | `catena_backend_baseline_tests`; Phase 2 roadmap |
-| Property declaration with `forall` bindings | No application-artifact disposition; can be silently filtered | Known-failing | `catena_backend_baseline_tests`; Phase 2 roadmap |
-| Unknown or unclassified declaration | Silently filtered from the generated module | Known-failing | `catena_backend_baseline_tests` |
+| Test declaration | Explicitly rejected for application artifact generation | Deferred | `catena_backend_hardening_phase1_tests`; Phase 2 roadmap |
+| Property declaration with `forall` bindings | Explicitly rejected for application artifact generation | Deferred | `catena_backend_hardening_phase1_tests`; Phase 2 roadmap |
+| Unknown or unclassified declaration | `invalid_declaration_disposition` before module success | Deferred | `catena_backend_baseline_tests` |
 
 ## Expression Inventory
 
@@ -56,7 +56,7 @@ the `catena_codegen_*` modules and the tests linked below.
 | Function application | Core `apply` or explicit module call | Lowering-only; named local call is Known-failing | `catena_codegen_expr_tests`, `catena_backend_baseline_tests` |
 | Field access | `maps:get/2` | Lowering-only | `catena_codegen_expr_tests` |
 | `let` with variable binding | Core `let` | Lowering-only | `catena_codegen_expr_tests` |
-| `let` with a non-variable binding pattern | Binding replaced by wildcard | Known-failing | `catena_backend_baseline_tests` |
+| `let` with a non-variable binding pattern | `unsupported_backend_construct` before Core emission | Deferred | `catena_backend_hardening_phase1_tests` |
 | Lambda | Core function | Lowering-only | `catena_codegen_expr_tests` |
 | Match function and match with scrutinee | Core case and clauses | Proven for constructor clauses; otherwise Lowering-only | `catena_core_pipeline_tests`, `catena_codegen_pattern_tests` |
 | Empty/non-empty list | Native list | Lowering-only | `catena_codegen_expr_tests` |
@@ -65,7 +65,7 @@ the `catena_codegen_*` modules and the tests linked below.
 | `perform Effect.operation(...)` | Catena effect-runtime call | Runtime-lowered | `catena_effect_codegen_tests` |
 | `handle ... then` and handler operation cases | Catena effect-runtime handler boundary | Runtime-lowered | `catena_effect_codegen_tests` |
 | `do { ... }` with bind, let, action, and return statements | Desugared to `chain`, lambda, and `let` | Deferred | `catena_desugar`; named trait-method resolution is incomplete |
-| Unknown normalized expression | Attempts to generate `{error, unknown_expression, Term}` through a nonexistent Core constructor and crashes | Known-failing | `catena_backend_baseline_tests` |
+| Unknown normalized expression | `unsupported_backend_construct` before Core emission | Deferred | `catena_backend_hardening_phase1_tests` |
 
 `if_expr`, explicit atom/character/boolean literals, `module_call`, and
 `try_with_expr` are backend-normalized forms rather than productions in the
@@ -85,8 +85,9 @@ parser-native surface entries.
 | Tuple | Native tuple pattern | Lowering-only | `catena_codegen_pattern_tests` |
 | Empty and populated record | Core map pattern | Lowering-only | `catena_codegen_pattern_tests` |
 | As-pattern | Core alias pattern | Lowering-only | `catena_codegen_pattern_tests` |
-| Or-pattern | Expanded when it is the single clause pattern; misplaced forms become wildcard | Known-failing | `catena_codegen_pattern_tests`, `catena_backend_baseline_tests` |
-| Unknown normalized pattern | Replaced by wildcard | Known-failing | `catena_backend_baseline_tests` |
+| Or-pattern in the single clause-pattern position | Expanded into alternative Core clauses | Lowering-only | `catena_codegen_pattern_tests` |
+| Misplaced normalized or-pattern | `unsupported_backend_construct` before Core emission | Deferred | `catena_backend_baseline_tests` |
+| Unknown normalized pattern | `unsupported_backend_construct` before Core emission | Deferred | `catena_backend_hardening_phase1_tests` |
 
 ## Operator Inventory
 
@@ -103,12 +104,13 @@ parser-native surface entries.
 | `>>>`, `<<<`, `***`, `&&&` | Desugared to flow method calls | Deferred | `catena_desugar`; Phase 6 roadmap |
 | `<>` | Desugared to `combine` | Deferred | `catena_desugar`; Phase 6 roadmap |
 | `>=>` | Desugared to `kleisli` | Deferred | `catena_desugar`; Phase 6 roadmap |
-| Unknown normalized binary or unary operator | Arbitrary `erlang:Operator` call | Known-failing | `catena_backend_baseline_tests` |
+| Unknown normalized binary or unary operator | `unsupported_backend_construct` before Core emission | Deferred | `catena_backend_baseline_tests`, `catena_backend_hardening_phase1_tests` |
 
 ## Maintenance Rule
 
 Any grammar or canonical AST change must update this ledger in the same
 section-level commit. A row moves to Proven only with source-to-BEAM execution
-evidence. A Known-failing or Deferred row must reject artifact generation
-after Phase 1 unless a later phase promotes it with an accepted
-representation.
+evidence. Deferred lowering must reject artifact generation unless a later
+phase promotes it with an accepted representation. Known-failing behavior
+that is not a lossy fallback remains visible until its scheduled phase fixes
+it.

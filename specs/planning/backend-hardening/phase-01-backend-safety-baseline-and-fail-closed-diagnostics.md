@@ -5,7 +5,7 @@ introduces stable backend diagnostic categories, and removes the most dangerous
 placeholder and wildcard fallbacks before later phases expand executable
 coverage.
 
-**Status:** Planned.
+**Status:** Complete.
 
 **Dependencies:** ADR-0005 and the Core Erlang and BEAM backend spec accepted.
 
@@ -171,14 +171,14 @@ away.
 green while every captured lossy fallback now fails deterministically before
 artifact success.
 
-- [ ] **Section 1.4 Complete**
+- [x] **Section 1.4 Complete**
 
 ### Task 1.4.1: Verify Supported Baseline Preservation
 
 **Description:** Run the current source-to-Core-to-BEAM arithmetic and
 constructor-pattern programs through the hardened error boundary.
 
-- [ ] **Task 1.4.1 Complete**
+- [x] **Task 1.4.1 Complete**
 
 #### Subtask 1.4.1.1: Execute Existing Positive Fixtures
 
@@ -186,14 +186,14 @@ constructor-pattern programs through the hardened error boundary.
 and multi-clause constructor matches still compile, load, and return expected
 values.
 
-- [ ] **Subtask 1.4.1.1 Complete**
+- [x] **Subtask 1.4.1.1 Complete**
 
 #### Subtask 1.4.1.2: Preserve Frontend Failure Families
 
 **Description:** Confirm lexer, parser, semantic, kind, import, type, and effect
 failures still stop before code generation with their original categories.
 
-- [ ] **Subtask 1.4.1.2 Complete**
+- [x] **Subtask 1.4.1.2 Complete**
 
 ### Task 1.4.2: Verify Fail-Closed Rejection
 
@@ -201,7 +201,7 @@ failures still stop before code generation with their original categories.
 focused backend tests and public source-to-Core tests where the grammar can
 produce the construct.
 
-- [ ] **Task 1.4.2 Complete**
+- [x] **Task 1.4.2 Complete**
 
 #### Subtask 1.4.2.1: Assert No Placeholder Artifacts
 
@@ -209,7 +209,7 @@ produce the construct.
 declarations return structured errors and do not appear in successful Core
 Erlang.
 
-- [ ] **Subtask 1.4.2.1 Complete**
+- [x] **Subtask 1.4.2.1 Complete**
 
 #### Subtask 1.4.2.2: Run Phase Completion Gates
 
@@ -217,4 +217,13 @@ Erlang.
 `make conformance`, and the complete active EUnit suite and publish the ending
 support ledger.
 
-- [ ] **Subtask 1.4.2.2 Complete**
+- [x] **Subtask 1.4.2.2 Complete**
+
+### Phase Completion Evidence
+
+- `catena_backend_hardening_phase1_tests`: 15 passing integration tests
+- focused backend suites: 168 passing tests before the final integration suite
+- `make check-specs`: 42 requirements, 11 scenarios, 21 evidence rows across
+  20 modules, 73 acceptance criteria, and five ADRs
+- `make conformance`: 426 passing tests
+- `make test`: 4,873 passing tests, zero failures, and zero skipped tests

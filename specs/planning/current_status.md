@@ -198,10 +198,15 @@ Current promoted status:
   [backend component spec](../compiler/core_erlang_and_beam_backend.md)
   distinguishes proven, lowering-only, static-erased, runtime-lowered, and
   deferred behavior
-- the
+- Phase 1 of the
   [seven-phase implementation roadmap](backend-hardening/README.md)
-  is planned and begins with a reproducible feature ledger, structured
-  diagnostics, and removal of placeholder and wildcard fallbacks
+  is complete with a reproducible feature ledger, eight stable backend
+  diagnostic categories, explicit declaration rejection, and fail-closed
+  expression, operator, binding, and pattern fallbacks
+- `SCN-011` now includes a dedicated Phase 1 backend suite proving the
+  arithmetic and constructor-pattern vertical slice, preservation of lexer,
+  parser, semantic, kind, import, type, and effect errors, and rejection of
+  deferred application artifacts
 - later phases introduce the validated compilation unit, local and recursive
   call resolution, exhaustive pure lowering, effect semantics, executable
   module/trait linkage, and the public source-to-BEAM API
@@ -210,16 +215,18 @@ Current promoted status:
 
 Important caveat:
 
-- the accepted architecture and plan do not upgrade the current implementation
-  status; the backend remains a working vertical slice with named-call,
-  linkage, trait-dispatch, declaration-disposition, and API gaps
+- Phase 1 improves safety without expanding the promoted executable language;
+  the backend remains a working vertical slice with named-call, linkage,
+  trait-dispatch, complete declaration-disposition, and public BEAM API gaps
+- Phase 2, validated compilation units and declaration disposition, is the
+  next backend-hardening phase
 
 ## Current Quality State
 
 The default `rebar3 eunit` entry point discovers, compiles, and executes the
-complete active test tree. Two consecutive final verified runs on 2026-07-24
-each reported 4,838 passing, zero failing, and zero skipped tests, as recorded
-in the
+complete active test tree. The backend-hardening Phase 1 gate on 2026-07-24
+reported 4,873 passing, zero failing, and zero skipped tests. The earlier
+4,838-test baseline remains recorded in the
 [Phase 7 test baseline](spec-source-reconciliation/phase-07-test-baseline.md).
 
 Promoted interpretation:

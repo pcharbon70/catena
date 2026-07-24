@@ -2,7 +2,8 @@
 
 ## Status
 
-Promoted target: accepted architecture with partial implementation.
+Promoted target: accepted architecture with Phase 1 backend safety implemented
+and later backend phases partial or planned.
 
 The current repository proves a working source-to-BEAM vertical slice for
 representative transforms, arithmetic, algebraic data constructors, and
@@ -41,6 +42,7 @@ It distinguishes:
 - `src/compiler/codegen/catena_codegen_pattern.erl`
 - `src/compiler/codegen/catena_effect_codegen.erl`
 - `test/compiler/integration/catena_core_pipeline_tests.erl`
+- `test/compiler/integration/catena_backend_hardening_phase1_tests.erl`
 
 ## Compilation Boundary
 
@@ -242,9 +244,9 @@ does not promote a Catena feature to BEAM-supported status.
 
 ## Conformance Evidence Strategy
 
-`SCN-011` owns the executable BEAM backend contract. Its initial evidence is
-the existing arithmetic and constructor-pattern vertical slice. Completion
-requires a dedicated backend conformance suite covering at least:
+`SCN-011` owns the executable BEAM backend contract. Phase 1 evidence includes
+the arithmetic and constructor-pattern vertical slice plus the dedicated
+fail-closed backend suite. Later phases extend that suite to cover:
 
 - literals and primitive operators
 - local, forward, recursive, imported, and higher-order calls

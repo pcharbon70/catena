@@ -27,17 +27,19 @@ Based on the current `specs/` set, codebase, and test suite, the current promote
   paths, and links are checked by executable governance. Scenario evidence has
   a focused manifest-driven runner, and the complete verification contract is
   enforced in CI.
+- Backend-hardening Phase 1 is complete: backend support is inventoried,
+  diagnostics have stable categories and source context, and lossy codegen
+  fallbacks reject before successful Core artifact emission.
 
 ## Immediate Targets
 
-- Execute the fail-closed backend hardening defined by
+- Continue the fail-closed backend hardening defined by
   [ADR-0005](adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md)
   and the
   [Core Erlang and BEAM backend spec](compiler/core_erlang_and_beam_backend.md),
-  following the
-  [seven-phase implementation roadmap](planning/backend-hardening/README.md)
-  beginning with the reproducible support ledger and removal of placeholder
-  fallbacks.
+  with Phase 2 of the
+  [seven-phase implementation roadmap](planning/backend-hardening/README.md):
+  validated compilation units and complete declaration disposition.
 - Execute the
   [Dialyzer remediation roadmap](planning/dialyzer-remediation/README.md) to
   replace the visible 777-warning inventory with an enforced zero-warning
