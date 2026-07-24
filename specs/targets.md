@@ -30,6 +30,14 @@ Based on the current `specs/` set, codebase, and test suite, the current promote
 
 ## Immediate Targets
 
+- Execute the fail-closed backend hardening defined by
+  [ADR-0005](adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md)
+  and the
+  [Core Erlang and BEAM backend spec](compiler/core_erlang_and_beam_backend.md),
+  following the
+  [seven-phase implementation roadmap](planning/backend-hardening/README.md)
+  beginning with the reproducible support ledger and removal of placeholder
+  fallbacks.
 - Execute the
   [Dialyzer remediation roadmap](planning/dialyzer-remediation/README.md) to
   replace the visible 777-warning inventory with an enforced zero-warning

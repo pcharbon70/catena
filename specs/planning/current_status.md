@@ -18,6 +18,7 @@ It exists because some planning checklists are stale relative to later implement
 | Law verification | Structural and concrete stdlib laws execute, and known-instance generic checks bridge into the internal proptest framework; automatic derivation and broader workflow ergonomics remain future work. |
 | Language revamp migration | Completed and now historical. |
 | Flow | The pure Flow core is materially implemented in stdlib/compiler/test surfaces; later phases remain planned. |
+| Backend hardening | ADR-0005 and the Core Erlang/BEAM backend spec are accepted; a seven-phase implementation roadmap is planned from fail-closed diagnostics through public BEAM artifacts and conformance enforcement. |
 | Standalone category-theory library plan | Historical only; integrated into the PoC planning lineage rather than active as a separate track. |
 
 ## Proof-Of-Concept Track
@@ -187,6 +188,32 @@ Current promoted status:
 - the standalone category-theory library plan is historical only
 - it was integrated into the PoC planning lineage and should not be treated as an active separate execution track
 
+## Backend-Hardening Track
+
+Current promoted status:
+
+- [ADR-0005](../adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md)
+  accepts a fail-closed, semantics-preserving Core Erlang and BEAM backend
+- the
+  [backend component spec](../compiler/core_erlang_and_beam_backend.md)
+  distinguishes proven, lowering-only, static-erased, runtime-lowered, and
+  deferred behavior
+- the
+  [seven-phase implementation roadmap](backend-hardening/README.md)
+  is planned and begins with a reproducible feature ledger, structured
+  diagnostics, and removal of placeholder and wildcard fallbacks
+- later phases introduce the validated compilation unit, local and recursive
+  call resolution, exhaustive pure lowering, effect semantics, executable
+  module/trait linkage, and the public source-to-BEAM API
+- every phase ends with a dedicated integration-test section and must preserve
+  specs governance, focused conformance, and the complete active suite
+
+Important caveat:
+
+- the accepted architecture and plan do not upgrade the current implementation
+  status; the backend remains a working vertical slice with named-call,
+  linkage, trait-dispatch, declaration-disposition, and API gaps
+
 ## Current Quality State
 
 The default `rebar3 eunit` entry point discovers, compiles, and executes the
@@ -199,8 +226,8 @@ Promoted interpretation:
 
 - `make compile` and `rebar3 compile` compile the active source tree
 - `make test` and `rebar3 eunit` expose the complete active EUnit result
-- `make check-specs` validates 35 concrete requirements in five families, ten
-  scenarios, executable evidence, 63 component acceptance criteria, four
+- `make check-specs` validates 42 concrete requirements in five families, 11
+  scenarios, executable evidence, 73 component acceptance criteria, five
   ADRs, promoted paths, and local Markdown links
 - `make conformance` runs the unique EUnit modules named by the executable
   scenario manifest
