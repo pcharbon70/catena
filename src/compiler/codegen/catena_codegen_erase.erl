@@ -153,6 +153,10 @@ erase_expr({record_expr, Fields, Loc}) ->
 erase_expr({record_access, Record, Field, Loc}) ->
     {record_access, erase_expr(Record), Field, Loc};
 
+%% Imported references are already resolved executable metadata.
+erase_expr({imported_ref, Entry, Loc}) ->
+    {imported_ref, Entry, Loc};
+
 %% Constructor
 erase_expr({constructor, Name, Args, Loc}) ->
     {constructor, Name, [erase_expr(A) || A <- Args], Loc};

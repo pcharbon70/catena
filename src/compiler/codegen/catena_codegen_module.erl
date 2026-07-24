@@ -61,8 +61,10 @@ generate_validated_module(Unit) ->
                         BackendAST,
                         CodegenOpts,
                         catena_compilation_unit:callables(Unit),
+                        catena_compilation_unit:import_resolution(Unit),
                         catena_compilation_unit:effectful_transforms(Unit),
-                        catena_compilation_unit:runtime_dependencies(Unit)
+                        catena_compilation_unit:runtime_dependencies(Unit),
+                        catena_compilation_unit:artifact_dependencies(Unit)
                     );
                 {error, _} = Error ->
                     Error
@@ -96,7 +98,9 @@ generate_module(ModuleAST, Opts) ->
                     ModuleAST,
                     Opts,
                     Inventory,
+                    catena_import_resolution:empty(Name),
                     EffectfulTransforms,
+                    runtime_dependencies(EffectfulTransforms),
                     runtime_dependencies(EffectfulTransforms)
                 );
             {error, ResolutionDiagnostic} ->
@@ -117,16 +121,20 @@ generate_module_with_inventory(
     ModuleAST,
     Opts,
     Inventory,
+    ImportResolution,
     EffectfulTransforms,
-    RuntimeDependencies
+    RuntimeDependencies,
+    ArtifactDependencies
 ) ->
     try
         do_generate_module(
             ModuleAST,
             Opts,
             Inventory,
+            ImportResolution,
             EffectfulTransforms,
-            RuntimeDependencies
+            RuntimeDependencies,
+            ArtifactDependencies
         )
     catch
         error:{backend_error, _, _} = Diagnostic:_Stack ->
@@ -143,14 +151,17 @@ do_generate_module(
     ModuleAST,
     Opts,
     Inventory,
+    ImportResolution,
     EffectfulTransforms,
-    RuntimeDependencies
+    RuntimeDependencies,
+    ArtifactDependencies
 ) ->
         {module, Name, Exports, _Imports, Decls, _Loc} =
             catena_codegen_lower:lower_module(ModuleAST),
         State = catena_codegen_utils:new_state(#{
             module_name => Name,
             callables => Inventory,
+            import_resolution => ImportResolution,
             effectful_transforms => EffectfulTransforms
         }),
 
@@ -181,7 +192,10 @@ do_generate_module(
 
         %% Build module attributes
         Attrs = generate_attributes(
-            Opts#{runtime_dependencies => RuntimeDependencies}
+            Opts#{
+                runtime_dependencies => RuntimeDependencies,
+                artifact_dependencies => ArtifactDependencies
+            }
         ),
 
         %% Create Core Erlang module
@@ -324,7 +338,21 @@ generate_attributes(Opts) ->
                 ]
         end,
 
-    BaseAttrs ++ VersionAttr ++ AuthorAttr ++ RuntimeDependencyAttr.
+    ArtifactDependencyAttr =
+        case maps:get(artifact_dependencies, Opts, []) of
+            [] ->
+                [];
+            ArtifactDependencies ->
+                [
+                    {
+                        cerl:c_atom(catena_artifact_dependencies),
+                        cerl:abstract(ArtifactDependencies)
+                    }
+                ]
+        end,
+
+    BaseAttrs ++ VersionAttr ++ AuthorAttr ++ RuntimeDependencyAttr ++
+        ArtifactDependencyAttr.
 
 %%====================================================================
 %% Function Compilation (1.3.4.2)

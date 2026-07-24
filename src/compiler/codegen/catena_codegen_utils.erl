@@ -33,6 +33,7 @@
     resolve_constructor/4,
     resolve_value/3,
     callable_inventory/1,
+    import_resolution/1,
 
     %% Core Erlang builders
     c_atom/1,
@@ -66,6 +67,7 @@
     module_name :: atom() | undefined,
     current_transform :: atom() | undefined,
     callables :: catena_call_resolution:inventory() | undefined,
+    imports :: catena_import_resolution:resolution() | undefined,
     runtime_context :: cerl:cerl() | undefined,
     effectful_transforms = #{} :: #{atom() => non_neg_integer()}
 }).
@@ -87,6 +89,7 @@ new_state(Context) when is_map(Context) ->
     #codegen_state{
         module_name = maps:get(module_name, Context, undefined),
         callables = maps:get(callables, Context, undefined),
+        imports = maps:get(import_resolution, Context, undefined),
         effectful_transforms = maps:get(
             effectful_transforms,
             Context,
@@ -194,7 +197,8 @@ resolve_transform(
     #codegen_state{
         module_name = Module,
         current_transform = Transform,
-        callables = Inventory
+        callables = Inventory,
+        imports = Imports
     }
 ) ->
     Context = catena_backend_error:context(
@@ -206,12 +210,22 @@ resolve_transform(
             transform => Transform
         }
     ),
-    catena_call_resolution:resolve_transform(
-        Name,
-        Arity,
-        Inventory,
-        Context
-    ).
+    case catena_call_resolution:lookup(Name, Inventory) of
+        [] when Imports =/= undefined ->
+            catena_import_resolution:resolve_transform(
+                Name,
+                Arity,
+                Imports,
+                Context
+            );
+        _ ->
+            catena_call_resolution:resolve_transform(
+                Name,
+                Arity,
+                Inventory,
+                Context
+            )
+    end.
 
 %% @doc Resolve a constructor application with source-oriented context.
 -spec resolve_constructor(atom(), non_neg_integer(), term(), codegen_state()) ->
@@ -224,7 +238,8 @@ resolve_constructor(
     #codegen_state{
         module_name = Module,
         current_transform = Transform,
-        callables = Inventory
+        callables = Inventory,
+        imports = Imports
     }
 ) ->
     Context = catena_backend_error:context(
@@ -236,12 +251,22 @@ resolve_constructor(
             transform => Transform
         }
     ),
-    catena_call_resolution:resolve_constructor(
-        Name,
-        Arity,
-        Inventory,
-        Context
-    ).
+    case catena_call_resolution:lookup(Name, Inventory) of
+        [] when Imports =/= undefined ->
+            catena_import_resolution:resolve_constructor(
+                Name,
+                Arity,
+                Imports,
+                Context
+            );
+        _ ->
+            catena_call_resolution:resolve_constructor(
+                Name,
+                Arity,
+                Inventory,
+                Context
+            )
+    end.
 
 %% @doc Resolve a top-level callable used as a first-class value.
 -spec resolve_value(atom(), term(), codegen_state()) ->
@@ -253,7 +278,8 @@ resolve_value(
     #codegen_state{
         module_name = Module,
         current_transform = Transform,
-        callables = Inventory
+        callables = Inventory,
+        imports = Imports
     }
 ) ->
     Context = catena_backend_error:context(
@@ -265,13 +291,28 @@ resolve_value(
             transform => Transform
         }
     ),
-    catena_call_resolution:resolve_value(Name, Inventory, Context).
+    case catena_call_resolution:lookup(Name, Inventory) of
+        [] when Imports =/= undefined ->
+            catena_import_resolution:resolve_value(
+                Name,
+                Imports,
+                Context
+            );
+        _ ->
+            catena_call_resolution:resolve_value(Name, Inventory, Context)
+    end.
 
 %% @doc Return the callable inventory carried by the state.
 -spec callable_inventory(codegen_state()) ->
     catena_call_resolution:inventory() | undefined.
 callable_inventory(#codegen_state{callables = Inventory}) ->
     Inventory.
+
+%% @doc Return the executable imported-symbol inventory.
+-spec import_resolution(codegen_state()) ->
+    catena_import_resolution:resolution() | undefined.
+import_resolution(#codegen_state{imports = Imports}) ->
+    Imports.
 
 %%====================================================================
 %% Variable Generation

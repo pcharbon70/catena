@@ -54,6 +54,11 @@ translate_expr({literal, Type, Value, Loc}, State) ->
 translate_expr({var, Name, _Loc}, State) ->
     translate_var({var, Name, _Loc}, State);
 
+%% A qualified import is resolved before typing and carries its executable
+%% module/function identity through to code generation.
+translate_expr({imported_ref, Entry, _Loc}, State) ->
+    translate_callable_value(Entry, State);
+
 %% Function application
 translate_expr({app, Func, Args, Loc}, State) ->
     translate_app({app, Func, Args, Loc}, State);
@@ -224,6 +229,10 @@ translate_closure_application(
 
     %% Translate the function expression
     case Func of
+        {imported_ref, Entry, _} ->
+            ensure_imported_arity(Entry, length(CoreArgs), Application),
+            {remote_call(Entry, CoreArgs), State1};
+
         %% Module-qualified call: Module.function(args)
         {module_call, Module, FuncName, _} ->
             ModAtom = cerl:c_atom(Module),
@@ -297,13 +306,19 @@ translate_named_app(FuncName, CoreArgs, _Loc, _Application, State) ->
                     ) of
                         {ok, Callable} ->
                             Arity = maps:get(arity, Callable),
-                            {Target, RuntimeArgs} = local_transform_target(
-                                FuncName,
-                                Arity,
-                                CoreArgs,
-                                State
-                            ),
-                            {cerl:c_apply(Target, RuntimeArgs), State};
+                            case maps:get(imported, Callable, false) of
+                                true ->
+                                    {remote_call(Callable, CoreArgs), State};
+                                false ->
+                                    {Target, RuntimeArgs} =
+                                        local_transform_target(
+                                            FuncName,
+                                            Arity,
+                                            CoreArgs,
+                                            State
+                                        ),
+                                    {cerl:c_apply(Target, RuntimeArgs), State}
+                            end;
                         {error, Diagnostic} ->
                             throw(Diagnostic)
                     end
@@ -637,15 +652,23 @@ translate_tagged_constructor(Name, Args, State) ->
     {CoreArgs, State1} = translate_exprs(Args, State),
     {cerl:c_tuple([cerl:c_atom(Name) | CoreArgs]), State1}.
 
-translate_callable_value(#{kind := transform, name := Name, arity := Arity}, State) ->
+translate_callable_value(
+    #{kind := transform, name := Name, arity := Arity} = Callable,
+    State
+) ->
     {Arguments, State1} = catena_codegen_utils:fresh_vars(Arity, State),
-    {Target, RuntimeArguments} = local_transform_target(
-        Name,
-        Arity,
-        Arguments,
-        State1
-    ),
-    Body = cerl:c_apply(Target, RuntimeArguments),
+    Body = case maps:get(imported, Callable, false) of
+        true ->
+            remote_call(Callable, Arguments);
+        false ->
+            {Target, RuntimeArguments} = local_transform_target(
+                Name,
+                Arity,
+                Arguments,
+                State1
+            ),
+            cerl:c_apply(Target, RuntimeArguments)
+    end,
     {cerl:c_fun(Arguments, Body), State1};
 translate_callable_value(
     #{kind := constructor, name := Name, arity := Arity},
@@ -656,6 +679,36 @@ translate_callable_value(
     case Arity of
         0 -> {Body, State1};
         _ -> {cerl:c_fun(Arguments, Body), State1}
+    end.
+
+remote_call(Entry, Arguments) ->
+    cerl:c_call(
+        cerl:c_atom(maps:get(runtime_module, Entry)),
+        cerl:c_atom(maps:get(name, Entry)),
+        Arguments
+    ).
+
+ensure_imported_arity(Entry, Actual, SourceTerm) ->
+    Expected = maps:get(arity, Entry),
+    case Expected =:= Actual of
+        true ->
+            ok;
+        false ->
+            Context = catena_backend_error:context(
+                call_resolution,
+                imported_call,
+                SourceTerm,
+                #{
+                    source_module => maps:get(source_module, Entry),
+                    runtime_module => maps:get(runtime_module, Entry)
+                }
+            ),
+            throw(catena_backend_error:arity_mismatch(
+                maps:get(name, Entry),
+                Expected,
+                Actual,
+                Context
+            ))
     end.
 
 local_transform_target(Name, Arity, Arguments, State) ->

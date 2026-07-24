@@ -102,18 +102,76 @@ compile_string_to_unit(Source) ->
 compile_string_to_unit(Source, Opts) ->
     case analyze_string(Source) of
         {ok, AnalyzedAST} ->
-            case type_check_with_imports(AnalyzedAST, Opts) of
-                {ok, {typed_module, _, _, _} = TypedModule} ->
-                    build_validated_unit(
-                        AnalyzedAST,
-                        TypedModule,
-                        Opts
-                    );
-                {error, _} = TypeError ->
-                    TypeError
+            case prepare_import_resolution(AnalyzedAST, Opts) of
+                {ok, LinkedAST, LinkedOpts} ->
+                    case type_check_with_imports(LinkedAST, LinkedOpts) of
+                        {ok, {typed_module, _, _, _} = TypedModule} ->
+                            build_validated_unit(
+                                LinkedAST,
+                                TypedModule,
+                                LinkedOpts
+                            );
+                        {error, _} = TypeError ->
+                            TypeError
+                    end;
+                {error, _} = ImportError ->
+                    ImportError
             end;
         {error, _} = Error ->
             Error
+    end.
+
+prepare_import_resolution(
+    {module, Name, Exports, Imports, Declarations, _Location} = AST,
+    Opts
+) ->
+    case {Imports, maps:get(module_interfaces, Opts, undefined)} of
+        {[], _} ->
+            {ok, AST, Opts};
+        {_, undefined} ->
+            %% Typed-only compatibility path. Artifact generation remains
+            %% fail-closed because the import disposition has no executable
+            %% resolution inventory.
+            {ok, AST, Opts};
+        {_, Interfaces} when is_map(Interfaces) ->
+            case catena_call_resolution:build(
+                Name,
+                Exports,
+                Declarations
+            ) of
+                {ok, LocalInventory} ->
+                    LocalNames = [
+                        maps:get(name, Callable)
+                        || Callable <-
+                            catena_call_resolution:callables(LocalInventory)
+                    ],
+                    case catena_import_resolution:build(
+                        Name,
+                        Imports,
+                        Interfaces,
+                        LocalNames
+                    ) of
+                        {ok, Resolution} ->
+                            case catena_import_resolution:rewrite_module(
+                                AST,
+                                Resolution
+                            ) of
+                                {ok, LinkedAST} ->
+                                    {ok,
+                                        LinkedAST,
+                                        Opts#{import_resolution =>
+                                            Resolution}};
+                                {error, _} = Error ->
+                                    Error
+                            end;
+                        {error, _} = Error ->
+                            Error
+                    end;
+                {error, _} = Error ->
+                    Error
+            end;
+        {_, Interfaces} ->
+            {error, {invalid_module_interfaces, Interfaces}}
     end.
 
 build_validated_unit(AnalyzedAST, TypedModule, Opts) ->
@@ -998,6 +1056,8 @@ convert_expr({record_expr, Fields, _Base, _Loc}) ->
     {record, [{Name, convert_expr(Expr)} || {Name, Expr} <- Fields]};
 convert_expr({record_access, Expr, FieldName, _Loc}) ->
     {field, convert_expr(Expr), FieldName};
+convert_expr({imported_ref, Entry, _Loc}) ->
+    {var, catena_import_resolution:type_binding(Entry)};
 convert_expr({field_access, Expr, FieldName, _Loc}) ->
     {field, convert_expr(Expr), FieldName};
 convert_expr({binary_op, Op, Left, Right, Loc}) ->

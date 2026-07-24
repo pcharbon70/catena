@@ -321,6 +321,8 @@ import_decl -> import qualified upper_ident dot upper_ident as upper_ident lpare
 %% Import items list (comma-separated identifiers)
 import_items -> upper_ident : [extract_atom('$1')].
 import_items -> upper_ident comma import_items : [extract_atom('$1') | '$3'].
+import_items -> lower_ident : [extract_atom('$1')].
+import_items -> lower_ident comma import_items : [extract_atom('$1') | '$3'].
 
 %% Error recovery: skip malformed declaration and continue with next
 declaration -> error type :
@@ -1268,4 +1270,3 @@ extract_imports(Decls) ->
 %% Returns all non-import declarations
 filter_imports(Decls) ->
     [D || D <- Decls, element(1, D) =/= import].
-

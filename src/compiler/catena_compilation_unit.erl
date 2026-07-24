@@ -26,6 +26,7 @@
     validation_state/1,
     symbols/1,
     callables/1,
+    import_resolution/1,
     effect_inventory/1,
     effect_operations/1,
     effect_uses/1,
@@ -39,7 +40,7 @@
     with_dispositions/2
 ]).
 
--define(UNIT_VERSION, 5).
+-define(UNIT_VERSION, 6).
 
 -opaque t() :: #{
     '$catena_compilation_unit' := pos_integer(),
@@ -56,6 +57,7 @@
     validation_state := validation_state(),
     symbols := [symbol()],
     callables := catena_call_resolution:inventory(),
+    import_resolution := catena_import_resolution:resolution(),
     effect_inventory := catena_effect_resolution:inventory(),
     effectful_transforms := #{atom() => non_neg_integer()},
     runtime_dependencies := [map()],
@@ -177,6 +179,11 @@ new(
                                 validation_state => ValidationState,
                                 symbols => Symbols,
                                 callables => Callables,
+                                import_resolution => maps:get(
+                                    import_resolution,
+                                    Options,
+                                    catena_import_resolution:empty(Name)
+                                ),
                                 effect_inventory => EffectInventory,
                                 effectful_transforms => EffectfulTransforms,
                                 runtime_dependencies => RuntimeDependencies,
@@ -235,6 +242,7 @@ is_compilation_unit(#{
     validation_state := ValidationState,
     symbols := Symbols,
     callables := Callables,
+    import_resolution := ImportResolution,
     effect_inventory := EffectInventory,
     effectful_transforms := EffectfulTransforms,
     runtime_dependencies := RuntimeDependencies,
@@ -249,6 +257,7 @@ is_compilation_unit(#{
         is_map(Options) andalso
         is_list(Symbols) andalso
         catena_call_resolution:is_inventory(Callables) andalso
+        catena_import_resolution:is_resolution(ImportResolution) andalso
         catena_effect_resolution:is_inventory(EffectInventory) andalso
         is_map(EffectfulTransforms) andalso
         is_list(RuntimeDependencies) andalso
@@ -303,6 +312,9 @@ symbols(Unit) -> maps:get(symbols, Unit).
 
 -spec callables(t()) -> catena_call_resolution:inventory().
 callables(Unit) -> maps:get(callables, Unit).
+
+-spec import_resolution(t()) -> catena_import_resolution:resolution().
+import_resolution(Unit) -> maps:get(import_resolution, Unit).
 
 -spec effect_inventory(t()) -> catena_effect_resolution:inventory().
 effect_inventory(Unit) -> maps:get(effect_inventory, Unit).

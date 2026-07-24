@@ -45,10 +45,17 @@ classify(Unit) ->
             Module = catena_compilation_unit:module_name(Unit),
             Exports = catena_compilation_unit:exports(Unit),
             Imports = catena_compilation_unit:imports(Unit),
+            ImportResolution =
+                catena_compilation_unit:import_resolution(Unit),
             {module, _, _, _, Declarations, _} =
                 catena_compilation_unit:normalized_ast(Unit),
             ImportDispositions = [
-                classify_import(Module, Import, Index)
+                classify_import(
+                    Module,
+                    Import,
+                    Index,
+                    ImportResolution
+                )
                 || {Index, Import} <- indexed(Imports)
             ],
             DeclarationDispositions = [
@@ -292,23 +299,40 @@ prepare_for_codegen(Unit) ->
 classify_import(
     Module,
     {import, ImportedModule, Items, Qualified, Alias, Location} = Import,
-    Index
+    Index,
+    ImportResolution
 ) ->
+    Resolved = [
+        Entry
+        || Entry <- catena_import_resolution:entries(ImportResolution),
+           maps:get(source_module, Entry) =:= ImportedModule,
+           maps:get(import_location, Entry) =:= Location
+    ],
+    HasExecutableResolution =
+        catena_import_resolution:is_resolution(ImportResolution) andalso
+        Resolved =/= [],
     #{
         subject => import,
         index => Index,
-        disposition => unsupported,
+        disposition => case HasExecutableResolution of
+            true -> erased_static;
+            false -> unsupported
+        end,
         kind => import,
         declaration => Import,
         location => Location,
-        reason => executable_import_linkage_deferred,
+        reason => case HasExecutableResolution of
+            true -> executable_import_linkage_resolved;
+            false -> executable_import_linkage_deferred
+        end,
         representation => #{
             kind => import_linkage,
             source_module => Module,
             imported_module => ImportedModule,
             items => Items,
             qualified => Qualified,
-            alias => Alias
+            alias => Alias,
+            resolved_symbols => Resolved
         }
     }.
 
