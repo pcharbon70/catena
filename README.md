@@ -132,9 +132,12 @@ All scripts include timestamp checking and only rebuild when source files have c
 
 ## Documentation
 
+To learn the language from first principles through progressively richer
+examples, follow the **[Catena language learning path](guides/language/index.md)**.
+
 For a developer-oriented tour of the implementation, component boundaries, and
 current integration seams, start with the
-**[Catena Architecture Guide](guides/developer/ARCHITECTURE_GUIDE.md)**.
+**[Catena Architecture Guide](guides/developer/architecture_guide.md)**.
 
 Comprehensive research documents are available in [`specs/research/`](specs/research/):
 
