@@ -112,7 +112,7 @@ resulting Core Erlang module as one recursive definition set.
 constructor application so the same source identifier cannot be lowered by
 guesswork.
 
-- [ ] **Section 3.3 Complete**
+- [x] **Section 3.3 Complete**
 
 ### Task 3.3.1: Resolve Higher-Order Callable Values
 
@@ -120,14 +120,14 @@ guesswork.
 captured top-level transforms with semantics appropriate to their resolved
 callable kind.
 
-- [ ] **Task 3.3.1 Complete**
+- [x] **Task 3.3.1 Complete**
 
 #### Subtask 3.3.1.1: Preserve Closure Application
 
 **Description:** Continue using Core closure application only for values that
 type checking and scope resolution identify as callable runtime values.
 
-- [ ] **Subtask 3.3.1.1 Complete**
+- [x] **Subtask 3.3.1.1 Complete**
 
 #### Subtask 3.3.1.2: Represent Top-Level Functions As Values
 
@@ -135,28 +135,28 @@ type checking and scope resolution identify as callable runtime values.
 when a named transform is passed, stored, or returned instead of directly
 called.
 
-- [ ] **Subtask 3.3.1.2 Complete**
+- [x] **Subtask 3.3.1.2 Complete**
 
 ### Task 3.3.2: Resolve Constructor Applications Separately
 
 **Description:** Keep constructor identity and arity resolution distinct from
 ordinary transform and closure calls.
 
-- [ ] **Task 3.3.2 Complete**
+- [x] **Task 3.3.2 Complete**
 
 #### Subtask 3.3.2.1: Validate Constructor Arity
 
 **Description:** Reject under- and over-applied constructors unless the
 language explicitly promotes a partial-application rule.
 
-- [ ] **Subtask 3.3.2.1 Complete**
+- [x] **Subtask 3.3.2.1 Complete**
 
 #### Subtask 3.3.2.2: Emit Tagged Constructor Values
 
 **Description:** Preserve the accepted tagged-tuple representation for nullary,
 unary, and higher-arity constructors.
 
-- [ ] **Subtask 3.3.2.2 Complete**
+- [x] **Subtask 3.3.2.2 Complete**
 
 ## Section 3.4: Phase 3 Integration Tests
 

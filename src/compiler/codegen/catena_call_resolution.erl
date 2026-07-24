@@ -15,7 +15,8 @@
     callables/1,
     lookup/2,
     resolve_transform/4,
-    resolve_constructor/4
+    resolve_constructor/4,
+    resolve_value/3
 ]).
 
 -define(INVENTORY_VERSION, 1).
@@ -120,6 +121,28 @@ resolve_transform(Name, Arity, Inventory, Context) ->
     {ok, callable()} | {error, catena_backend_error:diagnostic()}.
 resolve_constructor(Name, Arity, Inventory, Context) ->
     resolve(constructor, Name, Arity, Inventory, Context).
+
+%% @doc Resolve a callable referenced as a first-class runtime value.
+-spec resolve_value(atom(), inventory(), map()) ->
+    {ok, callable()} | {error, catena_backend_error:diagnostic()}.
+resolve_value(Name, Inventory, Context) ->
+    case lookup(Name, Inventory) of
+        [] ->
+            {error, catena_backend_error:unresolved_call(
+                Name,
+                0,
+                Context#{usage => callable_value}
+            )};
+        [Callable] ->
+            {ok, Callable};
+        Candidates ->
+            {error, catena_backend_error:ambiguous_call(
+                Name,
+                0,
+                Candidates,
+                Context#{usage => callable_value}
+            )}
+    end.
 
 declaration_callables(
     Module,

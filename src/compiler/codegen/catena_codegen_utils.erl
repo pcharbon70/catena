@@ -21,9 +21,12 @@
     new_state/1,
     with_scope/2,
     with_function_scope/4,
+    with_bindings/3,
     is_bound/2,
     resolution_enabled/1,
     resolve_transform/4,
+    resolve_constructor/4,
+    resolve_value/3,
     callable_inventory/1,
 
     %% Core Erlang builders
@@ -107,6 +110,20 @@ with_function_scope(Name, Bindings, Fun, State) ->
         current_transform = OldTransform
     }}.
 
+%% @doc Compile an expression with additional runtime values in lexical scope.
+-spec with_bindings(
+    [atom()],
+    fun((codegen_state()) -> {Result, codegen_state()}),
+    codegen_state()
+) -> {Result, codegen_state()} when Result :: term().
+with_bindings(Bindings, Fun, State) ->
+    OldScope = State#codegen_state.scope,
+    ScopedState = State#codegen_state{
+        scope = lists:usort(Bindings ++ OldScope)
+    },
+    {Result, NewState} = Fun(ScopedState),
+    {Result, NewState#codegen_state{scope = OldScope}}.
+
 %% @doc Return whether a source variable is bound as a runtime value.
 -spec is_bound(atom(), codegen_state()) -> boolean().
 is_bound(Name, #codegen_state{scope = Scope}) ->
@@ -148,6 +165,60 @@ resolve_transform(
         Inventory,
         Context
     ).
+
+%% @doc Resolve a constructor application with source-oriented context.
+-spec resolve_constructor(atom(), non_neg_integer(), term(), codegen_state()) ->
+    {ok, catena_call_resolution:callable()} |
+    {error, catena_backend_error:diagnostic()}.
+resolve_constructor(
+    Name,
+    Arity,
+    SourceTerm,
+    #codegen_state{
+        module_name = Module,
+        current_transform = Transform,
+        callables = Inventory
+    }
+) ->
+    Context = catena_backend_error:context(
+        constructor_resolution,
+        constructor,
+        SourceTerm,
+        #{
+            module => Module,
+            transform => Transform
+        }
+    ),
+    catena_call_resolution:resolve_constructor(
+        Name,
+        Arity,
+        Inventory,
+        Context
+    ).
+
+%% @doc Resolve a top-level callable used as a first-class value.
+-spec resolve_value(atom(), term(), codegen_state()) ->
+    {ok, catena_call_resolution:callable()} |
+    {error, catena_backend_error:diagnostic()}.
+resolve_value(
+    Name,
+    SourceTerm,
+    #codegen_state{
+        module_name = Module,
+        current_transform = Transform,
+        callables = Inventory
+    }
+) ->
+    Context = catena_backend_error:context(
+        callable_value_resolution,
+        callable_value,
+        SourceTerm,
+        #{
+            module => Module,
+            transform => Transform
+        }
+    ),
+    catena_call_resolution:resolve_value(Name, Inventory, Context).
 
 %% @doc Return the callable inventory carried by the state.
 -spec callable_inventory(codegen_state()) ->
