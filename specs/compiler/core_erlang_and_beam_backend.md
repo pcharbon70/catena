@@ -2,11 +2,12 @@
 
 ## Status
 
-Promoted target: accepted architecture with Phases 1 through 5 implemented:
+Promoted target: accepted architecture with Phases 1 through 6 implemented:
 backend safety, validated-unit/declaration-disposition enforcement, local and
 higher-order call resolution, exhaustive pure expression/pattern/data
-lowering, and runtime-backed effect semantics. Later linkage and
-public-artifact phases remain partial or planned.
+lowering, runtime-backed effect semantics, executable module linkage, imported
+calls, and validated trait dictionary dispatch. The public-artifact phase
+remains planned.
 
 The current repository proves a working source-to-BEAM vertical slice for
 representative transforms, arithmetic, algebraic data constructors, and
@@ -18,7 +19,11 @@ or-patterns, representation round trips, and fail-closed type erasure. The
 effect evidence additionally covers declared operation resolution, explicit
 context propagation across helper calls, lossless handlers, nested and
 multiple effects, lifecycle cleanup, and versioned runtime dependencies. The
-repository does not yet satisfy the complete backend contract in this spec.
+same executable boundary now proves dependency-ordered module sets, open,
+qualified, aliased, selective, dotted, and higher-order imports, plus concrete
+local and imported trait instances. The repository does not yet satisfy the
+complete backend contract in this spec because the public BEAM API and final
+conformance enforcement remain Phase 7 work.
 
 ## Purpose
 
@@ -46,6 +51,13 @@ It distinguishes:
 - [Backend Hardening Implementation Plan](../planning/backend-hardening/README.md)
 - `src/compiler/catena_compile.erl`
 - `src/compiler/catena_compilation_unit.erl`
+- `src/compiler/semantic/catena_module_compile.erl`
+- `src/compiler/semantic/catena_module_identity.erl`
+- `src/compiler/semantic/catena_module_interface.erl`
+- `src/compiler/semantic/catena_module_linkage.erl`
+- `src/compiler/semantic/catena_import_resolution.erl`
+- `src/compiler/semantic/catena_trait_dictionary.erl`
+- `src/runtime/catena_trait_runtime.erl`
 - `src/compiler/types/catena_effect_resolution.erl`
 - `src/compiler/codegen/catena_declaration_disposition.erl`
 - `src/compiler/codegen/catena_call_resolution.erl`
@@ -61,6 +73,9 @@ It distinguishes:
 - `test/compiler/integration/catena_backend_hardening_phase3_tests.erl`
 - `test/compiler/integration/catena_backend_hardening_phase4_tests.erl`
 - `test/compiler/integration/catena_backend_hardening_phase5_tests.erl`
+- `test/compiler/integration/catena_backend_hardening_phase6_import_tests.erl`
+- `test/compiler/integration/catena_backend_hardening_phase6_trait_tests.erl`
+- `test/compiler/integration/catena_backend_hardening_phase6_integration_tests.erl`
 
 ## Compilation Boundary
 
@@ -84,7 +99,10 @@ Catena source
 `compile_string_to_core/1,2` and `compile_file_to_core/1,2` remain explicit
 Core Erlang APIs. They now share `compile_string_to_unit/1,2`, which constructs
 the validated backend authority only after the canonical frontend succeeds.
-Backend hardening later adds in-memory BEAM APIs with the same authority:
+The compiler-internal `catena_module_compile:compile_source_set/2` compiles a
+closed source map in dependency order and returns each accepted unit, Core
+module, BEAM binary, interface, and artifact dependency set. Phase 7 exposes
+public in-memory BEAM APIs with the same authority:
 
 ```erlang
 catena_compile:compile_string_to_beam(Source).
@@ -120,12 +138,12 @@ silent omission.
 | Structural records | BEAM maps keyed by field atoms | Proven for construction, exact-key pattern matching, field access, and missing-key behavior. |
 | Lambdas and higher-order values | Core Erlang functions and `apply` | Proven for lambda parameters, let-bound functions, returned functions, and named transforms used as values. |
 | Local, forward, and recursive transform calls | Resolved Core Erlang function references | Proven for direct, forward, self-recursive, and mutually recursive calls. |
-| Imported transform calls | Resolved Core Erlang module calls | Deferred pending executable module linkage. |
+| Imported transform calls | Interface-resolved Core Erlang module calls or eta-expanded remote closures | Proven for open, qualified, aliased, selective, dotted, shadowed, and higher-order imports. |
 | Pattern matching and guards | Core Erlang cases and clauses | Proven for every promoted parser-native pattern, recursive or-pattern expansion, bindings, pure guard conjunction, and source clause order. |
 | Type declarations and annotations | Static-erased after validation | Explicit, exhaustive, and fail-closed after disposition and representation selection. |
 | Effect declarations | Static-erased metadata | Proven after typed operation identities, uses, handlers, and runtime requirements are retained in the validated unit. |
 | `perform` and `handle` | Explicit calls to the Catena effect runtime with context passing | Proven for declared operations, zero/multiple arguments, nested/multiple handlers, effectful helper calls, handler patterns, and documented failure/cleanup paths. |
-| Traits and instances | Resolved runtime dictionaries | Deferred: validation and dictionary integration are incomplete. |
+| Traits and instances | Validated, stable dictionary descriptors with runtime method closures | Proven for required/default/inherited methods, coherence/orphan rejection, local/imported instances, dynamic concrete selection, and representative Comparable/Mapper/Applicator/Chainable/Pipeline/System/Flow calls. |
 | Test and property declarations | Explicit testing artifacts or runner registrations | Deferred: declarations are currently omitted from application emission. |
 | Actor/process surface | Explicit BEAM process/runtime operations | Outside the accepted frontend/backend surface until source-language integration exists. |
 
@@ -184,12 +202,13 @@ Before module emission, each declaration receives one disposition:
 
 Unknown declarations are always rejected.
 
-Phase 2 implements this boundary with an explicit disposition pass. Implemented
+Phase 2 introduced this boundary with an explicit disposition pass. Implemented
 transforms lower; type and effect declarations erase only after their
 constructor/operation metadata is retained; unused non-exported signatures may
-erase; exported signatures without implementations fail; and imports, traits,
-instances, tests, properties, and unknown declarations remain explicit
-unsupported dispositions until their later runtime/linkage contracts exist.
+erase; and exported signatures without implementations fail. Phase 6 promotes
+imports to resolved linkage metadata, validates traits before static erasure,
+and lowers instances to stable dictionary/dispatch artifacts. Tests,
+properties, and unknown declarations remain explicit unsupported dispositions.
 
 ## Diagnostics
 
@@ -285,13 +304,13 @@ round trips, exhaustive erasure, and negative fail-closed paths. Phase 5 adds
 effect-operation resolution, explicit context propagation, zero- and
 multi-argument operations, nested and multiple handlers, effectful helper
 calls, normal/error/unhandled/timeout cleanup, invalid-effect rejection, and
-runtime-dependency enforcement. Later phases extend that suite to cover:
-
-- local, forward, recursive, imported, and higher-order calls
-- trait dispatch when promoted
-- explicit rejection of deferred tests, properties, imports, traits, or actor
-  constructs until their runtime contracts are implemented
-- Core validation failures and source-oriented diagnostics
+runtime-dependency enforcement. Phase 6 adds deterministic module identity and
+dependency order, versioned interfaces, executable import variants and remote
+closures, source-oriented linkage failures, validated local and imported trait
+dictionaries, concrete runtime selection, and desugared standard-library
+operations. Phase 7 extends that suite with public BEAM API enforcement,
+explicit rejection of the remaining deferred tests, properties, and actor
+constructs, and maintained conformance wiring.
 
 ## Out Of Scope
 

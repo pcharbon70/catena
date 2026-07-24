@@ -61,8 +61,11 @@ generate_validated_module(Unit) ->
                         BackendAST,
                         CodegenOpts,
                         catena_compilation_unit:callables(Unit),
+                        catena_compilation_unit:import_resolution(Unit),
+                        catena_compilation_unit:trait_inventory(Unit),
                         catena_compilation_unit:effectful_transforms(Unit),
-                        catena_compilation_unit:runtime_dependencies(Unit)
+                        catena_compilation_unit:runtime_dependencies(Unit),
+                        catena_compilation_unit:artifact_dependencies(Unit)
                     );
                 {error, _} = Error ->
                     Error
@@ -96,7 +99,10 @@ generate_module(ModuleAST, Opts) ->
                     ModuleAST,
                     Opts,
                     Inventory,
+                    catena_import_resolution:empty(Name),
+                    catena_trait_dictionary:empty(Name),
                     EffectfulTransforms,
+                    runtime_dependencies(EffectfulTransforms),
                     runtime_dependencies(EffectfulTransforms)
                 );
             {error, ResolutionDiagnostic} ->
@@ -117,16 +123,22 @@ generate_module_with_inventory(
     ModuleAST,
     Opts,
     Inventory,
+    ImportResolution,
+    TraitInventory,
     EffectfulTransforms,
-    RuntimeDependencies
+    RuntimeDependencies,
+    ArtifactDependencies
 ) ->
     try
         do_generate_module(
             ModuleAST,
             Opts,
             Inventory,
+            ImportResolution,
+            TraitInventory,
             EffectfulTransforms,
-            RuntimeDependencies
+            RuntimeDependencies,
+            ArtifactDependencies
         )
     catch
         error:{backend_error, _, _} = Diagnostic:_Stack ->
@@ -143,14 +155,19 @@ do_generate_module(
     ModuleAST,
     Opts,
     Inventory,
+    ImportResolution,
+    TraitInventory,
     EffectfulTransforms,
-    RuntimeDependencies
+    RuntimeDependencies,
+    ArtifactDependencies
 ) ->
         {module, Name, Exports, _Imports, Decls, _Loc} =
             catena_codegen_lower:lower_module(ModuleAST),
         State = catena_codegen_utils:new_state(#{
             module_name => Name,
             callables => Inventory,
+            import_resolution => ImportResolution,
+            trait_inventory => TraitInventory,
             effectful_transforms => EffectfulTransforms
         }),
 
@@ -174,14 +191,25 @@ do_generate_module(
         ActiveDecls = [D || D <- ErasedDecls, D =/= erased],
 
         %% Compile functions
-        {CoreFunctions, _State1} = compile_functions(ActiveDecls, State),
+        {CoreFunctions, State1} = compile_functions(ActiveDecls, State),
+
+        {DictionaryFunctions, _State2, DictionaryExports} =
+            catena_trait_dictionary:compile_dictionaries(
+                TraitInventory,
+                State1
+            ),
 
         %% Generate exports
-        CoreExports = generate_module_exports(ActiveDecls, Exports),
+        CoreExports =
+            generate_module_exports(ActiveDecls, Exports) ++
+                DictionaryExports,
 
         %% Build module attributes
         Attrs = generate_attributes(
-            Opts#{runtime_dependencies => RuntimeDependencies}
+            Opts#{
+                runtime_dependencies => RuntimeDependencies,
+                artifact_dependencies => ArtifactDependencies
+            }
         ),
 
         %% Create Core Erlang module
@@ -189,7 +217,7 @@ do_generate_module(
             cerl:c_atom(Name),
             CoreExports,
             Attrs,
-            CoreFunctions
+            CoreFunctions ++ DictionaryFunctions
         ),
 
         {ok, CoreModule}.
@@ -324,7 +352,21 @@ generate_attributes(Opts) ->
                 ]
         end,
 
-    BaseAttrs ++ VersionAttr ++ AuthorAttr ++ RuntimeDependencyAttr.
+    ArtifactDependencyAttr =
+        case maps:get(artifact_dependencies, Opts, []) of
+            [] ->
+                [];
+            ArtifactDependencies ->
+                [
+                    {
+                        cerl:c_atom(catena_artifact_dependencies),
+                        cerl:abstract(ArtifactDependencies)
+                    }
+                ]
+        end,
+
+    BaseAttrs ++ VersionAttr ++ AuthorAttr ++ RuntimeDependencyAttr ++
+        ArtifactDependencyAttr.
 
 %%====================================================================
 %% Function Compilation (1.3.4.2)

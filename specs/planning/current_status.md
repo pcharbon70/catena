@@ -18,7 +18,7 @@ It exists because some planning checklists are stale relative to later implement
 | Law verification | Structural and concrete stdlib laws execute, and known-instance generic checks bridge into the internal proptest framework; automatic derivation and broader workflow ergonomics remain future work. |
 | Language revamp migration | Completed and now historical. |
 | Flow | The pure Flow core is materially implemented in stdlib/compiler/test surfaces; later phases remain planned. |
-| Backend hardening | ADR-0005 and the Core Erlang/BEAM backend spec are accepted; Phases 1 through 5 implement fail-closed diagnostics, validated compilation units, explicit declaration disposition, local/higher-order resolution, exhaustive pure lowering, and runtime-backed effect semantics. |
+| Backend hardening | ADR-0005 and the Core Erlang/BEAM backend spec are accepted; Phases 1 through 6 implement fail-closed diagnostics, validated compilation units, explicit declaration disposition, local/higher-order resolution, exhaustive pure lowering, runtime-backed effect semantics, executable module linkage/imports, and trait dictionaries. |
 | Standalone category-theory library plan | Historical only; integrated into the PoC planning lineage rather than active as a separate track. |
 
 ## Proof-Of-Concept Track
@@ -80,7 +80,9 @@ that public boundary remain follow-on work.
 ### Phase 4 And Beyond
 
 - Phase 4 module system: not complete
-- current repo does include minimal import resolution and exported-environment wiring
+- current repo includes interface-driven executable import resolution and a
+  dependency-ordered compiler-internal module-set boundary; the full package
+  and release workflow remains incomplete
 - Phase 5 local runtime toolkit: implemented and verified for BEAM process
   primitives, actors, GenServer-style callbacks, minimal one-for-one
   supervision, registry, pub/sub, event broadcasting, and direct REPL Process
@@ -220,40 +222,48 @@ Current promoted status:
   handlers, nested and multiple effect execution, versioned runtime
   dependencies, configurable operation timeouts, and synchronous handler
   cleanup on normal, error, unhandled, and timeout paths
+- Phase 6 is complete with deterministic source/runtime module identities,
+  versioned executable interfaces, dependency ordering and diagnostics,
+  open/qualified/aliased/selective/dotted and higher-order imported calls,
+  validated trait hierarchies and instances, stable runtime dictionaries,
+  dynamic concrete selection, and representative desugared Comparable,
+  Mapper, Applicator, Chainable, Pipeline, System, and Flow execution
 - the production Core boundary consumes that unit, while raw-AST generation
   is explicitly scoped to low-level codegen work
 - implemented transforms lower, type/effect metadata erases only after
   representation selection, and missing or deferred runtime declarations fail
   with source-oriented diagnostics
-- `SCN-011` includes dedicated Phase 1 through Phase 5 suites proving the
+- `SCN-011` has dedicated Phase 1 through Phase 6 implementation suites proving the
   executable vertical slice, preservation of frontend failures, validated-unit
   authority, explicit declaration disposition, resolved local call graphs, and
   higher-order callable execution, pure expression and pattern coverage,
   representation round trips, fail-closed erasure, resolved effect programs,
   explicit runtime contexts, handler execution and cleanup, and runtime
-  dependency enforcement
-- later phases introduce executable module/trait linkage and the public
-  source-to-BEAM API
+  dependency enforcement, deterministic module/interface linkage, executable
+  import variants, source-oriented link failures, trait validation, dictionary
+  dispatch, and desugared trait operations
+- Phase 7 introduces the public source-to-BEAM API and maintained conformance
+  enforcement
 - every phase ends with a dedicated integration-test section and must preserve
   specs governance, focused conformance, and the complete active suite
 
 Important caveat:
 
-- Phases 1 through 5 establish a fail-closed backend and expand the promoted
+- Phases 1 through 6 establish a fail-closed backend and expand the promoted
   executable language through module-local/higher-order calls and the complete
-  accepted pure expression, pattern, data, and runtime-backed effect surface;
-  linkage, trait-dispatch, and public BEAM API gaps remain
-- Phase 6, module linkage, imported calls, and trait dispatch, is the next
+  accepted pure expression, pattern, data, runtime-backed effect, imported
+  module, and concrete trait-dispatch surface; the public BEAM API gap remains
+- Phase 7, public BEAM API and conformance enforcement, is the next
   backend-hardening phase
 
 ## Current Quality State
 
 The default `rebar3 eunit` entry point discovers, compiles, and executes the
-complete active test tree. The backend-hardening Phase 5 gate on 2026-07-24
-reported 4,985 passing, zero failing, and zero skipped tests. The earlier
-Phase 4, Phase 3, Phase 2, and Phase 1 gates reported 4,954, 4,928, 4,906, and
-4,873 passing tests, respectively, and the earlier 4,838-test baseline remains
-recorded in the
+complete active test tree. The backend-hardening Phase 6 gate on 2026-07-24
+passed the complete active suite with zero failures or skips. The Phase 5,
+Phase 4, Phase 3, Phase 2, and Phase 1 gates reported 4,985, 4,954, 4,928,
+4,906, and 4,873 passing tests, respectively, and the earlier 4,838-test
+baseline remains recorded in the
 [Phase 7 test baseline](spec-source-reconciliation/phase-07-test-baseline.md).
 
 Promoted interpretation:
@@ -264,7 +274,7 @@ Promoted interpretation:
   scenarios, 25 executable evidence rows across 24 modules, 73 component
   acceptance criteria, five ADRs, promoted paths, and local Markdown links
 - `make conformance` runs the unique EUnit modules named by the executable
-  scenario manifest; the Phase 5 gate passed all 464 focused tests
+  scenario manifest; the Phase 6 gate passed all 463 focused tests
 - `make verify` combines specs governance with the complete active suite and
   is the read-only CI contract for pull requests and pushes to `main`
 - the six Phase 2 standard-library/frontend modules pass all 170 focused tests

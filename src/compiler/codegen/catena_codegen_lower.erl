@@ -206,6 +206,8 @@ lower_expr({record_expr, Fields, Location}) ->
         Location};
 lower_expr({record_access, Record, Field, Location}) ->
     {record_access, lower_expr(Record), Field, Location};
+lower_expr({imported_ref, Entry, Location}) ->
+    {imported_ref, Entry, Location};
 lower_expr({match_expr, undefined, Clauses, Location}) ->
     ParamName = backend_param_name(1),
     Param = {pat_var, ParamName, Location},

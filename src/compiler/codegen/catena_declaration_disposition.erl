@@ -45,10 +45,17 @@ classify(Unit) ->
             Module = catena_compilation_unit:module_name(Unit),
             Exports = catena_compilation_unit:exports(Unit),
             Imports = catena_compilation_unit:imports(Unit),
+            ImportResolution =
+                catena_compilation_unit:import_resolution(Unit),
             {module, _, _, _, Declarations, _} =
                 catena_compilation_unit:normalized_ast(Unit),
             ImportDispositions = [
-                classify_import(Module, Import, Index)
+                classify_import(
+                    Module,
+                    Import,
+                    Index,
+                    ImportResolution
+                )
                 || {Index, Import} <- indexed(Imports)
             ],
             DeclarationDispositions = [
@@ -180,8 +187,8 @@ classify_declaration(
     Index
 ) ->
     (declaration_disposition(Index, trait, Declaration, Location))#{
-        disposition => unsupported,
-        reason => trait_dispatch_deferred,
+        disposition => erased_static,
+        reason => trait_dispatch_validated,
         representation => #{
             kind => trait_dispatch,
             name => Name,
@@ -198,8 +205,8 @@ classify_declaration(
     Index
 ) ->
     (declaration_disposition(Index, instance, Declaration, Location))#{
-        disposition => unsupported,
-        reason => instance_dispatch_deferred,
+        disposition => runtime_lowered,
+        reason => instance_dictionary_emitted,
         representation => #{
             kind => instance_dictionary,
             trait => Trait,
@@ -292,23 +299,40 @@ prepare_for_codegen(Unit) ->
 classify_import(
     Module,
     {import, ImportedModule, Items, Qualified, Alias, Location} = Import,
-    Index
+    Index,
+    ImportResolution
 ) ->
+    Resolved = [
+        Entry
+        || Entry <- catena_import_resolution:entries(ImportResolution),
+           maps:get(source_module, Entry) =:= ImportedModule,
+           maps:get(import_location, Entry) =:= Location
+    ],
+    HasExecutableResolution =
+        catena_import_resolution:is_resolution(ImportResolution) andalso
+        Resolved =/= [],
     #{
         subject => import,
         index => Index,
-        disposition => unsupported,
+        disposition => case HasExecutableResolution of
+            true -> erased_static;
+            false -> unsupported
+        end,
         kind => import,
         declaration => Import,
         location => Location,
-        reason => executable_import_linkage_deferred,
+        reason => case HasExecutableResolution of
+            true -> executable_import_linkage_resolved;
+            false -> executable_import_linkage_deferred
+        end,
         representation => #{
             kind => import_linkage,
             source_module => Module,
             imported_module => ImportedModule,
             items => Items,
             qualified => Qualified,
-            alias => Alias
+            alias => Alias,
+            resolved_symbols => Resolved
         }
     }.
 
@@ -384,10 +408,17 @@ disposition_error(Unit, Disposition) ->
     {error, Diagnostic}.
 
 emits_runtime_declaration(Disposition) ->
-    lists:member(
+    case {
         maps:get(disposition, Disposition),
-        [lowered, runtime_lowered]
-    ).
+        maps:get(kind, Disposition, unknown)
+    } of
+        {lowered, _} -> true;
+        %% Instance declarations are emitted by the dictionary generator,
+        %% not by the ordinary declaration lowering path.
+        {runtime_lowered, instance} -> false;
+        {runtime_lowered, _} -> true;
+        _ -> false
+    end.
 
 transform_requires_runtime_export(_Name, []) ->
     true;

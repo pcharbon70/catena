@@ -33,6 +33,7 @@
 
 %% API
 -export([
+    compile_source_set/2,
     compile_modules/2,
     compile_single_module/2,
     generate_interface/2,
@@ -48,6 +49,265 @@
     extract_traits/1,
     extract_instances/1
 ]).
+
+%%%=============================================================================
+%%% Maintained In-Memory Artifact Pipeline
+%%%=============================================================================
+
+%% @doc Compile a closed set of Catena source modules in dependency order.
+%%
+%% This compiler-internal API exists so executable linkage can be exercised
+%% before Phase 7 promotes a public BEAM artifact API.  Each artifact retains
+%% its validated unit, Core module, BEAM binary, interface, and dependencies.
+-spec compile_source_set(#{atom() => string() | binary()}, map()) ->
+    {ok, map()} | {error, term()}.
+compile_source_set(SourceSet, Options)
+  when is_map(SourceSet), is_map(Options) ->
+    case analyze_source_set(SourceSet) of
+        {ok, ModuleASTs, SourcesByModule} ->
+            case catena_module_linkage:plan(ModuleASTs) of
+                {ok, Plan} ->
+                    Order = maps:get(order, Plan),
+                    compile_planned_modules(
+                        Order,
+                        ModuleASTs,
+                        SourcesByModule,
+                        Options,
+                        #{},
+                        #{}
+                    );
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end;
+compile_source_set(SourceSet, Options) ->
+    {error, {invalid_source_set, SourceSet, Options}}.
+
+analyze_source_set(SourceSet) ->
+    maps:fold(
+        fun
+            (_Identity, _Source, {error, _} = Error) ->
+                Error;
+            (Identity, Source0, {ok, ASTs, Sources}) ->
+                Source = source_characters(Source0),
+                case analyze_source(Source) of
+                    {ok, {module, Module, _, _, _, _} = AST} ->
+                        case Identity =:= Module of
+                            true ->
+                                case maps:is_key(Module, ASTs) of
+                                    true ->
+                                        {error, {
+                                            duplicate_source_module,
+                                            Module
+                                        }};
+                                    false ->
+                                        {ok,
+                                            ASTs#{Module => AST},
+                                            Sources#{Module => Source}}
+                                end;
+                            false ->
+                                {error, {
+                                    source_identity_mismatch,
+                                    Identity,
+                                    Module
+                                }}
+                        end;
+                    {error, _} = Error ->
+                        Error
+                end
+        end,
+        {ok, #{}, #{}},
+        SourceSet
+    ).
+
+source_characters(Source) when is_binary(Source) ->
+    binary_to_list(Source);
+source_characters(Source) when is_list(Source) ->
+    Source.
+
+analyze_source(Source) ->
+    case catena_lexer:string(Source) of
+        {ok, Tokens, _EndLocation} ->
+            case catena_parser:parse(Tokens) of
+                {ok, AST} ->
+                    catena_semantic:analyze(AST);
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, Reason, _Location} ->
+            {error, {lex_error, Reason}}
+    end.
+
+compile_planned_modules(
+    [],
+    _ModuleASTs,
+    _Sources,
+    _Options,
+    _Interfaces,
+    Artifacts
+) ->
+    Order = [
+        Module
+        || {Module, Artifact} <- maps:to_list(Artifacts),
+           maps:is_key(order_index, Artifact)
+    ],
+    SortedOrder = lists:sort(
+        fun(Left, Right) ->
+            maps:get(order_index, maps:get(Left, Artifacts)) <
+                maps:get(order_index, maps:get(Right, Artifacts))
+        end,
+        Order
+    ),
+    {ok, #{order => SortedOrder, artifacts => Artifacts}};
+compile_planned_modules(
+    [Module | Rest],
+    ModuleASTs,
+    Sources,
+    Options,
+    Interfaces,
+    Artifacts
+) ->
+    AST = maps:get(Module, ModuleASTs),
+    case imported_type_environment(AST, ModuleASTs) of
+        {ok, ImportEnv} ->
+            CompilerOptions = Options#{
+                process_imports => false,
+                import_env => ImportEnv,
+                module_interfaces => Interfaces,
+                source_identity => #{
+                    kind => module_set,
+                    module => Module
+                }
+            },
+            case catena_compile:compile_string_to_unit(
+                maps:get(Module, Sources),
+                CompilerOptions
+            ) of
+                {ok, Unit} ->
+                    case catena_codegen_module:generate_validated_module(Unit) of
+                        {ok, CoreModule} ->
+                            case core_to_beam(CoreModule) of
+                                {ok, RuntimeModule, Binary, Warnings} ->
+                                    Interface =
+                                        catena_compilation_unit:interface(Unit),
+                                    Artifact = #{
+                                        source_module => Module,
+                                        runtime_module => RuntimeModule,
+                                        unit => Unit,
+                                        core => CoreModule,
+                                        beam => Binary,
+                                        warnings => Warnings,
+                                        interface => Interface,
+                                        dependencies =>
+                                            catena_compilation_unit:
+                                                artifact_dependencies(Unit),
+                                        order_index =>
+                                            map_size(Artifacts) + 1
+                                    },
+                                    compile_planned_modules(
+                                        Rest,
+                                        ModuleASTs,
+                                        Sources,
+                                        Options,
+                                        Interfaces#{
+                                            Module => Interface
+                                        },
+                                        Artifacts#{Module => Artifact}
+                                    );
+                                {error, _} = Error ->
+                                    Error
+                            end;
+                        {error, _} = Error ->
+                            Error
+                    end;
+                {error, _} = Error ->
+                    Error
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+imported_type_environment(
+    {module, _Name, _Exports, Imports, _Decls, _Location},
+    ModuleASTs
+) ->
+    lists:foldl(
+        fun
+            (_Import, {error, _} = Error) ->
+                Error;
+            (
+                {import, ImportedModule, Items, Qualified, Alias, Location},
+                {ok, Env}
+            ) ->
+                case maps:get(ImportedModule, ModuleASTs, undefined) of
+                    undefined ->
+                        {error, #{
+                            reason => missing_dependency,
+                            dependency => ImportedModule,
+                            location => Location
+                        }};
+                    ImportedAST ->
+                        case catena_compile:build_module_exports_env(
+                            ImportedAST
+                        ) of
+                            {ok, ExportEnv} ->
+                                Selected = select_type_environment(
+                                    Items,
+                                    ExportEnv
+                                ),
+                                Prepared = qualify_type_environment(
+                                    ImportedModule,
+                                    Qualified,
+                                    Alias,
+                                    Selected
+                                ),
+                                {ok, catena_type_env:merge(Env, Prepared)};
+                            {error, _} = Error ->
+                                Error
+                        end
+                end
+        end,
+        {ok, catena_type_env:empty()},
+        Imports
+    ).
+
+select_type_environment(all, Env) ->
+    Env;
+select_type_environment(Items, Env) ->
+    maps:with(Items, Env).
+
+qualify_type_environment(_Module, false, _Alias, Env) ->
+    Env;
+qualify_type_environment(Module, true, Alias, Env) ->
+    Prefix = case Alias of
+        undefined -> Module;
+        _ -> Alias
+    end,
+    maps:from_list([
+        {{catena_import, Prefix, Name}, Scheme}
+        || {Name, Scheme} <- maps:to_list(Env)
+    ]).
+
+core_to_beam(CoreModule) ->
+    case compile:forms(
+        CoreModule,
+        [from_core, binary, return_errors, return_warnings]
+    ) of
+        {ok, Module, Binary} ->
+            {ok, Module, Binary, []};
+        {ok, Module, Binary, Warnings} ->
+            {ok, Module, Binary, Warnings};
+        {error, Errors, Warnings} ->
+            {error, {
+                core_compilation_failed,
+                Errors,
+                Warnings
+            }};
+        Other ->
+            {error, {unexpected_core_compiler_result, Other}}
+    end.
 
 %% Types
 -type module_name() :: atom().
