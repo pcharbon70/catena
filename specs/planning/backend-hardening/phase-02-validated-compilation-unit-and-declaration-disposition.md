@@ -116,14 +116,14 @@ cannot mistake them for the safe production compilation boundary.
 **Description:** Classify every module declaration before type erasure or
 function filtering so omission always has an explicit semantic reason.
 
-- [ ] **Section 2.3 Complete**
+- [x] **Section 2.3 Complete**
 
 ### Task 2.3.1: Classify Static And Executable Declarations
 
 **Description:** Assign `lowered`, `erased_static`, `runtime_lowered`, or
 `unsupported` to every canonical declaration form.
 
-- [ ] **Task 2.3.1 Complete**
+- [x] **Task 2.3.1 Complete**
 
 #### Subtask 2.3.1.1: Classify Transforms And Static Metadata
 
@@ -131,7 +131,7 @@ function filtering so omission always has an explicit semantic reason.
 without implementations, type declarations, effect declarations, imports, and
 exports.
 
-- [ ] **Subtask 2.3.1.1 Complete**
+- [x] **Subtask 2.3.1.1 Complete**
 
 #### Subtask 2.3.1.2: Classify Runtime-Bearing Declarations
 
@@ -139,21 +139,21 @@ exports.
 properties, and any future actor/process declarations without silently
 promoting incomplete lowering.
 
-- [ ] **Subtask 2.3.1.2 Complete**
+- [x] **Subtask 2.3.1.2 Complete**
 
 ### Task 2.3.2: Enforce Disposition Before Erasure
 
 **Description:** Require a valid disposition and any representation metadata
 before a declaration can be erased, lowered, or rejected.
 
-- [ ] **Task 2.3.2 Complete**
+- [x] **Task 2.3.2 Complete**
 
 #### Subtask 2.3.2.1: Order Representation Selection Before Erasure
 
 **Description:** Preserve constructor, effect-operation, trait-method, and
 import-linkage metadata before removing static declarations.
 
-- [ ] **Subtask 2.3.2.1 Complete**
+- [x] **Subtask 2.3.2.1 Complete**
 
 #### Subtask 2.3.2.2: Reject Missing Runtime Implementations
 
@@ -161,7 +161,7 @@ import-linkage metadata before removing static declarations.
 runtime-bearing declarations when application artifact generation would
 otherwise omit required behavior.
 
-- [ ] **Subtask 2.3.2.2 Complete**
+- [x] **Subtask 2.3.2.2 Complete**
 
 ## Section 2.4: Phase 2 Integration Tests
 

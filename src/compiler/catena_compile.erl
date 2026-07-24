@@ -104,18 +104,30 @@ compile_string_to_unit(Source, Opts) ->
         {ok, AnalyzedAST} ->
             case type_check_with_imports(AnalyzedAST, Opts) of
                 {ok, {typed_module, _, _, _} = TypedModule} ->
-                    catena_compilation_unit:new(
+                    build_validated_unit(
                         AnalyzedAST,
                         TypedModule,
-                        #{
-                            validation_state => successful_validations(),
-                            options => Opts,
-                            source_identity => source_identity(Opts)
-                        }
+                        Opts
                     );
                 {error, _} = TypeError ->
                     TypeError
             end;
+        {error, _} = Error ->
+            Error
+    end.
+
+build_validated_unit(AnalyzedAST, TypedModule, Opts) ->
+    case catena_compilation_unit:new(
+        AnalyzedAST,
+        TypedModule,
+        #{
+            validation_state => successful_validations(),
+            options => Opts,
+            source_identity => source_identity(Opts)
+        }
+    ) of
+        {ok, Unit} ->
+            catena_declaration_disposition:classify(Unit);
         {error, _} = Error ->
             Error
     end.

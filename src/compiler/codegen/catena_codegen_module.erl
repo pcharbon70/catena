@@ -53,12 +53,14 @@
 generate_validated_module(Unit) ->
     case catena_compilation_unit:is_compilation_unit(Unit) of
         true ->
-            CompilerOpts = catena_compilation_unit:options(Unit),
-            CodegenOpts = maps:get(codegen_opts, CompilerOpts, #{}),
-            generate_module(
-                catena_compilation_unit:normalized_ast(Unit),
-                CodegenOpts
-            );
+            case catena_declaration_disposition:prepare_for_codegen(Unit) of
+                {ok, BackendAST} ->
+                    CompilerOpts = catena_compilation_unit:options(Unit),
+                    CodegenOpts = maps:get(codegen_opts, CompilerOpts, #{}),
+                    generate_module(BackendAST, CodegenOpts);
+                {error, _} = Error ->
+                    Error
+            end;
         false ->
             {error, {invalid_compilation_unit, unchecked_backend_input}}
     end.

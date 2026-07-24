@@ -230,17 +230,27 @@ with_dispositions(Unit, Dispositions) when
     is_list(Dispositions)
 ->
     {module, _, _, _, Declarations, _} = normalized_ast(Unit),
-    case length(Declarations) =:= length(Dispositions) andalso
-        valid_disposition_indexes(Dispositions, length(Declarations))
-    of
+    case valid_disposition_indexes(
+        Dispositions,
+        length(Declarations)
+    ) of
         true ->
             {ok, Unit#{dispositions := Dispositions}};
         false ->
+            DeclarationDispositionCount = length([
+                Disposition
+                || Disposition <- Dispositions,
+                   maps:get(
+                       subject,
+                       Disposition,
+                       declaration
+                   ) =:= declaration
+            ]),
             {error,
                 {invalid_compilation_unit,
                     {disposition_count_mismatch,
                         length(Declarations),
-                        length(Dispositions)}}}
+                        DeclarationDispositionCount}}}
     end.
 
 validate_evidence(ValidationState) when is_map(ValidationState) ->
@@ -257,12 +267,17 @@ validate_evidence(_) ->
     {error, {invalid_compilation_unit, invalid_validation_state}}.
 
 valid_disposition_indexes(Dispositions, Count) ->
-    Indexes = [maps:get(index, Disposition, invalid) || Disposition <- Dispositions],
+    Indexes = [
+        maps:get(index, Disposition, invalid)
+        || Disposition <- Dispositions,
+           maps:get(subject, Disposition, declaration) =:= declaration
+    ],
     Indexes =:= lists:seq(1, Count).
 
 unclassified_dispositions(Declarations) ->
     [
         #{
+            subject => declaration,
             index => Index,
             disposition => unclassified,
             declaration => Declaration,
