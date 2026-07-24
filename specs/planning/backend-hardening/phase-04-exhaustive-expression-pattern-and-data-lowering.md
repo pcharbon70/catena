@@ -4,7 +4,7 @@
 exhaustive and semantics-preserving across expressions, operators, bindings,
 patterns, clauses, algebraic data, lists, tuples, and records.
 
-**Status:** Planned.
+**Status:** Complete.
 
 **Dependencies:** Phase 3 complete.
 
@@ -13,7 +13,7 @@ patterns, clauses, algebraic data, lists, tuples, and records.
 **Description:** Give every normalized pure expression and operator an explicit
 lowering or a structured rejection path.
 
-- [ ] **Section 4.1 Complete**
+- [x] **Section 4.1 Complete**
 
 ### Task 4.1.1: Complete Pure Expression Coverage
 
@@ -21,35 +21,35 @@ lowering or a structured rejection path.
 literals, applications, lambdas, lets, matches, lists, tuples, records, and
 field access.
 
-- [ ] **Task 4.1.1 Complete**
+- [x] **Task 4.1.1 Complete**
 
 #### Subtask 4.1.1.1: Lower Values And Bindings
 
 **Description:** Validate literal, list, tuple, record, lambda, application,
 simple-let, and nested-let behavior without placeholder nodes or lost scope.
 
-- [ ] **Subtask 4.1.1.1 Complete**
+- [x] **Subtask 4.1.1.1 Complete**
 
 #### Subtask 4.1.1.2: Lower Matches And Field Access
 
 **Description:** Preserve match scrutinees, clause ordering, record map access,
 and missing-field runtime behavior through explicit Core forms.
 
-- [ ] **Subtask 4.1.1.2 Complete**
+- [x] **Subtask 4.1.1.2 Complete**
 
 ### Task 4.1.2: Reconcile Operator Semantics
 
 **Description:** Align parser operators, semantic desugaring, type inference,
 and backend emission so each supported operator has one documented meaning.
 
-- [ ] **Task 4.1.2 Complete**
+- [x] **Task 4.1.2 Complete**
 
 #### Subtask 4.1.2.1: Lower Primitive Operators Explicitly
 
 **Description:** Cover arithmetic, comparison, Boolean, pipe, list append, and
 list cons operations with verified OTP targets and evaluation semantics.
 
-- [ ] **Subtask 4.1.2.1 Complete**
+- [x] **Subtask 4.1.2.1 Complete**
 
 #### Subtask 4.1.2.2: Validate Desugared Library Operators
 
@@ -57,14 +57,14 @@ list cons operations with verified OTP targets and evaluation semantics.
 resolution as explicit library calls rather than leaking parser operator atoms
 into arbitrary BIF emission.
 
-- [ ] **Subtask 4.1.2.2 Complete**
+- [x] **Subtask 4.1.2.2 Complete**
 
 ## Section 4.2: Lossless Pattern And Clause Compilation
 
 **Description:** Compile every promoted parser-native pattern without wildcard
 substitution while preserving bindings, guards, and source clause order.
 
-- [ ] **Section 4.2 Complete**
+- [x] **Section 4.2 Complete**
 
 ### Task 4.2.1: Complete Pattern Representation Coverage
 
@@ -72,28 +72,28 @@ substitution while preserving bindings, guards, and source clause order.
 tuple, record, as-pattern, and or-pattern shapes across semantic validation and
 Core generation.
 
-- [ ] **Task 4.2.1 Complete**
+- [x] **Task 4.2.1 Complete**
 
 #### Subtask 4.2.1.1: Compile Structural Patterns
 
 **Description:** Emit exact Core patterns for constructors, lists, cons cells,
 tuples, records, literals, variables, and wildcards.
 
-- [ ] **Subtask 4.2.1.1 Complete**
+- [x] **Subtask 4.2.1.1 Complete**
 
 #### Subtask 4.2.1.2: Compile As-Patterns And Or-Patterns
 
 **Description:** Preserve alias bindings and expand valid alternatives without
 dropping nested structure or changing bound-name sets.
 
-- [ ] **Subtask 4.2.1.2 Complete**
+- [x] **Subtask 4.2.1.2 Complete**
 
 ### Task 4.2.2: Preserve Clause And Binding Semantics
 
 **Description:** Keep transform parameters, match clauses, guards, and binding
 scope correct when the backend introduces synthetic parameters or cases.
 
-- [ ] **Task 4.2.2 Complete**
+- [x] **Task 4.2.2 Complete**
 
 #### Subtask 4.2.2.1: Compile Complex Transform Parameters
 
@@ -101,14 +101,14 @@ scope correct when the backend introduces synthetic parameters or cases.
 against the original patterns and never replace them with fresh unconstrained
 variables.
 
-- [ ] **Subtask 4.2.2.1 Complete**
+- [x] **Subtask 4.2.2.1 Complete**
 
 #### Subtask 4.2.2.2: Compile Guards And Pattern Bindings
 
 **Description:** Preserve guard conjunction, guard purity, clause fallthrough,
 and all variables introduced by successful patterns.
 
-- [ ] **Subtask 4.2.2.2 Complete**
+- [x] **Subtask 4.2.2.2 Complete**
 
 ## Section 4.3: Stable Data Representation And Erasure
 
@@ -116,7 +116,7 @@ and all variables introduced by successful patterns.
 and erase static type information only after all representation metadata is
 fixed.
 
-- [ ] **Section 4.3 Complete**
+- [x] **Section 4.3 Complete**
 
 ### Task 4.3.1: Stabilize Value Representations
 
@@ -124,21 +124,21 @@ fixed.
 representations explicit and consistent across construction, access, and
 pattern matching.
 
-- [ ] **Task 4.3.1 Complete**
+- [x] **Task 4.3.1 Complete**
 
 #### Subtask 4.3.1.1: Validate Constructor And Collection Symmetry
 
 **Description:** Ensure each emitted value can be consumed by the corresponding
 pattern form with the same tag, arity, field, and element conventions.
 
-- [ ] **Subtask 4.3.1.1 Complete**
+- [x] **Subtask 4.3.1.1 Complete**
 
 #### Subtask 4.3.1.2: Validate Record Map Semantics
 
 **Description:** Confirm record construction, field access, and exact record
 patterns use compatible map-key and missing-field behavior.
 
-- [ ] **Subtask 4.3.1.2 Complete**
+- [x] **Subtask 4.3.1.2 Complete**
 
 ### Task 4.3.2: Harden Type Erasure
 
@@ -146,7 +146,7 @@ patterns use compatible map-key and missing-field behavior.
 declarations and supported expressions rather than a permissive identity
 fallback.
 
-- [ ] **Task 4.3.2 Complete**
+- [x] **Task 4.3.2 Complete**
 
 #### Subtask 4.3.2.1: Erase Static Types Exhaustively
 
@@ -154,14 +154,14 @@ fallback.
 only through explicit clauses that preserve required constructor and dispatch
 metadata.
 
-- [ ] **Subtask 4.3.2.1 Complete**
+- [x] **Subtask 4.3.2.1 Complete**
 
 #### Subtask 4.3.2.2: Reject Unknown Erasure Forms
 
 **Description:** Return an invalid-disposition or unsupported-construct error
 when erasure receives a normalized form without an accepted rule.
 
-- [ ] **Subtask 4.3.2.2 Complete**
+- [x] **Subtask 4.3.2.2 Complete**
 
 ## Section 4.4: Phase 4 Integration Tests
 
@@ -169,35 +169,35 @@ when erasure receives a normalized form without an accepted rule.
 promoted expression, operator, pattern, and data representation and verify
 negative paths fail closed.
 
-- [ ] **Section 4.4 Complete**
+- [x] **Section 4.4 Complete**
 
 ### Task 4.4.1: Execute Pure Feature Matrix
 
 **Description:** Add source-to-BEAM tests that exercise supported values,
 operators, bindings, matches, records, collections, and clauses in combination.
 
-- [ ] **Task 4.4.1 Complete**
+- [x] **Task 4.4.1 Complete**
 
 #### Subtask 4.4.1.1: Test Expressions And Data
 
 **Description:** Execute literals, lists, tuples, records, field access,
 lambdas, lets, primitive operators, pipe, and desugared pure operators.
 
-- [ ] **Subtask 4.4.1.1 Complete**
+- [x] **Subtask 4.4.1.1 Complete**
 
 #### Subtask 4.4.1.2: Test Pattern Matrix
 
 **Description:** Execute every promoted pattern form, nested combinations,
 guards, aliases, alternative patterns, and multi-clause fallthrough.
 
-- [ ] **Subtask 4.4.1.2 Complete**
+- [x] **Subtask 4.4.1.2 Complete**
 
 ### Task 4.4.2: Verify Semantic And Failure Boundaries
 
 **Description:** Compare construction and matching results and verify all
 unsupported pure forms fail before Core success.
 
-- [ ] **Task 4.4.2 Complete**
+- [x] **Task 4.4.2 Complete**
 
 #### Subtask 4.4.2.1: Test Representation Round Trips
 
@@ -205,7 +205,7 @@ unsupported pure forms fail before Core success.
 patterns or accessors, and assert the expected observable result after BEAM
 execution.
 
-- [ ] **Subtask 4.4.2.1 Complete**
+- [x] **Subtask 4.4.2.1 Complete**
 
 #### Subtask 4.4.2.2: Run Phase Completion Gates
 
@@ -213,4 +213,4 @@ execution.
 and source-to-BEAM suites plus `make check-specs`, `make conformance`, and the
 complete active EUnit suite.
 
-- [ ] **Subtask 4.4.2.2 Complete**
+- [x] **Subtask 4.4.2.2 Complete**

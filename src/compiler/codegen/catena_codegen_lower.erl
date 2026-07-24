@@ -241,7 +241,7 @@ lower_expr({constructor, Name, Arguments, Location}) ->
         [lower_expr(Argument) || Argument <- Arguments],
         Location};
 lower_expr(Other) ->
-    Other.
+    unsupported(expression_lowering, expression, Other).
 
 lower_match_clause({match_clause, Pattern, Guards, Body, _Location}) ->
     {clause,
@@ -254,7 +254,7 @@ lower_match_clause({clause, Patterns, Guards, Body}) ->
         lower_guards(Guards),
         lower_expr(Body)};
 lower_match_clause(Other) ->
-    Other.
+    unsupported(clause_lowering, clause, Other).
 
 lower_handler({handler_clause, Effect, Operations, Location}) ->
     {handler_clause,
@@ -279,6 +279,16 @@ lower_pattern({pat_var, true, Location}) ->
     {pat_literal, true, bool, Location};
 lower_pattern({pat_var, false, Location}) ->
     {pat_literal, false, bool, Location};
+lower_pattern({pat_var, Name, Location}) ->
+    {pat_var, Name, Location};
+lower_pattern({pat_typed_var, Name, Type, Location}) ->
+    {pat_typed_var, Name, Type, Location};
+lower_pattern({pat_wildcard, Location}) ->
+    {pat_wildcard, Location};
+lower_pattern({pat_literal, Value, Type, Location})
+  when Type =:= integer; Type =:= float; Type =:= string;
+       Type =:= atom; Type =:= char; Type =:= bool ->
+    {pat_literal, Value, Type, Location};
 lower_pattern({pat_constructor, Name, Arguments, Location}) ->
     {pat_constructor,
         Name,
@@ -301,7 +311,7 @@ lower_pattern({pat_record, Fields, Location}) ->
         [{Field, lower_pattern(Pattern)} || {Field, Pattern} <- Fields],
         Location};
 lower_pattern(Other) ->
-    Other.
+    unsupported(pattern_lowering, pattern, Other).
 
 %% @doc Map parser operator names to their Core Erlang operation atoms.
 -spec lower_operator(atom()) -> atom().
@@ -319,7 +329,45 @@ lower_operator(gt) -> '>';
 lower_operator(lte) -> '=<';
 lower_operator(gte) -> '>=';
 lower_operator(plus_plus) -> '++';
-lower_operator(Other) -> Other.
+lower_operator('+') -> '+';
+lower_operator('-') -> '-';
+lower_operator('*') -> '*';
+lower_operator('/') -> '/';
+lower_operator('div') -> 'div';
+lower_operator('rem') -> 'rem';
+lower_operator('==') -> '==';
+lower_operator('/=') -> '/=';
+lower_operator('=:=') -> '=:=';
+lower_operator('=/=') -> '=/=';
+lower_operator('===') -> '===';
+lower_operator('!==') -> '!==';
+lower_operator('<') -> '<';
+lower_operator('>') -> '>';
+lower_operator('=<') -> '=<';
+lower_operator('>=') -> '>=';
+lower_operator('and') -> 'and';
+lower_operator('or') -> 'or';
+lower_operator('andalso') -> 'andalso';
+lower_operator('orelse') -> 'orelse';
+lower_operator('++') -> '++';
+lower_operator('::') -> '::';
+lower_operator('|>') -> '|>';
+lower_operator(Other) ->
+    unsupported(operator_lowering, operator, Other).
+
+unsupported(Stage, Construct, SourceTerm) ->
+    Context =
+        catena_backend_error:context(
+            Stage,
+            Construct,
+            SourceTerm
+        ),
+    throw(
+        catena_backend_error:unsupported_backend_construct(
+            Construct,
+            Context
+        )
+    ).
 
 is_constructor_name(Name) when is_atom(Name) ->
     case atom_to_list(Name) of

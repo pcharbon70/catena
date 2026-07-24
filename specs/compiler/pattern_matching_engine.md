@@ -2,10 +2,11 @@
 
 ## Status
 
-Promoted status: parser-native patterns are integrated through semantic
-validation and Core Erlang lowering. Exhaustiveness/redundancy analysis and
-decision-tree construction are implemented and tested as separate compiler
-surfaces, not yet selected by the default source-to-Core path.
+Promoted status: every parser-native pattern is integrated through semantic
+validation, lossless Core Erlang lowering, and source-to-BEAM execution
+evidence. Exhaustiveness/redundancy analysis and decision-tree construction
+remain separately tested compiler surfaces that are not yet selected by the
+default source-to-Core path.
 
 ## Design Anchors
 
@@ -20,12 +21,19 @@ surfaces, not yet selected by the default source-to-Core path.
 - `test/compiler/codegen/catena_pattern_decision_tree_tests.erl`
 - `test/compiler/integration/catena_pattern_integration_tests.erl`
 - `test/compiler/integration/catena_pattern_contract_tests.erl`
+- `test/compiler/codegen/catena_codegen_lossless_pattern_tests.erl`
+- `test/compiler/integration/catena_backend_hardening_phase4_tests.erl`
 
 ## Current Promoted Surface
 
 - Pattern matching is no longer just parser sugar; it is a multi-layer compiler feature.
 - Canonical transform and match clauses now lower into binding-safe Core Erlang
   case clauses.
+- Complex transform parameters are matched immediately against synthetic
+  function parameters, preserving their original structure and bindings.
+- Or-patterns expand recursively in nested and multi-position patterns,
+  preserve source order, and require identical binding sets.
+- Constructor patterns validate their declared arity before Core emission.
 - The codebase contains static analysis for exhaustiveness/redundancy and a
   decision-tree builder, but neither is wired into the default Core emission
   path yet.
@@ -89,6 +97,8 @@ The promoted current status for the pattern engine is:
 
 - advanced parser-native pattern lowering: integrated
 - guard purity, clause arity, and or-pattern bindings: compiler-enforced
+- parser-native pattern execution, binding scope, guard conjunction, and
+  clause fallthrough: proven through source-to-BEAM evidence
 - decision-tree construction: implemented and tested separately
 - exhaustiveness and redundancy checking: implemented and tested separately
 

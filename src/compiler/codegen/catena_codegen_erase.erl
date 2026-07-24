@@ -43,7 +43,9 @@
 -spec erase_module(module_ast()) -> module_ast().
 erase_module({module, Name, Exports, Imports, Decls, Loc}) ->
     ErasedDecls = [erase_decl(D) || D <- Decls],
-    {module, Name, Exports, Imports, ErasedDecls, Loc}.
+    {module, Name, Exports, Imports, ErasedDecls, Loc};
+erase_module(Other) ->
+    unsupported(module, Other).
 
 %% @doc Erase types from a declaration
 erase_decl({transform, Name, Params, Body, Loc}) ->
@@ -59,6 +61,9 @@ erase_decl({transform_typed, Name, _TypeSig, Params, Body, Loc}) ->
     ErasedBody = erase_expr(Body),
     {transform, Name, ErasedParams, ErasedBody, Loc};
 
+erase_decl(erased) ->
+    erased;
+
 erase_decl({type_decl, _Name, _TypeVars, _Constructors, _Derives, _Loc}) ->
     %% Type declarations are completely erased
     erased;
@@ -67,22 +72,12 @@ erase_decl({type_decl, _Name, _TypeVars, _Constructors, _Loc}) ->
     %% Legacy backend form without an explicit derives list
     erased;
 
-erase_decl({trait_decl, _Name, _TypeVar, _Supertraits, _Methods, _Loc}) ->
-    %% Trait declarations are erased (methods become regular functions)
-    erased;
-
-erase_decl({instance_decl, TraitName, TypeArgs, _Constraints, Methods, Loc}) ->
-    %% Instance declarations become dictionary definitions
-    DictName = instance_dict_name(TraitName, TypeArgs),
-    DictValue = build_instance_dict(Methods),
-    {transform, DictName, [], DictValue, Loc};
-
 erase_decl({effect_decl, _Name, _Operations, _Loc}) ->
     %% Effect declarations are metadata, erased at runtime
     erased;
 
 erase_decl(Other) ->
-    Other.
+    invalid_declaration(Other).
 
 %%====================================================================
 %% Expression Erasure
@@ -92,7 +87,9 @@ erase_decl(Other) ->
 -spec erase_expr(expr()) -> expr().
 
 %% Literals - no types to erase
-erase_expr({literal, Type, Value, Loc}) ->
+erase_expr({literal, Type, Value, Loc})
+  when Type =:= integer; Type =:= float; Type =:= string;
+       Type =:= atom; Type =:= char; Type =:= bool ->
     {literal, Type, Value, Loc};
 
 %% Variables - no types to erase
@@ -111,7 +108,7 @@ erase_expr({app, Func, Args, Loc}) ->
 
 %% Let binding
 erase_expr({let_expr, Bindings, Body, Loc}) ->
-    ErasedBindings = [{erase_pattern(P), erase_expr(E)} || {P, E} <- Bindings],
+    ErasedBindings = erase_bindings(Bindings),
     ErasedBody = erase_expr(Body),
     {let_expr, ErasedBindings, ErasedBody, Loc};
 
@@ -149,7 +146,7 @@ erase_expr({tuple_expr, Elements, Loc}) ->
 
 %% Record expression
 erase_expr({record_expr, Fields, Loc}) ->
-    ErasedFields = [{Name, erase_expr(Value)} || {Name, Value} <- Fields],
+    ErasedFields = erase_expression_fields(Fields),
     {record_expr, ErasedFields, Loc};
 
 %% Record access
@@ -175,12 +172,17 @@ erase_expr({try_with_expr, Body, Handlers, Loc}) ->
     ErasedHandlers = [erase_handler(H) || H <- Handlers],
     {try_with_expr, ErasedBody, ErasedHandlers, Loc};
 
+erase_expr({handle_expr, Body, Handlers, Loc}) ->
+    ErasedBody = erase_expr(Body),
+    ErasedHandlers = [erase_handler(H) || H <- Handlers],
+    {handle_expr, ErasedBody, ErasedHandlers, Loc};
+
 %% Type ascription - strip entirely
 erase_expr({type_ascription, Expr, _Type, _Loc}) ->
     erase_expr(Expr);
 
 %% Trait method call - transform to dictionary lookup
-erase_expr({trait_method, TraitName, Method, TypeArgs, Args, Loc}) ->
+erase_expr({trait_method, TraitName, Method, _TypeArgs, Args, Loc}) ->
     %% Transform: TraitName.method(args) -> dict.method(args)
     %% This becomes a dictionary lookup at runtime
     DictVar = {var, trait_dict_var(TraitName), Loc},
@@ -188,31 +190,36 @@ erase_expr({trait_method, TraitName, Method, TypeArgs, Args, Loc}) ->
     ErasedArgs = [erase_expr(A) || A <- Args],
     {app, MethodAccess, ErasedArgs, Loc};
 
-%% Default - return as is
 erase_expr(Other) ->
-    Other.
+    unsupported(expression, Other).
 
 %% Erase a match clause
 erase_clause({clause, Patterns, Guards, Body, Loc}) ->
     ErasedPatterns = [erase_pattern(P) || P <- Patterns],
-    ErasedGuards = [erase_expr(G) || G <- Guards],
+    ErasedGuards = erase_guards(Guards),
     ErasedBody = erase_expr(Body),
     {clause, ErasedPatterns, ErasedGuards, ErasedBody, Loc};
 erase_clause({clause, Patterns, Guards, Body}) ->
     ErasedPatterns = [erase_pattern(P) || P <- Patterns],
-    ErasedGuards = [erase_expr(G) || G <- Guards],
+    ErasedGuards = erase_guards(Guards),
     ErasedBody = erase_expr(Body),
-    {clause, ErasedPatterns, ErasedGuards, ErasedBody}.
+    {clause, ErasedPatterns, ErasedGuards, ErasedBody};
+erase_clause(Other) ->
+    unsupported(clause, Other).
 
 %% Erase a handler
 erase_handler({handler_clause, Effect, Operations, Loc}) ->
     ErasedOps = [erase_operation(Op) || Op <- Operations],
-    {handler_clause, Effect, ErasedOps, Loc}.
+    {handler_clause, Effect, ErasedOps, Loc};
+erase_handler(Other) ->
+    unsupported(handler, Other).
 
 erase_operation({operation_case, Name, Params, Body, Loc}) ->
     ErasedParams = [erase_pattern(P) || P <- Params],
     ErasedBody = erase_expr(Body),
-    {operation_case, Name, ErasedParams, ErasedBody, Loc}.
+    {operation_case, Name, ErasedParams, ErasedBody, Loc};
+erase_operation(Other) ->
+    unsupported(handler_operation, Other).
 
 %%====================================================================
 %% Pattern Erasure
@@ -234,7 +241,9 @@ erase_pattern({pat_wildcard, Loc}) ->
     {pat_wildcard, Loc};
 
 %% Literal
-erase_pattern({pat_literal, Value, Type, Loc}) ->
+erase_pattern({pat_literal, Value, Type, Loc})
+  when Type =:= integer; Type =:= float; Type =:= string;
+       Type =:= atom; Type =:= char; Type =:= bool ->
     {pat_literal, Value, Type, Loc};
 
 %% Constructor
@@ -263,12 +272,40 @@ erase_pattern({pat_or, Patterns, Loc}) ->
 
 %% Record pattern
 erase_pattern({pat_record, Fields, Loc}) ->
-    ErasedFields = [{Name, erase_pattern(P)} || {Name, P} <- Fields],
+    ErasedFields = erase_pattern_fields(Fields),
     {pat_record, ErasedFields, Loc};
 
-%% Default
 erase_pattern(Other) ->
-    Other.
+    unsupported(pattern, Other).
+
+erase_bindings([]) ->
+    [];
+erase_bindings([{Pattern, Expression} | Rest]) ->
+    [
+        {erase_pattern(Pattern), erase_expr(Expression)}
+        | erase_bindings(Rest)
+    ];
+erase_bindings(Other) ->
+    unsupported(let_bindings, Other).
+
+erase_expression_fields([]) ->
+    [];
+erase_expression_fields([{Name, Value} | Rest]) when is_atom(Name) ->
+    [{Name, erase_expr(Value)} | erase_expression_fields(Rest)];
+erase_expression_fields(Other) ->
+    unsupported(record_fields, Other).
+
+erase_pattern_fields([]) ->
+    [];
+erase_pattern_fields([{Name, Pattern} | Rest]) when is_atom(Name) ->
+    [{Name, erase_pattern(Pattern)} | erase_pattern_fields(Rest)];
+erase_pattern_fields(Other) ->
+    unsupported(record_pattern_fields, Other).
+
+erase_guards(Guards) when is_list(Guards) ->
+    [erase_expr(Guard) || Guard <- Guards];
+erase_guards(Other) ->
+    unsupported(guards, Other).
 
 %%====================================================================
 %% Type Annotation Stripping (1.3.3.1)
@@ -354,14 +391,6 @@ build_dictionary(TraitName, TypeArgs) ->
     DictName = instance_dict_name(TraitName, TypeArgs),
     {var, DictName, {location, 0, 0}}.
 
-%% Build instance dictionary value from methods
-build_instance_dict(Methods) ->
-    Fields = [{Name, build_method_ref(Name, Arity)} || {Name, Arity, _Body} <- Methods],
-    {record_expr, Fields, {location, 0, 0}}.
-
-build_method_ref(Name, _Arity) ->
-    {var, Name, {location, 0, 0}}.
-
 %%====================================================================
 %% Polymorphism Handling (1.3.3.3)
 %%====================================================================
@@ -436,6 +465,34 @@ check_structure_preserved(_Original, _Erased) ->
 %%====================================================================
 %% Helper Functions
 %%====================================================================
+
+invalid_declaration(Declaration) ->
+    Context =
+        catena_backend_error:context(
+            type_erasure,
+            declaration,
+            Declaration
+        ),
+    throw(
+        catena_backend_error:invalid_declaration_disposition(
+            Declaration,
+            Context
+        )
+    ).
+
+unsupported(Construct, SourceTerm) ->
+    Context =
+        catena_backend_error:context(
+            type_erasure,
+            Construct,
+            SourceTerm
+        ),
+    throw(
+        catena_backend_error:unsupported_backend_construct(
+            Construct,
+            Context
+        )
+    ).
 
 %% Generate dictionary variable name for a trait
 trait_dict_var(TraitName) ->

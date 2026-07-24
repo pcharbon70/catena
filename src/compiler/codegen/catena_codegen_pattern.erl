@@ -70,22 +70,100 @@ compile_clauses(Clauses, State, Opts) ->
 expand_or_patterns_in_clauses(Clauses) ->
     lists:flatmap(fun expand_or_pattern_clause/1, Clauses).
 
-%% @doc Expand a single clause if it contains an or-pattern
+%% @doc Expand every or-pattern in a clause, including nested alternatives.
 -spec expand_or_pattern_clause(clause()) -> [clause()].
-expand_or_pattern_clause({clause, [Pattern], Guards, Body}) ->
-    %% Single pattern - check if it's an or-pattern
-    case Pattern of
-        {pat_or, Alternatives, _Loc} ->
-            %% Expand into multiple clauses
-            [{clause, [Alt], Guards, Body} || Alt <- Alternatives];
-        _ ->
-            %% Not an or-pattern, keep as-is
-            [{clause, [Pattern], Guards, Body}]
-    end;
+expand_or_pattern_clause({clause, Patterns, Guards, Body}) ->
+    [
+        {clause, ExpandedPatterns, Guards, Body}
+        || ExpandedPatterns <- expand_pattern_list(Patterns)
+    ];
+expand_or_pattern_clause({Patterns, Body}) when is_list(Patterns) ->
+    [
+        {ExpandedPatterns, Body}
+        || ExpandedPatterns <- expand_pattern_list(Patterns)
+    ];
 expand_or_pattern_clause(Clause) ->
-    %% Multi-pattern or other format - keep as-is for now
-    %% TODO: Handle or-patterns in multi-pattern clauses
     [Clause].
+
+expand_pattern_list([]) ->
+    [[]];
+expand_pattern_list([Pattern | Rest]) ->
+    [
+        [ExpandedPattern | ExpandedRest]
+        || ExpandedPattern <- expand_pattern(Pattern),
+           ExpandedRest <- expand_pattern_list(Rest)
+    ].
+
+expand_pattern({pat_constructor, Name, Arguments, Location}) ->
+    [
+        {pat_constructor, Name, ExpandedArguments, Location}
+        || ExpandedArguments <- expand_pattern_list(Arguments)
+    ];
+expand_pattern({pat_list, Elements, Location}) ->
+    [
+        {pat_list, ExpandedElements, Location}
+        || ExpandedElements <- expand_pattern_list(Elements)
+    ];
+expand_pattern({pat_cons, Head, Tail, Location}) ->
+    [
+        {pat_cons, ExpandedHead, ExpandedTail, Location}
+        || ExpandedHead <- expand_pattern(Head),
+           ExpandedTail <- expand_pattern(Tail)
+    ];
+expand_pattern({pat_tuple, Elements, Location}) ->
+    [
+        {pat_tuple, ExpandedElements, Location}
+        || ExpandedElements <- expand_pattern_list(Elements)
+    ];
+expand_pattern({pat_as, Name, Pattern, Location}) ->
+    [
+        {pat_as, Name, ExpandedPattern, Location}
+        || ExpandedPattern <- expand_pattern(Pattern)
+    ];
+expand_pattern({pat_or, [], _Location} = Pattern) ->
+    unsupported(or_pattern, Pattern);
+expand_pattern({pat_or, Alternatives, Location} = Pattern) ->
+    validate_or_pattern_bindings(Alternatives, Location, Pattern),
+    lists:append([expand_pattern(Alternative) || Alternative <- Alternatives]);
+expand_pattern({pat_record, Fields, Location}) ->
+    [
+        {pat_record, ExpandedFields, Location}
+        || ExpandedFields <- expand_pattern_fields(Fields)
+    ];
+expand_pattern(Pattern) ->
+    [Pattern].
+
+expand_pattern_fields([]) ->
+    [[]];
+expand_pattern_fields([{Field, Pattern} | Rest]) ->
+    [
+        [{Field, ExpandedPattern} | ExpandedRest]
+        || ExpandedPattern <- expand_pattern(Pattern),
+           ExpandedRest <- expand_pattern_fields(Rest)
+    ].
+
+validate_or_pattern_bindings([First | Rest], Location, Pattern) ->
+    Expected = lists:usort(pattern_bindings(First)),
+    lists:foreach(
+        fun(Alternative) ->
+            Actual = lists:usort(pattern_bindings(Alternative)),
+            case Actual =:= Expected of
+                true ->
+                    ok;
+                false ->
+                    unsupported(
+                        or_pattern_bindings,
+                        Pattern,
+                        #{
+                            expected_bindings => Expected,
+                            actual_bindings => Actual,
+                            location => Location
+                        }
+                    )
+            end
+        end,
+        Rest
+    ).
 
 %% @doc Compile a single clause (pattern, guard, body)
 -spec compile_clause(clause(), catena_codegen_utils:codegen_state(), compile_opts()) ->
@@ -139,11 +217,10 @@ pattern_bindings({pat_tuple, Elements, _Location}) ->
     lists:append([pattern_bindings(Element) || Element <- Elements]);
 pattern_bindings({pat_as, Name, Pattern, _Location}) ->
     [Name | pattern_bindings(Pattern)];
-pattern_bindings({pat_or, Alternatives, _Location}) ->
-    lists:append([
-        pattern_bindings(Alternative)
-        || Alternative <- Alternatives
-    ]);
+pattern_bindings({pat_or, [First | _], _Location}) ->
+    pattern_bindings(First);
+pattern_bindings({pat_or, [], _Location}) ->
+    [];
 pattern_bindings({pat_record, Fields, _Location}) ->
     lists:append([
         pattern_bindings(Pattern)
@@ -184,6 +261,9 @@ compile_pattern({pat_literal, Value, string, _Loc}, State) when is_binary(Value)
 compile_pattern({pat_literal, Value, atom, _Loc}, State) ->
     {cerl:c_atom(Value), State};
 
+compile_pattern({pat_literal, Value, char, _Loc}, State) ->
+    {cerl:c_int(Value), State};
+
 compile_pattern({pat_literal, true, bool, _Loc}, State) ->
     {cerl:c_atom(true), State};
 
@@ -191,11 +271,23 @@ compile_pattern({pat_literal, false, bool, _Loc}, State) ->
     {cerl:c_atom(false), State};
 
 %% Constructor pattern: Some(x) -> {Some, X}
-compile_pattern({pat_constructor, Name, Args, _Loc}, State) ->
-    {CoreArgs, State1} = compile_patterns(Args, State),
-    %% Constructors are represented as tagged tuples
-    Constructor = cerl:c_tuple([cerl:c_atom(Name) | CoreArgs]),
-    {Constructor, State1};
+compile_pattern({pat_constructor, Name, Args, _Loc} = Pattern, State) ->
+    case catena_codegen_utils:resolution_enabled(State) of
+        true ->
+            case catena_codegen_utils:resolve_constructor(
+                Name,
+                length(Args),
+                Pattern,
+                State
+            ) of
+                {ok, _Callable} ->
+                    compile_tagged_constructor_pattern(Name, Args, State);
+                {error, Diagnostic} ->
+                    throw(Diagnostic)
+            end;
+        false ->
+            compile_tagged_constructor_pattern(Name, Args, State)
+    end;
 
 %% List pattern: [] or [x, y, ...]
 compile_pattern({pat_list, [], _Loc}, State) ->
@@ -257,11 +349,15 @@ compile_record_patterns(Fields, State) ->
     ).
 
 unsupported(Construct, Pattern) ->
+    unsupported(Construct, Pattern, #{}).
+
+unsupported(Construct, Pattern, Extra) ->
     Context =
         catena_backend_error:context(
             pattern_compilation,
             Construct,
-            Pattern
+            Pattern,
+            Extra
         ),
     throw(
         catena_backend_error:unsupported_backend_construct(
@@ -269,6 +365,10 @@ unsupported(Construct, Pattern) ->
             Context
         )
     ).
+
+compile_tagged_constructor_pattern(Name, Args, State) ->
+    {CoreArgs, State1} = compile_patterns(Args, State),
+    {cerl:c_tuple([cerl:c_atom(Name) | CoreArgs]), State1}.
 
 %%====================================================================
 %% Guard Compilation (1.3.2.2)
@@ -293,11 +393,14 @@ compile_guard([Guard], State) ->
 compile_guard([Guard | Rest], State) ->
     {CoreGuard, State1} = compile_guard_expr(Guard, State),
     {CoreRest, State2} = compile_guard(Rest, State1),
-    %% Combine with 'andalso'
-    Combined = cerl:c_call(
-        cerl:c_atom(erlang),
-        cerl:c_atom('andalso'),
-        [CoreGuard, CoreRest]
+    %% Core Erlang has no callable `erlang:andalso/2`; preserve its
+    %% short-circuit semantics with an explicit Boolean case.
+    Combined = cerl:c_case(
+        CoreGuard,
+        [
+            cerl:c_clause([cerl:c_atom(true)], CoreRest),
+            cerl:c_clause([cerl:c_atom(false)], cerl:c_atom(false))
+        ]
     ),
     {Combined, State2}.
 
@@ -526,6 +629,7 @@ pattern_to_core(Pattern, State) ->
                  | {pat_cons, pattern(), pattern(), term()}
                  | {pat_tuple, [pattern()], term()}
                  | {pat_as, atom(), pattern(), term()}
+                 | {pat_or, [pattern()], term()}
                  | {pat_record, [{atom(), pattern()}], term()}.
 
 -type clause() :: {clause, [pattern()], [term()], term()}

@@ -136,7 +136,7 @@ unknown_expression_propagates_through_module_boundary_test() ->
         {error,
             {backend_error, unsupported_backend_construct,
                 #{
-                    stage := expression_translation,
+                    stage := expression_lowering,
                     construct := expression,
                     location := {location, 9, 4}
                 }}},

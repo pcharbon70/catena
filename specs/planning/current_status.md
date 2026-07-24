@@ -18,7 +18,7 @@ It exists because some planning checklists are stale relative to later implement
 | Law verification | Structural and concrete stdlib laws execute, and known-instance generic checks bridge into the internal proptest framework; automatic derivation and broader workflow ergonomics remain future work. |
 | Language revamp migration | Completed and now historical. |
 | Flow | The pure Flow core is materially implemented in stdlib/compiler/test surfaces; later phases remain planned. |
-| Backend hardening | ADR-0005 and the Core Erlang/BEAM backend spec are accepted; Phases 1 and 2 implement fail-closed diagnostics, validated compilation units, and explicit declaration disposition. |
+| Backend hardening | ADR-0005 and the Core Erlang/BEAM backend spec are accepted; Phases 1 through 4 implement fail-closed diagnostics, validated compilation units, explicit declaration disposition, local/higher-order resolution, and exhaustive pure lowering. |
 | Standalone category-theory library plan | Historical only; integrated into the PoC planning lineage rather than active as a separate track. |
 
 ## Proof-Of-Concept Track
@@ -211,36 +211,41 @@ Current promoted status:
   lexical closure application, eta-expanded named transform values, and
   executable direct, forward, recursive, mutual, higher-order, and
   higher-arity-constructor evidence
+- Phase 4 is complete with explicit pure expression/operator coverage,
+  lossless parser-native pattern and clause compilation, recursively expanded
+  or-patterns, guarded fallthrough, stable tagged-tuple/list/tuple/map
+  representations, and exhaustive fail-closed type erasure
 - the production Core boundary consumes that unit, while raw-AST generation
   is explicitly scoped to low-level codegen work
 - implemented transforms lower, type/effect metadata erases only after
   representation selection, and missing or deferred runtime declarations fail
   with source-oriented diagnostics
-- `SCN-011` includes dedicated Phase 1, Phase 2, and Phase 3 suites proving the
+- `SCN-011` includes dedicated Phase 1 through Phase 4 suites proving the
   executable vertical slice, preservation of frontend failures, validated-unit
   authority, explicit declaration disposition, resolved local call graphs, and
-  higher-order callable execution
-- later phases introduce exhaustive pure lowering, effect semantics,
-  executable module/trait linkage, and the public source-to-BEAM API
+  higher-order callable execution, pure expression and pattern coverage,
+  representation round trips, and fail-closed erasure
+- later phases introduce hardened effect semantics, executable module/trait
+  linkage, and the public source-to-BEAM API
 - every phase ends with a dedicated integration-test section and must preserve
   specs governance, focused conformance, and the complete active suite
 
 Important caveat:
 
-- Phases 1 through 3 establish a fail-closed backend and expand the promoted
-  executable language through module-local and higher-order calls; linkage,
-  trait-dispatch, exhaustive lowering, effect-semantics, and public BEAM API
-  gaps remain
-- Phase 4, exhaustive expression, pattern, and data lowering, is the next
-  backend-hardening phase
+- Phases 1 through 4 establish a fail-closed backend and expand the promoted
+  executable language through module-local/higher-order calls and the complete
+  accepted pure expression, pattern, and data surface; linkage, trait-dispatch,
+  hardened effect-semantics, and public BEAM API gaps remain
+- Phase 5, effect and runtime-backed semantics, is the next backend-hardening
+  phase
 
 ## Current Quality State
 
 The default `rebar3 eunit` entry point discovers, compiles, and executes the
-complete active test tree. The backend-hardening Phase 3 gate on 2026-07-24
-reported 4,928 passing, zero failing, and zero skipped tests. The earlier
-Phase 2 and Phase 1 gates reported 4,906 and 4,873 passing tests,
-respectively, and the earlier 4,838-test baseline remains recorded in the
+complete active test tree. The backend-hardening Phase 4 gate on 2026-07-24
+reported 4,954 passing, zero failing, and zero skipped tests. The earlier
+Phase 3, Phase 2, and Phase 1 gates reported 4,928, 4,906, and 4,873 passing
+tests, respectively, and the earlier 4,838-test baseline remains recorded in the
 [Phase 7 test baseline](spec-source-reconciliation/phase-07-test-baseline.md).
 
 Promoted interpretation:
@@ -248,10 +253,10 @@ Promoted interpretation:
 - `make compile` and `rebar3 compile` compile the active source tree
 - `make test` and `rebar3 eunit` expose the complete active EUnit result
 - `make check-specs` validates 42 concrete requirements in five families, 11
-  scenarios, 23 executable evidence rows across 22 modules, 73 component
+  scenarios, 24 executable evidence rows across 23 modules, 73 component
   acceptance criteria, five ADRs, promoted paths, and local Markdown links
 - `make conformance` runs the unique EUnit modules named by the executable
-  scenario manifest; the Phase 3 gate passed all 448 focused tests
+  scenario manifest; the Phase 4 gate passed all 453 focused tests
 - `make verify` combines specs governance with the complete active suite and
   is the read-only CI contract for pull requests and pushes to `main`
 - the six Phase 2 standard-library/frontend modules pass all 170 focused tests
