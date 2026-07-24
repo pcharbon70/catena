@@ -14,7 +14,7 @@ together through code generation.
 **Description:** Define the authoritative backend input and the invariants that
 must hold before Core Erlang lowering may begin.
 
-- [ ] **Section 2.1 Complete**
+- [x] **Section 2.1 Complete**
 
 ### Task 2.1.1: Define The Compilation Unit Contract
 
@@ -22,7 +22,7 @@ must hold before Core Erlang lowering may begin.
 backend input rather than passing unrelated analyzed and typed artifacts
 separately.
 
-- [ ] **Task 2.1.1 Complete**
+- [x] **Task 2.1.1 Complete**
 
 #### Subtask 2.1.1.1: Model Required Unit Fields
 
@@ -30,21 +30,21 @@ separately.
 effective type environment, imports, exports, compiler options, and source
 identity.
 
-- [ ] **Subtask 2.1.1.1 Complete**
+- [x] **Subtask 2.1.1.1 Complete**
 
 #### Subtask 2.1.1.2: Model Validation State
 
 **Description:** Represent which frontend validations produced the unit and
 prevent construction of a backend-authoritative unit from unchecked AST terms.
 
-- [ ] **Subtask 2.1.1.2 Complete**
+- [x] **Subtask 2.1.1.2 Complete**
 
 ### Task 2.1.2: Define Symbol And Location Metadata
 
 **Description:** Give later call resolution and diagnostics a stable inventory
 of names, arities, declaration kinds, modules, and original locations.
 
-- [ ] **Task 2.1.2 Complete**
+- [x] **Task 2.1.2 Complete**
 
 #### Subtask 2.1.2.1: Build Module Symbol Entries
 
@@ -52,14 +52,14 @@ of names, arities, declaration kinds, modules, and original locations.
 instances, imports, exports, and non-runtime declarations with their kinds and
 arities.
 
-- [ ] **Subtask 2.1.2.1 Complete**
+- [x] **Subtask 2.1.2.1 Complete**
 
 #### Subtask 2.1.2.2: Preserve Source Locations
 
 **Description:** Retain module, declaration, clause, pattern, expression, and
 import locations across normalized and typed views.
 
-- [ ] **Subtask 2.1.2.2 Complete**
+- [x] **Subtask 2.1.2.2 Complete**
 
 ## Section 2.2: Compiler Orchestration Handoff
 
