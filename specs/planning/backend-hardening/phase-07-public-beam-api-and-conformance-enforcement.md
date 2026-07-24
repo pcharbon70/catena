@@ -14,7 +14,7 @@ maintained workflow.
 **Description:** Add public string and file APIs that reuse the validated
 compilation unit and return only OTP-accepted BEAM binaries.
 
-- [ ] **Section 7.1 Complete**
+- [x] **Section 7.1 Complete**
 
 ### Task 7.1.1: Implement Source-To-BEAM Entry Points
 
@@ -22,14 +22,14 @@ compilation unit and return only OTP-accepted BEAM binaries.
 `compile_file_to_beam/1,2` without duplicating or bypassing frontend and backend
 validation.
 
-- [ ] **Task 7.1.1 Complete**
+- [x] **Task 7.1.1 Complete**
 
 #### Subtask 7.1.1.1: Define The Success Artifact
 
 **Description:** Return module identity, BEAM binary, source identity, runtime
 dependencies, warnings, and relevant artifact metadata in a documented shape.
 
-- [ ] **Subtask 7.1.1.1 Complete**
+- [x] **Subtask 7.1.1.1 Complete**
 
 #### Subtask 7.1.1.2: Reuse Existing Compiler Options
 
@@ -37,28 +37,28 @@ dependencies, warnings, and relevant artifact metadata in a documented shape.
 and backend options consistently across typed-module, Core Erlang, and BEAM
 entry points.
 
-- [ ] **Subtask 7.1.1.2 Complete**
+- [x] **Subtask 7.1.1.2 Complete**
 
 ### Task 7.1.2: Validate Core And Compile BEAM
 
 **Description:** Run explicit Core validation and OTP `from_core` compilation
 as mandatory steps before returning a BEAM artifact.
 
-- [ ] **Task 7.1.2 Complete**
+- [x] **Task 7.1.2 Complete**
 
 #### Subtask 7.1.2.1: Add Core Validation Boundary
 
 **Description:** Detect unbound variables, malformed clauses, invalid exports,
 bad call targets, and other Core lint failures before artifact success.
 
-- [ ] **Subtask 7.1.2.1 Complete**
+- [x] **Subtask 7.1.2.1 Complete**
 
 #### Subtask 7.1.2.2: Compile In Memory With OTP
 
 **Description:** Use `compile:forms` with `from_core`, `binary`, structured
 errors, and structured warnings and return no partial success on failure.
 
-- [ ] **Subtask 7.1.2.2 Complete**
+- [x] **Subtask 7.1.2.2 Complete**
 
 ## Section 7.2: Source-Oriented Artifact Diagnostics
 

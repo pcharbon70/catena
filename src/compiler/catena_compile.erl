@@ -13,12 +13,16 @@
     compile_file/1,
     compile_file_to_core/1,
     compile_file_to_core/2,
+    compile_file_to_beam/1,
+    compile_file_to_beam/2,
     compile_string/1,
     compile_string/2,
     compile_string_to_unit/1,
     compile_string_to_unit/2,
     compile_string_to_core/1,
     compile_string_to_core/2,
+    compile_string_to_beam/1,
+    compile_string_to_beam/2,
     build_type_env/1,
     build_module_exports_env/1,
     process_imports/1,
@@ -50,6 +54,23 @@ compile_file_to_core(Path, Opts) ->
     case read_source_file(Path) of
         {ok, Source} ->
             compile_string_to_core(Source, file_options(Path, Opts));
+        {error, _} = Error ->
+            Error
+    end.
+
+%% @doc Compile a Catena source file to a validated in-memory BEAM artifact.
+-spec compile_file_to_beam(string()) ->
+    {ok, catena_beam_artifact:artifact()} | {error, term()}.
+compile_file_to_beam(Path) ->
+    compile_file_to_beam(Path, #{}).
+
+%% @doc Compile a Catena source file to a BEAM artifact with options.
+-spec compile_file_to_beam(string(), map()) ->
+    {ok, catena_beam_artifact:artifact()} | {error, term()}.
+compile_file_to_beam(Path, Opts) ->
+    case read_source_file(Path) of
+        {ok, Source} ->
+            compile_string_to_beam(Source, file_options(Path, Opts));
         {error, _} = Error ->
             Error
     end.
@@ -208,6 +229,27 @@ compile_string_to_core(Source, Opts) ->
     case compile_string_to_unit(Source, Opts) of
         {ok, Unit} ->
             catena_codegen_module:generate_validated_module(Unit);
+        {error, _} = Error ->
+            Error
+    end.
+
+%% @doc Compile Catena source to a validated in-memory BEAM artifact.
+-spec compile_string_to_beam(string()) ->
+    {ok, catena_beam_artifact:artifact()} | {error, term()}.
+compile_string_to_beam(Source) ->
+    compile_string_to_beam(Source, #{}).
+
+%% @doc Compile Catena source to a BEAM artifact with compiler options.
+%%
+%% The same import, source identity, search-path, and `codegen_opts` options
+%% accepted by the compilation-unit and Core APIs are preserved in the
+%% artifact pipeline.
+-spec compile_string_to_beam(string(), map()) ->
+    {ok, catena_beam_artifact:artifact()} | {error, term()}.
+compile_string_to_beam(Source, Opts) ->
+    case compile_string_to_unit(Source, Opts) of
+        {ok, Unit} ->
+            catena_beam_artifact:from_unit(Unit);
         {error, _} = Error ->
             Error
     end.

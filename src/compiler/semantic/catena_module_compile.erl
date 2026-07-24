@@ -57,8 +57,8 @@
 %% @doc Compile a closed set of Catena source modules in dependency order.
 %%
 %% This compiler-internal API exists so executable linkage can be exercised
-%% before Phase 7 promotes a public BEAM artifact API.  Each artifact retains
-%% its validated unit, Core module, BEAM binary, interface, and dependencies.
+%% Each artifact reuses the public validated BEAM boundary and additionally
+%% retains the compiler-internal unit and dependency order.
 -spec compile_source_set(#{atom() => string() | binary()}, map()) ->
     {ok, map()} | {error, term()}.
 compile_source_set(SourceSet, Options)
@@ -186,39 +186,28 @@ compile_planned_modules(
                 CompilerOptions
             ) of
                 {ok, Unit} ->
-                    case catena_codegen_module:generate_validated_module(Unit) of
-                        {ok, CoreModule} ->
-                            case core_to_beam(CoreModule) of
-                                {ok, RuntimeModule, Binary, Warnings} ->
-                                    Interface =
-                                        catena_compilation_unit:interface(Unit),
-                                    Artifact = #{
-                                        source_module => Module,
-                                        runtime_module => RuntimeModule,
-                                        unit => Unit,
-                                        core => CoreModule,
-                                        beam => Binary,
-                                        warnings => Warnings,
-                                        interface => Interface,
-                                        dependencies =>
-                                            catena_compilation_unit:
-                                                artifact_dependencies(Unit),
-                                        order_index =>
-                                            map_size(Artifacts) + 1
-                                    },
-                                    compile_planned_modules(
-                                        Rest,
-                                        ModuleASTs,
-                                        Sources,
-                                        Options,
-                                        Interfaces#{
-                                            Module => Interface
-                                        },
-                                        Artifacts#{Module => Artifact}
-                                    );
-                                {error, _} = Error ->
-                                    Error
-                            end;
+                    case catena_beam_artifact:from_unit(Unit) of
+                        {ok, PublicArtifact} ->
+                            Interface =
+                                catena_compilation_unit:interface(Unit),
+                            Artifact = PublicArtifact#{
+                                unit => Unit,
+                                dependencies =>
+                                    catena_compilation_unit:
+                                        artifact_dependencies(Unit),
+                                order_index =>
+                                    map_size(Artifacts) + 1
+                            },
+                            compile_planned_modules(
+                                Rest,
+                                ModuleASTs,
+                                Sources,
+                                Options,
+                                Interfaces#{
+                                    Module => Interface
+                                },
+                                Artifacts#{Module => Artifact}
+                            );
                         {error, _} = Error ->
                             Error
                     end;
@@ -289,25 +278,6 @@ qualify_type_environment(Module, true, Alias, Env) ->
         {{catena_import, Prefix, Name}, Scheme}
         || {Name, Scheme} <- maps:to_list(Env)
     ]).
-
-core_to_beam(CoreModule) ->
-    case compile:forms(
-        CoreModule,
-        [from_core, binary, return_errors, return_warnings]
-    ) of
-        {ok, Module, Binary} ->
-            {ok, Module, Binary, []};
-        {ok, Module, Binary, Warnings} ->
-            {ok, Module, Binary, Warnings};
-        {error, Errors, Warnings} ->
-            {error, {
-                core_compilation_failed,
-                Errors,
-                Warnings
-            }};
-        Other ->
-            {error, {unexpected_core_compiler_result, Other}}
-    end.
 
 %% Types
 -type module_name() :: atom().
