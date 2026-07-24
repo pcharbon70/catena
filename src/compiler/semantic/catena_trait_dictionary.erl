@@ -1002,6 +1002,8 @@ type_arity({type_fun, _From, To, _Location}) ->
     1 + type_arity(To);
 type_arity({type_effect, Type, _Effects, _Location}) ->
     type_arity(Type);
+type_arity({constrained_type, _Constraints, Type, _Location}) ->
+    type_arity(Type);
 type_arity(_) ->
     0.
 
@@ -1026,6 +1028,14 @@ specialize_type(
     {type_effect,
         specialize_type(Type, Substitution),
         Effects,
+        Location};
+specialize_type(
+    {constrained_type, Constraints, Type, Location},
+    Substitution
+) ->
+    {constrained_type,
+        Constraints,
+        specialize_type(Type, Substitution),
         Location};
 specialize_type(
     {type_app, Constructor, Arguments, Location},
@@ -1054,9 +1064,19 @@ internal_type({type_var, Name, _Location}) ->
 internal_type({type_con, Name, _Location}) ->
     {tcon, internal_type_name(Name)};
 internal_type({type_app, Constructor, Arguments, _Location}) ->
-    {tapp,
-        internal_type(Constructor),
-        [internal_type(Argument) || Argument <- Arguments]};
+    InternalConstructor = internal_type(Constructor),
+    InternalArguments = [
+        internal_type(Argument)
+        || Argument <- Arguments
+    ],
+    case InternalConstructor of
+        {tapp, RootConstructor, ExistingArguments} ->
+            {tapp,
+                RootConstructor,
+                ExistingArguments ++ InternalArguments};
+        _ ->
+            {tapp, InternalConstructor, InternalArguments}
+    end;
 internal_type({type_fun, From, To, _Location}) ->
     {tfun,
         internal_type(From),
@@ -1069,6 +1089,8 @@ internal_type(
         internal_type(Type),
         catena_types:effect_set(Effects)
     );
+internal_type({constrained_type, _Constraints, Type, _Location}) ->
+    internal_type(Type);
 internal_type({type_tuple, Elements, _Location}) ->
     {ttuple, [internal_type(Element) || Element <- Elements]};
 internal_type(Other) ->

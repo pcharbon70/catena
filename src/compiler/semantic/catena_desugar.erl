@@ -301,7 +301,11 @@ desugar_operator(equals, Left, Right, Loc) ->
 %% not_equals: a !== b => not (equals a b)
 desugar_operator(not_equals, Left, Right, Loc) ->
     EqualsApp = {app, {var, equals, Loc}, [Left, Right], Loc},
-    {app, {var, 'not', Loc}, [EqualsApp], Loc};
+    %% Keep Boolean negation inside the typed binary-operator surface. The
+    %% source grammar has no standalone `not` callable to add to the type
+    %% environment, while equality with `false` has the same semantics and
+    %% follows the already validated Boolean lowering path.
+    {binary_op, eq, EqualsApp, {var, false, Loc}, Loc};
 
 %% kleisli: f >=> g => kleisli f g
 %% Kleisli composition: (a -> m b) >=> (b -> m c) : a -> m c

@@ -2,8 +2,9 @@
 
 ## Status
 
-Promoted status: implemented through typed-module compilation and an explicit,
-type-validated source-to-Core Erlang API whose backend handoff is a validated
+Promoted status: implemented through typed-module compilation, an explicit
+type-validated source-to-Core Erlang API, and a compiler-internal,
+dependency-ordered multi-module BEAM boundary whose handoff is a validated
 compilation unit.
 
 ## Purpose
@@ -38,7 +39,10 @@ frontend validation to Core Erlang output.
   effective environment, imports, exports, options, validation evidence,
   symbols, the complete module-local callable inventory, locations, and
   declaration dispositions.
-- Import processing is intentionally minimal: Catena supports loading modules from the standard library and current project search paths, then merging exported environments into the local type environment.
+- Import processing publishes versioned module interfaces and resolves open,
+  qualified, aliased, selective, and dotted imports to executable symbols and
+  artifact dependencies. The compiler-internal closed-source-set path orders
+  dependencies and emits remote calls and closures from those bindings.
 - `catena_codegen_lower` is the explicit canonical-AST-to-backend boundary.
 - local transform and constructor identities are predeclared before
   expression emission, so direct, forward, recursive, and higher-order calls
@@ -72,7 +76,7 @@ The canonical success artifact of the current top-level compiler API is a typed 
 The typed-module API remains the canonical interactive/compiler-analysis
 boundary. Callers that need a backend artifact use the explicit Core APIs.
 
-### AC-CPIPE-003 Minimal Import Resolution
+### AC-CPIPE-003 Executable Import Resolution
 
 The promoted module boundary for the current compiler is:
 
@@ -80,8 +84,14 @@ The promoted module boundary for the current compiler is:
 - default search paths include the Catena standard library and current working directory
 - only exported symbols are visible from imported modules
 - local definitions shadow imported definitions
+- application artifacts resolve imported transforms by versioned interface,
+  source/runtime module identity, kind, name, and arity
+- dependency-ordered source sets reject missing modules and unsupported cycles
+  before artifact emission
 
-This is sufficient for current stdlib integration and does not imply that the full planned Phase 4 module system is complete.
+This executable linkage boundary does not imply that the full planned Phase 4
+package/module system, separate compilation workflow, or release packaging is
+complete.
 
 ### AC-CPIPE-004 Semantic Normalization Before Typing
 
@@ -108,8 +118,10 @@ Any compiler-facing status or design document must describe the current pipeline
 
 - materially implemented through typed modules
 - able to emit validated Core Erlang through an explicit public API
-- still short of on-disk BEAM emission, packaging, and a polished executable
-  build workflow
+- able to compile closed module sets to accepted in-memory BEAM artifacts
+  through a compiler-internal API
+- still short of a public BEAM API, on-disk emission, packaging, and a polished
+  executable build workflow
 
 This criterion exists to keep the promoted spec aligned with the actual code instead of the aspirational roadmap alone.
 
