@@ -120,42 +120,42 @@ names and locations over generated Core Erlang identifiers.
 **Description:** Remove fallback behavior that can silently change program
 meaning while preserving explicitly supported paths.
 
-- [ ] **Section 1.3 Complete**
+- [x] **Section 1.3 Complete**
 
 ### Task 1.3.1: Reject Unknown Expressions And Operators
 
 **Description:** Ensure expression and operator translation is exhaustive for
 the current supported set and rejects every other normalized form.
 
-- [ ] **Task 1.3.1 Complete**
+- [x] **Task 1.3.1 Complete**
 
 #### Subtask 1.3.1.1: Remove Placeholder Expression Values
 
 **Description:** Replace generated `{error, unknown_expression, ...}` tuples
 with `unsupported_backend_construct` diagnostics before Core module success.
 
-- [ ] **Subtask 1.3.1.1 Complete**
+- [x] **Subtask 1.3.1.1 Complete**
 
 #### Subtask 1.3.1.2: Remove Arbitrary Operator-To-BIF Fallback
 
 **Description:** Require every backend operator to have an explicit lowering
 or return an unsupported-operator diagnostic.
 
-- [ ] **Subtask 1.3.1.2 Complete**
+- [x] **Subtask 1.3.1.2 Complete**
 
 ### Task 1.3.2: Reject Lossy Pattern And Declaration Paths
 
 **Description:** Stop replacing unknown patterns with wildcards or dropping
 unclassified declarations during module function filtering.
 
-- [ ] **Task 1.3.2 Complete**
+- [x] **Task 1.3.2 Complete**
 
 #### Subtask 1.3.2.1: Remove Unknown-Pattern Wildcards
 
 **Description:** Return a source-oriented backend error whenever pattern
 lowering or compilation receives an unsupported shape.
 
-- [ ] **Subtask 1.3.2.1 Complete**
+- [x] **Subtask 1.3.2.1 Complete**
 
 #### Subtask 1.3.2.2: Reject Unclassified Declarations
 
@@ -163,7 +163,7 @@ lowering or compilation receives an unsupported shape.
 disposition before module emission and reject them instead of filtering them
 away.
 
-- [ ] **Subtask 1.3.2.2 Complete**
+- [x] **Subtask 1.3.2.2 Complete**
 
 ## Section 1.4: Phase 1 Integration Tests
 

@@ -121,14 +121,8 @@ translate_expr({constructor, Name, Args, Loc}, State) ->
     translate_constructor({constructor, Name, Args, Loc}, State);
 
 %% Unknown expression type
-translate_expr(Unknown, State) ->
-    %% For now, return a placeholder with an error annotation
-    Error = cerl:c_tuple([
-        cerl:c_atom(error),
-        cerl:c_atom(unknown_expression),
-        cerl:c_literal(Unknown)
-    ]),
-    {Error, State}.
+translate_expr(Unknown, _State) ->
+    unsupported(expression_translation, expression, Unknown).
 
 %% @doc Translate multiple expressions
 -spec translate_exprs([term()], catena_codegen_utils:codegen_state()) ->
@@ -245,9 +239,8 @@ pattern_to_var({wildcard, _Loc}) ->
     cerl:c_var('_');
 pattern_to_var({pat_wildcard, _Loc}) ->
     cerl:c_var('_');
-pattern_to_var(_Complex) ->
-    %% Complex patterns need pattern matching - placeholder for now
-    cerl:c_var('_').
+pattern_to_var(Complex) ->
+    unsupported(let_binding_translation, binding_pattern, Complex).
 
 %%====================================================================
 %% Binary Operator Translation (1.3.1.3)
@@ -351,16 +344,14 @@ translate_binary_op({binary_op, '::', Left, Right, _Loc}, State) ->
     {CoreRight, State2} = translate_expr(Right, State1),
     {cerl:c_cons(CoreLeft, CoreRight), State2};
 
-%% Default: treat as BIF call
-translate_binary_op({binary_op, Op, Left, Right, _Loc}, State) ->
-    {CoreLeft, State1} = translate_expr(Left, State),
-    {CoreRight, State2} = translate_expr(Right, State1),
-    BifCall = cerl:c_call(
-        cerl:c_atom(erlang),
-        cerl:c_atom(Op),
-        [CoreLeft, CoreRight]
-    ),
-    {BifCall, State2}.
+%% Every accepted operator requires an explicit lowering.
+translate_binary_op({binary_op, Op, Left, Right, Loc} = Expr, _State) ->
+    unsupported(
+        operator_translation,
+        operator,
+        Expr,
+        #{operator => Op, operands => [Left, Right], location => Loc}
+    ).
 
 %%====================================================================
 %% Lambda Translation
@@ -382,7 +373,8 @@ param_name({var, Name, _}) -> Name;
 param_name({pat_var, Name, _}) -> Name;
 param_name({typed_var, Name, _, _}) -> Name;
 param_name({pat_typed_var, Name, _, _}) -> Name;
-param_name(_) -> '_'.
+param_name(Pattern) ->
+    unsupported(lambda_translation, parameter_pattern, Pattern).
 
 %%====================================================================
 %% If Expression Translation
@@ -477,14 +469,13 @@ translate_unary_op({unary_op, 'not', Operand, _Loc}, State) ->
     ),
     {Not, State1};
 
-translate_unary_op({unary_op, Op, Operand, _Loc}, State) ->
-    {CoreOperand, State1} = translate_expr(Operand, State),
-    UnaryCall = cerl:c_call(
-        cerl:c_atom(erlang),
-        cerl:c_atom(Op),
-        [CoreOperand]
-    ),
-    {UnaryCall, State1}.
+translate_unary_op({unary_op, Op, Operand, Loc} = Expr, _State) ->
+    unsupported(
+        operator_translation,
+        unary_operator,
+        Expr,
+        #{operator => Op, operand => Operand, location => Loc}
+    ).
 
 %%====================================================================
 %% Record Access Translation
@@ -510,3 +501,21 @@ translate_constructor({constructor, Name, Args, _Loc}, State) ->
     %% Constructors translate to tagged tuples: {Name, Arg1, Arg2, ...}
     Constructor = cerl:c_tuple([cerl:c_atom(Name) | CoreArgs]),
     {Constructor, State1}.
+
+unsupported(Stage, Construct, SourceTerm) ->
+    unsupported(Stage, Construct, SourceTerm, #{}).
+
+unsupported(Stage, Construct, SourceTerm, Extra) ->
+    Context =
+        catena_backend_error:context(
+            Stage,
+            Construct,
+            SourceTerm,
+            Extra
+        ),
+    throw(
+        catena_backend_error:unsupported_backend_construct(
+            Construct,
+            Context
+        )
+    ).

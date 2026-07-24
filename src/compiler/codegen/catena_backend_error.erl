@@ -74,7 +74,8 @@ context(Stage, Construct, SourceTerm, Extra) when is_map(Extra) ->
         #{
             stage => Stage,
             construct => Construct,
-            location => source_location(SourceTerm)
+            location => source_location(SourceTerm),
+            source_term => SourceTerm
         },
         Extra
     ).

@@ -14,56 +14,96 @@ named_top_level_call_reaches_core_lint_as_unbound_variable_test() ->
         compile_core(CoreModule)
     ).
 
-unknown_expression_placeholder_path_crashes_test() ->
+unknown_expression_is_rejected_test() ->
     Unknown = {mystery_expr, location()},
-    ?assertException(
-        error,
-        undef,
-        catena_codegen_expr:translate_expr(Unknown, new_state())
-    ).
+    Diagnostic = capture_backend_throw(
+        fun() -> catena_codegen_expr:translate_expr(Unknown, new_state()) end
+    ),
+    assert_unsupported(Diagnostic, expression, location()).
 
-unknown_pattern_becomes_wildcard_test() ->
-    {CorePattern, _State} =
-        catena_codegen_pattern:compile_pattern(
-            {mystery_pattern, location()},
-            new_state()
-        ),
-    ?assertEqual('_', cerl:var_name(CorePattern)).
+unknown_pattern_is_rejected_test() ->
+    Unknown = {mystery_pattern, location()},
+    Diagnostic = capture_backend_throw(
+        fun() ->
+            catena_codegen_pattern:compile_pattern(Unknown, new_state())
+        end
+    ),
+    assert_unsupported(Diagnostic, pattern, location()).
 
-complex_let_binding_becomes_wildcard_test() ->
+complex_let_binding_is_rejected_test() ->
     Pattern = {pat_constructor, 'Some', [{pat_var, x, location()}], location()},
     Expr =
         {let_expr,
-            [{Pattern, {constructor, 'Some', [{literal, integer, 1, location()}], location()}}],
+            [
+                {Pattern,
+                    {constructor,
+                        'Some',
+                        [{literal, integer, 1, location()}],
+                        location()}}
+            ],
             {literal, integer, 2, location()},
             location()},
-    {CoreLet, _State} = catena_codegen_expr:translate_expr(Expr, new_state()),
-    [CoreVar] = cerl:let_vars(CoreLet),
-    ?assertEqual('_', cerl:var_name(CoreVar)).
+    Diagnostic = capture_backend_throw(
+        fun() -> catena_codegen_expr:translate_expr(Expr, new_state()) end
+    ),
+    assert_unsupported(Diagnostic, binding_pattern, location()).
 
-unknown_operator_becomes_arbitrary_erlang_call_test() ->
+unknown_operator_is_rejected_test() ->
     Expr =
         {binary_op,
             mystery_operator,
             {literal, integer, 1, location()},
             {literal, integer, 2, location()},
             location()},
-    {CoreCall, _State} = catena_codegen_expr:translate_expr(Expr, new_state()),
-    ?assertEqual(erlang, cerl:atom_val(cerl:call_module(CoreCall))),
-    ?assertEqual(mystery_operator, cerl:atom_val(cerl:call_name(CoreCall))).
+    Diagnostic = capture_backend_throw(
+        fun() -> catena_codegen_expr:translate_expr(Expr, new_state()) end
+    ),
+    assert_unsupported(Diagnostic, operator, location()),
+    ?assertEqual(
+        mystery_operator,
+        maps:get(operator, catena_backend_error:details(Diagnostic))
+    ).
 
-unclassified_declaration_is_silently_omitted_test() ->
+unknown_unary_operator_is_rejected_test() ->
+    Expr =
+        {unary_op,
+            mystery_unary,
+            {literal, integer, 1, location()},
+            location()},
+    Diagnostic = capture_backend_throw(
+        fun() -> catena_codegen_expr:translate_expr(Expr, new_state()) end
+    ),
+    assert_unsupported(Diagnostic, unary_operator, location()),
+    ?assertEqual(
+        mystery_unary,
+        maps:get(operator, catena_backend_error:details(Diagnostic))
+    ).
+
+unclassified_declaration_is_rejected_test() ->
+    Declaration =
+        {test_decl,
+            "not emitted",
+            {literal, bool, true, location()},
+            location()},
     Module =
         {module,
             'Silent',
             [],
             [],
-            [{test_decl, "not emitted", {literal, bool, true, location()}, location()}],
+            [Declaration],
             location()},
-    {ok, CoreModule} = catena_codegen_module:generate_module(Module),
-    ?assertEqual([], cerl:module_defs(CoreModule)).
+    ?assertMatch(
+        {error,
+            {backend_error, invalid_declaration_disposition,
+                #{
+                    module := 'Silent',
+                    declaration := Declaration,
+                    location := {location, 9, 4}
+                }}},
+        catena_codegen_module:generate_module(Module)
+    ).
 
-misplaced_or_pattern_becomes_wildcard_test() ->
+misplaced_or_pattern_is_rejected_test() ->
     Pattern =
         {pat_or,
             [
@@ -71,9 +111,37 @@ misplaced_or_pattern_becomes_wildcard_test() ->
                 {pat_literal, 2, integer, location()}
             ],
             location()},
-    {CorePattern, _State} =
-        catena_codegen_pattern:compile_pattern(Pattern, new_state()),
-    ?assertEqual('_', cerl:var_name(CorePattern)).
+    Diagnostic = capture_backend_throw(
+        fun() ->
+            catena_codegen_pattern:compile_pattern(Pattern, new_state())
+        end
+    ),
+    assert_unsupported(Diagnostic, or_pattern, location()).
+
+unknown_expression_propagates_through_module_boundary_test() ->
+    Module =
+        {module,
+            'UnknownBody',
+            [],
+            [],
+            [
+                {transform,
+                    broken,
+                    [],
+                    {mystery_expr, location()},
+                    location()}
+            ],
+            location()},
+    ?assertMatch(
+        {error,
+            {backend_error, unsupported_backend_construct,
+                #{
+                    stage := expression_translation,
+                    construct := expression,
+                    location := {location, 9, 4}
+                }}},
+        catena_codegen_module:generate_module(Module)
+    ).
 
 new_state() ->
     catena_codegen_utils:new_state().
@@ -86,3 +154,21 @@ compile_core(CoreModule) ->
         CoreModule,
         [from_core, binary, return_errors, return_warnings]
     ).
+
+capture_backend_throw(Fun) ->
+    try
+        Fun(),
+        error(expected_backend_diagnostic)
+    catch
+        throw:{backend_error, _, _} = Diagnostic ->
+            Diagnostic
+    end.
+
+assert_unsupported(Diagnostic, Construct, Location) ->
+    ?assertMatch(
+        {backend_error, unsupported_backend_construct, #{}},
+        Diagnostic
+    ),
+    Details = catena_backend_error:details(Diagnostic),
+    ?assertEqual(Construct, maps:get(construct, Details)),
+    ?assertEqual(Location, maps:get(location, Details)).
