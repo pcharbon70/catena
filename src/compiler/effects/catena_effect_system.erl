@@ -153,7 +153,8 @@
     enable_equations :: boolean(),
     enable_hefty :: boolean(),
     enable_row_poly :: boolean(),
-    trace_operations :: boolean()
+    trace_operations :: boolean(),
+    effect_timeout :: pos_integer()
 }).
 
 -record(system_state, {
@@ -203,7 +204,8 @@
     {enable_equations, boolean()} |
     {enable_hefty, boolean()} |
     {enable_row_poly, boolean()} |
-    {trace_operations, boolean()}.
+    {trace_operations, boolean()} |
+    {effect_timeout, pos_integer()}.
 
 %%====================================================================
 %% Process Dictionary Keys
@@ -232,7 +234,8 @@ new(Options) ->
         enable_equations = true,
         enable_hefty = true,
         enable_row_poly = true,
-        trace_operations = false
+        trace_operations = false,
+        effect_timeout = 5000
     },
     apply_options(Defaults, Options).
 
@@ -284,7 +287,9 @@ start_runtime(Config) ->
         true -> ok;
         false -> init(Config)
     end,
-    catena_effect_runtime:new_context().
+    State = get_state(),
+    Timeout = State#system_state.config#system_config.effect_timeout,
+    catena_effect_runtime:new_context(#{timeout => Timeout}).
 
 %% @doc Stop the effect runtime and shutdown orchestration state.
 -spec stop_runtime() -> ok.
@@ -330,6 +335,7 @@ get_config(Key) ->
         enable_hefty -> Config#system_config.enable_hefty;
         enable_row_poly -> Config#system_config.enable_row_poly;
         trace_operations -> Config#system_config.trace_operations;
+        effect_timeout -> Config#system_config.effect_timeout;
         _ -> undefined
     end.
 
@@ -812,6 +818,8 @@ apply_options(Config, [{Key, Value} | Rest]) ->
             Config#system_config{enable_row_poly = Value};
         trace_operations when is_boolean(Value) ->
             Config#system_config{trace_operations = Value};
+        effect_timeout when is_integer(Value), Value > 0 ->
+            Config#system_config{effect_timeout = Value};
         _ ->
             Config
     end,
@@ -856,7 +864,8 @@ diagnostics_config(Config) ->
         enable_equations => Config#system_config.enable_equations,
         enable_hefty => Config#system_config.enable_hefty,
         enable_row_poly => Config#system_config.enable_row_poly,
-        trace_operations => Config#system_config.trace_operations
+        trace_operations => Config#system_config.trace_operations,
+        effect_timeout => Config#system_config.effect_timeout
     }.
 
 %% @private Convert stats to diagnostics map.

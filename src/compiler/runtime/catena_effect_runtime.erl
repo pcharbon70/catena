@@ -22,6 +22,7 @@
     %% Context creation
     empty_context/0,
     new_context/0,
+    new_context/1,
 
     %% Main API
     perform/4,
@@ -38,7 +39,8 @@
 
 -type effect_context() :: #{
     handlers := #{atom() => pid()},
-    parent := effect_context() | undefined
+    parent := effect_context() | undefined,
+    timeout := pos_integer()
 }.
 
 -export_type([effect_context/0]).
@@ -60,12 +62,27 @@
 %% @doc Create an empty effect context
 -spec empty_context() -> effect_context().
 empty_context() ->
-    #{handlers => #{}, parent => undefined}.
+    #{
+        handlers => #{},
+        parent => undefined,
+        timeout => ?EFFECT_TIMEOUT
+    }.
 
 %% @doc Create a new effect context (alias for empty_context)
 -spec new_context() -> effect_context().
 new_context() ->
     empty_context().
+
+%% @doc Create a context with runtime options.
+-spec new_context(#{timeout => pos_integer()}) -> effect_context().
+new_context(Options) when is_map(Options) ->
+    Timeout = maps:get(timeout, Options, ?EFFECT_TIMEOUT),
+    true = is_integer(Timeout) andalso Timeout > 0,
+    #{
+        handlers => #{},
+        parent => undefined,
+        timeout => Timeout
+    }.
 
 %%====================================================================
 %% Main API (1.3.5.1, 1.3.5.2)
@@ -88,13 +105,14 @@ perform(Ctx, Effect, Operation, Args) ->
         HandlerPid ->
             %% Send perform message to handler
             HandlerPid ! {perform, Effect, Operation, Args, self()},
+            Timeout = maps:get(timeout, Ctx, ?EFFECT_TIMEOUT),
             %% Wait for result
             receive
                 {effect_result, Value} ->
                     Value;
                 {effect_error, Reason} ->
                     erlang:error({effect_error, Effect, Operation, Reason})
-            after ?EFFECT_TIMEOUT ->
+            after Timeout ->
                 erlang:error({effect_timeout, Effect, Operation})
             end
     end.
@@ -111,7 +129,8 @@ with_handlers(Ctx, HandlerSpecs, BodyFun) ->
     %% Create child context with new handlers merged in
     ChildCtx = #{
         handlers => maps:merge(maps:get(handlers, Ctx), NewHandlers),
-        parent => Ctx
+        parent => Ctx,
+        timeout => maps:get(timeout, Ctx, ?EFFECT_TIMEOUT)
     },
 
     try
@@ -193,10 +212,17 @@ handler_loop(Effect, Operations) ->
 cleanup_handlers(HandlerPids) ->
     lists:foreach(
         fun({_Effect, Pid}) ->
-            Pid ! stop
+            Ref = erlang:monitor(process, Pid),
+            unlink(Pid),
+            exit(Pid, shutdown),
+            receive
+                {'DOWN', Ref, process, Pid, _Reason} ->
+                    ok
+            end
         end,
         HandlerPids
-    ).
+    ),
+    ok.
 
 %%====================================================================
 %% Builtin Effects (1.3.5.4)

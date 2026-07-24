@@ -5,7 +5,7 @@ validated, source-to-BEAM contract by resolving effect operations, preserving
 explicit runtime contexts, compiling handlers without lossy parameter
 substitution, and making runtime dependencies visible.
 
-**Status:** Planned.
+**Status:** Complete.
 
 **Dependencies:** Phase 4 complete.
 
@@ -167,35 +167,35 @@ the selected target cannot supply a required Catena runtime module or version.
 effects from Catena source through loaded BEAM with the accepted explicit
 runtime model.
 
-- [ ] **Section 5.4 Complete**
+- [x] **Section 5.4 Complete**
 
 ### Task 5.4.1: Execute Effect Programs
 
 **Description:** Add source-to-BEAM programs for operation resolution, basic
 handlers, nested handlers, multiple effects, and effectful helper calls.
 
-- [ ] **Task 5.4.1 Complete**
+- [x] **Task 5.4.1 Complete**
 
 #### Subtask 5.4.1.1: Test Successful Effect Execution
 
 **Description:** Execute zero- and multi-argument operations, handler results,
 nested contexts, and calls between effectful transforms.
 
-- [ ] **Subtask 5.4.1.1 Complete**
+- [x] **Subtask 5.4.1.1 Complete**
 
 #### Subtask 5.4.1.2: Test Runtime Cleanup
 
 **Description:** Verify handler processes and runtime state are cleaned after
 normal results, handler exceptions, unhandled operations, and timeouts.
 
-- [ ] **Subtask 5.4.1.2 Complete**
+- [x] **Subtask 5.4.1.2 Complete**
 
 ### Task 5.4.2: Verify Effect Failure Boundaries
 
 **Description:** Confirm invalid effect programs fail during validation and
 runtime failures retain their documented execution semantics.
 
-- [ ] **Task 5.4.2 Complete**
+- [x] **Task 5.4.2 Complete**
 
 #### Subtask 5.4.2.1: Test Invalid Declarations And Handlers
 
@@ -203,7 +203,7 @@ runtime failures retain their documented execution semantics.
 types, missing handler cases where coverage is required, and effect-set
 mismatches.
 
-- [ ] **Subtask 5.4.2.1 Complete**
+- [x] **Subtask 5.4.2.1 Complete**
 
 #### Subtask 5.4.2.2: Run Phase Completion Gates
 
@@ -211,4 +211,4 @@ mismatches.
 source-to-BEAM suites plus `make check-specs`, `make conformance`, and the
 complete active EUnit suite.
 
-- [ ] **Subtask 5.4.2.2 Complete**
+- [x] **Subtask 5.4.2.2 Complete**

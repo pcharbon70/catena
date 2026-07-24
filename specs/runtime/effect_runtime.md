@@ -2,7 +2,10 @@
 
 ## Status
 
-Promoted status: implemented as an explicit-context runtime with handler processes, nested scope support, and builtin `IO` and `Process` handlers.
+Promoted status: compiler-aligned explicit-context runtime with handler
+processes, nested scope support, configurable operation timeouts, synchronous
+handler cleanup, and builtin `IO` and `Process` handlers. Declared effects now
+execute from Catena source through loaded BEAM at this boundary.
 
 ## Design Anchors
 
@@ -10,14 +13,29 @@ Promoted status: implemented as an explicit-context runtime with handler process
 - [Current Status](../planning/current_status.md)
 - [Runtime Contract](../contracts/runtime_contract.md)
 - `src/compiler/runtime/catena_effect_runtime.erl`
+- `src/compiler/effects/catena_effect_system.erl`
+- `src/compiler/types/catena_effect_resolution.erl`
+- `src/compiler/codegen/catena_effect_codegen.erl`
 - `test/compiler/runtime/catena_effect_runtime_tests.erl`
 - `test/integration/catena_effect_integration_tests.erl`
+- `test/compiler/integration/catena_backend_hardening_phase5_tests.erl`
 
 ## Current Promoted Surface
 
 - Catena's current effect runtime is explicitly context-passing, not process-dictionary based.
 - Effect handlers are implemented as BEAM processes that receive perform messages and reply with results.
 - Nested handler scopes are part of the design, so child contexts can shadow or extend parent handlers.
+- Generated effectful transforms keep their public source arity and delegate to
+  private context-aware entries. Calls between effectful transforms reuse the
+  current context instead of creating nested top-level runtimes.
+- Effect declarations and handler clauses are validated against stable
+  operation identities before Core Erlang emission. Handler patterns use the
+  ordinary lossless pattern compiler.
+- Effectful artifacts declare version 1 dependencies on
+  `catena_effect_runtime` and `catena_effect_system`; artifact preparation
+  rejects targets that cannot supply those contracts.
+- The runtime timeout defaults to 5,000 milliseconds and may be configured
+  through `catena_effect_system` for an execution boundary.
 - Builtin effect support exists today for `IO` and `Process`.
 - The builtin `Process` handler exposes `spawn`, `spawn_link`, `send`, `self`,
   `link`, `unlink`, `monitor`, `demonitor`, `whereis`, `register`,
@@ -44,7 +62,8 @@ this boundary.
 - spawning handler processes
 - constructing a child effect context
 - executing a body inside that context
-- cleaning up the spawned handlers after execution
+- synchronously cleaning up the spawned handlers after normal results,
+  handler failures, unhandled operations, and timeouts
 
 This lifecycle behavior is part of the runtime contract, not an incidental implementation detail.
 
@@ -60,7 +79,8 @@ This lifecycle behavior is part of the runtime contract, not an incidental imple
 
 The promoted runtime includes the current lightweight safety boundaries already present in code, including:
 
-- handler response timeout behavior
+- handler response timeout behavior, including the configurable
+  `effect_timeout` execution option
 - basic process-count limits for process-oriented operations
 - file/path and size protections in builtin IO operations
 
@@ -71,7 +91,11 @@ These are part of Catena's current runtime design and should remain documented u
 The effect runtime is only promoted as correct when it lines up with the compiler's effect model:
 
 - effect names used in runtime dispatch correspond to the language's effect declarations
+- performed operations resolve to declared names, arities, argument types, and
+  result types before lowering
 - handlers compose with nested scopes
+- handler cases cover every declared operation exactly once with the declared
+  arity
 - handler removal/resolution semantics remain compatible with the type/effect system's current explicit effect tracking, including the implemented row-polymorphic/algebraic-effects surfaces
 
 ## Out Of Scope

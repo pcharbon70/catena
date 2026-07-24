@@ -131,12 +131,22 @@ translate_operation_handler(Params, Body, Location, State) ->
     {cerl:c_fun(Arguments, CoreBody), State2}.
 
 handler_match_shape([Argument], [Pattern], _Location) ->
-    {Argument, Pattern};
+    {Argument, normalize_handler_pattern(Pattern)};
 handler_match_shape(Arguments, Params, Location) ->
     {
         cerl:c_tuple(Arguments),
-        {pat_tuple, Params, Location}
+        {pat_tuple, [normalize_handler_pattern(Param) || Param <- Params], Location}
     }.
+
+%% Legacy raw-codegen fixtures represented a handler variable parameter with
+%% the expression node used for variable references. The parser-native AST
+%% uses `pat_var`; normalize only this historical shape at the handler
+%% boundary so all other patterns retain the ordinary pattern compiler's
+%% fail-closed behavior.
+normalize_handler_pattern({var, Name, Location}) ->
+    {pat_var, Name, Location};
+normalize_handler_pattern(Pattern) ->
+    Pattern.
 
 -spec runtime_context_var() -> cerl:cerl().
 runtime_context_var() ->
