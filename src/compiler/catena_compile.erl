@@ -15,6 +15,8 @@
     compile_file_to_core/2,
     compile_string/1,
     compile_string/2,
+    compile_string_to_unit/1,
+    compile_string_to_unit/2,
     compile_string_to_core/1,
     compile_string_to_core/2,
     build_type_env/1,
@@ -28,7 +30,10 @@
 compile_file(Path) ->
     case read_source_file(Path) of
         {ok, Source} ->
-            compile_string(Source);
+            compile_string(
+                Source,
+                #{source_identity => file_source_identity(Path)}
+            );
         {error, _} = Error ->
             Error
     end.
@@ -44,7 +49,7 @@ compile_file_to_core(Path) ->
 compile_file_to_core(Path, Opts) ->
     case read_source_file(Path) of
         {ok, Source} ->
-            compile_string_to_core(Source, Opts);
+            compile_string_to_core(Source, file_options(Path, Opts));
         {error, _} = Error ->
             Error
     end.
@@ -73,9 +78,44 @@ compile_string(Source) ->
 %%   - import_env: env() - pre-built environment from imports (skips import processing)
 -spec compile_string(string(), map()) -> {ok, term()} | {error, term()}.
 compile_string(Source, Opts) ->
+    case compile_string_to_unit(Source, Opts) of
+        {ok, Unit} ->
+            {ok, catena_compilation_unit:typed_module(Unit)};
+        {error, _} = Error ->
+            Error
+    end.
+
+%% @doc Build the validated compilation unit shared by artifact backends.
+%%
+%% This is the maintained orchestration handoff.  It is exported so compiler
+%% integration tests and future artifact APIs can inspect the contract without
+%% duplicating any frontend stage.  Language-facing callers should normally
+%% use compile_string/1,2 or an artifact-specific API.
+-spec compile_string_to_unit(string()) ->
+    {ok, catena_compilation_unit:t()} | {error, term()}.
+compile_string_to_unit(Source) ->
+    compile_string_to_unit(Source, #{}).
+
+%% @doc Build a validated compilation unit with compiler options.
+-spec compile_string_to_unit(string(), map()) ->
+    {ok, catena_compilation_unit:t()} | {error, term()}.
+compile_string_to_unit(Source, Opts) ->
     case analyze_string(Source) of
         {ok, AnalyzedAST} ->
-            type_check_with_imports(AnalyzedAST, Opts);
+            case type_check_with_imports(AnalyzedAST, Opts) of
+                {ok, {typed_module, _, _, _} = TypedModule} ->
+                    catena_compilation_unit:new(
+                        AnalyzedAST,
+                        TypedModule,
+                        #{
+                            validation_state => successful_validations(),
+                            options => Opts,
+                            source_identity => source_identity(Opts)
+                        }
+                    );
+                {error, _} = TypeError ->
+                    TypeError
+            end;
         {error, _} = Error ->
             Error
     end.
@@ -95,21 +135,42 @@ compile_string_to_core(Source) ->
 -spec compile_string_to_core(string(), map()) ->
     {ok, cerl:cerl()} | {error, term()}.
 compile_string_to_core(Source, Opts) ->
-    case analyze_string(Source) of
-        {ok, AnalyzedAST} ->
-            case type_check_with_imports(AnalyzedAST, Opts) of
-                {ok, {typed_module, _, _, _}} ->
-                    CodegenOpts = maps:get(codegen_opts, Opts, #{}),
-                    catena_codegen_module:generate_module(
-                        AnalyzedAST,
-                        CodegenOpts
-                    );
-                {error, _} = TypeError ->
-                    TypeError
-            end;
+    case compile_string_to_unit(Source, Opts) of
+        {ok, Unit} ->
+            catena_codegen_module:generate_validated_module(Unit);
         {error, _} = Error ->
             Error
     end.
+
+successful_validations() ->
+    maps:from_list([
+        {Stage, passed}
+        || Stage <- catena_compilation_unit:validated_stages()
+    ]).
+
+source_identity(Opts) ->
+    maps:get(
+        source_identity,
+        Opts,
+        #{
+            kind => string,
+            name => maps:get(
+                file,
+                maps:get(codegen_opts, Opts, #{}),
+                "nofile"
+            )
+        }
+    ).
+
+file_source_identity(Path) ->
+    #{kind => file, path => Path}.
+
+file_options(Path, Opts) ->
+    CodegenOpts = maps:get(codegen_opts, Opts, #{}),
+    Opts#{
+        source_identity => file_source_identity(Path),
+        codegen_opts => maps:put(file, Path, CodegenOpts)
+    }.
 
 analyze_string(Source) ->
     case catena_lexer:string(Source) of

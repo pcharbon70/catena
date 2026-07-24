@@ -67,49 +67,49 @@ import locations across normalized and typed views.
 after all frontend gates while keeping the typed-module and Core APIs
 compatible.
 
-- [ ] **Section 2.2 Complete**
+- [x] **Section 2.2 Complete**
 
 ### Task 2.2.1: Produce The Unit From The Canonical Frontend
 
 **Description:** Join semantic output, import results, kind validation, type
 checking, effect validation, and symbol collection into one success artifact.
 
-- [ ] **Task 2.2.1 Complete**
+- [x] **Task 2.2.1 Complete**
 
 #### Subtask 2.2.1.1: Refactor Frontend Success Assembly
 
 **Description:** Reuse one orchestration path for typed-module, Core Erlang,
 and later BEAM APIs without repeating or skipping validation.
 
-- [ ] **Subtask 2.2.1.1 Complete**
+- [x] **Subtask 2.2.1.1 Complete**
 
 #### Subtask 2.2.1.2: Preserve Existing Public Results
 
 **Description:** Keep the documented typed-module return shape stable or add a
 deliberate compatibility adapter while the validated unit remains internal.
 
-- [ ] **Subtask 2.2.1.2 Complete**
+- [x] **Subtask 2.2.1.2 Complete**
 
 ### Task 2.2.2: Make Code Generation Consume The Unit
 
 **Description:** Route the public source-to-Core path through the validated
 unit and make low-level AST helpers explicitly internal or test-only.
 
-- [ ] **Task 2.2.2 Complete**
+- [x] **Task 2.2.2 Complete**
 
 #### Subtask 2.2.2.1: Add The Validated Backend Entry Point
 
 **Description:** Introduce a code-generation entry point whose input contract
 requires validated symbols, types, dispositions, and locations.
 
-- [ ] **Subtask 2.2.2.1 Complete**
+- [x] **Subtask 2.2.2.1 Complete**
 
 #### Subtask 2.2.2.2: Scope Raw-AST Codegen Helpers
 
 **Description:** Rename, document, or guard raw backend helpers so callers
 cannot mistake them for the safe production compilation boundary.
 
-- [ ] **Subtask 2.2.2.2 Complete**
+- [x] **Subtask 2.2.2.2 Complete**
 
 ## Section 2.3: Declaration Disposition Pass
 
