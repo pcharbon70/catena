@@ -911,6 +911,10 @@ convert_expr({var, false, _Loc}) ->
     {lit, {bool, false}};
 convert_expr({var, Name, _Loc}) ->
     {var, Name};
+convert_expr({literal, Value, Type, Loc})
+  when Type =:= integer; Type =:= float; Type =:= string;
+       Type =:= atom; Type =:= char; Type =:= bool ->
+    {literal, Type, Value, Loc};
 convert_expr({literal, Type, Value, Loc}) ->
     {literal, Type, Value, Loc};
 convert_expr({literal, {int, Value}, _Loc}) ->
@@ -949,6 +953,8 @@ convert_expr({handle_expr, Body, Handlers, Loc}) ->
     {handle_expr, convert_expr(Body), Handlers, Loc};
 convert_expr({record_expr, Fields, _Base, _Loc}) ->
     {record, [{Name, convert_expr(Expr)} || {Name, Expr} <- Fields]};
+convert_expr({record_access, Expr, FieldName, _Loc}) ->
+    {field, convert_expr(Expr), FieldName};
 convert_expr({field_access, Expr, FieldName, _Loc}) ->
     {field, convert_expr(Expr), FieldName};
 convert_expr({binary_op, Op, Left, Right, Loc}) ->

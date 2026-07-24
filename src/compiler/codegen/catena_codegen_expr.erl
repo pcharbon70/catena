@@ -161,7 +161,15 @@ translate_literal({literal, bool, true, _Loc}, State) ->
     {cerl:c_atom(true), State};
 
 translate_literal({literal, bool, false, _Loc}, State) ->
-    {cerl:c_atom(false), State}.
+    {cerl:c_atom(false), State};
+
+translate_literal({literal, Type, Value, Loc} = Literal, _State) ->
+    unsupported(
+        expression_translation,
+        literal,
+        Literal,
+        #{literal_type => Type, literal_value => Value, location => Loc}
+    ).
 
 %%====================================================================
 %% Variable Translation
@@ -347,17 +355,16 @@ pattern_to_var(Complex) ->
 translate_binary_op({binary_op, '|>', Left, Right, _Loc}, State) ->
     %% a |> f becomes f(a)
     %% a |> f(x) becomes f(a, x)
-    {CoreLeft, State1} = translate_expr(Left, State),
     case Right of
         {app, Func, Args, AppLoc} ->
             %% f(x) |> g(y) becomes g(f(x), y)
             translate_app({app, Func, [Left | Args], AppLoc}, State);
-        {var, _, _} ->
+        {var, _, RightLoc} ->
             %% a |> f becomes f(a)
-            {CoreRight, State2} = translate_expr(Right, State1),
-            {cerl:c_apply(CoreRight, [CoreLeft]), State2};
+            translate_app({app, Right, [Left], RightLoc}, State);
         _ ->
             %% General case: treat right as a function
+            {CoreLeft, State1} = translate_expr(Left, State),
             {CoreRight, State2} = translate_expr(Right, State1),
             {cerl:c_apply(CoreRight, [CoreLeft]), State2}
     end;
@@ -423,16 +430,12 @@ translate_binary_op({binary_op, Op, Left, Right, _Loc}, State)
 
 %% List append (<>)
 translate_binary_op({binary_op, '<>', Left, Right, _Loc}, State) ->
-    {CoreLeft, State1} = translate_expr(Left, State),
-    {CoreRight, State2} = translate_expr(Right, State1),
-    BifCall = cerl:c_call(
-        cerl:c_atom(erlang),
-        cerl:c_atom('++'),
-        [CoreLeft, CoreRight]
-    ),
-    {BifCall, State2};
+    translate_list_append(Left, Right, State);
 
-%% List cons (::)
+%% Parser-native list append (++)
+translate_binary_op({binary_op, '++', Left, Right, _Loc}, State) ->
+    translate_list_append(Left, Right, State);
+
 translate_binary_op({binary_op, '::', Left, Right, _Loc}, State) ->
     {CoreLeft, State1} = translate_expr(Left, State),
     {CoreRight, State2} = translate_expr(Right, State1),
@@ -446,6 +449,16 @@ translate_binary_op({binary_op, Op, Left, Right, Loc} = Expr, _State) ->
         Expr,
         #{operator => Op, operands => [Left, Right], location => Loc}
     ).
+
+translate_list_append(Left, Right, State) ->
+    {CoreLeft, State1} = translate_expr(Left, State),
+    {CoreRight, State2} = translate_expr(Right, State1),
+    BifCall = cerl:c_call(
+        cerl:c_atom(erlang),
+        cerl:c_atom('++'),
+        [CoreLeft, CoreRight]
+    ),
+    {BifCall, State2}.
 
 %%====================================================================
 %% Lambda Translation

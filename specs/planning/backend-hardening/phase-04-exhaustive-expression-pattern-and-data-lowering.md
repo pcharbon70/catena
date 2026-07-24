@@ -13,7 +13,7 @@ patterns, clauses, algebraic data, lists, tuples, and records.
 **Description:** Give every normalized pure expression and operator an explicit
 lowering or a structured rejection path.
 
-- [ ] **Section 4.1 Complete**
+- [x] **Section 4.1 Complete**
 
 ### Task 4.1.1: Complete Pure Expression Coverage
 
@@ -21,35 +21,35 @@ lowering or a structured rejection path.
 literals, applications, lambdas, lets, matches, lists, tuples, records, and
 field access.
 
-- [ ] **Task 4.1.1 Complete**
+- [x] **Task 4.1.1 Complete**
 
 #### Subtask 4.1.1.1: Lower Values And Bindings
 
 **Description:** Validate literal, list, tuple, record, lambda, application,
 simple-let, and nested-let behavior without placeholder nodes or lost scope.
 
-- [ ] **Subtask 4.1.1.1 Complete**
+- [x] **Subtask 4.1.1.1 Complete**
 
 #### Subtask 4.1.1.2: Lower Matches And Field Access
 
 **Description:** Preserve match scrutinees, clause ordering, record map access,
 and missing-field runtime behavior through explicit Core forms.
 
-- [ ] **Subtask 4.1.1.2 Complete**
+- [x] **Subtask 4.1.1.2 Complete**
 
 ### Task 4.1.2: Reconcile Operator Semantics
 
 **Description:** Align parser operators, semantic desugaring, type inference,
 and backend emission so each supported operator has one documented meaning.
 
-- [ ] **Task 4.1.2 Complete**
+- [x] **Task 4.1.2 Complete**
 
 #### Subtask 4.1.2.1: Lower Primitive Operators Explicitly
 
 **Description:** Cover arithmetic, comparison, Boolean, pipe, list append, and
 list cons operations with verified OTP targets and evaluation semantics.
 
-- [ ] **Subtask 4.1.2.1 Complete**
+- [x] **Subtask 4.1.2.1 Complete**
 
 #### Subtask 4.1.2.2: Validate Desugared Library Operators
 
@@ -57,7 +57,7 @@ list cons operations with verified OTP targets and evaluation semantics.
 resolution as explicit library calls rather than leaking parser operator atoms
 into arbitrary BIF emission.
 
-- [ ] **Subtask 4.1.2.2 Complete**
+- [x] **Subtask 4.1.2.2 Complete**
 
 ## Section 4.2: Lossless Pattern And Clause Compilation
 

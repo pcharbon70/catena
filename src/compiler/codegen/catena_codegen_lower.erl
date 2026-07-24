@@ -241,7 +241,7 @@ lower_expr({constructor, Name, Arguments, Location}) ->
         [lower_expr(Argument) || Argument <- Arguments],
         Location};
 lower_expr(Other) ->
-    Other.
+    unsupported(expression_lowering, expression, Other).
 
 lower_match_clause({match_clause, Pattern, Guards, Body, _Location}) ->
     {clause,
@@ -319,7 +319,43 @@ lower_operator(gt) -> '>';
 lower_operator(lte) -> '=<';
 lower_operator(gte) -> '>=';
 lower_operator(plus_plus) -> '++';
-lower_operator(Other) -> Other.
+lower_operator('+') -> '+';
+lower_operator('-') -> '-';
+lower_operator('*') -> '*';
+lower_operator('/') -> '/';
+lower_operator('div') -> 'div';
+lower_operator('rem') -> 'rem';
+lower_operator('==') -> '==';
+lower_operator('/=') -> '/=';
+lower_operator('===') -> '===';
+lower_operator('!==') -> '!==';
+lower_operator('<') -> '<';
+lower_operator('>') -> '>';
+lower_operator('=<') -> '=<';
+lower_operator('>=') -> '>=';
+lower_operator('and') -> 'and';
+lower_operator('or') -> 'or';
+lower_operator('andalso') -> 'andalso';
+lower_operator('orelse') -> 'orelse';
+lower_operator('++') -> '++';
+lower_operator('::') -> '::';
+lower_operator('|>') -> '|>';
+lower_operator(Other) ->
+    unsupported(operator_lowering, operator, Other).
+
+unsupported(Stage, Construct, SourceTerm) ->
+    Context =
+        catena_backend_error:context(
+            Stage,
+            Construct,
+            SourceTerm
+        ),
+    throw(
+        catena_backend_error:unsupported_backend_construct(
+            Construct,
+            Context
+        )
+    ).
 
 is_constructor_name(Name) when is_atom(Name) ->
     case atom_to_list(Name) of
