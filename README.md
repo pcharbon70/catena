@@ -132,6 +132,10 @@ All scripts include timestamp checking and only rebuild when source files have c
 
 ## Documentation
 
+For a developer-oriented tour of the implementation, component boundaries, and
+current integration seams, start with the
+**[Catena Architecture Guide](guides/developer/ARCHITECTURE_GUIDE.md)**.
+
 Comprehensive research documents are available in [`specs/research/`](specs/research/):
 
 - **[1.01 - Original Idea](specs/research/1.01-original_idea/1.01.1-original_idea.md)** - Core design philosophy
