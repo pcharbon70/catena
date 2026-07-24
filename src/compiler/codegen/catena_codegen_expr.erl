@@ -192,7 +192,25 @@ translate_var({var, Name, _Loc} = Variable, State) ->
 %% Function calls are translated to either:
 %% - cerl:c_apply for local function calls
 %% - cerl:c_call for module-qualified calls
-translate_app({app, Func, Args, Loc} = Application, State) ->
+translate_app({app, _Func, _Args, _Loc} = Application, State) ->
+    case direct_local_application(Application, State) of
+        {direct, FuncName, Args, Loc} ->
+            {CoreArgs, State1} = translate_exprs(Args, State),
+            translate_named_app(
+                FuncName,
+                CoreArgs,
+                Loc,
+                Application,
+                State1
+            );
+        closure ->
+            translate_closure_application(Application, State)
+    end.
+
+translate_closure_application(
+    {app, Func, Args, Loc} = Application,
+    State
+) ->
     %% Translate arguments first
     {CoreArgs, State1} = translate_exprs(Args, State),
 
@@ -218,6 +236,37 @@ translate_app({app, Func, Args, Loc} = Application, State) ->
         _ ->
             {CoreFunc, State2} = translate_expr(Func, State1),
             {cerl:c_apply(CoreFunc, CoreArgs), State2}
+    end.
+
+direct_local_application(Application, State) ->
+    case catena_codegen_utils:resolution_enabled(State) of
+        false ->
+            closure;
+        true ->
+            {Root, Arguments, Location} =
+                application_spine(Application),
+            case Root of
+                {var, Name, _}
+                  when is_atom(Name) ->
+                    case catena_codegen_utils:is_bound(Name, State) of
+                        true -> closure;
+                        false -> {direct, Name, Arguments, Location}
+                    end;
+                _ ->
+                    closure
+            end
+    end.
+
+application_spine({app, Function, Arguments, Location}) ->
+    case Function of
+        {app, _, [], _} ->
+            {Function, Arguments, Location};
+        {app, _, _, _} ->
+            {Root, EarlierArguments, _EarlierLocation} =
+                application_spine(Function),
+            {Root, EarlierArguments ++ Arguments, Location};
+        _ ->
+            {Function, Arguments, Location}
     end.
 
 translate_named_app(FuncName, CoreArgs, _Loc, _Application, State)

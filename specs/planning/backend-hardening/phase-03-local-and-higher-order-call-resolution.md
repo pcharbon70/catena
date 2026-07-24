@@ -4,7 +4,7 @@
 multi-function programs by resolving module-local transforms, recursion,
 constructors, and higher-order callable values before Core Erlang emission.
 
-**Status:** Planned.
+**Status:** Complete.
 
 **Dependencies:** Phase 2 complete.
 
@@ -164,42 +164,42 @@ unary, and higher-arity constructors.
 programs compile to loadable BEAM while unresolved or misapplied targets fail
 before artifact success.
 
-- [ ] **Section 3.4 Complete**
+- [x] **Section 3.4 Complete**
 
 ### Task 3.4.1: Execute Local Call Graphs
 
 **Description:** Add source-to-BEAM programs that cover the complete
 module-local call-resolution surface.
 
-- [ ] **Task 3.4.1 Complete**
+- [x] **Task 3.4.1 Complete**
 
 #### Subtask 3.4.1.1: Test Direct And Forward Calls
 
 **Description:** Execute programs with earlier and later transform targets and
 assert their observable results.
 
-- [ ] **Subtask 3.4.1.1 Complete**
+- [x] **Subtask 3.4.1.1 Complete**
 
 #### Subtask 3.4.1.2: Test Self And Mutual Recursion
 
 **Description:** Execute terminating recursive programs and validate their
 results, Core compilation, and module loading behavior.
 
-- [ ] **Subtask 3.4.1.2 Complete**
+- [x] **Subtask 3.4.1.2 Complete**
 
 ### Task 3.4.2: Execute Higher-Order And Negative Paths
 
 **Description:** Test closure calls, named transforms as values, constructor
 calls, and rejected unresolved or arity-invalid targets.
 
-- [ ] **Task 3.4.2 Complete**
+- [x] **Task 3.4.2 Complete**
 
 #### Subtask 3.4.2.1: Test Higher-Order Execution
 
 **Description:** Execute lambda parameters, returned functions, let-bound
 functions, and named transform references passed to other transforms.
 
-- [ ] **Subtask 3.4.2.1 Complete**
+- [x] **Subtask 3.4.2.1 Complete**
 
 #### Subtask 3.4.2.2: Run Phase Completion Gates
 
@@ -207,4 +207,4 @@ functions, and named transform references passed to other transforms.
 and source-to-BEAM suites plus `make check-specs`, `make conformance`, and the
 complete active EUnit suite.
 
-- [ ] **Subtask 3.4.2.2 Complete**
+- [x] **Subtask 3.4.2.2 Complete**
