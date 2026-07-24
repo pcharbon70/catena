@@ -14,8 +14,8 @@ It exists because some planning checklists are stale relative to later implement
 | --- | --- |
 | Proof-of-concept | Implemented through Phases 1 to 3, with Phase 4 partial/minimal and a verified local Phase 5 actor runtime toolkit whose source-language integration remains incomplete. |
 | Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary; full language-surface continuation support remains incomplete. |
-| Property testing | Phases 1 to 4 are materially implemented in `src/proptest`; Phases 5 and 6 are substantial but partial; Phase 7 remains planned. |
-| Law verification | Structural stdlib law definition is implemented; stdlib-native execution remains partial; the internal proptest law framework is materially ahead of the staged plan. |
+| Property testing | Phases 1 to 4 are materially implemented in `src/proptest`; Phases 5 and 6 are substantial but partial; explicit Phase 7 helper surfaces are also materially implemented, while automatic language integration remains incomplete. |
+| Law verification | Structural and concrete stdlib laws execute, and known-instance generic checks bridge into the internal proptest framework; automatic derivation and broader workflow ergonomics remain future work. |
 | Language revamp migration | Completed and now historical. |
 | Flow | The pure Flow core is materially implemented in stdlib/compiler/test surfaces; later phases remain planned. |
 | Standalone category-theory library plan | Historical only; integrated into the PoC planning lineage rather than active as a separate track. |
@@ -37,10 +37,12 @@ Reconciled Section 1.5 status:
 - 1.5.1 Standard Library Compilation: complete
 - 1.5.2 Trait Instance Resolution: complete
 - 1.5.3 Higher-Kinded Type Validation: complete
-- 1.5.4 Law Verification via Test Module: partial
+- 1.5.4 Law Verification via Test Module: implemented at the current known-instance boundary
   - pure law definitions in `Laws` exist
   - structural tests for those law surfaces exist
-  - executable concrete law suites and generic generator-backed law verification remain staged follow-on work
+  - concrete `Maybe`, `Either`, `List`, applicative, accumulator, and orderable suites execute
+  - `verifyTrait` and `verifyTraits` route supported known instances into the generic generator-backed law framework
+  - automatic instance discovery, derivation sugar, and broader instance coverage remain follow-on work
 - 1.5.5 Do-Notation Desugaring: implemented
 - 1.5.6 Effect Integration with Kleisli Arrows: mostly implemented
 - 1.5.7 Operator Desugaring: implemented
@@ -109,7 +111,7 @@ Important caveat:
 
 ## Property-Testing Track
 
-The property-testing planning documents are no longer aligned with the current repo in a simple "plan ahead of code" direction. Phase 1 and Phase 2 notes mark work complete beyond the older promoted status, while Phases 3 through 6 still show unchecked markdown checklists even though the repo now contains substantial `src/proptest/*` implementations and tests for those areas.
+The property-testing planning documents are no longer aligned with the current repo in a simple "plan ahead of code" direction. Phase 1 and Phase 2 notes mark work complete beyond the older promoted status, while Phases 3 through 7 still contain stale unchecked markdown checklists even though the repo now contains substantial `src/proptest/*` implementations and tests for those areas.
 
 Current promoted status:
 
@@ -119,21 +121,23 @@ Current promoted status:
 - Phase 4 law-testing infrastructure is materially implemented on the Erlang/proptest side through `catena_laws`, `catena_trait_laws`, `catena_discipline`, `catena_law_tests`, and integration tests
 - Phase 5 stateful testing is substantial but partial: state-machine definition, command generation, symbolic/concrete execution, and integration surfaces exist, but some parallel-execution paths remain placeholder-backed
 - Phase 6 BEAM integration is substantial but partial: process, message, concurrency, distribution, and OTP testing surfaces exist, but several distribution/concurrency/OTP paths remain placeholder-backed or simplified
-- Phase 7 advanced features remain planned rather than implemented
-- the current concrete property-testing surface spans `src/proptest/catena_tree.erl`, `catena_gen.erl`, `catena_shrink.erl`, `catena_stdgen.erl`, `catena_property.erl`, `catena_runner.erl`, `catena_report.erl`, `catena_laws.erl`, `catena_trait_laws.erl`, `catena_discipline.erl`, `catena_statem.erl`, `catena_process.erl`, `catena_message.erl`, `catena_concurrency.erl`, `catena_distribution.erl`, and `catena_otp.erl`
+- Phase 7 explicit advanced helpers are materially implemented through derivation descriptors, coverage guidance, metamorphic testing, property combinators, and performance helpers; automatic type reflection, attributes, and macros remain absent
+- bounded map and set generators preserve selected root cardinality through deterministic unique resampling and report unsatisfiable domains explicitly
+- the current concrete property-testing surface spans `src/proptest/catena_tree.erl`, `catena_gen.erl`, `catena_shrink.erl`, `catena_stdgen.erl`, `catena_property.erl`, `catena_runner.erl`, `catena_report.erl`, `catena_laws.erl`, `catena_trait_laws.erl`, `catena_discipline.erl`, `catena_statem.erl`, `catena_process.erl`, `catena_message.erl`, `catena_concurrency.erl`, `catena_distribution.erl`, `catena_otp.erl`, `catena_derive.erl`, `catena_coverage.erl`, `catena_metamorphic.erl`, `catena_props.erl`, and `catena_perf.erl`
 
 Important caveats:
 
 - the Phase 1 and Phase 2 note checklists are ahead of the old promoted summary and now mark completion through Section 1.7 and Phase 2.6 integration tests
-- the Phase 3 through Phase 6 note checklists remain largely unchecked despite real implementations and tests, so this document is the reconciled read
+- the Phase 3 through Phase 7 note checklists remain stale in places despite real implementations and tests, so this document is the reconciled read
 - placeholder-backed paths still exist in parts of the stateful/concurrency/distribution surfaces, so "implemented" here does not mean every branch is production-polished
-- the legacy `src/testing/*` property-testing surface still exists, but `src/proptest/*` is the newer and broader active direction
+- the `src/testing/*` compatibility/front-end surface still exists, but property execution converges on the newer and broader `src/proptest/*` engine
 
 Next clear steps on this track:
 
 - finish the placeholder-backed parallel/concurrency/distribution paths in Phases 5 and 6
 - reconcile the property-testing phase markdown files themselves with the now-implemented Erlang/proptest surfaces
-- decide whether the next active push is Phase 7 advanced features or deeper stabilization/integration of the already-implemented framework
+- replace explicit Phase 7 workarounds with source-language reflection and macro support when those compiler capabilities exist
+- deepen stabilization and integration of the already-implemented framework
 
 ## Law-Verification Track
 
@@ -142,14 +146,14 @@ The staged law-verification plan is now conservative relative to the repo's newe
 Current promoted status:
 
 - Stage 1 structural stdlib law definition is implemented
-- Stage 2 stdlib-native executable law suites remain partial and are still the clearest unfinished step on the standard-library path
+- Stage 2 stdlib-native executable law suites are implemented for the current concrete instance fixtures
 - Stage 3 generator/runner foundation is materially implemented in `src/proptest/*`
-- Stage 4 generic law specifications, trait-law definitions, discipline packaging, and law-test generation helpers are materially implemented on the Erlang/proptest side
+- Stage 4 generic law specifications, trait-law definitions, discipline packaging, and law-test generation helpers are materially implemented and bridge into stdlib `verifyTrait`/`verifyTraits` for known instances
 - Stage 5 ergonomic derivation and workflow integration remains partial/future: function-based helpers exist, but the broader macro/derive/REPL/CI ergonomics are not fully realized
 
 Important caveat:
 
-- this track now has two partially overlapping realities: the stdlib/Catena-native law-execution story is still incomplete, while the internal Erlang/proptest law framework is materially further along
+- the stdlib and internal law paths now meet at an explicit known-instance bridge; that boundary does not yet provide automatic instance discovery, source-language derivation, or universal coverage of every trait and type
 
 ## Language-Revamp Migration Track
 
@@ -185,11 +189,9 @@ Current promoted status:
 
 ## Current Quality State
 
-The default `rebar3 eunit` entry point now discovers, compiles, and executes the
-complete active test tree. It is not yet green. Two consecutive final verified
-runs on 2026-07-24 each reported 4,822 passing, 2 failing, and zero skipped
-tests. A preliminary run also exposed one intermittent Phase 6 collection
-generator failure recorded in the Phase 5 baseline.
+The default `rebar3 eunit` entry point discovers, compiles, and executes the
+complete active test tree. Two consecutive final verified runs on 2026-07-24
+each reported 4,829 passing, zero failing, and zero skipped tests.
 
 Promoted interpretation:
 
@@ -199,14 +201,15 @@ Promoted interpretation:
 - the 15 Phase 3 compiler/codegen/pattern modules pass all 397 focused tests
 - the ten Phase 4 effect/type/runtime modules pass all 244 focused tests
 - the 14 Phase 5 process/actor/REPL modules pass all 302 focused tests
+- the 53 Phase 6 property/law modules pass all 1,091 focused tests
 - valid source reaches executable Core Erlang only after typed frontend
   validation
-- the two deterministic remaining failures and one observed generator flake
-  are assigned to Phase 6 in the
-  [Phase 5 test baseline](spec-source-reconciliation/phase-05-test-baseline.md)
-- the internal property-testing transition is still underway
+- the two deterministic law failures and observed collection-generator flake
+  from Phase 5 are resolved in the
+  [Phase 6 test baseline](spec-source-reconciliation/phase-06-test-baseline.md)
+- `rebar3 dialyzer` remains non-green with 777 repository-wide warnings
 - historical PropEr suites remain preserved under `test_legacy/proper/` as migration targets rather than active default tests
 
 The component status summaries above describe implementation inventory and
-maturity. They must not be read as a claim that every promoted integration is
-currently passing its complete test family.
+maturity. The green maintained suite must not be read as a claim that every
+advanced helper is production-complete or that static analysis is green.

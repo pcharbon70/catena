@@ -7,7 +7,7 @@ runtime failures, makes unique collection cardinality deterministic, and
 publishes a repeatable green-suite baseline without absorbing the executable
 conformance and governance work owned by Phase 7.
 
-**Status:** In progress.
+**Status:** Complete.
 
 **Dependencies:** Phase 5 complete.
 
@@ -136,42 +136,42 @@ seeds, including seeds that previously exposed duplicate collapse.
 suite runs, then publish the implementation boundary, quality evidence, and
 remaining Phase 7 work.
 
-- [ ] **Section 6.3 Complete**
+- [x] **Section 6.3 Complete**
 
 ### Task 6.3.1: Verify Property and Law Integration
 
 **Description:** Validate generators, shrinking, runners, adapters,
 first-class properties, discipline laws, and stdlib law workflows together.
 
-- [ ] **Task 6.3.1 Complete**
+- [x] **Task 6.3.1 Complete**
 
 #### Subtask 6.3.1.1: Run the Focused Gate
 
 **Description:** Execute all Phase 6 generator, property, runner, adapter,
 trait-law, stdlib-law, convergence, and workflow modules.
 
-- [ ] **Subtask 6.3.1.1 Complete**
+- [x] **Subtask 6.3.1.1 Complete**
 
 #### Subtask 6.3.1.2: Run the Complete Suite Twice
 
 **Description:** Confirm the active suite is green and its totals are stable
 across two consecutive runs.
 
-- [ ] **Subtask 6.3.1.2 Complete**
+- [x] **Subtask 6.3.1.2 Complete**
 
 ### Task 6.3.2: Publish Phase 6 Evidence
 
 **Description:** Record commands, focused totals, complete-suite totals,
 static-analysis status, resolved failures, and the honest remaining scope.
 
-- [ ] **Task 6.3.2 Complete**
+- [x] **Task 6.3.2 Complete**
 
 #### Subtask 6.3.2.1: Create the Test Baseline
 
 **Description:** Supersede the Phase 5 quality snapshot with repeatable Phase 6
 property/law evidence.
 
-- [ ] **Subtask 6.3.2.1 Complete**
+- [x] **Subtask 6.3.2.1 Complete**
 
 #### Subtask 6.3.2.2: Reconcile Promoted Status
 
@@ -179,7 +179,7 @@ property/law evidence.
 status documents to match the verified implementation without claiming future
 source-language or governance work.
 
-- [ ] **Subtask 6.3.2.2 Complete**
+- [x] **Subtask 6.3.2.2 Complete**
 
 **Acceptance Criteria:**
 
@@ -195,8 +195,8 @@ source-language or governance work.
 property engine, unique collection generators, promoted specifications, and
 repeatable repository evidence agree at one executable boundary.
 
-- [ ] Runtime transform scope is declaration-order independent
-- [ ] Generic known-instance law suites execute through compiled stdlib values
-- [ ] Unique collection generators satisfy deterministic cardinality contracts
-- [ ] Focused and complete-suite evidence is green and repeatable
-- [ ] Current status and property/law specifications match executable evidence
+- [x] Runtime transform scope is declaration-order independent
+- [x] Generic known-instance law suites execute through compiled stdlib values
+- [x] Unique collection generators satisfy deterministic cardinality contracts
+- [x] Focused and complete-suite evidence is green and repeatable
+- [x] Current status and property/law specifications match executable evidence
