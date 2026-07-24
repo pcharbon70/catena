@@ -43,7 +43,13 @@ from_unit(Unit) ->
         true ->
             case catena_codegen_module:generate_validated_module(Unit) of
                 {ok, CoreModule} ->
-                    Context = artifact_context(Unit),
+                    Origins = catena_core_origin:inventory(
+                        Unit,
+                        CoreModule
+                    ),
+                    Context = (artifact_context(Unit))#{
+                        origins => Origins
+                    },
                     case validate_core(CoreModule, Context) of
                         {ok, CoreWarnings} ->
                             case compile_core(CoreModule, Context) of
@@ -53,7 +59,8 @@ from_unit(Unit) ->
                                         RuntimeModule,
                                         Binary,
                                         CoreModule,
-                                        CoreWarnings ++ BeamWarnings
+                                        CoreWarnings ++ BeamWarnings,
+                                        Origins
                                     );
                                 {error, _} = Error ->
                                     Error
@@ -74,13 +81,38 @@ from_unit(Unit) ->
 validate_core(CoreModule, Context) when is_map(Context) ->
     case core_lint:module(CoreModule) of
         {ok, Warnings} ->
-            {ok, nonempty_diagnostics(Warnings)};
+            {ok, catena_artifact_diagnostic:normalize(
+                core_validation,
+                warning,
+                Warnings,
+                Context
+            )};
         {error, Errors, Warnings} ->
+            NormalizedErrors =
+                catena_artifact_diagnostic:normalize(
+                    core_validation,
+                    error,
+                    Errors,
+                    Context
+                ),
+            NormalizedWarnings =
+                catena_artifact_diagnostic:normalize(
+                    core_validation,
+                    warning,
+                    Warnings,
+                    Context
+                ),
             {error,
                 catena_backend_error:core_validation_failed(
-                    Errors,
-                    nonempty_diagnostics(Warnings),
-                    Context#{stage => core_validation}
+                    NormalizedErrors,
+                    NormalizedWarnings,
+                    failure_context(
+                        Context,
+                        NormalizedErrors,
+                        core_validation,
+                        Errors,
+                        Warnings
+                    )
                 )};
         Other ->
             {error,
@@ -105,13 +137,41 @@ compile_core(CoreModule, Context) when is_map(Context) ->
         {ok, Module, Binary} ->
             {ok, Module, Binary, []};
         {ok, Module, Binary, Warnings} ->
-            {ok, Module, Binary, nonempty_diagnostics(Warnings)};
+            {ok,
+                Module,
+                Binary,
+                catena_artifact_diagnostic:normalize(
+                    beam_compilation,
+                    warning,
+                    Warnings,
+                    Context
+                )};
         {error, Errors, Warnings} ->
+            NormalizedErrors =
+                catena_artifact_diagnostic:normalize(
+                    beam_compilation,
+                    error,
+                    Errors,
+                    Context
+                ),
+            NormalizedWarnings =
+                catena_artifact_diagnostic:normalize(
+                    beam_compilation,
+                    warning,
+                    Warnings,
+                    Context
+                ),
             {error,
                 catena_backend_error:beam_compilation_failed(
-                    Errors,
-                    nonempty_diagnostics(Warnings),
-                    Context#{stage => beam_compilation}
+                    NormalizedErrors,
+                    NormalizedWarnings,
+                    failure_context(
+                        Context,
+                        NormalizedErrors,
+                        beam_compilation,
+                        Errors,
+                        Warnings
+                    )
                 )};
         Other ->
             {error,
@@ -127,7 +187,8 @@ expected_runtime_module(
     RuntimeModule,
     Binary,
     CoreModule,
-    Warnings
+    Warnings,
+    Origins
 ) ->
     ExpectedRuntimeModule = catena_compilation_unit:runtime_module(Unit),
     case RuntimeModule =:= ExpectedRuntimeModule of
@@ -138,7 +199,8 @@ expected_runtime_module(
                     RuntimeModule,
                     Binary,
                     CoreModule,
-                    Warnings
+                    Warnings,
+                    Origins
                 )};
         false ->
             Context = artifact_context(Unit),
@@ -154,7 +216,14 @@ expected_runtime_module(
                 )}
     end.
 
-build_artifact(Unit, RuntimeModule, Binary, CoreModule, Warnings) ->
+build_artifact(
+    Unit,
+    RuntimeModule,
+    Binary,
+    CoreModule,
+    Warnings,
+    Origins
+) ->
     SourceModule = catena_compilation_unit:module_name(Unit),
     #{
         format => catena_beam_artifact,
@@ -181,7 +250,8 @@ build_artifact(Unit, RuntimeModule, Binary, CoreModule, Warnings) ->
                     catena_compilation_unit:validation_state(Unit),
                 core_lint => passed,
                 otp_from_core => passed
-            }
+            },
+            origins => Origins
         }
     }.
 
@@ -193,16 +263,24 @@ artifact_context(Unit) ->
         locations => catena_compilation_unit:locations(Unit)
     }.
 
-nonempty_diagnostics(Diagnostics) when is_list(Diagnostics) ->
-    [
-        Diagnostic
-        || Diagnostic <- Diagnostics,
-           not empty_diagnostic(Diagnostic)
-    ];
-nonempty_diagnostics(Diagnostic) ->
-    [Diagnostic].
-
-empty_diagnostic({_Source, []}) ->
-    true;
-empty_diagnostic(_) ->
-    false.
+failure_context(Context, NormalizedErrors, Stage, Errors, Warnings) ->
+    Closest = case NormalizedErrors of
+        [First | _] ->
+            maps:with(
+                [
+                    module,
+                    transform,
+                    generated_identity,
+                    location,
+                    origin
+                ],
+                First
+            );
+        [] ->
+            #{}
+    end,
+    (maps:merge(Context, Closest))#{
+        stage => Stage,
+        otp_errors => Errors,
+        otp_warnings => Warnings
+    }.

@@ -45,54 +45,66 @@
 %% @doc Translate a Catena expression to Core Erlang
 -spec translate_expr(term(), catena_codegen_utils:codegen_state()) ->
     {cerl:cerl(), catena_codegen_utils:codegen_state()}.
+translate_expr(Expression, State) ->
+    {CoreExpression, State1} =
+        translate_expression(Expression, State),
+    {
+        catena_core_origin:user(
+            CoreExpression,
+            expression_construct(Expression),
+            Expression,
+            State
+        ),
+        State1
+    }.
 
 %% Literals
-translate_expr({literal, Type, Value, Loc}, State) ->
+translate_expression({literal, Type, Value, Loc}, State) ->
     translate_literal({literal, Type, Value, Loc}, State);
 
 %% Variables
-translate_expr({var, Name, _Loc}, State) ->
+translate_expression({var, Name, _Loc}, State) ->
     translate_var({var, Name, _Loc}, State);
 
 %% A qualified import is resolved before typing and carries its executable
 %% module/function identity through to code generation.
-translate_expr({imported_ref, Entry, _Loc}, State) ->
+translate_expression({imported_ref, Entry, _Loc}, State) ->
     translate_callable_value(Entry, State);
 
 %% Function application
-translate_expr({app, Func, Args, Loc}, State) ->
+translate_expression({app, Func, Args, Loc}, State) ->
     translate_app({app, Func, Args, Loc}, State);
 
 %% Let binding
-translate_expr({let_expr, Bindings, Body, Loc}, State) ->
+translate_expression({let_expr, Bindings, Body, Loc}, State) ->
     translate_let({let_expr, Bindings, Body, Loc}, State);
 
 %% Binary operators (includes |>)
-translate_expr({binary_op, Op, Left, Right, Loc}, State) ->
+translate_expression({binary_op, Op, Left, Right, Loc}, State) ->
     translate_binary_op({binary_op, Op, Left, Right, Loc}, State);
 
 %% Lambda expressions
-translate_expr({lambda, Params, Body, Loc}, State) ->
+translate_expression({lambda, Params, Body, Loc}, State) ->
     translate_lambda({lambda, Params, Body, Loc}, State);
 
 %% If expressions
-translate_expr({if_expr, Cond, Then, Else, Loc}, State) ->
+translate_expression({if_expr, Cond, Then, Else, Loc}, State) ->
     translate_if({if_expr, Cond, Then, Else, Loc}, State);
 
 %% List literals
-translate_expr({list_expr, Elements, Loc}, State) ->
+translate_expression({list_expr, Elements, Loc}, State) ->
     translate_list({list_expr, Elements, Loc}, State);
 
 %% Tuple literals
-translate_expr({tuple_expr, Elements, Loc}, State) ->
+translate_expression({tuple_expr, Elements, Loc}, State) ->
     translate_tuple({tuple_expr, Elements, Loc}, State);
 
 %% Record literals
-translate_expr({record_expr, Fields, Loc}, State) ->
+translate_expression({record_expr, Fields, Loc}, State) ->
     translate_record({record_expr, Fields, Loc}, State);
 
 %% Match expressions
-translate_expr({match_expr, Scrutinee, Clauses, _Loc}, State) ->
+translate_expression({match_expr, Scrutinee, Clauses, _Loc}, State) ->
     {CoreScrutinee, State1} = translate_expr(Scrutinee, State),
     catena_codegen_pattern:compile_match(
         CoreScrutinee,
@@ -102,32 +114,41 @@ translate_expr({match_expr, Scrutinee, Clauses, _Loc}, State) ->
     );
 
 %% Perform expression (effect invocation)
-translate_expr({perform_expr, Effect, Operation, Args, Loc}, State) ->
+translate_expression({perform_expr, Effect, Operation, Args, Loc}, State) ->
     translate_perform({perform_expr, Effect, Operation, Args, Loc}, State);
 
 %% Handle expression (parser AST)
-translate_expr({handle_expr, Body, Handlers, Loc}, State) ->
+translate_expression({handle_expr, Body, Handlers, Loc}, State) ->
     catena_effect_codegen:translate_handle({handle_expr, Body, Handlers, Loc}, State);
 
 %% Try/with expression (effect handling)
-translate_expr({try_with_expr, Body, Handlers, Loc}, State) ->
+translate_expression({try_with_expr, Body, Handlers, Loc}, State) ->
     translate_try_with({try_with_expr, Body, Handlers, Loc}, State);
 
 %% Unary operators
-translate_expr({unary_op, Op, Operand, Loc}, State) ->
+translate_expression({unary_op, Op, Operand, Loc}, State) ->
     translate_unary_op({unary_op, Op, Operand, Loc}, State);
 
 %% Record access
-translate_expr({record_access, Record, Field, Loc}, State) ->
+translate_expression({record_access, Record, Field, Loc}, State) ->
     translate_record_access({record_access, Record, Field, Loc}, State);
 
 %% Constructor application (ADT constructors)
-translate_expr({constructor, Name, Args, Loc}, State) ->
+translate_expression({constructor, Name, Args, Loc}, State) ->
     translate_constructor({constructor, Name, Args, Loc}, State);
 
 %% Unknown expression type
-translate_expr(Unknown, _State) ->
+translate_expression(Unknown, _State) ->
     unsupported(expression_translation, expression, Unknown).
+
+expression_construct(Expression) when
+    is_tuple(Expression),
+    tuple_size(Expression) > 0,
+    is_atom(element(1, Expression))
+->
+    element(1, Expression);
+expression_construct(_) ->
+    expression.
 
 %% @doc Translate multiple expressions
 -spec translate_exprs([term()], catena_codegen_utils:codegen_state()) ->

@@ -65,14 +65,14 @@ errors, and structured warnings and return no partial success on failure.
 **Description:** Preserve enough origin metadata to report backend, Core, and
 BEAM failures in Catena vocabulary at the responsible source construct.
 
-- [ ] **Section 7.2 Complete**
+- [x] **Section 7.2 Complete**
 
 ### Task 7.2.1: Map Generated Forms To Source Origins
 
 **Description:** Track the source module, transform, clause, expression,
 pattern, and location associated with generated function names and Core nodes.
 
-- [ ] **Task 7.2.1 Complete**
+- [x] **Task 7.2.1 Complete**
 
 #### Subtask 7.2.1.1: Annotate Generated Core
 
@@ -80,35 +80,35 @@ pattern, and location associated with generated function names and Core nodes.
 by OTP without exposing unstable internal terms as the public diagnostic
 contract.
 
-- [ ] **Subtask 7.2.1.1 Complete**
+- [x] **Subtask 7.2.1.1 Complete**
 
 #### Subtask 7.2.1.2: Retain Synthetic-Origin Metadata
 
 **Description:** Distinguish user-written nodes from compiler-generated
 matches, parameters, closures, dictionaries, and runtime wrappers.
 
-- [ ] **Subtask 7.2.1.2 Complete**
+- [x] **Subtask 7.2.1.2 Complete**
 
 ### Task 7.2.2: Normalize OTP Diagnostics
 
 **Description:** Translate Core lint and BEAM compiler errors and warnings into
 structured Catena compiler diagnostics while retaining the original OTP detail.
 
-- [ ] **Task 7.2.2 Complete**
+- [x] **Task 7.2.2 Complete**
 
 #### Subtask 7.2.2.1: Map Core Validation Failures
 
 **Description:** Convert unbound names, invalid arities, malformed clauses, and
 invalid exports to the closest Catena source identity and diagnostic category.
 
-- [ ] **Subtask 7.2.2.1 Complete**
+- [x] **Subtask 7.2.2.1 Complete**
 
 #### Subtask 7.2.2.2: Map BEAM Compilation Failures And Warnings
 
 **Description:** Preserve severity, source context, OTP reason, and actionable
 Catena formatting for compiler output.
 
-- [ ] **Subtask 7.2.2.2 Complete**
+- [x] **Subtask 7.2.2.2 Complete**
 
 ## Section 7.3: Backend Conformance And Workflow Enforcement
 
