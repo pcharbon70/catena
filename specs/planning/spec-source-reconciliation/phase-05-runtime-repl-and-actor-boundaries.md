@@ -9,7 +9,7 @@ components from future source-language actor syntax, and publishes a
 deterministic Phase 5 baseline without absorbing property/law work owned by
 Phase 6.
 
-**Status:** In progress.
+**Status:** Complete.
 
 **Dependencies:** Phase 4 complete.
 
@@ -174,49 +174,49 @@ contracts, and direct REPL Process-effect coverage.
 active-suite runs, then publish the Phase 5 evidence and remaining Phase 6
 inventory.
 
-- [ ] **Section 5.3 Complete**
+- [x] **Section 5.3 Complete**
 
 ### Task 5.3.1: Verify Runtime Integration
 
 **Description:** Validate process primitives, actor/OTP-style components, REPL
 commands and state, and direct effect evaluation together.
 
-- [ ] **Task 5.3.1 Complete**
+- [x] **Task 5.3.1 Complete**
 
 #### Subtask 5.3.1.1: Run the Focused Gate
 
 **Description:** Execute all Phase 5 process, actor, registry, pub/sub,
 supervisor, broadcaster, REPL, history, completion, and workflow modules.
 
-- [ ] **Subtask 5.3.1.1 Complete**
+- [x] **Subtask 5.3.1.1 Complete**
 
 #### Subtask 5.3.1.2: Run the Complete Suite Twice
 
 **Description:** Confirm the remaining failure inventory is deterministic and
 contains only work assigned to Phase 6.
 
-- [ ] **Subtask 5.3.1.2 Complete**
+- [x] **Subtask 5.3.1.2 Complete**
 
 ### Task 5.3.2: Publish Phase 5 Evidence
 
 **Description:** Record tool versions, commands, focused totals, full-suite
 totals, static-analysis status, and resolved/remaining failures.
 
-- [ ] **Task 5.3.2 Complete**
+- [x] **Task 5.3.2 Complete**
 
 #### Subtask 5.3.2.1: Create the Test Baseline
 
 **Description:** Supersede the Phase 4 quality snapshot with repeatable Phase 5
 runtime evidence.
 
-- [ ] **Subtask 5.3.2.1 Complete**
+- [x] **Subtask 5.3.2.1 Complete**
 
 #### Subtask 5.3.2.2: Reconcile Current Status
 
 **Description:** Promote the implemented local actor toolkit while preserving
 the explicit future status of source-language actors and distribution.
 
-- [ ] **Subtask 5.3.2.2 Complete**
+- [x] **Subtask 5.3.2.2 Complete**
 
 **Acceptance Criteria:**
 
@@ -232,7 +232,7 @@ the explicit future status of source-language actors and distribution.
 components, direct REPL Process effects, runtime specifications, and repeatable
 test evidence agree at one honest integration boundary.
 
-- [ ] Process primitive behavior matches BEAM and Catena façade contracts
-- [ ] Actor and OTP-style runtime components have an explicit promoted scope
-- [ ] REPL automatic handlers execute the declared standard Process surface
-- [ ] Current status and runtime specs match repeatable Phase 5 evidence
+- [x] Process primitive behavior matches BEAM and Catena façade contracts
+- [x] Actor and OTP-style runtime components have an explicit promoted scope
+- [x] REPL automatic handlers execute the declared standard Process surface
+- [x] Current status and runtime specs match repeatable Phase 5 evidence
