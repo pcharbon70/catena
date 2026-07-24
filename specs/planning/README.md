@@ -6,6 +6,8 @@ Current promoted planning view:
 
 - [current_status.md](current_status.md)
 - [law_verification_staged_plan.md](law_verification_staged_plan.md)
+- [dialyzer-remediation/](dialyzer-remediation/README.md) - phased work to
+  reach and enforce a zero-warning static-analysis boundary
 - [spec-source-reconciliation/](spec-source-reconciliation/) - phased work to
   align promoted specifications with executable repository evidence
 - `algebraic-effects/` - restored Phase 7 through Phase 14 algebraic-effects phase documents
