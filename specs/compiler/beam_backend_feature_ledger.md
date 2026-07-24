@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 3 ending baseline, derived from the parser grammar, validated compilation
+Phase 4 ending baseline, derived from the parser grammar, validated compilation
 unit, normalized AST, declaration dispositions, and executable backend evidence
 on 2026-07-24.
 
@@ -41,7 +41,7 @@ declaration classification come from `catena_compilation_unit` and
 | Exported type, trait, or effect | Frontend metadata only | Static-erased | `catena_codegen_erase:erase_decl/1`; executable export semantics are deferred |
 | Import: open, qualified, aliased, or selective | Explicit unsupported disposition retaining linkage metadata; no executable linkage | Deferred | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests`; Phase 6 roadmap |
 | Type declaration and constructors | Static-erased only after constructor representation and callable metadata is retained | Static-erased | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests`, `catena_backend_hardening_phase3_tests`, constructor rows below |
-| Transform with implementation, including guarded and multi-clause forms | Function plus case clauses | Proven for simple and constructor clauses; otherwise Lowering-only | `catena_codegen_lower_tests`, `catena_core_pipeline_tests` |
+| Transform with implementation, including guarded and multi-clause forms | Function plus source-ordered Core case clauses | Proven | `catena_codegen_lower_tests`, `catena_codegen_lossless_pattern_tests`, `catena_backend_hardening_phase4_tests` |
 | Signature-only transform | Static-erased only when not runtime-exported; an exported signature fails with `missing_transform_implementation` | Deferred | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests` |
 | Effect declaration and operations | Static-erased after operation metadata is retained | Static-erased | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests` |
 | Trait declaration, extends list, signatures, and default members | Explicit unsupported disposition retaining dispatch metadata | Deferred | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests`; Phase 6 roadmap |
@@ -54,21 +54,21 @@ declaration classification come from `catena_compilation_unit` and
 
 | Parser-native surface | Backend representation | Class | Evidence |
 | --- | --- | --- | --- |
-| Integer, float, and string literals | Native BEAM terms | Proven for integer; Lowering-only for float/string | `catena_core_pipeline_tests`, `catena_codegen_expr_tests` |
+| Integer, float, and string literals | Native BEAM terms | Proven | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
 | Lower-case identifier | Lexical Core variable or resolved eta-expanded top-level callable value | Proven for transform parameters, pattern bindings, lambda/let values, and named transforms as values | `catena_codegen_higher_order_tests`, `catena_backend_hardening_phase3_tests` |
 | Nullary and applied upper-case constructor | Arity-validated tagged tuple `{Constructor, ...}` | Proven for nullary, unary, and higher-arity constructors | `catena_core_pipeline_tests`, `catena_codegen_higher_order_tests`, `catena_backend_hardening_phase3_tests` |
 | Function application | Resolved local function-name `apply`, closure `apply`, or explicit module call | Proven for local, forward, recursive, mutual, and higher-order local calls; imported calls remain Deferred | `catena_codegen_local_call_tests`, `catena_codegen_higher_order_tests`, `catena_backend_hardening_phase3_tests` |
-| Field access | `maps:get/2` | Lowering-only | `catena_codegen_expr_tests` |
+| Field access | `maps:get/2`, retaining native missing-key failure | Proven | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
 | `let` with variable binding | Core `let` with lexical callable-value scope | Proven for let-bound functions | `catena_codegen_expr_tests`, `catena_codegen_higher_order_tests`, `catena_backend_hardening_phase3_tests` |
 | `let` with a non-variable binding pattern | `unsupported_backend_construct` before Core emission | Deferred | `catena_backend_hardening_phase1_tests` |
 | Lambda | Core function with lexical parameter scope | Proven for creation and higher-order execution | `catena_codegen_expr_tests`, `catena_codegen_higher_order_tests`, `catena_backend_hardening_phase3_tests` |
-| Match function and match with scrutinee | Core case and clauses | Proven for constructor clauses; otherwise Lowering-only | `catena_core_pipeline_tests`, `catena_codegen_pattern_tests` |
-| Empty/non-empty list | Native list | Lowering-only | `catena_codegen_expr_tests` |
-| Tuple | Native tuple | Lowering-only | `catena_codegen_expr_tests` |
-| Empty/non-empty record | BEAM map | Lowering-only | `catena_codegen_expr_tests` |
+| Match function and match with scrutinee | Core case and source-ordered clauses | Proven for the promoted parser-native pattern surface | `catena_codegen_lossless_pattern_tests`, `catena_backend_hardening_phase4_tests` |
+| Empty/non-empty list | Native list | Proven | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
+| Tuple | Native tuple | Proven | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
+| Empty/non-empty record | BEAM map | Proven | `catena_codegen_pure_expr_tests`, `catena_codegen_data_erasure_tests`, `catena_backend_hardening_phase4_tests` |
 | `perform Effect.operation(...)` | Catena effect-runtime call | Runtime-lowered | `catena_effect_codegen_tests` |
 | `handle ... then` and handler operation cases | Catena effect-runtime handler boundary | Runtime-lowered | `catena_effect_codegen_tests` |
-| `do { ... }` with bind, let, action, and return statements | Desugared to `chain`, lambda, and `let` | Deferred | `catena_desugar`; named trait-method resolution is incomplete |
+| `do { ... }` with bind, let, action, and return statements | Desugared to `chain`, lambda, and `let` | Proven when `chain` resolves to an accepted local callable; standard-library trait dispatch remains Deferred | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
 | Unknown normalized expression | `unsupported_backend_construct` before Core emission | Deferred | `catena_backend_hardening_phase1_tests` |
 
 `if_expr`, explicit atom/character/boolean literals, `module_call`, and
@@ -80,16 +80,16 @@ parser-native surface entries.
 
 | Parser-native surface | Backend representation | Class | Evidence |
 | --- | --- | --- | --- |
-| Variable | Core variable | Proven inside transform clauses | `catena_core_pipeline_tests`, `catena_codegen_pattern_tests` |
-| Wildcard | Core wildcard variable | Lowering-only | `catena_codegen_pattern_tests` |
-| Nullary and applied constructor | Tagged tuple pattern | Proven for nullary/unary | `catena_core_pipeline_tests` |
-| Integer, float, and string literal | Core literal pattern | Lowering-only | `catena_codegen_pattern_tests` |
-| Empty and fixed list | Native list pattern | Lowering-only | `catena_codegen_pattern_tests` |
-| Cons | Native cons pattern | Lowering-only | `catena_codegen_pattern_tests` |
-| Tuple | Native tuple pattern | Lowering-only | `catena_codegen_pattern_tests` |
-| Empty and populated record | Core map pattern | Lowering-only | `catena_codegen_pattern_tests` |
-| As-pattern | Core alias pattern | Lowering-only | `catena_codegen_pattern_tests` |
-| Or-pattern in the single clause-pattern position | Expanded into alternative Core clauses | Lowering-only | `catena_codegen_pattern_tests` |
+| Variable | Core variable | Proven | `catena_codegen_lossless_pattern_tests`, `catena_backend_hardening_phase4_tests` |
+| Wildcard | Core wildcard variable | Proven | `catena_codegen_lossless_pattern_tests`, `catena_backend_hardening_phase4_tests` |
+| Nullary and applied constructor | Arity-validated tagged tuple pattern | Proven for nullary and higher arities | `catena_codegen_lossless_pattern_tests`, `catena_backend_hardening_phase4_tests` |
+| Integer, float, and string literal | Core literal pattern | Proven | `catena_codegen_pattern_tests`, `catena_codegen_lossless_pattern_tests`, `catena_backend_hardening_phase4_tests` |
+| Empty and fixed list | Native list pattern | Proven | `catena_codegen_lossless_pattern_tests`, `catena_backend_hardening_phase4_tests` |
+| Cons | Native cons pattern | Proven | `catena_codegen_lossless_pattern_tests`, `catena_backend_hardening_phase4_tests` |
+| Tuple | Native tuple pattern | Proven | `catena_codegen_lossless_pattern_tests`, `catena_backend_hardening_phase4_tests` |
+| Empty and populated record | Core exact-key map pattern | Proven | `catena_codegen_data_erasure_tests`, `catena_backend_hardening_phase4_tests` |
+| As-pattern | Core alias pattern retaining alias and inner bindings | Proven | `catena_codegen_lossless_pattern_tests`, `catena_backend_hardening_phase4_tests` |
+| Or-pattern in nested and multi-position clauses | Recursively expanded into source-ordered alternative Core clauses with identical binding sets | Proven | `catena_codegen_lossless_pattern_tests`, `catena_backend_hardening_phase4_tests` |
 | Misplaced normalized or-pattern | `unsupported_backend_construct` before Core emission | Deferred | `catena_backend_baseline_tests` |
 | Unknown normalized pattern | `unsupported_backend_construct` before Core emission | Deferred | `catena_backend_hardening_phase1_tests` |
 
@@ -97,16 +97,16 @@ parser-native surface entries.
 
 | Parser token/surface | Normalized behavior | Class | Evidence |
 | --- | --- | --- | --- |
-| `+`, `-`, `*`, `/` | Explicit Erlang arithmetic call | Proven for `+`; Lowering-only for the remainder | `catena_core_pipeline_tests`, `catena_codegen_expr_tests` |
-| `==`, `!=`, `<`, `>`, `<=`, `>=` | Explicit Erlang comparison call | Lowering-only | `catena_codegen_expr_tests` |
-| `and`, `or` | Explicit Erlang boolean call | Lowering-only | `catena_codegen_expr_tests` |
-| `++` | Explicit Erlang list append call | Lowering-only | `catena_codegen_expr_tests` |
-| `::` | Core cons | Lowering-only | `catena_codegen_expr_tests` |
-| `|>` | Core function application | Lowering-only; named target resolution is incomplete | `catena_codegen_expr_tests`, Phase 3 roadmap |
+| `+`, `-`, `*`, `/` | Explicit Erlang arithmetic call | Proven | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
+| `==`, `!=`, `<`, `>`, `<=`, `>=` | Explicit Erlang comparison call | Proven | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
+| `&&`, `||` | Explicit Erlang Boolean call | Proven | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
+| `++` | Explicit Erlang list append call | Proven | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
+| `::` | Core cons | Proven | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
+| `|>` | Resolved Core function application | Proven for accepted local and closure targets | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
 | `===`, `!==` | Desugared to `equals`/`not equals` trait calls | Deferred | `catena_desugar`; Phase 6 roadmap |
 | `<$>`, `<*>`, `>>=` | Desugared to `map`, `apply`, and `chain` calls | Deferred | `catena_desugar`; Phase 6 roadmap |
 | `>>>`, `<<<`, `***`, `&&&` | Desugared to flow method calls | Deferred | `catena_desugar`; Phase 6 roadmap |
-| `<>` | Desugared to `combine` | Deferred | `catena_desugar`; Phase 6 roadmap |
+| `<>` | Desugared to `combine` | Proven when `combine` resolves to an accepted local callable; trait dispatch remains Deferred | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
 | `>=>` | Desugared to `kleisli` | Deferred | `catena_desugar`; Phase 6 roadmap |
 | Unknown normalized binary or unary operator | `unsupported_backend_construct` before Core emission | Deferred | `catena_backend_baseline_tests`, `catena_backend_hardening_phase1_tests` |
 

@@ -2,17 +2,20 @@
 
 ## Status
 
-Promoted target: accepted architecture with Phase 1 backend safety, Phase 2
-validated-unit/declaration-disposition enforcement, and Phase 3 local and
-higher-order call resolution implemented; later backend phases remain partial
-or planned.
+Promoted target: accepted architecture with Phases 1 through 4 implemented:
+backend safety, validated-unit/declaration-disposition enforcement, local and
+higher-order call resolution, and exhaustive pure expression, pattern, and
+data lowering. Later runtime, linkage, and public-artifact phases remain
+partial or planned.
 
 The current repository proves a working source-to-BEAM vertical slice for
 representative transforms, arithmetic, algebraic data constructors, and
 constructor-pattern dispatch. Local, forward, self-recursive, mutually
-recursive, higher-order, and constructor calls are now proven through
-executable source programs. The repository does not yet satisfy the complete
-backend contract in this spec.
+recursive, higher-order, and constructor calls are proven through executable
+source programs. The same evidence now covers primitive pure operators,
+collections, records, field access, parser-native patterns, guards, aliases,
+or-patterns, representation round trips, and fail-closed type erasure. The
+repository does not yet satisfy the complete backend contract in this spec.
 
 ## Purpose
 
@@ -52,6 +55,7 @@ It distinguishes:
 - `test/compiler/integration/catena_backend_hardening_phase1_tests.erl`
 - `test/compiler/integration/catena_backend_hardening_phase2_tests.erl`
 - `test/compiler/integration/catena_backend_hardening_phase3_tests.erl`
+- `test/compiler/integration/catena_backend_hardening_phase4_tests.erl`
 
 ## Compilation Boundary
 
@@ -104,17 +108,17 @@ silent omission.
 
 | Catena surface | BEAM/Core representation | Current compliance |
 | --- | --- | --- |
-| Module and transform definitions | Core Erlang module and function definitions | Partial: simple exported transforms are proven. |
-| Primitive literals | Native BEAM terms | Implemented in lowering; arithmetic is proven end to end. |
+| Module and transform definitions | Core Erlang module and function definitions | Proven for accepted local pure transforms, including guarded and multi-clause definitions. |
+| Primitive literals | Native BEAM terms | Proven for the parser-native pure literal surface. |
 | Algebraic data constructors | Tagged tuples `{Constructor, ...}` | Proven for nullary, unary, and higher-arity constructors with exact arity validation. |
-| Lists and tuples | Native BEAM lists and tuples | Lowering exists; executable feature coverage is incomplete. |
-| Structural records | BEAM maps keyed by field atoms | Lowering exists; executable feature coverage is incomplete. |
+| Lists and tuples | Native BEAM lists and tuples | Proven through construction, operations, and pattern round trips. |
+| Structural records | BEAM maps keyed by field atoms | Proven for construction, exact-key pattern matching, field access, and missing-key behavior. |
 | Lambdas and higher-order values | Core Erlang functions and `apply` | Proven for lambda parameters, let-bound functions, returned functions, and named transforms used as values. |
 | Local, forward, and recursive transform calls | Resolved Core Erlang function references | Proven for direct, forward, self-recursive, and mutually recursive calls. |
 | Imported transform calls | Resolved Core Erlang module calls | Deferred pending executable module linkage. |
-| Pattern matching and guards | Core Erlang cases and clauses | Partial: constructor clauses are proven; all parser-native pattern forms are not yet proven. |
-| Type declarations and annotations | Static-erased after validation | Implemented in principle; disposition must become explicit. |
-| Effect declarations | Static-erased metadata | Implemented in principle. |
+| Pattern matching and guards | Core Erlang cases and clauses | Proven for every promoted parser-native pattern, recursive or-pattern expansion, bindings, pure guard conjunction, and source clause order. |
+| Type declarations and annotations | Static-erased after validation | Explicit, exhaustive, and fail-closed after disposition and representation selection. |
+| Effect declarations | Static-erased metadata | Explicit after operation metadata is retained; runtime effect execution remains a Phase 5 concern. |
 | `perform` and `handle` | Explicit calls to the Catena effect runtime with context passing | Partial: lowering and runtime paths exist; promoted source-to-BEAM coverage is incomplete. |
 | Traits and instances | Resolved runtime dictionaries | Deferred: validation and dictionary integration are incomplete. |
 | Test and property declarations | Explicit testing artifacts or runner registrations | Deferred: declarations are currently omitted from application emission. |
@@ -268,14 +272,13 @@ fail-closed backend suite. Phase 2 adds validated-unit construction, frontend
 failure exclusion, declaration classification, representation-before-erasure,
 and missing/deferred-runtime rejection evidence. Phase 3 adds direct, forward,
 self-recursive, mutually recursive, closure, named-function-value, and
-constructor-arity execution and rejection evidence. Later phases extend that
-suite to cover:
+constructor-arity execution and rejection evidence. Phase 4 adds primitive
+pure expressions and operators, collections, records, field access, every
+promoted parser-native pattern, guard and clause behavior, representation
+round trips, exhaustive erasure, and negative fail-closed paths. Later phases
+extend that suite to cover:
 
-- literals and primitive operators
 - local, forward, recursive, imported, and higher-order calls
-- ADTs, lists, tuples, records, and field access
-- transform clauses, guards, and every supported pattern form
-- desugared do-notation and category-theory operators
 - basic effect performance and handling
 - trait dispatch when promoted
 - explicit rejection of deferred tests, properties, imports, traits, or actor

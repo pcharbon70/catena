@@ -4,7 +4,7 @@
 exhaustive and semantics-preserving across expressions, operators, bindings,
 patterns, clauses, algebraic data, lists, tuples, and records.
 
-**Status:** Planned.
+**Status:** Complete.
 
 **Dependencies:** Phase 3 complete.
 
@@ -169,35 +169,35 @@ when erasure receives a normalized form without an accepted rule.
 promoted expression, operator, pattern, and data representation and verify
 negative paths fail closed.
 
-- [ ] **Section 4.4 Complete**
+- [x] **Section 4.4 Complete**
 
 ### Task 4.4.1: Execute Pure Feature Matrix
 
 **Description:** Add source-to-BEAM tests that exercise supported values,
 operators, bindings, matches, records, collections, and clauses in combination.
 
-- [ ] **Task 4.4.1 Complete**
+- [x] **Task 4.4.1 Complete**
 
 #### Subtask 4.4.1.1: Test Expressions And Data
 
 **Description:** Execute literals, lists, tuples, records, field access,
 lambdas, lets, primitive operators, pipe, and desugared pure operators.
 
-- [ ] **Subtask 4.4.1.1 Complete**
+- [x] **Subtask 4.4.1.1 Complete**
 
 #### Subtask 4.4.1.2: Test Pattern Matrix
 
 **Description:** Execute every promoted pattern form, nested combinations,
 guards, aliases, alternative patterns, and multi-clause fallthrough.
 
-- [ ] **Subtask 4.4.1.2 Complete**
+- [x] **Subtask 4.4.1.2 Complete**
 
 ### Task 4.4.2: Verify Semantic And Failure Boundaries
 
 **Description:** Compare construction and matching results and verify all
 unsupported pure forms fail before Core success.
 
-- [ ] **Task 4.4.2 Complete**
+- [x] **Task 4.4.2 Complete**
 
 #### Subtask 4.4.2.1: Test Representation Round Trips
 
@@ -205,7 +205,7 @@ unsupported pure forms fail before Core success.
 patterns or accessors, and assert the expected observable result after BEAM
 execution.
 
-- [ ] **Subtask 4.4.2.1 Complete**
+- [x] **Subtask 4.4.2.1 Complete**
 
 #### Subtask 4.4.2.2: Run Phase Completion Gates
 
@@ -213,4 +213,4 @@ execution.
 and source-to-BEAM suites plus `make check-specs`, `make conformance`, and the
 complete active EUnit suite.
 
-- [ ] **Subtask 4.4.2.2 Complete**
+- [x] **Subtask 4.4.2.2 Complete**
