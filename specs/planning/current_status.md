@@ -61,11 +61,18 @@ The older Phase 2 proof-of-concept checklist was not reconciled to that later im
 Implementation summaries and code indicate:
 
 - Phase 3.1 advanced patterns: implemented
-- Phase 3.2 decision trees: implemented
-- Phase 3.3 exhaustiveness/redundancy checking: implemented
-- Phase 3.4 integration tests: implemented
+- Phase 3.2 decision-tree construction: implemented and tested separately, not
+  selected by the public Core pipeline
+- Phase 3.3 exhaustiveness/redundancy checking: implemented as a separately
+  callable analysis surface
+- Phase 3.4 parser-native integration: implemented through semantic pattern
+  contracts, canonical AST lowering, and executable Core Erlang validation
 
-The older Phase 3 proof-of-concept checklist was not reconciled to that later implementation state.
+The public compiler now enforces guard purity, transform clause arity, and
+or-pattern binding consistency. `compile_string_to_core/1,2` and
+`compile_file_to_core/1,2` run the typed frontend before emitting Core Erlang.
+Automatic exhaustiveness/redundancy diagnostics and decision-tree selection at
+that public boundary remain follow-on work.
 
 ### Phase 4 And Beyond
 
@@ -171,7 +178,7 @@ Current promoted status:
 
 The default `rebar3 eunit` entry point now discovers, compiles, and executes the
 complete active test tree. It is deterministic but not green. Two consecutive
-verified runs on 2026-07-23 each reported 4,706 passing, 93 failing, and zero
+verified runs on 2026-07-23 each reported 4,725 passing, 93 failing, and zero
 skipped tests.
 
 Promoted interpretation:
@@ -179,9 +186,12 @@ Promoted interpretation:
 - `make compile` and `rebar3 compile` compile the active source tree
 - `make test` and `rebar3 eunit` expose the complete active EUnit result
 - the six Phase 2 standard-library/frontend modules pass all 170 focused tests
+- the 15 Phase 3 compiler/codegen/pattern modules pass all 397 focused tests
+- valid source reaches executable Core Erlang only after typed frontend
+  validation
 - the 93 remaining failures are assigned to later spec-source reconciliation
   phases in the
-  [Phase 2 test baseline](spec-source-reconciliation/phase-02-test-baseline.md)
+  [Phase 3 test baseline](spec-source-reconciliation/phase-03-test-baseline.md)
 - the internal property-testing transition is still underway
 - historical PropEr suites remain preserved under `test_legacy/proper/` as migration targets rather than active default tests
 

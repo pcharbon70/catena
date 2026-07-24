@@ -147,19 +147,41 @@ infer_guard_effects({binary_op, _, Left, Right, _}) ->
     union(infer_guard_effects(Left), infer_guard_effects(Right));
 infer_guard_effects({unary_op, _, Expr, _}) ->
     infer_guard_effects(Expr);
+infer_guard_effects({app, Fun, Args, _}) when is_list(Args) ->
+    lists:foldl(
+        fun(Arg, Effects) ->
+            union(Effects, infer_guard_effects(Arg))
+        end,
+        infer_guard_effects(Fun),
+        Args
+    );
 infer_guard_effects({app, Fun, Arg, _}) ->
     union(infer_guard_effects(Fun), infer_guard_effects(Arg));
+infer_guard_effects({tuple_expr, Elements, _}) when is_list(Elements) ->
+    lists:foldl(fun(E, Acc) -> union(Acc, infer_guard_effects(E)) end, pure(), Elements);
 infer_guard_effects({tuple, Elements, _}) when is_list(Elements) ->
+    lists:foldl(fun(E, Acc) -> union(Acc, infer_guard_effects(E)) end, pure(), Elements);
+infer_guard_effects({list_expr, Elements, _}) when is_list(Elements) ->
     lists:foldl(fun(E, Acc) -> union(Acc, infer_guard_effects(E)) end, pure(), Elements);
 infer_guard_effects({list, Elements, _}) when is_list(Elements) ->
     lists:foldl(fun(E, Acc) -> union(Acc, infer_guard_effects(E)) end, pure(), Elements);
+infer_guard_effects({record_expr, Fields, _Base, _}) when is_list(Fields) ->
+    lists:foldl(fun({_, E}, Acc) -> union(Acc, infer_guard_effects(E)) end, pure(), Fields);
 infer_guard_effects({record, Fields, _}) when is_list(Fields) ->
     lists:foldl(fun({_, E}, Acc) -> union(Acc, infer_guard_effects(E)) end, pure(), Fields);
+infer_guard_effects({record_access, Expr, _, _}) ->
+    infer_guard_effects(Expr);
 infer_guard_effects({field_access, Expr, _, _}) ->
     infer_guard_effects(Expr);
 %% Effectful operations - reject in guards
+infer_guard_effects({perform_expr, Effect, _, _, _}) ->
+    from_list([Effect]);
 infer_guard_effects({perform, Effect, _, _}) ->
     from_list([Effect]);
+infer_guard_effects({handle_expr, _, _, _}) ->
+    from_list([unknown_effect]);
+infer_guard_effects({try_with_expr, _, _, _}) ->
+    from_list([unknown_effect]);
 infer_guard_effects({do_expr, _, _}) ->
     %% Do expressions in guards are not allowed (likely effectful)
     from_list([unknown_effect]);

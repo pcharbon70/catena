@@ -2,11 +2,14 @@
 
 ## Status
 
-Promoted status: implemented through typed-module compilation, with code-generation components present and tested as separate compiler surfaces.
+Promoted status: implemented through typed-module compilation and an explicit,
+type-validated source-to-Core Erlang API.
 
 ## Purpose
 
-This spec promotes the compiler pipeline that Catena currently ships in code. It covers the implemented path from source text through typed module output, plus the existing Core Erlang generation components that sit just beyond the public `catena_compile` API.
+This spec promotes the compiler pipeline that Catena currently ships in code.
+It covers the typed-module API and the public path from source text through
+frontend validation to Core Erlang output.
 
 ## Design Anchors
 
@@ -18,14 +21,17 @@ This spec promotes the compiler pipeline that Catena currently ships in code. It
 - `src/compiler/semantic/*`
 - `src/compiler/codegen/*`
 - `test/compiler/integration/catena_pipeline_integration_tests.erl`
+- `test/compiler/integration/catena_core_pipeline_tests.erl`
 - `test/compiler/codegen/*`
 
 ## Current Promoted Surface
 
 - `catena_compile:compile_string/1,2` and `compile_file/1` are the canonical top-level compiler entry points.
 - The public compile path currently returns `{ok, {typed_module, Name, TypedDecls, Env}}` or a stage-specific error.
+- `compile_string_to_core/1,2` and `compile_file_to_core/1,2` reuse the same
+  frontend and type-checking path, then return a Core Erlang module.
 - Import processing is intentionally minimal: Catena supports loading modules from the standard library and current project search paths, then merging exported environments into the local type environment.
-- Code generation to Core Erlang exists in dedicated modules and tests, even though the top-level compile API is not yet a single "emit artifact" command.
+- `catena_codegen_lower` is the explicit canonical-AST-to-backend boundary.
 
 ## Acceptance Criteria
 
@@ -49,7 +55,8 @@ The canonical success artifact of the current top-level compiler API is a typed 
 - typed declarations
 - the merged type environment used for later compilation or interactive work
 
-This spec does not require the public pipeline to emit BEAM artifacts directly today.
+The typed-module API remains the canonical interactive/compiler-analysis
+boundary. Callers that need a backend artifact use the explicit Core APIs.
 
 ### AC-CPIPE-003 Minimal Import Resolution
 
@@ -72,20 +79,23 @@ Semantic normalization must remain part of the promoted compiler design. In prac
 
 ### AC-CPIPE-005 Separate But Real Codegen Surface
 
-Core Erlang generation modules under `src/compiler/codegen/` are part of the promoted compiler design, even though they are not yet the default `catena_compile` output boundary. The spec requires:
+Core Erlang generation modules under `src/compiler/codegen/` are part of the
+promoted compiler design. The explicit Core API requires:
 
-- module generation from Catena module ASTs
+- module generation from canonical analyzed Catena module ASTs
 - expression and pattern lowering support
 - type erasure support where needed
-- dedicated tests for generated Core Erlang structure
+- preservation of parser-native transform exports
+- successful Core-to-BEAM validation for supported source programs
 
 ### AC-CPIPE-006 Honest Scope
 
 Any compiler-facing status or design document must describe the current pipeline as:
 
 - materially implemented through typed modules
-- supported by tested code-generation components
-- still short of a single polished artifact-emission workflow
+- able to emit validated Core Erlang through an explicit public API
+- still short of on-disk BEAM emission, packaging, and a polished executable
+  build workflow
 
 This criterion exists to keep the promoted spec aligned with the actual code instead of the aspirational roadmap alone.
 

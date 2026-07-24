@@ -48,8 +48,10 @@ generate_module(ModuleAST) ->
     generate_module(ModuleAST, #{}).
 
 -spec generate_module(module_ast(), gen_opts()) -> {ok, cerl:cerl()} | {error, term()}.
-generate_module({module, Name, _Exports, _Imports, Decls, _Loc}, Opts) ->
+generate_module(ModuleAST, Opts) ->
     try
+        {module, Name, Exports, _Imports, Decls, _Loc} =
+            catena_codegen_lower:lower_module(ModuleAST),
         State = catena_codegen_utils:new_state(),
 
         %% Erase types from declarations
@@ -62,7 +64,7 @@ generate_module({module, Name, _Exports, _Imports, Decls, _Loc}, Opts) ->
         {CoreFunctions, _State1} = compile_functions(ActiveDecls, State),
 
         %% Generate exports
-        Exports = generate_exports(ActiveDecls),
+        CoreExports = generate_module_exports(ActiveDecls, Exports),
 
         %% Build module attributes
         Attrs = generate_attributes(Opts),
@@ -70,7 +72,7 @@ generate_module({module, Name, _Exports, _Imports, Decls, _Loc}, Opts) ->
         %% Create Core Erlang module
         CoreModule = cerl:c_module(
             cerl:c_atom(Name),
-            Exports,
+            CoreExports,
             Attrs,
             CoreFunctions
         ),
@@ -94,13 +96,17 @@ erase_types(Decls) ->
 %% @doc Build module info from AST
 -spec build_module_info(module_ast()) -> module_info().
 build_module_info({module, Name, Exports, _Imports, Decls, Loc}) ->
+    {module, Name, Exports, _, LoweredDecls, Loc} =
+        catena_codegen_lower:lower_module(
+            {module, Name, Exports, _Imports, Decls, Loc}
+        ),
     #{
         name => Name,
         exports => Exports,
-        declarations => Decls,
+        declarations => LoweredDecls,
         location => Loc,
-        function_count => count_functions(Decls),
-        public_count => length(Exports)
+        function_count => count_functions(LoweredDecls),
+        public_count => length(generate_module_exports(LoweredDecls, Exports))
     }.
 
 %% Count function declarations
@@ -227,6 +233,28 @@ generate_exports(Decls) ->
     %% Convert to Core Erlang fname nodes
     [cerl:c_fname(Name, get_arity(Decl))
      || {Name, Decl} <- PublicDecls].
+
+generate_module_exports(Decls, []) ->
+    generate_exports(Decls);
+generate_module_exports(Decls, Exports) ->
+    ExportedTransforms = [
+        Name
+        || {export_transform, Name} <- Exports
+    ],
+    ExplicitExports = [
+        cerl:c_fname(Name, Arity)
+        || {Name, Arity} <- Exports,
+           is_atom(Name),
+           is_integer(Arity)
+    ],
+    ParserExports = [
+        cerl:c_fname(Name, get_arity(Decl))
+        || Decl <- Decls,
+           is_function_decl(Decl),
+           Name <- [get_name(Decl)],
+           lists:member(Name, ExportedTransforms)
+    ],
+    ExplicitExports ++ ParserExports.
 
 %% @doc Filter declarations to only public functions
 -spec filter_public([decl()]) -> [{atom(), decl()}].

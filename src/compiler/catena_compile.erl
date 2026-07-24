@@ -11,8 +11,12 @@
 
 -export([
     compile_file/1,
+    compile_file_to_core/1,
+    compile_file_to_core/2,
     compile_string/1,
     compile_string/2,
+    compile_string_to_core/1,
+    compile_string_to_core/2,
     build_type_env/1,
     build_module_exports_env/1,
     process_imports/1,
@@ -22,11 +26,35 @@
 %% @doc Compile a Catena source file.
 -spec compile_file(string()) -> {ok, term()} | {error, term()}.
 compile_file(Path) ->
+    case read_source_file(Path) of
+        {ok, Source} ->
+            compile_string(Source);
+        {error, _} = Error ->
+            Error
+    end.
+
+%% @doc Compile a Catena source file to a Core Erlang module.
+-spec compile_file_to_core(string()) -> {ok, cerl:cerl()} | {error, term()}.
+compile_file_to_core(Path) ->
+    compile_file_to_core(Path, #{}).
+
+%% @doc Compile a Catena source file to Core Erlang with options.
+-spec compile_file_to_core(string(), map()) ->
+    {ok, cerl:cerl()} | {error, term()}.
+compile_file_to_core(Path, Opts) ->
+    case read_source_file(Path) of
+        {ok, Source} ->
+            compile_string_to_core(Source, Opts);
+        {error, _} = Error ->
+            Error
+    end.
+
+read_source_file(Path) ->
     case filename:extension(Path) of
         ".cat" ->
             case file:read_file(Path) of
                 {ok, Binary} ->
-                    compile_string(binary_to_list(Binary));
+                    {ok, binary_to_list(Binary)};
                 {error, Reason} ->
                     {error, {file_error, Path, Reason}}
             end;
@@ -45,13 +73,52 @@ compile_string(Source) ->
 %%   - import_env: env() - pre-built environment from imports (skips import processing)
 -spec compile_string(string(), map()) -> {ok, term()} | {error, term()}.
 compile_string(Source, Opts) ->
+    case analyze_string(Source) of
+        {ok, AnalyzedAST} ->
+            type_check_with_imports(AnalyzedAST, Opts);
+        {error, _} = Error ->
+            Error
+    end.
+
+%% @doc Compile a Catena source string to a Core Erlang module.
+%%
+%% The backend runs only after the canonical frontend and type-checking stages
+%% have succeeded. `compile_string/1,2` remains the typed-module API.
+-spec compile_string_to_core(string()) ->
+    {ok, cerl:cerl()} | {error, term()}.
+compile_string_to_core(Source) ->
+    compile_string_to_core(Source, #{}).
+
+%% @doc Compile a Catena source string to Core Erlang with options.
+%% Existing compiler options (`process_imports` and `import_env`) are accepted.
+%% Backend options are supplied under the `codegen_opts` map key.
+-spec compile_string_to_core(string(), map()) ->
+    {ok, cerl:cerl()} | {error, term()}.
+compile_string_to_core(Source, Opts) ->
+    case analyze_string(Source) of
+        {ok, AnalyzedAST} ->
+            case type_check_with_imports(AnalyzedAST, Opts) of
+                {ok, {typed_module, _, _, _}} ->
+                    CodegenOpts = maps:get(codegen_opts, Opts, #{}),
+                    catena_codegen_module:generate_module(
+                        AnalyzedAST,
+                        CodegenOpts
+                    );
+                {error, _} = TypeError ->
+                    TypeError
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+analyze_string(Source) ->
     case catena_lexer:string(Source) of
         {ok, Tokens, _EndLoc} ->
             case catena_parser:parse(Tokens) of
                 {ok, AST} ->
                     case catena_semantic:analyze(AST) of
                         {ok, AnalyzedAST} ->
-                            type_check_with_imports(AnalyzedAST, Opts);
+                            {ok, AnalyzedAST};
                         {error, _} = SemanticError ->
                             SemanticError
                     end;
@@ -608,17 +675,21 @@ type_check_transform(Name, DeclaredType, Clauses, Env) ->
                 _ ->
                     convert_type_sig(DeclaredType)
             end;
-        [{transform_clause, Patterns, _Guards, Body, _Loc} | _] ->
-            %% Convert transform to lambda expression
-            Expr = patterns_to_lambda(Patterns, Body),
+        [{transform_clause, Patterns, _Guards, _Body, _Loc} | _] ->
+            %% Infer every clause through one synthetic match. This keeps
+            %% pattern bindings scoped to their clause and unifies argument
+            %% and result types across the complete transform.
+            Arity = length(Patterns),
+            Expr = transform_clauses_to_lambda(Clauses, Arity),
+            EffectExpr = transform_clauses_to_effect_expr(Clauses, Arity),
             %% Infer type
             case catena_infer:infer_expr(Expr, Env) of
                 {ok, InferredType} ->
                     State0 = catena_infer_state:new(),
                     {SynthesizedEffects, State1} =
-                        catena_effect_synthesis:synthesize(Body, State0),
+                        catena_effect_synthesis:synthesize(EffectExpr, State0),
                     {GeneratedConstraints, State2} =
-                        catena_effect_constraints:generate_constraints(Body, State1),
+                        catena_effect_constraints:generate_constraints(EffectExpr, State1),
                     {PropagatedConstraints, State3} =
                         catena_effect_constraints:propagate_constraints(GeneratedConstraints, State2),
                     case catena_effect_constraints:solve_constraints(PropagatedConstraints, State3) of
@@ -660,23 +731,105 @@ type_check_instance_methods([{Name, Lambda} | Rest], Env, Acc) ->
 type_check_instance_methods([Other | _Rest], _Env, _Acc) ->
     {error, {invalid_method, Other}}.
 
-%% @doc Convert pattern list to nested lambda expression.
-%% [x, y] and body becomes {lam, x, {lam, y, body}}
-patterns_to_lambda([], Body) ->
-    convert_expr(Body);
-patterns_to_lambda([Pattern | Rest], Body) ->
-    case Pattern of
-        {pat_var, Name, _Loc} ->
-            {lam, Name, patterns_to_lambda(Rest, Body)};
-        {pat_wildcard, _Loc} ->
-            %% Generate fresh name for wildcard
-            FreshName = list_to_atom("_wild_" ++ integer_to_list(erlang:unique_integer([positive]))),
-            {lam, FreshName, patterns_to_lambda(Rest, Body)};
-        _ ->
-            %% TODO: Handle complex patterns (constructors, literals)
-            FreshName = list_to_atom("_pat_" ++ integer_to_list(erlang:unique_integer([positive]))),
-            {lam, FreshName, patterns_to_lambda(Rest, Body)}
+%% @doc Convert all transform clauses to a lambda containing one match.
+transform_clauses_to_lambda(Clauses, Arity) ->
+    ParamNames = inference_param_names(Arity),
+    Scrutinee = inference_scrutinee(ParamNames),
+    InferClauses = [
+        transform_clause_to_infer_clause(Clause, Arity)
+        || Clause <- Clauses
+    ],
+    Match = {match, Scrutinee, InferClauses},
+    lists:foldr(
+        fun(ParamName, Body) -> {lam, ParamName, Body} end,
+        Match,
+        ParamNames
+    ).
+
+inference_param_names(Arity) ->
+    [
+        list_to_atom("$catena_infer_arg_" ++ integer_to_list(Index))
+        || Index <- lists:seq(1, Arity)
+    ].
+
+inference_scrutinee([]) ->
+    {lit, {bool, true}};
+inference_scrutinee([ParamName]) ->
+    {var, ParamName};
+inference_scrutinee(ParamNames) ->
+    {tuple, [{var, ParamName} || ParamName <- ParamNames]}.
+
+transform_clause_to_infer_clause(
+    {transform_clause, Patterns, Guards, Body, _Loc},
+    Arity
+) ->
+    Pattern = combine_infer_patterns(Patterns, Arity),
+    InferBody = convert_expr(Body),
+    case convert_guards(Guards) of
+        undefined ->
+            {Pattern, InferBody};
+        InferGuard ->
+            {Pattern, InferGuard, InferBody}
     end.
+
+combine_infer_patterns([], 0) ->
+    {plit, {bool, true}};
+combine_infer_patterns([Pattern], 1) ->
+    convert_pattern(Pattern);
+combine_infer_patterns(Patterns, _Arity) ->
+    {ptuple, [convert_pattern(Pattern) || Pattern <- Patterns]}.
+
+%% @doc Build the parser-shaped match used by effect synthesis and solving.
+transform_clauses_to_effect_expr(Clauses, Arity) ->
+    Location = transform_clauses_location(Clauses),
+    ParamNames = inference_param_names(Arity),
+    Scrutinee = source_scrutinee(ParamNames, Location),
+    Cases = [
+        transform_clause_to_effect_case(Clause, Arity)
+        || Clause <- Clauses
+    ],
+    {match_expr, Scrutinee, Cases, Location}.
+
+transform_clauses_location(
+    [{transform_clause, _Patterns, _Guards, _Body, Location} | _]
+) ->
+    Location;
+transform_clauses_location([]) ->
+    undefined.
+
+source_scrutinee([], Location) ->
+    {literal, bool, true, Location};
+source_scrutinee([ParamName], Location) ->
+    {var, ParamName, Location};
+source_scrutinee(ParamNames, Location) ->
+    {tuple_expr,
+        [{var, ParamName, Location} || ParamName <- ParamNames],
+        Location}.
+
+transform_clause_to_effect_case(
+    {transform_clause, Patterns, Guards, Body, Location},
+    Arity
+) ->
+    Pattern = combine_source_patterns(Patterns, Arity, Location),
+    {match_clause, Pattern, combine_source_guards(Guards), Body, Location}.
+
+combine_source_patterns([], 0, Location) ->
+    {pat_literal, true, bool, Location};
+combine_source_patterns([Pattern], 1, _Location) ->
+    Pattern;
+combine_source_patterns(Patterns, _Arity, Location) ->
+    {pat_tuple, Patterns, Location}.
+
+combine_source_guards(undefined) ->
+    undefined;
+combine_source_guards([]) ->
+    undefined;
+combine_source_guards([Guard]) ->
+    Guard;
+combine_source_guards([Guard | Rest]) ->
+    {binary_op, 'and', Guard, combine_source_guards(Rest), undefined};
+combine_source_guards(Guard) ->
+    Guard.
 
 %% @doc Convert parser expression to type inference expression.
 convert_expr({var, true, _Loc}) ->
@@ -760,10 +913,21 @@ convert_application(Func, Args) ->
 
 convert_match_clause({match_clause, Pattern, undefined, Body, _Loc}) ->
     {convert_pattern(Pattern), convert_expr(Body)};
-convert_match_clause({match_clause, Pattern, Guard, Body, _Loc}) ->
-    {convert_pattern(Pattern), convert_expr(Guard), convert_expr(Body)};
+convert_match_clause({match_clause, Pattern, Guards, Body, _Loc}) ->
+    {convert_pattern(Pattern), convert_guards(Guards), convert_expr(Body)};
 convert_match_clause(Other) ->
     Other.
+
+convert_guards(undefined) ->
+    undefined;
+convert_guards([]) ->
+    undefined;
+convert_guards([Guard]) ->
+    convert_expr(Guard);
+convert_guards([Guard | Rest]) ->
+    {binary_op, 'and', convert_expr(Guard), convert_guards(Rest), undefined};
+convert_guards(Guard) ->
+    convert_expr(Guard).
 
 %% @doc Convert parser patterns to the representation consumed by inference.
 convert_pattern({pat_var, true, _Loc}) ->
