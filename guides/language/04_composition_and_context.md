@@ -27,13 +27,13 @@ supplies *what* the behavior is.
 This simple helper applies an adjustment to a quote:
 
 ```catena
-transform adjust_quote : (Natural -> Natural) -> Natural -> Natural
+transform adjust_quote : (Int -> Int) -> Int -> Int
 transform adjust_quote adjustment quote =
   adjustment quote
 ```
 
 The first pair of parentheses belongs to the type:
-`(Natural -> Natural)` is one argument, itself a transform. We can pass a named
+`(Int -> Int)` is one argument, itself a transform. We can pass a named
 transform:
 
 ```catena
@@ -46,7 +46,7 @@ transform insured_total total =
 Or use a lambda for a one-off rule:
 
 ```catena
-transform weekend_total : Natural -> Natural
+transform weekend_total : Int -> Int
 transform weekend_total total =
   adjust_quote (fn amount -> amount + 2) total
 ```
@@ -78,7 +78,7 @@ transform insure_optional_quote quote =
 The symbolic form uses `<$>`:
 
 ```catena
-transform insure_optional_quote : Maybe Natural -> Maybe Natural
+transform insure_optional_quote : Maybe Int -> Maybe Int
 transform insure_optional_quote quote =
   add_insurance <$> quote
 ```
@@ -103,7 +103,7 @@ The prelude's `Result a e` has two constructors: `Ok a` and `Err e`.
 Validation can now state its failure in the return type:
 
 ```catena
-transform validate_weight : Natural -> Result Natural QuoteError
+transform validate_weight : Int -> Result Int QuoteError
 transform validate_weight 0 = Err MissingWeight
 transform validate_weight weight = Ok weight
 ```
@@ -132,7 +132,7 @@ In Catena's prelude, `chain` takes the next transform first and the contextual
 value second:
 
 ```catena
-transform validated_fee : Natural -> Result Natural QuoteError
+transform validated_fee : Int -> Result Int QuoteError
 transform validated_fee weight =
   chain
     (fn valid_weight -> Ok (5 + valid_weight + valid_weight))
@@ -142,7 +142,7 @@ transform validated_fee weight =
 The `>>=` operator writes the contextual value first:
 
 ```catena
-transform validated_fee : Natural -> Result Natural QuoteError
+transform validated_fee : Int -> Result Int QuoteError
 transform validated_fee weight =
   validate_weight weight
   >>= fn valid_weight -> Ok (5 + valid_weight + valid_weight)
@@ -169,7 +169,7 @@ Several dependent steps can become visually noisy as nested `chain` calls.
 and semicolons:
 
 ```catena
-transform validate_parcel : Natural -> Zone -> Result Natural QuoteError
+transform validate_parcel : Int -> Zone -> Result Int QuoteError
 transform validate_parcel weight zone =
   do {
     valid_weight <- validate_weight weight;
@@ -196,7 +196,7 @@ composition.
 A pure local binding inside a block uses `let` without `in`:
 
 ```catena
-transform quote_with_local : Natural -> Result Natural QuoteError
+transform quote_with_local : Int -> Result Int QuoteError
 transform quote_with_local weight =
   do {
     valid_weight <- validate_weight weight;
@@ -260,14 +260,18 @@ Choosing the operator follows from the types, not visual preference.
 ## The current implementation boundary
 
 `Maybe`, `Either`, `Result`, `List`, the standard traits, operator parsing, and
-`do` desugaring are implemented language and standard-library surfaces.
-Trait-backed operators such as `<$>` and `>>=` currently desugar to named
-method calls. Complete method dispatch and named-call emission in application
-artifacts remain backend-hardening work, so these examples primarily teach the
-typed front-end semantics today.
+`do` desugaring are implemented language and standard-library surfaces. The
+artifact backend executes concrete local and imported trait dictionaries, and
+has source-to-BEAM evidence for `<$>`, `<*>`, and `>>=` when a concrete
+instance is selected.
 
-That boundary is why the compiler rejects unsupported artifact paths rather
-than pretending a contextual pipeline executed correctly.
+The shipped `Prelude` is currently a typed/source library, not a complete
+executable BEAM provider: its default `Pipeline.join` refers to an unresolved
+`id` implementation. Consequently, the `import Prelude` snippets in this
+chapter teach the current language and library semantics but are not complete
+standalone artifact examples. Self-contained modules and closed source sets
+with concrete dictionaries are executable; application artifact generation
+fails closed if an imported provider cannot be linked.
 
 ## What to remember
 

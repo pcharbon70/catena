@@ -14,25 +14,27 @@ Keeping one domain lets each new idea build on something familiar.
 ## Before you begin
 
 Catena is an early-stage language. Its lexer, parser, semantic analysis, type
-and effect checking, standard-library model, REPL, and Core Erlang lowering are
-all real. The executable backend currently proves a smaller subset than the
-front end accepts.
+and effect checking, standard-library model, REPL, Core Erlang lowering, and
+validated in-memory BEAM artifact pipeline are all real. The executable
+backend now covers the promoted pure language, effects and handlers, closed
+source-set imports, and concrete trait dictionaries. Some frontend and library
+surfaces still remain outside that boundary.
 
 These guides use three labels to keep that distinction visible:
 
 - **Language surface** means the syntax is represented by the current parser
   and compiler model.
-- **Executable subset** means the current source-to-Core path has direct
-  execution evidence for that feature.
+- **Executable subset** means the current source-to-BEAM artifact path has
+  direct execution evidence for that feature.
 - **Frontier** means the design or an internal implementation exists, but its
   complete source-language path is not yet ready to teach as ordinary
   production use.
 
-Most examples teach the language surface. Simple arithmetic and constructor
-matching are also in the proven executable subset. Traits, advanced operators,
-tests, effects, and handlers are useful and implemented front-end concepts,
-but their backend integration is still uneven. Each guide calls out the
-boundary where it matters.
+Most examples teach the language surface, and the chapters identify the few
+places where the shipped standard library or artifact kind is not yet an
+executable provider. Native test/property application artifacts,
+source-language actor/process syntax, general trait-dispatched `<>`, and `>=>`
+remain frontier features. Each guide calls out the boundary where it matters.
 
 ## The learning path
 
@@ -109,9 +111,24 @@ rebar3 shell
 
 Useful REPL commands include `:type`, `:load`, `:browse`, `:prelude`, `:clear`,
 `:help`, and `:quit`. The REPL is useful for exploring literals and the
-compiler-backed interactive environment, but some richer language examples in
-this course are best understood as source modules while the backend is being
-hardened.
+compiler-backed interactive environment. It does not yet execute arbitrary
+expressions by compiling and loading their BEAM artifacts.
+
+For an executable source module, the Erlang API returns a validated in-memory
+artifact:
+
+```erlang
+{ok, Artifact} = catena_compile:compile_file_to_beam("parcel.cat"),
+RuntimeModule = maps:get(runtime_module, Artifact),
+Beam = maps:get(beam, Artifact),
+{module, RuntimeModule} =
+    code:load_binary(RuntimeModule, "parcel.cat", Beam).
+```
+
+Interdependent modules use
+`catena_compile:compile_source_set_to_beam/1,2` with a closed map containing
+every imported source module. Packaging those artifacts into an on-disk
+release and a standalone `catena` command are still future tooling.
 
 ## Syntax conventions used here
 
@@ -126,6 +143,13 @@ hardened.
 
 The guides favor explicit code while a concept is new. Later examples become
 more compact as composition takes over.
+
+Code blocks that begin with `module` are intended as complete module examples.
+Blocks without a module declaration are focused excerpts and may rely on types
+or transforms introduced in surrounding prose; do not concatenate every
+excerpt in a chapter into one source file. The three capstone application
+modules are a closed source set and have been checked through the public BEAM
+artifact API.
 
 ## Sources of truth
 

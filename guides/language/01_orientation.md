@@ -36,12 +36,12 @@ module ParcelBasics
 
 export transform shipping_fee
 
-transform shipping_fee : Natural -> Natural
+transform shipping_fee : Int -> Int
 transform shipping_fee weight = 5 + weight + weight
 ```
 
-The signature says that `shipping_fee` accepts a `Natural` and returns a
-`Natural`. The implementation binds the input to `weight` and evaluates the
+The signature says that `shipping_fee` accepts an `Int` and returns an
+`Int`. The implementation binds the input to `weight` and evaluates the
 expression on the right of `=`.
 
 If the parcel weighs `4`, substitution is enough to understand the result:
@@ -58,7 +58,7 @@ the transform explicitly performs an effect, a topic we will reach later.
 
 ## Transforms are values between types
 
-The arrow in `Natural -> Natural` is read “from `Natural` to `Natural`.” It
+The arrow in `Int -> Int` is read “from `Int` to `Int`.” It
 describes a reusable relationship, not a sequence of statements that mutates a
 hidden parcel.
 
@@ -83,15 +83,18 @@ entirely by its shape.
 ## Source code and the current compiler
 
 The current compiler takes `.cat` source through lexical analysis, parsing,
-semantic normalization, kind checking, and type/effect checking. That path
-produces a typed module. A separate public path lowers supported programs to
-validated Core Erlang.
+semantic normalization, import and name resolution, kind checking, and
+type/effect checking. That path produces a typed module and a validated
+compilation unit. Public artifact APIs lower accepted programs to validated
+Core Erlang and in-memory BEAM binaries.
 
 The executable backend is deliberately fail-closed: when it cannot preserve a
 feature's meaning, it rejects the artifact instead of quietly generating a
-placeholder. At present, simple exported arithmetic transforms and simple
-constructor pattern clauses have direct source-to-Core execution evidence.
-Later guides cover broader front-end features and identify their maturity.
+placeholder. Local and recursive transforms, higher-order calls, pure data and
+patterns, effects and handlers, closed source-set imports, and concrete trait
+dictionaries all have source-to-BEAM execution evidence. Later guides identify
+the remaining boundaries around test artifacts, packaging, and a few deferred
+operators.
 
 The first `shipping_fee` example sits close to the proven executable subset:
 it has a module name, an exported transform, a variable argument, integer
@@ -131,14 +134,14 @@ Type arrows associate to the right. This matters as soon as a transform takes
 more than one argument:
 
 ```catena
-transform add : Natural -> Natural -> Natural
+transform add : Int -> Int -> Int
 transform add left right = left + right
 ```
 
 Read the signature as:
 
 ```text
-Natural -> (Natural -> Natural)
+Int -> (Int -> Int)
 ```
 
 Giving `add` one number produces another transform waiting for the second
@@ -152,8 +155,8 @@ fit naturally into Catena; we will use both in the next guide.
 - `transform name : Input -> Output` declares a type.
 - `transform name argument = expression` defines behavior.
 - Lowercase type names such as `a` are type variables.
-- The front end currently supports more of the language than the executable
-  backend.
+- Accepted application modules can be compiled to validated in-memory BEAM
+  artifacts; unsupported constructs fail closed.
 
 As a small exercise, change `shipping_fee` so that the base fee is `7`, then
 define a two-argument transform that also charges `1` unit for every unit of

@@ -8,9 +8,10 @@ subsystems are not yet connected to the canonical compilation path.
 The short version is:
 
 > Catena is an Erlang implementation of a functional language that validates
-> source through a staged frontend, lowers supported programs to Core Erlang,
-> and relies on the OTP compiler for BEAM generation. Richer abstractions live
-> in the standard library, while runtime-only behavior crosses explicit Erlang
+> source through a staged frontend, builds an authoritative compilation unit,
+> lowers supported programs to Core Erlang, validates that Core, and relies on
+> the OTP compiler for BEAM generation. Richer abstractions live in the
+> standard library, while runtime-only behavior crosses explicit Erlang
 > boundaries.
 
 This is a developer guide, not a normative specification. When code, this
@@ -24,8 +25,9 @@ parts are implemented, partial, or planned.
 
 Catena is easiest to understand as four cooperating domains:
 
-1. **Compiler:** turns `.cat` text into validated intermediate forms and,
-   for the supported subset, Core Erlang.
+1. **Compiler:** turns `.cat` text into validated compilation units and,
+   for the supported surface, Core Erlang modules and versioned BEAM
+   artifacts.
 2. **Runtime:** supplies behavior that cannot be erased, especially effects
    and BEAM process operations.
 3. **Library:** defines category-theory abstractions, tests, laws, generators,
@@ -80,7 +82,7 @@ Two ideas recur throughout the repository:
 | `src/compiler/semantic` | Declaration normalization, desugaring, kinds, names, traits, dependency analysis, and pattern checks |
 | `src/compiler/types` | Algorithm W, substitutions, environments, constraints, traits, effects, and row types |
 | `src/compiler/effects` | Advanced algebraic-effect orchestration, handlers, resumptions, laws, rows, and higher-order effects |
-| `src/compiler/codegen` | Frontend-to-backend lowering, erasure, patterns, effects, Core Erlang, and backend diagnostics |
+| `src/compiler/codegen` | Frontend-to-backend lowering, erasure, patterns, effects, Core Erlang, validated BEAM artifacts, origins, and backend diagnostics |
 | `src/compiler/runtime` | Explicit-context effect runtime used by generated code |
 | `src/repl` | Interactive state, commands, history, completion, and direct effect evaluation |
 | `src/runtime` | Local BEAM process, actor, GenServer-style, supervision, registry, pub/sub, and event helpers |
@@ -161,18 +163,19 @@ semantics map onto them.
 ## 4. The Canonical Compiler Pipeline
 
 The main orchestrator is
-[catena_compile](../../src/compiler/catena_compile.erl). It exposes three
-important result boundaries:
+[catena_compile](../../src/compiler/catena_compile.erl). Its maintained result
+boundaries are:
 
 | API | Result |
 | --- | --- |
 | `compile_string/1,2` | a typed module |
 | `compile_file/1` | a typed module read from a `.cat` file |
-| `compile_string_to_core/1,2` | a Core Erlang module after frontend validation |
+| `compile_string_to_unit/1,2` | the validated compilation unit shared by artifact backends |
+| `compile_string_to_core/1,2` | a Core Erlang module produced from a validated compilation unit |
 | `compile_file_to_core/1,2` | the same Core path, starting from a `.cat` file |
-
-There is not yet a public `compile_*_to_beam` API. Integration tests perform
-the final OTP `from_core` step directly.
+| `compile_string_to_beam/1,2` | a versioned, validated in-memory BEAM artifact |
+| `compile_file_to_beam/1,2` | the same BEAM artifact path for a `.cat` file |
+| `compile_source_set_to_beam/1,2` | dependency order plus artifacts for a closed source-module map |
 
 ```mermaid
 flowchart TD
@@ -184,21 +187,27 @@ flowchart TD
     Kinds --> Typed["Typed module gate<br/>catena_infer + effect constraints"]
 
     Typed --> AnalysisAPI["Typed-module API"]
-    Typed --> Handoff["Current backend handoff:<br/>normalized source AST"]
-    Handoff --> Lowered["Backend AST<br/>catena_codegen_lower"]
+    Typed --> Unit["Validated compilation unit<br/>types, symbols, identities,<br/>options, locations"]
+    Unit --> Resolve["Call, import, effect,<br/>and trait resolution"]
+    Resolve --> Lowered["Backend AST<br/>catena_codegen_lower"]
     Lowered --> Erased["Runtime declarations<br/>catena_codegen_erase"]
     Erased --> Core["Core Erlang AST<br/>cerl"]
-    Core --> FromCore["OTP compile:forms<br/>from_core"]
-    FromCore --> Binary["BEAM binary"]
+    Core --> CoreLint["Explicit Core validation"]
+    CoreLint --> FromCore["OTP compile:forms<br/>from_core"]
+    FromCore --> Artifact["Versioned artifact<br/>BEAM, Core, interface,<br/>dependencies, origins"]
 ```
 
-The diagram highlights an important current seam: successful typing gates
-code generation, but `compile_string_to_core/2` still passes the analyzed AST
-to codegen rather than passing the typed declarations as one authoritative
-compilation unit. The planned backend-hardening work will join normalized
-source, types, symbols, dispositions, options, and locations into one validated
-unit. Until then, do not treat raw calls to codegen helpers as equivalent to
-the public validated pipeline.
+`catena_compilation_unit` is the authoritative backend handoff. It joins the
+normalized source, typed module, symbols, declaration dispositions, resolved
+calls, options, source identity, and locations. Raw codegen helpers remain
+useful for focused tests, but they are not equivalent to this validated public
+pipeline.
+
+Single-module artifact success includes the source and runtime identities,
+Core and BEAM payloads, runtime and artifact dependencies, warnings, exported
+interface, and validation/origin metadata. Source-set compilation accepts a
+closed map of source modules, orders dependencies, and returns the same public
+artifact shape keyed by source module.
 
 ### 4.1 Building the compiler itself
 
@@ -320,7 +329,7 @@ Desugaring is a semantic boundary, not cosmetic formatting. Type inference
 should normally see the normalized meaning rather than independently
 reimplementing each piece of syntax sugar.
 
-### 4.5 Imports and the current module boundary
+### 4.5 Imports and executable module linkage
 
 [catena_module_loader](../../src/compiler/catena_module_loader.erl) converts a
 module name such as `Effect.IO` to `effect/io.cat`, then searches:
@@ -328,24 +337,25 @@ module name such as `Effect.IO` to `effect/io.cat`, then searches:
 1. `lib/catena/stdlib`;
 2. the current directory.
 
-The public compiler parses imported modules, selects their exported
-declarations, builds a type environment, and merges it with the local
-environment. Local definitions shadow imports; later imports shadow earlier
-ones; qualified imports receive a prefix.
+The typed-module compatibility path parses imported modules, selects their
+exported declarations, builds a type environment, and merges it with the
+local environment. Local definitions shadow imports; later imports shadow
+earlier ones; qualified imports receive a prefix.
 
-This is intentionally a **minimal typing bridge**, not the complete module
-system:
+Executable imports use a stricter boundary. A call must resolve through a
+versioned module interface to a source module, runtime module, name, and
+arity. The maintained
+[catena_module_compile](../../src/compiler/semantic/catena_module_compile.erl)
+path compiles a closed source map in dependency order, and
+`compile_source_set_to_beam/1,2` exposes its stable artifacts. Open,
+qualified, aliased, selective, dotted, shadowed, and higher-order imports all
+have source-to-BEAM evidence.
 
-- imports contribute compile-time visibility;
-- executable imported-call linkage is not complete;
-- interfaces and package-level compilation are not the canonical path;
-- the separately implemented
-  [catena_module_compile](../../src/compiler/semantic/catena_module_compile.erl)
-  contains placeholder code generation and binary concatenation and must not
-  be used as evidence of real BEAM linking.
-
-The active backend-hardening roadmap reserves complete name/call resolution
-and executable module linkage for later phases.
+A single-source artifact request that contains imports but has no executable
+provider interfaces fails closed. Use the closed source-set API when compiling
+interdependent source modules. Package discovery, separate compilation,
+on-disk release assembly, and a command-line linker remain future tooling
+concerns.
 
 ## 5. Kinds, Types, Traits, and Effects
 
@@ -441,7 +451,7 @@ Trait behavior spans multiple layers:
 - trait hierarchy and method lookup;
 - builtin and standard-library instance databases;
 - coherence and cross-module resolution helpers;
-- runtime dictionary lowering, which remains incomplete end to end.
+- validated runtime dictionary descriptors and method closures.
 
 Representative modules include
 [catena_trait_resolve](../../src/compiler/types/catena_trait_resolve.erl),
@@ -449,10 +459,17 @@ Representative modules include
 [catena_instance](../../src/compiler/types/catena_instance.erl), and
 [catena_coherence](../../src/compiler/types/catena_coherence.erl).
 
-The repository has meaningful trait machinery, but not every helper is wired
-through `catena_compile` for every source construct. In particular, successful
-compile-time trait visibility must not be confused with complete runtime
-dictionary dispatch in generated BEAM.
+The artifact pipeline proves concrete local and imported instances, including
+required, default, and inherited methods, coherence/orphan rejection, and
+dynamic selection among concrete dictionaries. Representative
+`Comparable`, `Mapper`, `Applicator`, `Chainable`, `Pipeline`, `System`, and
+`Flow` calls execute through generated BEAM.
+
+This is not unrestricted type-class elaboration. Only calls for which the
+compiler can select a concrete validated dictionary are promoted. The `<>`
+surface is executable when its desugared `combine` name resolves to an
+accepted local callable (including current local concrete examples), but
+general trait-based `<>` dispatch remains deferred; `>=>` is also deferred.
 
 ### 5.5 Concrete effects and effect rows
 
@@ -529,7 +546,8 @@ then removes compile-time-only information:
 - type declarations disappear after representation decisions;
 - effect declarations disappear as static metadata;
 - trait declarations disappear;
-- instance declarations have a provisional dictionary transformation.
+- accepted instance declarations become validated dictionary descriptors and
+  runtime method closures.
 
 Erasure is not permission to ignore behavior. A declaration can be erased only
 when it has no required runtime identity.
@@ -557,11 +575,13 @@ construct the individual `cerl` expressions.
 
 [catena_codegen_module](../../src/compiler/codegen/catena_codegen_module.erl)
 collects functions, exports, and attributes into `cerl:c_module`. It also
-checks provisional declaration dispositions before filtering erased nodes.
+checks validated declaration dispositions before filtering static-erased
+nodes.
 
 ### 7.3 From Core Erlang to BEAM
 
-OTP owns the final compilation step:
+The public artifact path explicitly validates the emitted Core module and then
+asks OTP to perform the final compilation step:
 
 ```erlang
 compile:forms(
@@ -570,26 +590,45 @@ compile:forms(
 ).
 ```
 
-On success OTP returns a module name and BEAM binary. Tests can load it with
-`code:load_binary/3`; tooling can write the binary to `Module.beam`.
+On success OTP returns a module name and BEAM binary.
+[catena_beam_artifact](../../src/compiler/codegen/catena_beam_artifact.erl)
+combines them with Core, identities, interfaces, dependencies, warnings, and
+origin metadata. No partial artifact is returned when Core validation or OTP
+compilation fails. A caller can load an accepted artifact directly:
 
-The executable vertical slice is demonstrated in
-[catena_core_pipeline_tests](../../test/compiler/integration/catena_core_pipeline_tests.erl).
-It covers representative transforms, arithmetic, constructors, and
-constructor-pattern dispatch.
+```erlang
+{ok, Artifact} = catena_compile:compile_string_to_beam(Source),
+RuntimeModule = maps:get(runtime_module, Artifact),
+Beam = maps:get(beam, Artifact),
+{module, RuntimeModule} =
+    code:load_binary(RuntimeModule, "in_memory", Beam).
+```
+
+The phase-specific integration suites and
+[catena_backend_conformance_tests](../../test/compiler/integration/catena_backend_conformance_tests.erl)
+exercise the full source-to-BEAM boundary.
 
 ### 7.4 Backend status
 
-The backend is being hardened in explicit phases. Today:
+All seven phases of the backend-hardening plan are implemented. The promoted
+surface now includes:
 
-- unknown expressions, unsupported operators, lossy binding patterns, unknown
-  patterns, and unclassified declarations fail with structured diagnostics;
-- the public Core API still has a loose analyzed-AST handoff after the typed
-  gate;
-- named top-level calls can still become unbound Core variables;
-- imported runtime linkage and trait dispatch are incomplete;
-- there is no public in-memory source-to-BEAM API;
-- packaging and release assembly are separate future tooling concerns.
+- fail-closed declaration disposition and structured backend diagnostics;
+- local, forward, recursive, mutually recursive, and higher-order calls;
+- pure operators, collections, records, field access, parser-native patterns,
+  guards, aliases, and or-patterns;
+- explicit-context effects and handlers, including nested and multiple
+  effects plus cleanup;
+- dependency-ordered closed source sets and executable imported calls;
+- concrete local and imported trait dictionaries; and
+- public, versioned string, file, and source-set BEAM artifacts with explicit
+  Core validation and source-oriented diagnostic metadata.
+
+The remaining boundary is narrower than the language frontend. Native
+test/property application artifacts, source-language actor/process syntax,
+`>=>`, trait-dispatched `<>`, packaging/release assembly, and arbitrary
+compiled-BEAM execution in the REPL are not promoted. Unsupported constructs
+must reject artifact generation rather than receive approximate semantics.
 
 The authoritative support inventory is the
 [BEAM backend feature ledger](../../specs/compiler/beam_backend_feature_ledger.md),
@@ -767,6 +806,14 @@ Key modules are:
 - [laws.cat](../../lib/catena/stdlib/laws.cat): concrete algebraic law
   definitions.
 - `effect/*.cat`: declarations for `IO`, `Process`, `State`, and `Error`.
+
+These files do not all have the same executable maturity. `Prelude` passes the
+typed-module API but its BEAM artifact currently fails on the unresolved
+default `Pipeline.join` reference to `id`. `Gen` can produce a BEAM artifact;
+`Test` and `Laws` currently fail canonical frontend type/name checking.
+Accordingly, their definitions remain important library design surfaces, but
+the complete shipped stdlib must not be presented as an executable artifact
+provider yet.
 
 [catena_prelude](../../src/stdlib/catena_prelude.erl) is a different layer: it
 provides Erlang function bindings and type descriptions for the REPL and
@@ -975,18 +1022,23 @@ They are not interchangeable wire protocols.
 
 These are the most important facts to keep in mind while navigating the code:
 
-- the typed module gates Core generation, but codegen still consumes the
-  normalized source AST rather than one validated compilation unit;
+- `catena_compilation_unit` is the checked authority for Core and BEAM
+  artifact generation; direct codegen helpers are not public substitutes;
 - the parser/semantic AST, inference IR, backend AST, record AST helpers, and
   Core Erlang AST are distinct representations;
-- import processing supplies a type environment but not complete executable
-  linkage;
-- named local, forward, and recursive calls are not yet resolved reliably for
-  Core emission;
-- the public API stops at Core Erlang, with OTP BEAM generation performed in
-  tests;
-- fail-closed fallback removal is implemented, while broader exhaustive
-  lowering is still in progress;
+- typed-only import processing can build an environment from source files,
+  while executable import linkage requires a closed source set and versioned
+  provider interfaces;
+- local, recursive, higher-order, imported, effect-operation, and concrete
+  trait-method calls use distinct resolution inventories;
+- the public string, file, and closed-source-set APIs return validated
+  in-memory BEAM artifacts; packaging and release assembly remain separate;
+- test/property declarations are rejected by application artifact generation
+  until a dedicated testing artifact is defined;
+- actor/process runtime helpers exist, but their source-language surface is not
+  part of the accepted grammar/backend contract;
+- trait-dispatched `<>` and `>=>` remain deferred even though the broader
+  concrete dictionary path is executable;
 - pattern exhaustiveness analysis and decision-tree compilation are separate
   from the default public path;
 - advanced effect machinery exceeds the currently integrated source syntax;
@@ -994,12 +1046,8 @@ These are the most important facts to keep in mind while navigating the code:
   context models;
 - the REPL types and records general expressions but does not yet execute
   arbitrary expressions as compiled BEAM;
-- the local actor toolkit is implemented, but source-language actor
-  integration is incomplete;
 - the internal property framework is the destination, while `src/testing`
-  remains a compatibility bridge;
-- `catena_module_compile` contains planned/placeholder linkage behavior and is
-  not the canonical compiler entry point.
+  remains a compatibility bridge.
 
 These are not reasons to avoid the relevant modules. They are the boundaries
 that new work should either respect or deliberately close.
@@ -1109,8 +1157,13 @@ candidates.
 **Static erasure:** Deliberate removal of compile-time-only information after
 all runtime representation decisions have been made.
 
-**Typed module:** Current successful analysis artifact containing the module
+**Typed module:** Successful frontend analysis result containing the module
 name, typed declarations, and effective type environment.
 
-**Validated compilation unit:** Planned authoritative backend input combining
-normalized source, types, symbols, dispositions, options, and locations.
+**Validated compilation unit:** Authoritative backend input combining
+normalized source, types, symbols, dispositions, resolved identities, options,
+and locations.
+
+**BEAM artifact:** Versioned public result containing validated Core, the BEAM
+binary, module identities, interfaces, dependency metadata, warnings, and
+source-origin information.

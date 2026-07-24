@@ -33,7 +33,7 @@ an expression would otherwise be hard to scan.
 Parcel Relay can calculate a fee from both weight and distance:
 
 ```catena
-transform shipping_fee : Natural -> Natural -> Natural
+transform shipping_fee : Int -> Int -> Int
 transform shipping_fee weight distance =
   5 + weight + weight + distance
 ```
@@ -60,7 +60,7 @@ expression after `in`. The binding cannot be reassigned.
 The pricing rule becomes easier to read when each charge has a name:
 
 ```catena
-transform shipping_fee : Natural -> Natural -> Natural
+transform shipping_fee : Int -> Int -> Int
 transform shipping_fee weight distance =
   let weight_charge = weight + weight in
   let distance_charge = distance in
@@ -83,7 +83,7 @@ stage we can use a structural record type without introducing a named parcel
 type yet.
 
 ```catena
-transform quote : {weight: Natural, distance: Natural} -> Natural
+transform quote : {weight: Int, distance: Int} -> Int
 transform quote parcel =
   let weight_charge = parcel.weight + parcel.weight in
   let distance_charge = parcel.distance in
@@ -117,7 +117,7 @@ transform add_insurance amount = amount + 3
 ```
 
 The signature tells us which helpers can connect. `subtotal` eventually
-produces a `Natural`, and `add_insurance` accepts a `Natural`, so the output of
+produces an `Int`, and `add_insurance` accepts an `Int`, so the output of
 the first can flow into the second.
 
 ## Forward piping
@@ -125,7 +125,7 @@ the first can flow into the second.
 The forward pipe makes that flow read from left to right:
 
 ```catena
-transform insured_quote : Natural -> Natural -> Natural
+transform insured_quote : Int -> Int -> Int
 transform insured_quote weight distance =
   subtotal weight distance
   |> add_insurance
@@ -147,10 +147,9 @@ Piping is most useful when each stage accepts one value. It helps the source
 mirror the story a developer tells: calculate the subtotal, then add
 insurance.
 
-The pipe is part of the language surface and has backend lowering, but named
-top-level call resolution is still being hardened. Treat the explicit nested
-form and the piped form as semantically equivalent even where the current
-artifact backend cannot yet execute the entire chain.
+The pipe, named top-level calls, forward references, recursion, and
+higher-order calls are all part of the executable subset. The explicit nested
+form and the piped form compile with the same left-to-right meaning.
 
 ## Partial application
 
@@ -165,7 +164,7 @@ transform shipping_fee weight distance =
 transform quote_four_unit_parcel = shipping_fee 4
 ```
 
-`shipping_fee 4` has the remaining type `Natural -> Natural`. It waits for a
+`shipping_fee 4` has the remaining type `Int -> Int`. It waits for a
 distance. Partial application is not a special syntax feature; it follows from
 the right-associated function type described in the previous guide.
 
@@ -175,7 +174,7 @@ A lambda is an unnamed transform. The current surface uses
 `fn parameter -> expression`:
 
 ```catena
-transform add_weekend_fee : Natural -> Natural
+transform add_weekend_fee : Int -> Int
 transform add_weekend_fee amount =
   (fn fee -> fee + 2) amount
 ```
@@ -205,7 +204,7 @@ transform double value = value * 2
 For a public Parcel Relay rule, prefer:
 
 ```catena
-transform double : Natural -> Natural
+transform double : Int -> Int
 transform double value = value * 2
 ```
 
@@ -220,7 +219,7 @@ transform double value = value * 2
 - Type inference reduces noise, while explicit public signatures clarify
   contracts.
 
-As an exercise, add `add_priority_fee : Natural -> Natural` and build a quote
+As an exercise, add `add_priority_fee : Int -> Int` and build a quote
 that applies both insurance and priority fees with pipes.
 
 Previous: [Orientation and your first transform](01_orientation.md)
