@@ -146,7 +146,9 @@ Catena is a new functional programming language for the BEAM virtual machine tha
 
 To make category theory accessible, Catena uses **pragmatic terminology** alongside traditional mathematical names. Where mathematicians say "morphism", we say **Transform**. Where they say "object", we say **Type**. This developer-friendly naming makes the powerful abstractions of category theory intuitive for everyday programming.
 
-**Note**: This guide focuses on core language features. For information about standard library abstractions (Mapper/Functor, Pipeline/Monad, operators, etc.), see the [Standard Library Guide](../guides/standard-library-overview.md).
+**Note**: This guide focuses on core language features. For the promoted
+standard-library abstractions and their current implementation boundary, see
+the [Standard Library Surface](../stdlib/standard_library_surface.md).
 
 ## Core Philosophy
 

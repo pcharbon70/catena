@@ -57,6 +57,7 @@ The structure follows the layered model used by `../epic/jido_os/specs`, adapted
 
 - [conformance/scenario_catalog.md](conformance/scenario_catalog.md)
 - [conformance/spec_conformance_matrix.md](conformance/spec_conformance_matrix.md)
+- [conformance/executable_scenarios.tsv](conformance/executable_scenarios.tsv)
 
 ## Planning And Operations
 

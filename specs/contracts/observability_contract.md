@@ -9,3 +9,4 @@ This contract defines the `REQ-OBS-*` family for Catena's traceability and statu
 - `REQ-OBS-003`: Canonical project status SHOULD distinguish between implemented, partial, and deferred work rather than flattening everything into a single roadmap state.
 - `REQ-OBS-004`: When planning checklists drift from implemented code, the repository SHOULD provide a reconciled current-status view rather than forcing contributors to infer it from Git history alone.
 - `REQ-OBS-005`: The project SHOULD retain enough documentation structure that contributors can understand current scope without reading the entire research archive.
+- `REQ-OBS-006`: Stable conformance scenarios MUST map to maintained executable evidence with source paths that can be checked automatically.
