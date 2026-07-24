@@ -53,6 +53,7 @@
 
     %% Messaging - using recv instead of receive (reserved word)
     recv/2,
+    recv/3,
 
     %% Exit handling
     trap_exit/1,
@@ -91,7 +92,7 @@ spawn_monitor(Fun) when is_function(Fun, 0) ->
 
 %% @doc Send an asynchronous message (! operator).
 %% Returns immediately without waiting for the message to be processed.
--spec send(pid(), message()) -> ok.
+-spec send(pid() | process_name(), message()) -> ok.
 send(Pid, Msg) when is_pid(Pid) ->
     Pid ! Msg,
     ok;
@@ -102,23 +103,23 @@ send(Name, Msg) when is_atom(Name) ->
     end.
 
 %% @doc Send a synchronous request (? operator) and wait for reply.
-%% Uses gen_server:call for timeout support and reply handling.
+%% Uses the native OTP gen_server protocol for timeout support and replies.
 -spec call(pid(), message()) -> result().
 call(Pid, Msg) when is_pid(Pid) ->
     call(Pid, Msg, 5000).
 
 %% @doc Send a synchronous request (? operator) with timeout.
--spec call(pid(), message(), pos_integer()) -> result().
-call(Pid, Msg, Timeout) when is_pid(Pid); is_pid(Msg), is_integer(Timeout) ->
-    %% Support both Pid/Msg and Msg/Pid orders for flexibility
-    ActualPid = if is_pid(Pid) -> Pid; true -> Msg end,
-    ActualMsg = if is_pid(Msg) -> Pid; true -> Msg end,
+-spec call(pid(), message(), timeout()) -> result().
+call(Pid, Msg, Timeout)
+        when is_pid(Pid),
+             ((is_integer(Timeout) andalso Timeout >= 0) orelse
+              Timeout =:= infinity) ->
     try
-        gen_server:call(ActualPid, {'$gen_call', ActualMsg}, Timeout)
+        gen_server:call(Pid, Msg, Timeout)
     catch
-        exit:{noproc, _} -> erlang:error({no_process, ActualPid});
-        exit:{timeout, _} -> erlang:error({call_timeout, ActualPid, Timeout});
-        exit:{Reason, _} -> erlang:error({call_failed, ActualPid, Reason})
+        exit:{noproc, _} -> erlang:error({no_process, Pid});
+        exit:{timeout, _} -> erlang:error({call_timeout, Pid, Timeout});
+        exit:Reason -> erlang:error({call_failed, Pid, Reason})
     end.
 
 %%%=============================================================================
@@ -127,14 +128,16 @@ call(Pid, Msg, Timeout) when is_pid(Pid); is_pid(Msg), is_integer(Timeout) ->
 
 %% @doc Create a bidirectional link with a process.
 %% If either process exits abnormally, the other receives an exit signal.
--spec link(pid()) -> true.
+-spec link(pid()) -> ok.
 link(Pid) when is_pid(Pid) ->
-    erlang:link(Pid).
+    _ = erlang:link(Pid),
+    ok.
 
 %% @doc Remove a bidirectional link.
--spec unlink(pid()) -> true.
+-spec unlink(pid()) -> ok.
 unlink(Pid) when is_pid(Pid) ->
-    erlang:unlink(Pid).
+    _ = erlang:unlink(Pid),
+    ok.
 
 %% @doc Monitor a process (unidirectional).
 %% Returns a reference that can be used with demonitor/1.
@@ -144,10 +147,11 @@ unlink(Pid) when is_pid(Pid) ->
 monitor(Pid) when is_pid(Pid) ->
     erlang:monitor(process, Pid).
 
-%% @doc Remove a monitor.
--spec demonitor(monitor_ref()) -> true.
+%% @doc Remove a monitor and flush an already-delivered DOWN message.
+-spec demonitor(monitor_ref()) -> ok.
 demonitor(Ref) when is_reference(Ref) ->
-    erlang:demonitor(Ref).
+    _ = erlang:demonitor(Ref, [flush]),
+    ok.
 
 %%%=============================================================================
 %%% Process Information
@@ -163,19 +167,40 @@ self() ->
 whereis(Name) when is_atom(Name) ->
     erlang:whereis(Name).
 
-%% @doc Register the current process with a name.
+%% @doc Register a process with a name.
 %% The name must be unique globally.
--spec register(process_name(), pid()) -> true.
+-spec register(process_name(), pid()) -> ok.
 register(Name, Pid) when is_atom(Name), is_pid(Pid) ->
-    case erlang:register(Name, Pid) of
-        true -> true;
-        false -> erlang:error({name_already_registered, Name})
+    case erlang:whereis(Name) of
+        undefined ->
+            try erlang:register(Name, Pid) of
+                true -> ok
+            catch
+                error:badarg ->
+                    case erlang:whereis(Name) of
+                        undefined ->
+                            erlang:error({registration_failed, Name, Pid});
+                        _ExistingPid ->
+                            erlang:error({name_already_registered, Name})
+                    end
+            end;
+        _ExistingPid ->
+            erlang:error({name_already_registered, Name})
     end.
 
-%% @doc Unregister a process name.
--spec unregister(process_name()) -> true.
+%% @doc Unregister a process name. Missing names are already unregistered.
+-spec unregister(process_name()) -> ok.
 unregister(Name) when is_atom(Name) ->
-    erlang:unregister(Name).
+    case erlang:whereis(Name) of
+        undefined ->
+            ok;
+        _Pid ->
+            try erlang:unregister(Name) of
+                true -> ok
+            catch
+                error:badarg -> ok
+            end
+    end.
 
 %%%=============================================================================
 %%% Receive Operations
@@ -184,33 +209,58 @@ unregister(Name) when is_atom(Name) ->
 %% @doc Receive a message with timeout and default.
 %% Named 'recv' to avoid conflict with Erlang's 'receive' keyword.
 -spec recv(non_neg_integer(), term()) -> term().
-recv(TimeoutMs, Default) ->
+recv(TimeoutMs, Default) when is_integer(TimeoutMs), TimeoutMs >= 0 ->
     receive
         Msg -> Msg
     after TimeoutMs ->
         Default
     end.
 
-%% @doc Receive a message matching a pattern.
-%% This is a simplified version - full selective receive requires
-%% compiler support for pattern matching.
+%% @doc Receive the first message accepted by a dynamic predicate.
+%% Messages rejected while searching are restored before this call returns.
+%% Source-level selective receive still requires compiler pattern support.
 -spec recv(fun((message()) -> boolean()), non_neg_integer(), term()) -> term().
-recv(Pred, TimeoutMs, Default) ->
-    Start = erlang:monotonic_time(milli_second),
-    recv_loop(Pred, TimeoutMs, Start, Default).
+recv(Pred, TimeoutMs, Default)
+        when is_function(Pred, 1), is_integer(TimeoutMs), TimeoutMs >= 0 ->
+    Deadline = erlang:monotonic_time(millisecond) + TimeoutMs,
+    recv_loop(Pred, Deadline, Default, []).
 
-recv_loop(_Pred, TimeoutMs, _Start, Default) when TimeoutMs =< 0 ->
-    Default;
-recv_loop(Pred, TimeoutMs, Start, Default) ->
+recv_loop(Pred, Deadline, Default, Rejected) ->
+    Remaining = max(Deadline - erlang:monotonic_time(millisecond), 0),
     receive
         Msg ->
-            case Pred(Msg) of
-                true -> Msg;
-                false -> recv_loop(Pred, 0, Start, Default)
+            case apply_receive_predicate(Pred, Msg, Rejected) of
+                true ->
+                    restore_messages(Rejected),
+                    Msg;
+                false ->
+                    recv_loop(Pred, Deadline, Default, [Msg | Rejected])
             end
-    after TimeoutMs ->
+    after Remaining ->
+        restore_messages(Rejected),
         Default
     end.
+
+apply_receive_predicate(Pred, Msg, Rejected) ->
+    try Pred(Msg) of
+        true ->
+            true;
+        false ->
+            false;
+        Other ->
+            erlang:error({invalid_receive_predicate_result, Other})
+    catch
+        Class:Reason:Stacktrace ->
+            restore_messages([Msg | Rejected]),
+            erlang:raise(Class, Reason, Stacktrace)
+    end.
+
+restore_messages(Rejected) ->
+    lists:foreach(
+        fun(Message) -> erlang:self() ! Message end,
+        lists:reverse(Rejected)
+    ),
+    ok.
 
 %%%=============================================================================
 %%% Exit Handling
@@ -242,6 +292,7 @@ exit(Reason) ->
     erlang:exit(Reason).
 
 %% @doc Exit a specific process with a reason.
--spec exit(pid(), term()) -> true.
+-spec exit(pid(), term()) -> ok.
 exit(Pid, Reason) when is_pid(Pid) ->
-    erlang:exit(Pid, Reason).
+    _ = erlang:exit(Pid, Reason),
+    ok.
