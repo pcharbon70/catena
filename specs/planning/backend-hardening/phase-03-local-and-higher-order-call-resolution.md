@@ -13,49 +13,49 @@ constructors, and higher-order callable values before Core Erlang emission.
 **Description:** Build the complete local callable inventory before lowering
 any function body so resolution does not depend on declaration order.
 
-- [ ] **Section 3.1 Complete**
+- [x] **Section 3.1 Complete**
 
 ### Task 3.1.1: Predeclare Local Callable Symbols
 
 **Description:** Collect every implemented transform and constructor identity,
 arity, visibility, type, and source location into the validated unit.
 
-- [ ] **Task 3.1.1 Complete**
+- [x] **Task 3.1.1 Complete**
 
 #### Subtask 3.1.1.1: Index Transform Identities
 
 **Description:** Index all top-level transforms before body traversal,
 including later declarations and mutually recursive groups.
 
-- [ ] **Subtask 3.1.1.1 Complete**
+- [x] **Subtask 3.1.1.1 Complete**
 
 #### Subtask 3.1.1.2: Index Constructor Identities
 
 **Description:** Derive constructor arities and result-type ownership from type
 declarations before those declarations are erased.
 
-- [ ] **Subtask 3.1.1.2 Complete**
+- [x] **Subtask 3.1.1.2 Complete**
 
 ### Task 3.1.2: Enforce Name And Arity Rules
 
 **Description:** Resolve each unqualified callable name to one unambiguous local
 identity or return a structured diagnostic.
 
-- [ ] **Task 3.1.2 Complete**
+- [x] **Task 3.1.2 Complete**
 
 #### Subtask 3.1.2.1: Detect Duplicate And Ambiguous Callables
 
 **Description:** Reject symbol definitions or overload sets that the current
 language rules cannot distinguish at a call site.
 
-- [ ] **Subtask 3.1.2.1 Complete**
+- [x] **Subtask 3.1.2.1 Complete**
 
 #### Subtask 3.1.2.2: Detect Call Arity Mismatches
 
 **Description:** Compare source argument count with resolved callable arity and
 report the call and declaration locations on failure.
 
-- [ ] **Subtask 3.1.2.2 Complete**
+- [x] **Subtask 3.1.2.2 Complete**
 
 ## Section 3.2: Local, Forward, And Recursive Core Calls
 
