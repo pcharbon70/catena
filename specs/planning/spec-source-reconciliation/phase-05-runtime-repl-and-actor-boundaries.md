@@ -99,7 +99,7 @@ monitors or trapped exits rather than sleeps and unrelated mailboxes.
 close the direct REPL Process-effect gap, and state clearly which
 source-language and distributed actor features remain future work.
 
-- [ ] **Section 5.2 Complete**
+- [x] **Section 5.2 Complete**
 
 ### Task 5.2.1: Promote the Actor Runtime Surface
 
@@ -107,14 +107,14 @@ source-language and distributed actor features remain future work.
 process façade, actors, GenServer-style callbacks, supervisors, registries,
 pub/sub, and event broadcasting.
 
-- [ ] **Task 5.2.1 Complete**
+- [x] **Task 5.2.1 Complete**
 
 #### Subtask 5.2.1.1: Define Implemented Runtime Components
 
 **Description:** Anchor each promoted actor capability to its source module and
 focused tests.
 
-- [ ] **Subtask 5.2.1.1 Complete**
+- [x] **Subtask 5.2.1.1 Complete**
 
 #### Subtask 5.2.1.2: Mark the Language Boundary
 
@@ -122,28 +122,28 @@ focused tests.
 future Catena actor syntax, typed protocols, Process Workflow instances, and
 distributed operation.
 
-- [ ] **Subtask 5.2.1.2 Complete**
+- [x] **Subtask 5.2.1.2 Complete**
 
 ### Task 5.2.2: Complete Direct REPL Process Effects
 
 **Description:** Make every Process operation declared by the current standard
 effect surface executable through the REPL's advertised direct handlers.
 
-- [ ] **Task 5.2.2 Complete**
+- [x] **Task 5.2.2 Complete**
 
 #### Subtask 5.2.2.1: Handle Spawn, Send, and Self
 
 **Description:** Delegate direct REPL Process operations to the reconciled
 process façade and return the evaluator's standard `{ok, Value}` shape.
 
-- [ ] **Subtask 5.2.2.1 Complete**
+- [x] **Subtask 5.2.2.1 Complete**
 
 #### Subtask 5.2.2.2: Verify Interactive Process Execution
 
 **Description:** Exercise identity, process creation, and message delivery
 through `eval_with_effects` with automatic handler provision.
 
-- [ ] **Subtask 5.2.2.2 Complete**
+- [x] **Subtask 5.2.2.2 Complete**
 
 ### Task 5.2.3: Reconcile Runtime Contracts
 
@@ -151,14 +151,14 @@ through `eval_with_effects` with automatic handler provision.
 generated code, direct REPL evaluation, and Erlang actor components have
 separate, non-conflicting authorities.
 
-- [ ] **Task 5.2.3 Complete**
+- [x] **Task 5.2.3 Complete**
 
 #### Subtask 5.2.3.1: Add Runtime Requirements
 
 **Description:** Require BEAM-native process behavior, local actor lifecycle
 contracts, and direct REPL Process-effect coverage.
 
-- [ ] **Subtask 5.2.3.1 Complete**
+- [x] **Subtask 5.2.3.1 Complete**
 
 **Acceptance Criteria:**
 

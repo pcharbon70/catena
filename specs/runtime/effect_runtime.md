@@ -76,6 +76,8 @@ The effect runtime is only promoted as correct when it lines up with the compile
 
 ## Out Of Scope
 
-- actor-model integration beyond the currently implemented builtin process effect surface
+- source-language actor declarations and compilation; the implemented local
+  Erlang actor toolkit is specified separately in
+  [Actor Runtime](actor_runtime.md)
 - distributed effect handling
 - the full future runtime story beyond the proof-of-concept
