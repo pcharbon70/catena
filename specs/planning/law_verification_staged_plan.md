@@ -9,32 +9,35 @@ It exists because the repository currently has:
 - real law definitions in the standard library
 - real test wrappers for law checks
 - structural tests proving those surfaces compile and normalize correctly
-- an unfinished path from those stdlib-native surfaces to fully reconciled executable law verification, even though the internal Erlang/proptest framework has moved materially further ahead
+- executable concrete law suites
+- a known-instance bridge from stdlib generic checks into the internal Erlang/proptest framework
 
-The goal is to describe the intended path without overstating what is already executable.
+The goal is to describe the implemented layers and preserve the boundary
+between current known-instance execution and future automatic derivation.
 
 ## Current Baseline
 
 Catena's current baseline for law verification is:
 
 - `lib/catena/stdlib/laws.cat` defines pure law transforms for `Mapper`, `Pipeline`, `Comparable`, and `Combiner`
-- `lib/catena/stdlib/test.cat` defines `verify` as the current standard-library wrapper for turning a Bool-producing law check into a test value
-- `test/compiler/integration/catena_stdlib_laws_tests.erl` verifies the `Laws` module parses, exports the expected transforms, and preserves the intended law arities and AST shape
+- `lib/catena/stdlib/test.cat` defines concrete `verify` checks plus generic `verifyTrait` and `verifyTraits` values with iteration and seed configuration
+- `test/compiler/integration/catena_stdlib_laws_tests.erl` verifies structure and executes concrete, generic, configured, and deliberately failing suites
 - `src/proptest/catena_laws.erl`, `catena_trait_laws.erl`, `catena_discipline.erl`, and `catena_law_tests.erl` provide a generic Erlang-side law framework
 - `test/proptest/catena_trait_laws_tests.erl` and `test/proptest/catena_law_integration_tests.erl` exercise that internal framework end-to-end
-- full execution of reusable imported law suites is still partial
-- generic generator-backed law verification now exists in the internal Erlang/proptest framework, but the stdlib/Catena-native execution path is still incomplete
+- `src/testing/catena_stdlib_law_bridge.erl` maps Catena trait vocabulary and known `Maybe`, `Either`, `List`, and `Int` instances into that framework
+- `src/testing/catena_test_runner.erl` executes the resulting law checks and preserves law-aware failure details
 
-This creates two overlapping realities:
+This creates one layered execution path:
 
-- the stdlib/Catena-native law path is still only partially executable
-- the internal Erlang/proptest law framework is materially further along
+- concrete fixtures execute Catena law transforms directly
+- known-instance generic checks execute generator-backed internal laws
+- both report through the maintained test runner
 
 Promoted interpretation:
 
-- Stage 1 law definition work exists
-- Stage 2 remains partial on the stdlib-native path
-- Stage 3 and Stage 4 are materially implemented in the internal Erlang/proptest framework
+- Stage 1 law definition is implemented
+- Stage 2 concrete stdlib execution is implemented
+- Stage 3 and Stage 4 are materially implemented and connected at the known-instance bridge
 - Stage 5 remains future ergonomics and workflow integration work
 
 ## Stage 1: Structural Law Definition
@@ -52,7 +55,7 @@ This stage proves the language and stdlib can represent the laws, but it does no
 
 ## Stage 2: Executable Concrete Law Suites
 
-Status: partial and still the clearest unfinished step on the stdlib-native path
+Status: implemented for current concrete fixtures
 
 The second stage makes today's law surface executable for concrete known instances before the generic property-testing framework is complete.
 
@@ -75,6 +78,12 @@ The second stage makes today's law surface executable for concrete known instanc
 - a deliberately broken fixture or intentionally invalid instance can be shown to fail
 - the tests run through a maintained repo test path rather than ad hoc one-off scripts
 
+Current evidence:
+
+- `Maybe`, `Either`, `List`, applicative, accumulator, and orderable fixtures execute
+- a deliberately broken `Maybe` fixture reports a law failure
+- imported `Prelude`, `Test`, and `Laws` declarations execute through the maintained compiler/runtime test path
+
 ## Stage 3: Generator And Runner Foundation
 
 Status: materially implemented in the internal Erlang/proptest framework
@@ -91,7 +100,7 @@ This stage is where Catena moves from finite fixture checking toward data-driven
 Current promoted reading:
 
 - the generator/runner/reporting foundation now exists in `src/proptest/*`
-- the remaining work is less about foundation and more about bridging that foundation back into the stdlib-native law-verification story cleanly
+- stdlib generic checks now reach that foundation through `catena_stdlib_law_bridge`
 
 ## Stage 4: Generic Law Specifications And Disciplines
 
@@ -115,8 +124,8 @@ This stage aligns with the Phase 4 property-testing track and turns law verifica
 
 Current promoted reading:
 
-- this stage exists today in the internal framework, even though the older phase markdown remains largely unchecked
-- the missing work is broader integration and canonical documentation, not the complete absence of a generic law framework
+- this stage exists in the internal framework and is callable from stdlib generic law values for supported known instances
+- the missing work is automatic instance discovery, broader instance coverage, and ergonomic source-language derivation
 
 ## Stage 5: Ergonomic Derivation And Workflow Integration
 
@@ -136,15 +145,15 @@ This stage is explicitly downstream of the generic framework, not a prerequisite
 Current promoted reading:
 
 - explicit function-based helpers now exist before macro/derive sugar
+- generic stdlib checks support iteration and seed configuration
 - the broader ergonomic workflow story remains incomplete
 
 ## Recommended Execution Order
 
-1. Maintain the green default repo test path while continuing the PropEr migration.
-2. Complete Stage 2 by making current `Laws + Test.verify` executable for concrete suites.
-3. Reconcile the staged-law docs with the already-implemented `src/proptest/*` framework rather than pretending Stages 3 and 4 are still absent.
-4. Bridge the stdlib-native law path and the internal law framework more explicitly where that improves contributor understanding and test coverage.
-5. Add broader ergonomic derivation only after the underlying framework and integration boundaries are solid.
+1. Maintain the green default repo test path and the focused property/law gate.
+2. Extend the known-instance bridge only with explicit generators, adapters, and focused law evidence.
+3. Improve grouped reporting and contributor-facing workflow ergonomics on the maintained runner.
+4. Add automatic instance discovery, source-language derivation, or REPL sugar only after the required reflection and macro capabilities exist.
 
 ## What This Plan Avoids
 
@@ -153,4 +162,7 @@ This plan intentionally avoids two bad outcomes:
 - claiming law verification is already complete just because the law definitions compile
 - blocking all useful progress on law execution until the entire future property-testing roadmap is finished
 
-Catena should instead ship law verification in layers: first representable, then executable for concrete suites, then generic and property-based.
+Catena ships law verification in layers: representable, executable for concrete
+suites, then generic and property-based for explicit known instances. Automatic
+derivation remains a later layer rather than an implicit claim of the current
+bridge.

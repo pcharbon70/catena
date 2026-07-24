@@ -2,7 +2,7 @@
 
 ## Status
 
-Promoted status: materially implemented for the maintained repo workflow. The internal property-testing engine now spans rose trees, generators, ranges, the runner, reporting, first-class Catena property surfaces, and generic law-suite execution for known stdlib-backed instances. The remaining PropEr boundary is historical/documentary rather than part of the active execution path.
+Promoted status: materially implemented and green for the maintained repo workflow. The internal property-testing engine spans rose trees, generators, ranges, shrinking, the runner, reporting, first-class Catena property surfaces, and generic law-suite execution for known stdlib-backed instances. The remaining PropEr boundary is historical/documentary rather than part of the active execution path.
 
 ## Design Anchors
 
@@ -31,13 +31,14 @@ Promoted status: materially implemented for the maintained repo workflow. The in
 - `catena_gen` now includes the functor/applicative/monad/alternative-style layer needed to compose generators before the primitive-combinator phase.
 - `catena_gen` now also includes primitive constant/element/bool/int/filter/sample utilities with first-class `Range` integration for integer generation.
 - `catena_range` now owns the promoted range abstraction, including origins, size-scaled bounds, and linear/exponential constructors.
+- `catena_stdgen` bounded maps and sets now preserve selected root cardinality through deterministic unique resampling and report unsatisfiable unique domains explicitly.
 - `catena_runner` is now the maintained execution engine for active properties, including deterministic seeds, shrinking, discard tracking, and richer result metadata.
 - `catena_report` is now part of the promoted property-testing surface for failure formatting and CI-friendly structured output.
 - `lib/catena/stdlib/test.cat` now exposes a real first-class property surface through `Test.prop`, property configuration helpers, and `forAll` / `implies` / `discard`.
 - `lib/catena/stdlib/gen.cat` now exposes the initial Catena-facing generator surface for bool/int/text families and first combinators such as `oneOf`, `map`, `flatMap`, and `filter`.
 - `src/testing/catena_first_class_property_adapter.erl` is now the promoted bridge from first-class stdlib property/generator values into `src/proptest/*`.
 - `src/testing/catena_property_adapter.erl` now routes legacy `property_decl` syntax into the same internal engine rather than maintaining a separate handwritten property loop.
-- `src/testing/catena_test_runner.erl` is now the maintained compatibility and formatting layer over that internal engine for declaration-based tests, first-class properties, suites, and known-instance law checks.
+- `src/testing/catena_test_runner.erl` is now the maintained compatibility and formatting layer over that internal engine for declaration-based tests, first-class properties, suites, and known-instance law checks; its runtime declaration scope supports forward transform references.
 - `src/testing/catena_stdlib_law_bridge.erl` now bridges the stdlib law surface into the internal trait-law/disciplines framework for known instances such as `Maybe`, `Either`, `List`, and `Int`.
 - Rich property/law results now preserve seeds, discard counts, shrink information, counterexamples, and label/output metadata in the active runner path.
 - The historical PropEr quarantine has effectively collapsed to documentation-only material under `test_legacy/proper/`; there are no runnable PropEr suites left in the maintained path.
@@ -129,10 +130,15 @@ The promoted current status for the property-testing roadmap is:
 - runner/reporting integration: materially implemented
 - Catena-facing property API and generator bridge: materially implemented
 - known-instance law bridging: materially implemented
+- compiled stdlib `verifyTrait` / `verifyTraits` execution: implemented for the supported known-instance bridge
+- unique map/set root cardinality and bounded exhaustion: implemented
 
 The active property/law engine is no longer limited to the original foundations.
 
-The remaining work is now mostly advanced engine breadth, workflow polish, and canonical documentation rather than the absence of a working property/law execution stack.
+Explicit helpers for derivation descriptors, coverage guidance, metamorphic
+testing, type-directed property combinators, and performance work are also
+present. Automatic source-language reflection/macros, some advanced
+stateful/BEAM branches, and workflow polish remain incomplete.
 
 ### AC-PROP-007 Transitional Coexistence
 
@@ -156,13 +162,16 @@ The canonical direction is internal property testing with integrated shrinking, 
 Documentation and tooling specs must continue to note the true transition state:
 
 - the default repo-wide `rebar3 eunit` entry point covers the complete active
-  suite and reports the current
-  [non-green baseline](../planning/spec-source-reconciliation/phase-02-test-baseline.md)
+  suite and reports the current green
+  [Phase 6 baseline](../planning/spec-source-reconciliation/phase-06-test-baseline.md)
+- the focused property/law gate passes 1,091 tests across 53 modules
+- two consecutive complete-suite runs pass all 4,829 active tests
+- Dialyzer remains non-green with 777 repository-wide warnings
 - the historical PropEr area no longer contains runnable suites, only documentary artifacts
 - the remaining gaps are advanced internal-framework breadth and workflow ergonomics, not active dependence on PropEr in the default path
 
-This prevents the specs from confusing "complete default workflow" with
-"green default workflow."
+This prevents a green execution baseline from being confused with complete
+advanced-feature or static-analysis maturity.
 
 ### AC-PROP-010 Law-Testing Destination
 
@@ -170,8 +179,8 @@ Generic trait-law verification SHOULD converge on the internal property-testing 
 
 Promoted staging:
 
-- near-term: concrete executable suites may still use `Laws + Test.verify`
-- current implemented middle layer: known-instance generator-backed law suites execute through `catena_stdlib_law_bridge`
+- current concrete layer: executable suites use `Laws + Test.verify`
+- current generic layer: `Test.verifyTrait` / `verifyTraits` route known-instance generator-backed suites through `catena_stdlib_law_bridge`
 - later: broader derive/REPL sugar and more automatic law plumbing land on top of the same internal framework
 
 ## Out Of Scope

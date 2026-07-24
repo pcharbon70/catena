@@ -183,7 +183,8 @@ build_runtime_env(Declarations) ->
 
 -spec build_runtime_env([term()], map()) -> map().
 build_runtime_env(Declarations, BaseEnv) ->
-    lists:foldl(fun add_runtime_decl_to_env/2, BaseEnv, Declarations).
+    StaticEnv = lists:foldl(fun add_runtime_type_decl_to_env/2, BaseEnv, Declarations),
+    add_runtime_transform_decls_to_env(Declarations, StaticEnv).
 
 %% @doc Collect all test and property declarations from a list of declarations
 -spec collect_tests([term()]) -> [term()].
@@ -853,12 +854,26 @@ law_config_seed(_Other) ->
 %% Runtime Environment Construction
 %%====================================================================
 
-add_runtime_decl_to_env({type_decl, _Name, _Params, Constructors, _Derives, _Loc}, Env) ->
+add_runtime_type_decl_to_env({type_decl, _Name, _Params, Constructors, _Derives, _Loc}, Env) ->
     lists:foldl(fun add_constructor_binding/2, Env, Constructors);
-add_runtime_decl_to_env({transform_decl, Name, _TypeSig, Clauses, _Loc}, Env) ->
-    maps:put(Name, {make_transform_fun(Clauses, Env), transform_arity(Clauses), runtime}, Env);
-add_runtime_decl_to_env(_Decl, Env) ->
+add_runtime_type_decl_to_env(_Decl, Env) ->
     Env.
+
+add_runtime_transform_decls_to_env(Declarations, StaticEnv) ->
+    lists:foldl(
+        fun({transform_decl, Name, _TypeSig, Clauses, _Loc}, Env) ->
+                Binding = {
+                    make_transform_fun(Clauses, Declarations, StaticEnv),
+                    transform_arity(Clauses),
+                    runtime
+                },
+                maps:put(Name, Binding, Env);
+           (_Decl, Env) ->
+                Env
+        end,
+        StaticEnv,
+        Declarations
+    ).
 
 add_constructor_binding({constructor, Name, ArgTypes, _Loc}, Env) ->
     maps:put(Name, make_constructor_binding(Name, ArgTypes), Env).
@@ -918,23 +933,24 @@ transform_arity([{transform_clause, Patterns, _Guards, _Body, _Loc} | _]) ->
 transform_arity([]) ->
     0.
 
-make_transform_fun(Clauses, Env) ->
+make_transform_fun(Clauses, Declarations, StaticEnv) ->
+    Scope = fun() -> add_runtime_transform_decls_to_env(Declarations, StaticEnv) end,
     Arity = transform_arity(Clauses),
     case Arity of
         0 ->
-            fun() -> evaluate_transform_clauses(Clauses, [], Env) end;
+            fun() -> evaluate_transform_clauses(Clauses, [], Scope()) end;
         _ ->
-            make_curried_transform(Clauses, Env, [], Arity)
+            make_curried_transform(Clauses, Scope, [], Arity)
     end.
 
-make_curried_transform(Clauses, Env, BoundArgs, Arity) ->
+make_curried_transform(Clauses, Scope, BoundArgs, Arity) ->
     fun(Arg) ->
         NewArgs = BoundArgs ++ [Arg],
         case length(NewArgs) of
             Arity ->
-                evaluate_transform_clauses(Clauses, NewArgs, Env);
+                evaluate_transform_clauses(Clauses, NewArgs, Scope());
             _ ->
-                make_curried_transform(Clauses, Env, NewArgs, Arity)
+                make_curried_transform(Clauses, Scope, NewArgs, Arity)
         end
     end.
 
