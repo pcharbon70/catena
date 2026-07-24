@@ -53,15 +53,19 @@
 %% @doc Create an effect context with default builtin handlers.
 %% Automatically registers handlers for IO, Process, Error, and State effects.
 -spec with_default_handlers(options()) -> effect_context().
-with_default_handlers(Opts) ->
+with_default_handlers(_Opts) ->
     Ctx = catena_effect_runtime:new_context(),
     %% For REPL, we don't spawn handler processes - we handle effects directly
     %% Mark which effects are available
     Handlers = #{
         io => direct,
+        'IO' => direct,
         process => direct,
+        'Process' => direct,
         error => direct,
-        state => direct
+        'Error' => direct,
+        state => direct,
+        'State' => direct
     },
     Ctx#{handlers => Handlers}.
 
@@ -284,7 +288,7 @@ eval_case_clauses(Value, [{match_clause, Pattern, Guard, Body, _Loc} | Rest], Ct
 -spec match_pattern(term(), tuple()) -> {ok, boolean()} | {error, term()}.
 match_pattern(Value, {literal, LitVal, _Type, _Loc}) ->
     {ok, Value =:= LitVal};
-match_pattern(Value, {var, _Name, _Loc}) ->
+match_pattern(_Value, {var, _Name, _Loc}) ->
     {ok, true};
 match_pattern(Value, {tuple_pattern, Elements, _Loc}) when is_tuple(Value) ->
     case tuple_size(Value) =:= length(Elements) of
@@ -328,6 +332,14 @@ match_tuple_elements(_, _) ->
 %% This is called when no handler is registered but we have builtin support.
 -spec handle_builtin_effect(atom(), atom(), [term()], effect_context()) ->
     {ok, term()} | {error, term()}.
+handle_builtin_effect('IO', Operation, Args, Ctx) ->
+    handle_builtin_effect(io, Operation, Args, Ctx);
+handle_builtin_effect('Process', Operation, Args, Ctx) ->
+    handle_builtin_effect(process, Operation, Args, Ctx);
+handle_builtin_effect('Error', Operation, Args, Ctx) ->
+    handle_builtin_effect(error, Operation, Args, Ctx);
+handle_builtin_effect('State', Operation, Args, Ctx) ->
+    handle_builtin_effect(state, Operation, Args, Ctx);
 handle_builtin_effect(io, print, [String], _Ctx) ->
     io:format("~s~n", [String]),
     {ok, unit};
@@ -340,6 +352,17 @@ handle_builtin_effect(io, read_line, [], _Ctx) ->
         eof -> {ok, eof};
         {error, Reason} -> {error, Reason}
     end;
+handle_builtin_effect(process, spawn, [Fun], _Ctx) when is_function(Fun, 0) ->
+    {ok, catena_process:spawn(Fun)};
+handle_builtin_effect(process, send, [Target, Message], _Ctx)
+        when is_pid(Target); is_atom(Target) ->
+    try catena_process:send(Target, Message) of
+        ok -> {ok, unit}
+    catch
+        error:Reason -> {error, Reason}
+    end;
+handle_builtin_effect(process, self, [], _Ctx) ->
+    {ok, catena_process:self()};
 handle_builtin_effect(error, raise, [Reason], _Ctx) ->
     {error, Reason};
 handle_builtin_effect(state, get, [], _Ctx) ->

@@ -12,7 +12,7 @@ It exists because some planning checklists are stale relative to later implement
 
 | Track | Current promoted status |
 | --- | --- |
-| Proof-of-concept | Implemented through Phases 1 to 3, with Phase 4 partial/minimal and later phases still planned or historically superseded. |
+| Proof-of-concept | Implemented through Phases 1 to 3, with Phase 4 partial/minimal and a verified local Phase 5 actor runtime toolkit whose source-language integration remains incomplete. |
 | Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary; full language-surface continuation support remains incomplete. |
 | Property testing | Phases 1 to 4 are materially implemented in `src/proptest`; Phases 5 and 6 are substantial but partial; Phase 7 remains planned. |
 | Law verification | Structural stdlib law definition is implemented; stdlib-native execution remains partial; the internal proptest law framework is materially ahead of the staged plan. |
@@ -78,7 +78,12 @@ that public boundary remain follow-on work.
 
 - Phase 4 module system: not complete
 - current repo does include minimal import resolution and exported-environment wiring
-- Phase 5 actor model integration: planned
+- Phase 5 local runtime toolkit: implemented and verified for BEAM process
+  primitives, actors, GenServer-style callbacks, minimal one-for-one
+  supervision, registry, pub/sub, event broadcasting, and direct REPL Process
+  effects
+- Phase 5 source-language actor declarations, typed protocols, effect-handler
+  unification, full OTP parity, and distributed actors: planned
 - the original proof-of-concept "Phase 6 effect completion" label is no longer the best description of the current effect-system implementation
 - Phase 7 distribution layer: planned/research-backed, not implemented
 
@@ -181,9 +186,10 @@ Current promoted status:
 ## Current Quality State
 
 The default `rebar3 eunit` entry point now discovers, compiles, and executes the
-complete active test tree. It is deterministic but not green. Two consecutive
-verified runs on 2026-07-23 each reported 4,801 passing, 17 failing, and zero
-skipped tests.
+complete active test tree. It is not yet green. Two consecutive final verified
+runs on 2026-07-24 each reported 4,822 passing, 2 failing, and zero skipped
+tests. A preliminary run also exposed one intermittent Phase 6 collection
+generator failure recorded in the Phase 5 baseline.
 
 Promoted interpretation:
 
@@ -192,11 +198,12 @@ Promoted interpretation:
 - the six Phase 2 standard-library/frontend modules pass all 170 focused tests
 - the 15 Phase 3 compiler/codegen/pattern modules pass all 397 focused tests
 - the ten Phase 4 effect/type/runtime modules pass all 244 focused tests
+- the 14 Phase 5 process/actor/REPL modules pass all 302 focused tests
 - valid source reaches executable Core Erlang only after typed frontend
   validation
-- the 17 remaining failures are assigned to later spec-source reconciliation
-  phases in the
-  [Phase 4 test baseline](spec-source-reconciliation/phase-04-test-baseline.md)
+- the two deterministic remaining failures and one observed generator flake
+  are assigned to Phase 6 in the
+  [Phase 5 test baseline](spec-source-reconciliation/phase-05-test-baseline.md)
 - the internal property-testing transition is still underway
 - historical PropEr suites remain preserved under `test_legacy/proper/` as migration targets rather than active default tests
 

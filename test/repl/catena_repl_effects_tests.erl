@@ -27,9 +27,6 @@ cleanup(_) ->
 default_options() ->
     #{verbose => false, timeout => 5000}.
 
-verbose_options() ->
-    #{verbose => true, timeout => 5000}.
-
 %%%=============================================================================
 %%% Default Handler Management Tests
 %%%=============================================================================
@@ -40,9 +37,13 @@ with_default_handlers_test() ->
     ?assertMatch(#{handlers := #{}, parent := _}, Ctx),
     Handlers = maps:get(handlers, Ctx),
     ?assert(maps:is_key(io, Handlers)),
+    ?assert(maps:is_key('IO', Handlers)),
     ?assert(maps:is_key(process, Handlers)),
+    ?assert(maps:is_key('Process', Handlers)),
     ?assert(maps:is_key(error, Handlers)),
-    ?assert(maps:is_key(state, Handlers)).
+    ?assert(maps:is_key('Error', Handlers)),
+    ?assert(maps:is_key(state, Handlers)),
+    ?assert(maps:is_key('State', Handlers)).
 
 %%%=============================================================================
 %%% Effect Evaluation Tests
@@ -171,6 +172,66 @@ eval_io_print_test() ->
             {tcon, unit}, {1, 1}},
     Result = catena_repl_effects:eval_with_effects(AST, default_options()),
     ?assertMatch({ok, unit}, Result).
+
+eval_process_self_test() ->
+    AST = {perform_expr, 'Process', self, [],
+            {tcon, pid}, {1, 1}},
+    ?assertEqual(
+        {ok, self()},
+        catena_repl_effects:eval_with_effects(AST, default_options())
+    ).
+
+eval_process_spawn_test() ->
+    Parent = self(),
+    Ref = make_ref(),
+    Fun = fun() -> Parent ! {Ref, spawned_from_repl} end,
+    AST = {perform_expr, 'Process', spawn,
+            [{literal, Fun, flow, {1, 1}}],
+            {tcon, pid}, {1, 1}},
+    {ok, Pid} = catena_repl_effects:eval_with_effects(
+        AST,
+        default_options()
+    ),
+    ?assert(is_pid(Pid)),
+    receive
+        {Ref, spawned_from_repl} -> ok
+    after 1000 ->
+        ?assert(false, process_effect_spawn_timeout)
+    end.
+
+eval_process_send_test() ->
+    Ref = make_ref(),
+    Message = {Ref, sent_from_repl},
+    AST = {perform_expr, 'Process', send,
+            [
+                {literal, self(), {tcon, pid}, {1, 1}},
+                {literal, Message, message, {1, 1}}
+            ],
+            {tcon, unit}, {1, 1}},
+    ?assertEqual(
+        {ok, unit},
+        catena_repl_effects:eval_with_effects(AST, default_options())
+    ),
+    receive
+        Message -> ok
+    after 1000 ->
+        ?assert(false, process_effect_send_timeout)
+    end.
+
+eval_process_missing_name_test() ->
+    Name = catena_missing_repl_process,
+    ?assertEqual(undefined, erlang:whereis(Name)),
+    AST = {perform_expr, 'Process', send,
+            [
+                {literal, Name, process_name, {1, 1}},
+                {literal, ignored, message, {1, 1}}
+            ],
+            {tcon, unit}, {1, 1}},
+    ?assertEqual(
+        {error, {effect_operation_failed, 'Process', send,
+            {no_process, Name}}},
+        catena_repl_effects:eval_with_effects(AST, default_options())
+    ).
 
 eval_state_put_get_test_() ->
     {setup,

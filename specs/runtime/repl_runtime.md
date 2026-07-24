@@ -9,8 +9,10 @@ Promoted status: implemented as a compiler-backed interactive environment with p
 - [Current Status](../planning/current_status.md)
 - [Runtime Contract](../contracts/runtime_contract.md)
 - `src/repl/catena_repl.erl`
+- `src/repl/catena_repl_effects.erl`
 - `src/stdlib/catena_prelude.erl`
 - `test/repl/catena_repl_tests.erl`
+- `test/repl/catena_repl_effects_tests.erl`
 - `test/integration/catena_repl_workflow_tests.erl`
 - `test/integration/catena_repl_programs_tests.erl`
 
@@ -19,6 +21,9 @@ Promoted status: implemented as a compiler-backed interactive environment with p
 - The REPL is a real implemented subsystem, not just a roadmap item.
 - Interactive work is compiler-backed: expressions and loaded files go through Catena's existing pipeline rather than a separate ad hoc parser.
 - The REPL boots with the Erlang-side prelude bindings unless explicitly told not to.
+- The direct effect evaluator automatically exposes IO, Process, Error, and
+  State handlers. The standard Process operations `spawn`, `send`, and `self`
+  delegate to the reconciled BEAM process façade.
 - Phase 2 planning checkboxes are stale relative to the summaries and code, so this spec follows the reconciled implementation state.
 
 ## Acceptance Criteria
@@ -74,8 +79,23 @@ The promoted current status for the REPL/runtime track is:
 
 This criterion exists to reconcile the spec with the actual code and summaries rather than the stale Phase 2 checklist.
 
+### AC-REPL-006 Direct Effect Boundary
+
+The REPL's automatic handlers are a direct evaluator surface. They must:
+
+- recognize both canonical effect names such as `Process` and their internal
+  lowercase aliases
+- execute standard Process `spawn`, `send`, and `self` operations
+- return evaluator values in the common `{ok, Value}` shape
+- convert a missing registered process target into a structured effect error
+
+This direct path does not replace the explicit-context runtime used by
+generated code.
+
 ## Out Of Scope
 
 - debugger-like introspection
 - package management
 - the final production tooling experience for interactive development
+- automatic support for Process operations beyond the standard effect's
+  current `spawn`, `send`, and `self` declarations

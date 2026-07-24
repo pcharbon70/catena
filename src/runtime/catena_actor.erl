@@ -4,7 +4,7 @@
 %%% This module implements the actor pattern for Catena, providing:
 %%% - Stateful message handling through actor loops
 %%% - Standard behavior protocol for all actors
-%%% - Integration with the effect system (actors as effect handlers)
+%%% - A local Erlang runtime boundary alongside the Process effect
 %%% - Lifecycle management (spawn, stop, supervision)
 %%%
 %%% == Actor Model ==
@@ -74,7 +74,8 @@
 -export_type([
     from/0,
     call_result/0,
-    cast_result/0
+    cast_result/0,
+    info_result/0
 ]).
 
 %%====================================================================
@@ -187,7 +188,7 @@ send(Actor, Msg) ->
 %%====================================================================
 
 %% @private Start an actor process with given spawn function.
-do_start(Module, Args, Options, SpawnFun) ->
+do_start(Module, Args, _Options, SpawnFun) ->
     Parent = self(),
     Ref = make_ref(),
     InitFun = fun() ->
