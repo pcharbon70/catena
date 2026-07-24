@@ -64,7 +64,7 @@ into arbitrary BIF emission.
 **Description:** Compile every promoted parser-native pattern without wildcard
 substitution while preserving bindings, guards, and source clause order.
 
-- [ ] **Section 4.2 Complete**
+- [x] **Section 4.2 Complete**
 
 ### Task 4.2.1: Complete Pattern Representation Coverage
 
@@ -72,28 +72,28 @@ substitution while preserving bindings, guards, and source clause order.
 tuple, record, as-pattern, and or-pattern shapes across semantic validation and
 Core generation.
 
-- [ ] **Task 4.2.1 Complete**
+- [x] **Task 4.2.1 Complete**
 
 #### Subtask 4.2.1.1: Compile Structural Patterns
 
 **Description:** Emit exact Core patterns for constructors, lists, cons cells,
 tuples, records, literals, variables, and wildcards.
 
-- [ ] **Subtask 4.2.1.1 Complete**
+- [x] **Subtask 4.2.1.1 Complete**
 
 #### Subtask 4.2.1.2: Compile As-Patterns And Or-Patterns
 
 **Description:** Preserve alias bindings and expand valid alternatives without
 dropping nested structure or changing bound-name sets.
 
-- [ ] **Subtask 4.2.1.2 Complete**
+- [x] **Subtask 4.2.1.2 Complete**
 
 ### Task 4.2.2: Preserve Clause And Binding Semantics
 
 **Description:** Keep transform parameters, match clauses, guards, and binding
 scope correct when the backend introduces synthetic parameters or cases.
 
-- [ ] **Task 4.2.2 Complete**
+- [x] **Task 4.2.2 Complete**
 
 #### Subtask 4.2.2.1: Compile Complex Transform Parameters
 
@@ -101,14 +101,14 @@ scope correct when the backend introduces synthetic parameters or cases.
 against the original patterns and never replace them with fresh unconstrained
 variables.
 
-- [ ] **Subtask 4.2.2.1 Complete**
+- [x] **Subtask 4.2.2.1 Complete**
 
 #### Subtask 4.2.2.2: Compile Guards And Pattern Bindings
 
 **Description:** Preserve guard conjunction, guard purity, clause fallthrough,
 and all variables introduced by successful patterns.
 
-- [ ] **Subtask 4.2.2.2 Complete**
+- [x] **Subtask 4.2.2.2 Complete**
 
 ## Section 4.3: Stable Data Representation And Erasure
 

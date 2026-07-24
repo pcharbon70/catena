@@ -243,8 +243,8 @@ test_compile_multiple_guards() ->
         {binary_op, '<', {var, y, loc()}, {literal, integer, 10, loc()}, loc()}
     ],
     {Core, _State1} = catena_codegen_pattern:compile_guard(Guards, State),
-    %% Should be combined with 'andalso'
-    ?assertEqual(call, cerl:type(Core)).
+    %% Core preserves `andalso` short-circuiting with a Boolean case.
+    ?assertEqual('case', cerl:type(Core)).
 
 %%====================================================================
 %% Clause Compilation Tests

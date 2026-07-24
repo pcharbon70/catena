@@ -36,6 +36,7 @@ consistent_or_pattern_reaches_valid_core_test() ->
     Source =
         "module EitherValue\n"
         "export transform unwrap\n"
+        "type Either a = Left a | Right a\n"
         "transform unwrap value = match value of\n"
         "  | Left(x) | Right(x) -> x\n"
         "end\n",
@@ -53,6 +54,7 @@ as_pattern_reaches_valid_core_test() ->
     Source =
         "module AsPattern\n"
         "export transform unwrap\n"
+        "type Maybe a = None | Some a\n"
         "transform unwrap Some(x) as whole = x\n",
     ?assertEqual(ok, validate_source_core(Source)).
 
