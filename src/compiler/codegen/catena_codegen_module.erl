@@ -123,6 +123,10 @@ do_generate_module(ModuleAST, Opts, Inventory) ->
             callables => Inventory
         }),
 
+        %% The raw-AST compatibility path must still classify every erasure
+        %% input before static declarations can disappear.
+        ok = validate_erasure_inputs(Decls, Name),
+
         %% Erase types from declarations
         ErasedDecls = erase_types(Decls),
 
@@ -154,6 +158,39 @@ do_generate_module(ModuleAST, Opts, Inventory) ->
 %% Erase types from declarations
 erase_types(Decls) ->
     [catena_codegen_erase:erase_decl(D) || D <- Decls].
+
+validate_erasure_inputs(Decls, ModuleName) ->
+    lists:foreach(
+        fun
+            (erased) ->
+                ok;
+            ({transform, _, _, _, _}) ->
+                ok;
+            ({transform_typed, _, _, _, _, _}) ->
+                ok;
+            ({type_decl, _, _, _, _, _}) ->
+                ok;
+            ({type_decl, _, _, _, _}) ->
+                ok;
+            ({effect_decl, _, _, _}) ->
+                ok;
+            (Declaration) ->
+                Context =
+                    catena_backend_error:context(
+                        type_erasure,
+                        declaration,
+                        Declaration,
+                        #{module => ModuleName}
+                    ),
+                throw(
+                    catena_backend_error:invalid_declaration_disposition(
+                        Declaration,
+                        Context
+                    )
+                )
+        end,
+        Decls
+    ).
 
 validate_declaration_dispositions(Decls, ModuleName) ->
     lists:foreach(

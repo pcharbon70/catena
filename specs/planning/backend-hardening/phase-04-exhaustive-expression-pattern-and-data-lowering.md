@@ -116,7 +116,7 @@ and all variables introduced by successful patterns.
 and erase static type information only after all representation metadata is
 fixed.
 
-- [ ] **Section 4.3 Complete**
+- [x] **Section 4.3 Complete**
 
 ### Task 4.3.1: Stabilize Value Representations
 
@@ -124,21 +124,21 @@ fixed.
 representations explicit and consistent across construction, access, and
 pattern matching.
 
-- [ ] **Task 4.3.1 Complete**
+- [x] **Task 4.3.1 Complete**
 
 #### Subtask 4.3.1.1: Validate Constructor And Collection Symmetry
 
 **Description:** Ensure each emitted value can be consumed by the corresponding
 pattern form with the same tag, arity, field, and element conventions.
 
-- [ ] **Subtask 4.3.1.1 Complete**
+- [x] **Subtask 4.3.1.1 Complete**
 
 #### Subtask 4.3.1.2: Validate Record Map Semantics
 
 **Description:** Confirm record construction, field access, and exact record
 patterns use compatible map-key and missing-field behavior.
 
-- [ ] **Subtask 4.3.1.2 Complete**
+- [x] **Subtask 4.3.1.2 Complete**
 
 ### Task 4.3.2: Harden Type Erasure
 
@@ -146,7 +146,7 @@ patterns use compatible map-key and missing-field behavior.
 declarations and supported expressions rather than a permissive identity
 fallback.
 
-- [ ] **Task 4.3.2 Complete**
+- [x] **Task 4.3.2 Complete**
 
 #### Subtask 4.3.2.1: Erase Static Types Exhaustively
 
@@ -154,14 +154,14 @@ fallback.
 only through explicit clauses that preserve required constructor and dispatch
 metadata.
 
-- [ ] **Subtask 4.3.2.1 Complete**
+- [x] **Subtask 4.3.2.1 Complete**
 
 #### Subtask 4.3.2.2: Reject Unknown Erasure Forms
 
 **Description:** Return an invalid-disposition or unsupported-construct error
 when erasure receives a normalized form without an accepted rule.
 
-- [ ] **Subtask 4.3.2.2 Complete**
+- [x] **Subtask 4.3.2.2 Complete**
 
 ## Section 4.4: Phase 4 Integration Tests
 

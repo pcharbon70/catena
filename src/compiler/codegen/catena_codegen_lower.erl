@@ -337,6 +337,8 @@ lower_operator('div') -> 'div';
 lower_operator('rem') -> 'rem';
 lower_operator('==') -> '==';
 lower_operator('/=') -> '/=';
+lower_operator('=:=') -> '=:=';
+lower_operator('=/=') -> '=/=';
 lower_operator('===') -> '===';
 lower_operator('!==') -> '!==';
 lower_operator('<') -> '<';
