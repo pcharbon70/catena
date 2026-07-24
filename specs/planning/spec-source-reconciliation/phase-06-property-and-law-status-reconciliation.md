@@ -78,49 +78,49 @@ stable failed test results rather than undefined runtime variables.
 cardinality ranges by resampling collisions deterministically and reporting
 unsatisfiable unique domains explicitly.
 
-- [ ] **Section 6.2 Complete**
+- [x] **Section 6.2 Complete**
 
 ### Task 6.2.1: Preserve Requested Root Cardinality
 
 **Description:** Generate unique map keys and set elements until the selected
 root size is reached instead of silently collapsing duplicate samples.
 
-- [ ] **Task 6.2.1 Complete**
+- [x] **Task 6.2.1 Complete**
 
 #### Subtask 6.2.1.1: Resample Map Key Collisions
 
 **Description:** Retry duplicate map keys with deterministic seed progression
 while retaining the existing map shrink behavior.
 
-- [ ] **Subtask 6.2.1.1 Complete**
+- [x] **Subtask 6.2.1.1 Complete**
 
 #### Subtask 6.2.1.2: Resample Set Element Collisions
 
 **Description:** Apply the same unique-sampling contract to bounded set
 generation.
 
-- [ ] **Subtask 6.2.1.2 Complete**
+- [x] **Subtask 6.2.1.2 Complete**
 
 ### Task 6.2.2: Make Exhaustion and Reproduction Explicit
 
 **Description:** Bound collision retries, report generators whose domain
 cannot satisfy the requested cardinality, and cover representative seeds.
 
-- [ ] **Task 6.2.2 Complete**
+- [x] **Task 6.2.2 Complete**
 
 #### Subtask 6.2.2.1: Report Unique-Domain Exhaustion
 
 **Description:** Raise a structured generator failure after a bounded number
 of duplicate samples rather than hanging or returning an undersized root.
 
-- [ ] **Subtask 6.2.2.1 Complete**
+- [x] **Subtask 6.2.2.1 Complete**
 
 #### Subtask 6.2.2.2: Add Deterministic Seed Sweeps
 
 **Description:** Verify map and set range invariants across a repeatable set of
 seeds, including seeds that previously exposed duplicate collapse.
 
-- [ ] **Subtask 6.2.2.2 Complete**
+- [x] **Subtask 6.2.2.2 Complete**
 
 **Acceptance Criteria:**
 

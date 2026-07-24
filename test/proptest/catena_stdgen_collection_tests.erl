@@ -120,11 +120,30 @@ gen_map_shrinks_by_removing_entries_test() ->
 gen_map_of_with_range_test() ->
     Range = catena_range:range_constant({2, 5}),
     Gen = catena_stdgen:gen_map_of(Range, catena_gen:gen_int(), catena_gen:gen_int()),
-    Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_from_int(1)),
     Map = catena_tree:root(Tree),
     Size = map_size(Map),
     ?assert(Size >= 2 andalso Size =< 5),
     ok.
+
+gen_map_of_preserves_cardinality_across_seeds_test() ->
+    Range = catena_range:range_constant({5, 5}),
+    Gen = catena_stdgen:gen_map_of(Range, catena_gen:gen_int(), catena_gen:gen_int()),
+    lists:foreach(
+        fun(SeedInt) ->
+            Tree = catena_gen:run(Gen, 10, catena_gen:seed_from_int(SeedInt)),
+            ?assertEqual(5, map_size(catena_tree:root(Tree)))
+        end,
+        lists:seq(1, 250)
+    ).
+
+gen_map_of_reports_unsatisfiable_key_domain_test() ->
+    Range = catena_range:range_constant({2, 2}),
+    Gen = catena_stdgen:gen_map_of(Range, catena_gen:constant(key), catena_gen:gen_int()),
+    ?assertThrow(
+        {generator_failed, {unique_collection_exhausted, map, 2}},
+        catena_gen:run(Gen, 10, catena_gen:seed_from_int(1))
+    ).
 
 %% ---- Set Generators ----
 
@@ -153,8 +172,27 @@ gen_set_shrinks_by_removing_elements_test() ->
 gen_set_of_with_range_test() ->
     Range = catena_range:range_constant({2, 5}),
     Gen = catena_stdgen:gen_set_of(Range, catena_gen:gen_int()),
-    Tree = catena_gen:run(Gen, 10, catena_gen:seed_new()),
+    Tree = catena_gen:run(Gen, 10, catena_gen:seed_from_int(1)),
     Set = catena_tree:root(Tree),
     Size = length(Set),
     ?assert(Size >= 2 andalso Size =< 5),
     ok.
+
+gen_set_of_preserves_cardinality_across_seeds_test() ->
+    Range = catena_range:range_constant({5, 5}),
+    Gen = catena_stdgen:gen_set_of(Range, catena_gen:gen_int()),
+    lists:foreach(
+        fun(SeedInt) ->
+            Tree = catena_gen:run(Gen, 10, catena_gen:seed_from_int(SeedInt)),
+            ?assertEqual(5, length(catena_tree:root(Tree)))
+        end,
+        lists:seq(1, 250)
+    ).
+
+gen_set_of_reports_unsatisfiable_element_domain_test() ->
+    Range = catena_range:range_constant({2, 2}),
+    Gen = catena_stdgen:gen_set_of(Range, catena_gen:constant(element)),
+    ?assertThrow(
+        {generator_failed, {unique_collection_exhausted, set, 2}},
+        catena_gen:run(Gen, 10, catena_gen:seed_from_int(1))
+    ).

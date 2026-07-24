@@ -98,6 +98,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-define(DEFAULT_UNIQUE_ATTEMPTS, 100).
+
 %%====================================================================
 %% Types
 %%====================================================================
@@ -835,22 +837,73 @@ gen_map_of(LengthRange, KeyGen, ValueGen) ->
 gen_map_tree(0, _KeyGen, _ValueGen, _Size, _Seed) ->
     catena_tree:singleton(#{});
 gen_map_tree(Len, KeyGen, ValueGen, Size, Seed) when Len > 0 ->
-    {Entries, _} = lists:mapfoldl(
-        fun(_, AccSeed) ->
-            {SeedK, SeedV} = catena_gen:seed_split(AccSeed),
-            KeyTree = catena_gen:run(KeyGen, Size, SeedK),
-            ValTree = catena_gen:run(ValueGen, Size, SeedV),
-            {{catena_tree:root(KeyTree), catena_tree:root(ValTree)}, SeedV}
-        end,
+    {Map, _} = gen_unique_map_entries(
+        Len,
+        Len,
+        KeyGen,
+        ValueGen,
+        Size,
         Seed,
-        lists:seq(1, Len)
+        #{},
+        ?DEFAULT_UNIQUE_ATTEMPTS
     ),
-    %% Remove duplicates by keeping the last occurrence of each key
-    Map = lists:foldl(fun({K, V}, Acc) -> maps:put(K, V, Acc) end, #{}, Entries),
     catena_tree:tree(Map, fun() ->
         %% Shrink by removing entries
         gen_map_shrink(maps:to_list(Map), KeyGen, ValueGen, Size)
     end).
+
+gen_unique_map_entries(0, _Requested, _KeyGen, _ValueGen, _Size, Seed, Map, _Attempts) ->
+    {Map, Seed};
+gen_unique_map_entries(
+    _Remaining,
+    Requested,
+    _KeyGen,
+    _ValueGen,
+    _Size,
+    _Seed,
+    _Map,
+    0
+) ->
+    throw({generator_failed, {unique_collection_exhausted, map, Requested}});
+gen_unique_map_entries(
+    Remaining,
+    Requested,
+    KeyGen,
+    ValueGen,
+    Size,
+    Seed,
+    Map,
+    Attempts
+) ->
+    {SeedK, SeedV} = catena_gen:seed_split(Seed),
+    KeyTree = catena_gen:run(KeyGen, Size, SeedK),
+    Key = catena_tree:root(KeyTree),
+    case maps:is_key(Key, Map) of
+        true ->
+            gen_unique_map_entries(
+                Remaining,
+                Requested,
+                KeyGen,
+                ValueGen,
+                Size,
+                SeedV,
+                Map,
+                Attempts - 1
+            );
+        false ->
+            ValueTree = catena_gen:run(ValueGen, Size, SeedV),
+            Value = catena_tree:root(ValueTree),
+            gen_unique_map_entries(
+                Remaining - 1,
+                Requested,
+                KeyGen,
+                ValueGen,
+                Size,
+                SeedV,
+                maps:put(Key, Value, Map),
+                ?DEFAULT_UNIQUE_ATTEMPTS
+            )
+    end.
 
 %% ---- Set Generators ----
 
@@ -879,21 +932,81 @@ gen_set_of(LengthRange, ElementGen) ->
 gen_set_tree(0, _ElementGen, _Size, _Seed) ->
     catena_tree:singleton([]);
 gen_set_tree(Len, ElementGen, Size, Seed) when Len > 0 ->
-    {Elements, _} = lists:mapfoldl(
-        fun(_, AccSeed) ->
-            {S1, S2} = catena_gen:seed_split(AccSeed),
-            Tree = catena_gen:run(ElementGen, Size, S1),
-            {catena_tree:root(Tree), S2}
-        end,
+    {Elements, _} = gen_unique_set_elements(
+        Len,
+        Len,
+        ElementGen,
+        Size,
         Seed,
-        lists:seq(1, Len)
+        #{},
+        [],
+        ?DEFAULT_UNIQUE_ATTEMPTS
     ),
-    %% Remove duplicates while preserving order
-    UniqueElements = lists:usort(Elements),
+    UniqueElements = lists:sort(Elements),
     catena_tree:tree(UniqueElements, fun() ->
         %% Shrink by removing elements
         gen_set_shrink(UniqueElements, ElementGen, Size)
     end).
+
+gen_unique_set_elements(
+    0,
+    _Requested,
+    _ElementGen,
+    _Size,
+    Seed,
+    _Seen,
+    Elements,
+    _Attempts
+) ->
+    {Elements, Seed};
+gen_unique_set_elements(
+    _Remaining,
+    Requested,
+    _ElementGen,
+    _Size,
+    _Seed,
+    _Seen,
+    _Elements,
+    0
+) ->
+    throw({generator_failed, {unique_collection_exhausted, set, Requested}});
+gen_unique_set_elements(
+    Remaining,
+    Requested,
+    ElementGen,
+    Size,
+    Seed,
+    Seen,
+    Elements,
+    Attempts
+) ->
+    {ElementSeed, NextSeed} = catena_gen:seed_split(Seed),
+    Tree = catena_gen:run(ElementGen, Size, ElementSeed),
+    Element = catena_tree:root(Tree),
+    case maps:is_key(Element, Seen) of
+        true ->
+            gen_unique_set_elements(
+                Remaining,
+                Requested,
+                ElementGen,
+                Size,
+                NextSeed,
+                Seen,
+                Elements,
+                Attempts - 1
+            );
+        false ->
+            gen_unique_set_elements(
+                Remaining - 1,
+                Requested,
+                ElementGen,
+                Size,
+                NextSeed,
+                maps:put(Element, true, Seen),
+                [Element | Elements],
+                ?DEFAULT_UNIQUE_ATTEMPTS
+            )
+    end.
 
 %%====================================================================
 %% Internal Helpers - Collections
