@@ -375,19 +375,49 @@ infer({identifier, Name, _Loc}, Env, State) ->
 %
 % The perform expression introduces an effect into the function's effect set.
 % The result type depends on the operation's declared type.
-infer({perform_expr, EffectName, _OperationName, Args, _Loc}, Env, State) ->
+infer({perform_expr, EffectName, OperationName, Args, _Loc}, Env, State) ->
     %% Infer types of arguments
     case infer_exprs(Args, Env, State) of
-        {_ArgTypes, State1} ->
-            %% For now, return a fresh type variable for the result
-            %% In a full implementation, we'd look up the operation's type
-            {ResultType, State2} = catena_infer_state:fresh_var(State1),
-
-            %% Record the effect in the state
-            %% The effect is tracked as part of the function's type
-            State3 = catena_infer_state:add_effect(EffectName, State2),
-
-            {ResultType, State3};
+        {ArgTypes, State1} ->
+            Binding = catena_effect_resolution:binding_name(
+                EffectName,
+                OperationName
+            ),
+            case catena_type_env:lookup(Env, Binding) of
+                {ok, Scheme} ->
+                    {OperationType, Constraints, State2} =
+                        instantiate(Scheme, State1),
+                    State3 = catena_infer_state:add_constraints(
+                        Constraints,
+                        State2
+                    ),
+                    case infer_operation_application(
+                        OperationType,
+                        ArgTypes,
+                        State3
+                    ) of
+                        {ResultType, State4} ->
+                            State5 = catena_infer_state:add_effect(
+                                EffectName,
+                                State4
+                            ),
+                            {ResultType, State5};
+                        {error, _, _} = Error ->
+                            Error
+                    end;
+                none ->
+                    %% Direct inference-unit callers do not carry module
+                    %% declarations. Source compilation resolves every
+                    %% operation before entering inference, while this
+                    %% compatibility path retains the historical fresh result.
+                    {ResultType, State2} =
+                        catena_infer_state:fresh_var(State1),
+                    State3 = catena_infer_state:add_effect(
+                        EffectName,
+                        State2
+                    ),
+                    {ResultType, State3}
+            end;
         {error, _, _} = Error ->
             Error
     end;
@@ -410,6 +440,42 @@ infer({handle_expr, Body, _Handlers, _Loc}, Env, State) ->
         {error, _, _} = Error ->
             Error
     end.
+
+infer_operation_application(OperationType, [], State) ->
+    Substitution = catena_infer_state:get_subst(State),
+    {catena_type_subst:apply(Substitution, OperationType), State};
+infer_operation_application(
+    OperationType,
+    [ArgumentType | Rest],
+    State
+) ->
+    {ResultType, State1} = catena_infer_state:fresh_var(State),
+    Effects = operation_function_effects(OperationType),
+    ExpectedType = {tfun, ArgumentType, ResultType, Effects},
+    case catena_infer_unify:unify(
+        OperationType,
+        ExpectedType,
+        State1
+    ) of
+        {ok, _Substitution, State2} ->
+            CurrentSubstitution = catena_infer_state:get_subst(State2),
+            AppliedResult = catena_type_subst:apply(
+                CurrentSubstitution,
+                ResultType
+            ),
+            infer_operation_application(
+                AppliedResult,
+                Rest,
+                State2
+            );
+        {error, _, _} = Error ->
+            Error
+    end.
+
+operation_function_effects({tfun, _From, _To, Effects}) ->
+    Effects;
+operation_function_effects(_Type) ->
+    catena_types:empty_effects().
 
 %% @doc Instantiate a type scheme by replacing quantified variables with fresh ones
 %%
@@ -754,4 +820,3 @@ infer_match_clause({Pattern, Guard, Body}, ScrutineeType, ResultType, Env, State
         {error, _, _} = Error ->
             Error
     end.
-

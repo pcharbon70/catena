@@ -15,7 +15,7 @@ substitution, and making runtime dependencies visible.
 call resolution, backend lowering, and diagnostics before effect declarations
 are erased.
 
-- [ ] **Section 5.1 Complete**
+- [x] **Section 5.1 Complete**
 
 ### Task 5.1.1: Index Effect Operations
 
@@ -23,14 +23,14 @@ are erased.
 with its parameter types, result type, effect identity, arity, and source
 location.
 
-- [ ] **Task 5.1.1 Complete**
+- [x] **Task 5.1.1 Complete**
 
 #### Subtask 5.1.1.1: Preserve Operation Signatures
 
 **Description:** Convert operation declarations into stable typed metadata
 that survives semantic normalization and static effect-declaration erasure.
 
-- [ ] **Subtask 5.1.1.1 Complete**
+- [x] **Subtask 5.1.1.1 Complete**
 
 #### Subtask 5.1.1.2: Resolve Performed Operations
 
@@ -38,28 +38,28 @@ that survives semantic normalization and static effect-declaration erasure.
 declared operation identity and reject missing effects, missing operations,
 and arity mismatches.
 
-- [ ] **Subtask 5.1.1.2 Complete**
+- [x] **Subtask 5.1.1.2 Complete**
 
 ### Task 5.1.2: Validate Operation Types And Effects
 
 **Description:** Use resolved operation signatures rather than fresh
 unconstrained result types when checking effectful expressions.
 
-- [ ] **Task 5.1.2 Complete**
+- [x] **Task 5.1.2 Complete**
 
 #### Subtask 5.1.2.1: Check Operation Arguments And Results
 
 **Description:** Unify performed arguments with declared parameters and return
 the declared result type through the typed backend input.
 
-- [ ] **Subtask 5.1.2.1 Complete**
+- [x] **Subtask 5.1.2.1 Complete**
 
 #### Subtask 5.1.2.2: Preserve Effect Obligations
 
 **Description:** Carry synthesized and declared effect sets into backend
 metadata and reject unresolved or invalid effect constraints before lowering.
 
-- [ ] **Subtask 5.1.2.2 Complete**
+- [x] **Subtask 5.1.2.2 Complete**
 
 ## Section 5.2: Explicit Effect Context Lowering
 
