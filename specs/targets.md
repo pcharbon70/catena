@@ -30,7 +30,10 @@ Based on the current `specs/` set, codebase, and test suite, the current promote
 
 ## Immediate Targets
 
-- Reduce the visible repository-wide Dialyzer warning inventory.
+- Execute the
+  [Dialyzer remediation roadmap](planning/dialyzer-remediation/README.md) to
+  replace the visible 777-warning inventory with an enforced zero-warning
+  boundary.
 - Decide whether the next implementation track resumes the proof-of-concept
   module system, advances source-language actor integration, or deepens the
   already-implemented property-testing framework.
