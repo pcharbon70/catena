@@ -32,6 +32,8 @@
     resolve_transform/4,
     resolve_constructor/4,
     resolve_value/3,
+    resolve_trait_method/4,
+    resolve_trait_value/3,
     callable_inventory/1,
     import_resolution/1,
 
@@ -68,6 +70,7 @@
     current_transform :: atom() | undefined,
     callables :: catena_call_resolution:inventory() | undefined,
     imports :: catena_import_resolution:resolution() | undefined,
+    traits :: catena_trait_dictionary:inventory() | undefined,
     runtime_context :: cerl:cerl() | undefined,
     effectful_transforms = #{} :: #{atom() => non_neg_integer()}
 }).
@@ -90,6 +93,7 @@ new_state(Context) when is_map(Context) ->
         module_name = maps:get(module_name, Context, undefined),
         callables = maps:get(callables, Context, undefined),
         imports = maps:get(import_resolution, Context, undefined),
+        traits = maps:get(trait_inventory, Context, undefined),
         effectful_transforms = maps:get(
             effectful_transforms,
             Context,
@@ -313,6 +317,78 @@ callable_inventory(#codegen_state{callables = Inventory}) ->
     catena_import_resolution:resolution() | undefined.
 import_resolution(#codegen_state{imports = Imports}) ->
     Imports.
+
+%% @doc Resolve a trait method to its visible runtime dictionaries.
+-spec resolve_trait_method(
+    atom(),
+    non_neg_integer(),
+    term(),
+    codegen_state()
+) -> {ok, [map()]} | {error, term()}.
+resolve_trait_method(
+    Name,
+    Arity,
+    SourceTerm,
+    #codegen_state{
+        module_name = Module,
+        current_transform = Transform,
+        traits = Inventory
+    }
+) ->
+    Context = catena_backend_error:context(
+        trait_dispatch,
+        trait_method,
+        SourceTerm,
+        #{module => Module, transform => Transform}
+    ),
+    case Inventory of
+        undefined ->
+            {error, catena_backend_error:unresolved_call(
+                Name,
+                Arity,
+                Context#{callable_kind => trait_method}
+            )};
+        _ ->
+            catena_trait_dictionary:resolve_method(
+                Name,
+                Arity,
+                Inventory,
+                Context
+            )
+    end.
+
+%% @doc Resolve a trait method referenced as a first-class function.
+-spec resolve_trait_value(atom(), term(), codegen_state()) ->
+    {ok, non_neg_integer(), [map()]} | {error, term()}.
+resolve_trait_value(
+    Name,
+    SourceTerm,
+    #codegen_state{
+        module_name = Module,
+        current_transform = Transform,
+        traits = Inventory
+    }
+) ->
+    Context = catena_backend_error:context(
+        trait_dispatch,
+        trait_method_value,
+        SourceTerm,
+        #{module => Module, transform => Transform}
+    ),
+    case Inventory of
+        undefined ->
+            {error, catena_backend_error:unresolved_call(
+                Name,
+                0,
+                Context#{callable_kind => trait_method}
+            )};
+        _ ->
+            catena_trait_dictionary:resolve_method_value(
+                Name,
+                Inventory,
+                Context
+            )
+    end.
 
 %%====================================================================
 %% Variable Generation

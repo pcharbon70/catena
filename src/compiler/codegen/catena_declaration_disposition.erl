@@ -187,8 +187,8 @@ classify_declaration(
     Index
 ) ->
     (declaration_disposition(Index, trait, Declaration, Location))#{
-        disposition => unsupported,
-        reason => trait_dispatch_deferred,
+        disposition => erased_static,
+        reason => trait_dispatch_validated,
         representation => #{
             kind => trait_dispatch,
             name => Name,
@@ -205,8 +205,8 @@ classify_declaration(
     Index
 ) ->
     (declaration_disposition(Index, instance, Declaration, Location))#{
-        disposition => unsupported,
-        reason => instance_dispatch_deferred,
+        disposition => runtime_lowered,
+        reason => instance_dictionary_emitted,
         representation => #{
             kind => instance_dictionary,
             trait => Trait,
@@ -408,10 +408,17 @@ disposition_error(Unit, Disposition) ->
     {error, Diagnostic}.
 
 emits_runtime_declaration(Disposition) ->
-    lists:member(
+    case {
         maps:get(disposition, Disposition),
-        [lowered, runtime_lowered]
-    ).
+        maps:get(kind, Disposition, unknown)
+    } of
+        {lowered, _} -> true;
+        %% Instance declarations are emitted by the dictionary generator,
+        %% not by the ordinary declaration lowering path.
+        {runtime_lowered, instance} -> false;
+        {runtime_lowered, _} -> true;
+        _ -> false
+    end.
 
 transform_requires_runtime_export(_Name, []) ->
     true;

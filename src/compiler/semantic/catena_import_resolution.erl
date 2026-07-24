@@ -35,7 +35,8 @@ empty(Module) ->
         entries => [],
         unqualified => #{},
         qualified => #{},
-        qualifiers => []
+        qualifiers => [],
+        resolved_modules => []
     }.
 
 -spec build(atom(), [term()], #{atom() => map()}, [atom()]) ->
@@ -87,7 +88,18 @@ resolve_constructor(Name, Arity, Resolution, Context) ->
 -spec resolve_value(atom(), resolution(), map()) ->
     {ok, map()} | {error, term()}.
 resolve_value(Name, Resolution, Context) ->
-    case maps:get(Name, maps:get(unqualified, Resolution), []) of
+    case [
+        Entry
+        || Entry <- maps:get(
+            Name,
+            maps:get(unqualified, Resolution),
+            []
+        ),
+           lists:member(
+               maps:get(kind, Entry),
+               [transform, constructor]
+           )
+    ] of
         [Entry] ->
             {ok, Entry};
         [] ->
@@ -244,7 +256,14 @@ select_symbols(Items, Available) when is_list(Items) ->
             {ok, [
                 Entry
                 || Entry <- Available,
-                   lists:member(maps:get(name, Entry), Items)
+                   lists:member(maps:get(name, Entry), Items) orelse
+                       (
+                           maps:get(kind, Entry) =:= trait_method andalso
+                           lists:member(
+                               maps:get(owner, Entry),
+                               Items
+                           )
+                       )
             ]};
         _ ->
             {error, Missing}
@@ -266,6 +285,12 @@ add_selected(Selected, true, Prefix, Location, _LocalSet, Resolution) ->
             {ok, Resolution#{
                 entries := maps:get(entries, Resolution) ++ Entries,
                 qualified := Qualified1,
+                resolved_modules := lists:usort(
+                    [
+                        maps:get(source_module, Entry)
+                        || Entry <- Entries
+                    ] ++ maps:get(resolved_modules, Resolution)
+                ),
                 qualifiers := lists:usort(
                     [Prefix | maps:get(qualifiers, Resolution)]
                 )
@@ -299,7 +324,11 @@ add_selected(Selected, false, _Prefix, Location, LocalSet, Resolution) ->
     ),
     {ok, Resolution#{
         entries := maps:get(entries, Resolution) ++ Entries,
-        unqualified := Unqualified1
+        unqualified := Unqualified1,
+        resolved_modules := lists:usort(
+            [maps:get(source_module, Entry) || Entry <- Entries] ++
+                maps:get(resolved_modules, Resolution)
+        )
     }}.
 
 add_qualified_entries([], _Prefix, _Location, Index) ->

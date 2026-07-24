@@ -215,14 +215,6 @@ deferred_runtime_declarations_fail_with_source_context_test_() ->
                 "property \"not emitted\" = "
                 "forall x : Int . x\n",
                 application_property_artifact_deferred
-            ))},
-        {"trait declaration",
-            ?_test(assert_deferred_declaration_rejected(
-                "module DeferredTrait\n"
-                "trait Empty a where\n"
-                "member : a -> a\n"
-                "end\n",
-                trait_dispatch_deferred
             ))}
     ].
 

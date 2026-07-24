@@ -27,6 +27,7 @@
     symbols/1,
     callables/1,
     import_resolution/1,
+    trait_inventory/1,
     effect_inventory/1,
     effect_operations/1,
     effect_uses/1,
@@ -40,7 +41,7 @@
     with_dispositions/2
 ]).
 
--define(UNIT_VERSION, 6).
+-define(UNIT_VERSION, 7).
 
 -opaque t() :: #{
     '$catena_compilation_unit' := pos_integer(),
@@ -58,6 +59,7 @@
     symbols := [symbol()],
     callables := catena_call_resolution:inventory(),
     import_resolution := catena_import_resolution:resolution(),
+    trait_inventory := catena_trait_dictionary:inventory(),
     effect_inventory := catena_effect_resolution:inventory(),
     effectful_transforms := #{atom() => non_neg_integer()},
     runtime_dependencies := [map()],
@@ -147,18 +149,54 @@ new(
                                 effect_runtime_dependencies(
                                     EffectfulTransforms
                                 ),
-                            ArtifactDependencies =
-                                catena_module_linkage:artifact_dependencies(
-                                    Imports,
-                                    RuntimeDependencies
-                                ),
+                            ImportResolution = maps:get(
+                                import_resolution,
+                                Options,
+                                catena_import_resolution:empty(Name)
+                            ),
+                            Interfaces = maps:get(
+                                module_interfaces,
+                                Options,
+                                #{}
+                            ),
+                            case catena_trait_dictionary:build(
+                                Name,
+                                Declarations,
+                                TypedDeclarations,
+                                Interfaces,
+                                ImportResolution
+                            ) of
+                                {ok, TraitInventory} ->
+                            TraitRuntimeDependencies =
+                                case catena_trait_dictionary:
+                                    runtime_required(TraitInventory)
+                                of
+                                    true ->
+                                        [
+                                            catena_trait_dictionary:
+                                                runtime_dependency()
+                                        ];
+                                    false ->
+                                        []
+                                end,
+                            AllRuntimeDependencies = lists:usort(
+                                RuntimeDependencies ++
+                                    TraitRuntimeDependencies
+                            ),
+                            AllArtifactDependencies =
+                                catena_module_linkage:
+                                    artifact_dependencies(
+                                        Imports,
+                                        AllRuntimeDependencies
+                                    ),
                             case catena_module_interface:build(
                                 Name,
                                 Exports,
                                 Declarations,
                                 Symbols,
-                                ArtifactDependencies,
-                                SourceIdentity
+                                AllArtifactDependencies,
+                                SourceIdentity,
+                                TraitInventory
                             ) of
                                 {ok, Interface} ->
                             {ok, #{
@@ -179,21 +217,22 @@ new(
                                 validation_state => ValidationState,
                                 symbols => Symbols,
                                 callables => Callables,
-                                import_resolution => maps:get(
-                                    import_resolution,
-                                    Options,
-                                    catena_import_resolution:empty(Name)
-                                ),
+                                import_resolution => ImportResolution,
+                                trait_inventory => TraitInventory,
                                 effect_inventory => EffectInventory,
                                 effectful_transforms => EffectfulTransforms,
-                                runtime_dependencies => RuntimeDependencies,
+                                runtime_dependencies =>
+                                    AllRuntimeDependencies,
                                 artifact_dependencies =>
-                                    ArtifactDependencies,
+                                    AllArtifactDependencies,
                                 interface => Interface,
                                 locations => Locations,
                                 dispositions =>
                                     unclassified_dispositions(Declarations)
                             }};
+                                {error, _} = Error ->
+                                    Error
+                            end;
                                 {error, _} = Error ->
                                     Error
                             end;
@@ -243,6 +282,7 @@ is_compilation_unit(#{
     symbols := Symbols,
     callables := Callables,
     import_resolution := ImportResolution,
+    trait_inventory := TraitInventory,
     effect_inventory := EffectInventory,
     effectful_transforms := EffectfulTransforms,
     runtime_dependencies := RuntimeDependencies,
@@ -258,6 +298,7 @@ is_compilation_unit(#{
         is_list(Symbols) andalso
         catena_call_resolution:is_inventory(Callables) andalso
         catena_import_resolution:is_resolution(ImportResolution) andalso
+        catena_trait_dictionary:is_inventory(TraitInventory) andalso
         catena_effect_resolution:is_inventory(EffectInventory) andalso
         is_map(EffectfulTransforms) andalso
         is_list(RuntimeDependencies) andalso
@@ -315,6 +356,9 @@ callables(Unit) -> maps:get(callables, Unit).
 
 -spec import_resolution(t()) -> catena_import_resolution:resolution().
 import_resolution(Unit) -> maps:get(import_resolution, Unit).
+
+-spec trait_inventory(t()) -> catena_trait_dictionary:inventory().
+trait_inventory(Unit) -> maps:get(trait_inventory, Unit).
 
 -spec effect_inventory(t()) -> catena_effect_resolution:inventory().
 effect_inventory(Unit) -> maps:get(effect_inventory, Unit).

@@ -62,6 +62,7 @@ generate_validated_module(Unit) ->
                         CodegenOpts,
                         catena_compilation_unit:callables(Unit),
                         catena_compilation_unit:import_resolution(Unit),
+                        catena_compilation_unit:trait_inventory(Unit),
                         catena_compilation_unit:effectful_transforms(Unit),
                         catena_compilation_unit:runtime_dependencies(Unit),
                         catena_compilation_unit:artifact_dependencies(Unit)
@@ -99,6 +100,7 @@ generate_module(ModuleAST, Opts) ->
                     Opts,
                     Inventory,
                     catena_import_resolution:empty(Name),
+                    catena_trait_dictionary:empty(Name),
                     EffectfulTransforms,
                     runtime_dependencies(EffectfulTransforms),
                     runtime_dependencies(EffectfulTransforms)
@@ -122,6 +124,7 @@ generate_module_with_inventory(
     Opts,
     Inventory,
     ImportResolution,
+    TraitInventory,
     EffectfulTransforms,
     RuntimeDependencies,
     ArtifactDependencies
@@ -132,6 +135,7 @@ generate_module_with_inventory(
             Opts,
             Inventory,
             ImportResolution,
+            TraitInventory,
             EffectfulTransforms,
             RuntimeDependencies,
             ArtifactDependencies
@@ -152,6 +156,7 @@ do_generate_module(
     Opts,
     Inventory,
     ImportResolution,
+    TraitInventory,
     EffectfulTransforms,
     RuntimeDependencies,
     ArtifactDependencies
@@ -162,6 +167,7 @@ do_generate_module(
             module_name => Name,
             callables => Inventory,
             import_resolution => ImportResolution,
+            trait_inventory => TraitInventory,
             effectful_transforms => EffectfulTransforms
         }),
 
@@ -185,10 +191,18 @@ do_generate_module(
         ActiveDecls = [D || D <- ErasedDecls, D =/= erased],
 
         %% Compile functions
-        {CoreFunctions, _State1} = compile_functions(ActiveDecls, State),
+        {CoreFunctions, State1} = compile_functions(ActiveDecls, State),
+
+        {DictionaryFunctions, _State2, DictionaryExports} =
+            catena_trait_dictionary:compile_dictionaries(
+                TraitInventory,
+                State1
+            ),
 
         %% Generate exports
-        CoreExports = generate_module_exports(ActiveDecls, Exports),
+        CoreExports =
+            generate_module_exports(ActiveDecls, Exports) ++
+                DictionaryExports,
 
         %% Build module attributes
         Attrs = generate_attributes(
@@ -203,7 +217,7 @@ do_generate_module(
             cerl:c_atom(Name),
             CoreExports,
             Attrs,
-            CoreFunctions
+            CoreFunctions ++ DictionaryFunctions
         ),
 
         {ok, CoreModule}.

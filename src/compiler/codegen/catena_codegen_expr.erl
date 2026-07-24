@@ -191,8 +191,18 @@ translate_var({var, Name, _Loc} = Variable, State) ->
             case catena_codegen_utils:resolve_value(Name, Variable, State) of
                 {ok, Callable} ->
                     translate_callable_value(Callable, State);
-                {error, Diagnostic} ->
-                    throw(Diagnostic)
+                {error, CallableDiagnostic} ->
+                    case resolve_trait_value(Name, Variable, State) of
+                        {ok, Candidates, Arity} ->
+                            translate_trait_callable_value(
+                                Name,
+                                Arity,
+                                Candidates,
+                                State
+                            );
+                        {error, _} ->
+                            throw(CallableDiagnostic)
+                    end
             end
     end.
 
@@ -319,8 +329,27 @@ translate_named_app(FuncName, CoreArgs, _Loc, _Application, State) ->
                                         ),
                                     {cerl:c_apply(Target, RuntimeArgs), State}
                             end;
-                        {error, Diagnostic} ->
-                            throw(Diagnostic)
+                        {error, CallableDiagnostic} ->
+                            case catena_codegen_utils:
+                                resolve_trait_method(
+                                    FuncName,
+                                    length(CoreArgs),
+                                    _Application,
+                                    State
+                                )
+                            of
+                                {ok, Candidates} ->
+                                    {
+                                        trait_dispatch_call(
+                                            Candidates,
+                                            FuncName,
+                                            CoreArgs
+                                        ),
+                                        State
+                                    };
+                                {error, _} ->
+                                    throw(CallableDiagnostic)
+                            end
                     end
             end
     end.
@@ -680,6 +709,37 @@ translate_callable_value(
         0 -> {Body, State1};
         _ -> {cerl:c_fun(Arguments, Body), State1}
     end.
+
+resolve_trait_value(Name, SourceTerm, State) ->
+    case catena_codegen_utils:resolve_trait_value(
+        Name,
+        SourceTerm,
+        State
+    ) of
+        {ok, Arity, Candidates} ->
+            {ok, Candidates, Arity};
+        {error, _} = Error ->
+            Error
+    end.
+
+translate_trait_callable_value(Name, Arity, Candidates, State) ->
+    {Arguments, State1} = catena_codegen_utils:fresh_vars(Arity, State),
+    Body = trait_dispatch_call(Candidates, Name, Arguments),
+    {cerl:c_fun(Arguments, Body), State1}.
+
+trait_dispatch_call(Candidates, Method, Arguments) ->
+    cerl:c_call(
+        cerl:c_atom(catena_trait_runtime),
+        cerl:c_atom(invoke),
+        [
+            cerl:abstract(Candidates),
+            cerl:c_atom(Method),
+            core_list(Arguments)
+        ]
+    ).
+
+core_list(Elements) ->
+    lists:foldr(fun cerl:c_cons/2, cerl:c_nil(), Elements).
 
 remote_call(Entry, Arguments) ->
     cerl:c_call(

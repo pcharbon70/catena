@@ -137,9 +137,6 @@ nonexported_signature_can_be_erased_test() ->
 runtime_bearing_declarations_are_not_silently_erased_test() ->
     Location = {location, 9, 3},
     RuntimeDeclarations = [
-        {trait_decl, 'Functor', [f], undefined, [], Location},
-        {instance_decl, 'Functor', [{type_con, 'Maybe'}], undefined, [],
-            Location},
         {test_decl, "deferred", {literal, integer, 1, Location}, Location},
         {property_decl, "deferred",
             {property_forall, [{x, 'Int'}],
@@ -165,6 +162,29 @@ runtime_bearing_declarations_are_not_silently_erased_test() ->
         end,
         RuntimeDeclarations
     ).
+
+traits_and_instances_have_promoted_dispositions_test() ->
+    Source =
+        "module PromotedTraits\n"
+        "type Flag = On | Off\n"
+        "trait Comparable a where\n"
+        "  equals : a -> a -> Bool\n"
+        "end\n"
+        "instance Comparable Flag where\n"
+        "  transform equals left right = true\n"
+        "end\n",
+    {ok, Unit} = catena_compile:compile_string_to_unit(Source),
+    Dispositions = declaration_dispositions(Unit),
+    ?assertEqual(
+        erased_static,
+        disposition_for(Dispositions, trait, 'Comparable')
+    ),
+    ?assertEqual(
+        runtime_lowered,
+        disposition_for(Dispositions, instance, 'Comparable')
+    ),
+    {ok, _BackendAST} =
+        catena_declaration_disposition:prepare_for_codegen(Unit).
 
 unknown_declaration_is_explicitly_unsupported_test() ->
     Location = {location, 12, 4},

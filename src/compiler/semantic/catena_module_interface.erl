@@ -10,7 +10,7 @@
 -module(catena_module_interface).
 
 -export([
-    build/6,
+    build/7,
     is_interface/1,
     source_module/1,
     runtime_module/1,
@@ -24,7 +24,8 @@
 -type interface() :: map().
 -export_type([interface/0]).
 
--spec build(atom(), [term()], [term()], [map()], [map()], term()) ->
+-spec build(atom(), [term()], [term()], [map()], [map()], term(),
+    catena_trait_dictionary:inventory()) ->
     {ok, interface()} | {error, term()}.
 build(
     Module,
@@ -32,7 +33,8 @@ build(
     Declarations,
     Symbols,
     ArtifactDependencies,
-    SourceIdentity
+    SourceIdentity,
+    TraitInventory
 ) ->
     case catena_module_identity:normalize(Module) of
         {ok, Identity} ->
@@ -63,6 +65,10 @@ build(
                     ExportPolicy
                 ),
                 instances => instance_metadata(Declarations, Module),
+                dictionaries =>
+                    catena_trait_dictionary:public_dictionaries(
+                        TraitInventory
+                    ),
                 artifact_dependencies =>
                     normalize_dependencies(ArtifactDependencies)
             }};
@@ -157,6 +163,14 @@ publishable_symbol(
     Policy
 ) ->
     exported(type, TypeName, Policy);
+publishable_symbol(#{kind := trait, name := Name}, _Declarations, Policy) ->
+    exported(trait, Name, Policy);
+publishable_symbol(
+    #{kind := trait_method, owner := Trait},
+    _Declarations,
+    Policy
+) ->
+    exported(trait, Trait, Policy);
 publishable_symbol(_, _, _) ->
     false.
 
