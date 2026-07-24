@@ -7,7 +7,7 @@ manifest, validates governance relationships and local links, provides focused
 conformance and full verification entry points, enforces them in CI, and
 publishes a final repeatable baseline for the reconciliation roadmap.
 
-**Status:** In progress.
+**Status:** Complete.
 
 **Dependencies:** Phase 6 complete.
 
@@ -144,7 +144,7 @@ compose specs plus the complete test suite for full verification.
 pull requests, reconcile promoted status/tooling documents, and publish the
 final Phase 7 evidence.
 
-- [ ] **Section 7.3 Complete**
+- [x] **Section 7.3 Complete**
 
 ### Task 7.3.1: Enforce The Verification Workflow
 
@@ -152,35 +152,35 @@ final Phase 7 evidence.
 the supported Erlang/Rebar versions and runs the repository's canonical verify
 target.
 
-- [ ] **Task 7.3.1 Complete**
+- [x] **Task 7.3.1 Complete**
 
 #### Subtask 7.3.1.1: Add Pull-Request And Main-Branch CI
 
 **Description:** Run verification for pull requests and pushes to `main`
 without granting write permissions.
 
-- [ ] **Subtask 7.3.1.1 Complete**
+- [x] **Subtask 7.3.1.1 Complete**
 
 ### Task 7.3.2: Publish Phase 7 Evidence
 
 **Description:** Run the governance, conformance, complete-suite, compile, and
 static-analysis gates and record their exact results.
 
-- [ ] **Task 7.3.2 Complete**
+- [x] **Task 7.3.2 Complete**
 
 #### Subtask 7.3.2.1: Reconcile Promoted Status And Tooling
 
 **Description:** Replace stale non-green and pre-runner descriptions with the
 implemented governance, green-suite, and remaining static-analysis boundaries.
 
-- [ ] **Subtask 7.3.2.1 Complete**
+- [x] **Subtask 7.3.2.1 Complete**
 
 #### Subtask 7.3.2.2: Create The Final Test Baseline
 
 **Description:** Record focused governance/conformance totals, two complete
 suite runs, tool versions, and remaining non-EUnit gaps.
 
-- [ ] **Subtask 7.3.2.2 Complete**
+- [x] **Subtask 7.3.2.2 Complete**
 
 **Acceptance Criteria:**
 
@@ -197,8 +197,8 @@ suite runs, tool versions, and remaining non-EUnit gaps.
 maintained executable evidence, governance drift fails locally and in CI, and
 the complete reconciliation roadmap has a repeatable final baseline.
 
-- [ ] Every scenario maps to maintained executable evidence
-- [ ] Requirements, scenarios, components, ADRs, and links pass governance
-- [ ] Canonical local commands expose specs, conformance, and full verification
-- [ ] CI enforces the complete verification command
-- [ ] Final status and baseline documents match repeatable repository evidence
+- [x] Every scenario maps to maintained executable evidence
+- [x] Requirements, scenarios, components, ADRs, and links pass governance
+- [x] Canonical local commands expose specs, conformance, and full verification
+- [x] CI enforces the complete verification command
+- [x] Final status and baseline documents match repeatable repository evidence

@@ -80,5 +80,6 @@ Add or expand material in `specs/` when it is:
 ## Current Scope
 
 The executable governance and conformance gates are available locally.
-CI enforcement is introduced separately so the command contract can be
-validated before it becomes a required remote check.
+The repository's read-only GitHub Actions workflow runs `make verify` for
+pull requests and pushes to `main`, so the same governance and complete-suite
+contract is enforced locally and in CI.

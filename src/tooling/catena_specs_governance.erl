@@ -9,6 +9,7 @@
 ]).
 
 -type validation_error() :: term().
+-type validation_errors() :: [validation_error(), ...].
 -type validation_report() :: #{
     requirements := non_neg_integer(),
     requirement_families := non_neg_integer(),
@@ -27,12 +28,12 @@
 %% Public API
 %%====================================================================
 
--spec validate() -> {ok, validation_report()} | {error, [validation_error()]}.
+-spec validate() -> {ok, validation_report()} | {error, validation_errors()}.
 validate() ->
     validate(".").
 
 -spec validate(file:filename_all()) ->
-    {ok, validation_report()} | {error, [validation_error()]}.
+    {ok, validation_report()} | {error, validation_errors()}.
 validate(RootValue) ->
     Root = filename:absname(RootValue),
     {Requirements, RequirementFamilies, RequirementErrors} =

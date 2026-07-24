@@ -163,9 +163,9 @@ Documentation and tooling specs must continue to note the true transition state:
 
 - the default repo-wide `rebar3 eunit` entry point covers the complete active
   suite and reports the current green
-  [Phase 6 baseline](../planning/spec-source-reconciliation/phase-06-test-baseline.md)
+  [Phase 7 baseline](../planning/spec-source-reconciliation/phase-07-test-baseline.md)
 - the focused property/law gate passes 1,091 tests across 53 modules
-- two consecutive complete-suite runs pass all 4,829 active tests
+- two consecutive complete-suite runs pass all 4,838 active tests
 - Dialyzer remains non-green with 777 repository-wide warnings
 - the historical PropEr area no longer contains runnable suites, only documentary artifacts
 - the remaining gaps are advanced internal-framework breadth and workflow ergonomics, not active dependence on PropEr in the default path

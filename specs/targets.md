@@ -18,28 +18,39 @@ Based on the current `specs/` set, codebase, and test suite, the current promote
   default pipeline stages.
 - Phase 4 is not complete, but a minimal import-resolution bridge exists.
 - A newer algebraic-effects track is materially implemented through orchestration, row-polymorphism integration, validation, and integration-test surfaces associated with Phases 7 through 14.
-- The internal property-testing framework has completed the rose-tree foundation for Phase 1.1, the generator/seed/size layer for Phase 1.2, the categorical generator layer for Phase 1.3, the primitive generator layer for Phase 1.4, and the range layer for Phase 1.5; the next major step is basic shrinking infrastructure.
+- The internal property-testing framework is materially implemented from
+  generators and shrinking through runners, reporting, laws, stateful/BEAM
+  helpers, and explicit advanced helpers. Placeholder-backed advanced paths
+  and automatic source-language integration remain.
+- The complete maintained EUnit suite is green.
+- Promoted requirements, scenarios, component acceptance criteria, ADRs,
+  paths, and links are checked by executable governance. Scenario evidence has
+  a focused manifest-driven runner, and the complete verification contract is
+  enforced in CI.
 
 ## Immediate Targets
 
-- reconcile canonical specs and planning state around the implemented compiler/runtime/library surfaces
-- consolidate the promoted description of the implemented algebraic-effects machinery so specs, contracts, and planning stop treating it as purely deferred work
-- finish the remaining Phase 1.5 library-validation gaps
-- decide whether to resume the proof-of-concept track or continue the property-testing framework track next
-- resolve the published 122-failure baseline phase by phase while preserving
-  complete `rebar3 eunit` discovery
-- continue migrating historical PropEr coverage into the internal
-  property-testing architecture without hiding active-suite failures
+- Reduce the visible repository-wide Dialyzer warning inventory.
+- Decide whether the next implementation track resumes the proof-of-concept
+  module system, advances source-language actor integration, or deepens the
+  already-implemented property-testing framework.
+- Finish placeholder-backed parallel, concurrency, distribution, and OTP
+  property-testing paths.
+- Extend executable scenario evidence when promoted behavior changes.
+- Continue migrating useful historical PropEr intent into the internal
+  property-testing architecture without reintroducing a second engine.
 
 ## Medium-Term Targets
 
 - full module-system completion
 - actor model integration on top of the existing effect/runtime foundation
 - broader front-end coverage and ergonomics for the already-implemented algebraic-effects system
-- generator, runner, and law-discipline layers for the internal property-testing framework
+- automatic reflection/derivation and broader workflow ergonomics for the
+  internal property-testing framework
 
 ## Non-Goals Of This Specs Layer
 
 - replacing code- and test-backed component detail with a second parallel status layer
-- pretending that all planning checklists are already reconciled
+- treating historical planning checklists as more authoritative than
+  executable code, tests, and promoted status
 - freezing experimental research areas that are still clearly exploratory
