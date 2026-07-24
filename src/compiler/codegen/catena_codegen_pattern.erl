@@ -94,11 +94,26 @@ compile_clause({clause, Patterns, Guards, Body}, State, _Opts) ->
     %% Compile patterns
     {CorePatterns, State1} = compile_patterns(Patterns, State),
 
-    %% Compile guard
-    {CoreGuard, State2} = compile_guards(Guards, State1),
-
-    %% Compile body
-    {CoreBody, State3} = catena_codegen_expr:translate_expr(Body, State2),
+    %% Pattern variables are runtime values throughout the guard and body.
+    Bindings = lists:usort(lists:append([
+        pattern_bindings(Pattern)
+        || Pattern <- Patterns
+    ])),
+    {{CoreGuard, CoreBody}, State3} =
+        catena_codegen_utils:with_bindings(
+            Bindings,
+            fun(ScopedState) ->
+                {CompiledGuard, GuardState} =
+                    compile_guards(Guards, ScopedState),
+                {CompiledBody, BodyState} =
+                    catena_codegen_expr:translate_expr(
+                        Body,
+                        GuardState
+                    ),
+                {{CompiledGuard, CompiledBody}, BodyState}
+            end,
+            State1
+        ),
 
     %% Build clause
     Clause = cerl:c_clause(CorePatterns, CoreGuard, CoreBody),
@@ -111,6 +126,31 @@ compile_clause({Patterns, Body}, State, Opts) ->
 %% Compile multiple patterns
 compile_patterns(Patterns, State) ->
     lists:mapfoldl(fun compile_pattern/2, State, Patterns).
+
+pattern_bindings({pat_var, Name, _Location}) ->
+    [Name];
+pattern_bindings({pat_constructor, _Name, Arguments, _Location}) ->
+    lists:append([pattern_bindings(Argument) || Argument <- Arguments]);
+pattern_bindings({pat_list, Elements, _Location}) ->
+    lists:append([pattern_bindings(Element) || Element <- Elements]);
+pattern_bindings({pat_cons, Head, Tail, _Location}) ->
+    pattern_bindings(Head) ++ pattern_bindings(Tail);
+pattern_bindings({pat_tuple, Elements, _Location}) ->
+    lists:append([pattern_bindings(Element) || Element <- Elements]);
+pattern_bindings({pat_as, Name, Pattern, _Location}) ->
+    [Name | pattern_bindings(Pattern)];
+pattern_bindings({pat_or, Alternatives, _Location}) ->
+    lists:append([
+        pattern_bindings(Alternative)
+        || Alternative <- Alternatives
+    ]);
+pattern_bindings({pat_record, Fields, _Location}) ->
+    lists:append([
+        pattern_bindings(Pattern)
+        || {_Field, Pattern} <- Fields
+    ]);
+pattern_bindings(_Pattern) ->
+    [].
 
 %%====================================================================
 %% Basic Pattern Compilation (1.3.2.1)

@@ -36,9 +36,13 @@ frontend validation to Core Erlang output.
 - `compile_string_to_unit/1,2` is the maintained compiler-internal handoff for
   artifact backends. It retains normalized source, typed declarations, the
   effective environment, imports, exports, options, validation evidence,
-  symbols, locations, and declaration dispositions.
+  symbols, the complete module-local callable inventory, locations, and
+  declaration dispositions.
 - Import processing is intentionally minimal: Catena supports loading modules from the standard library and current project search paths, then merging exported environments into the local type environment.
 - `catena_codegen_lower` is the explicit canonical-AST-to-backend boundary.
+- local transform and constructor identities are predeclared before
+  expression emission, so direct, forward, recursive, and higher-order calls
+  do not depend on declaration order
 - The typed-module and Core APIs share one frontend-success assembly path.
   Production Core generation accepts the resulting validated unit; direct raw
   AST generation remains a documented low-level codegen test helper.
@@ -113,7 +117,7 @@ This criterion exists to keep the promoted spec aligned with the actual code ins
 
 The public Core Erlang and future BEAM APIs must hand the backend a validated
 compilation unit with the source, symbol, arity, type, declaration-disposition,
-and location information required by
+callable-resolution, and location information required by
 [Core Erlang And BEAM Backend](core_erlang_and_beam_backend.md). Passing type
 validation and then lowering an unrelated or insufficiently described AST is
 not the completed backend boundary.

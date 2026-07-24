@@ -206,35 +206,41 @@ Current promoted status:
 - Phase 2 is complete with one validated frontend-success artifact carrying
   normalized and typed views, effective types, imports, exports, options,
   validation state, symbols, source locations, and declaration dispositions
+- Phase 3 is complete with a predeclared local callable inventory, exact
+  transform/constructor arity checks, resolved Core function identities,
+  lexical closure application, eta-expanded named transform values, and
+  executable direct, forward, recursive, mutual, higher-order, and
+  higher-arity-constructor evidence
 - the production Core boundary consumes that unit, while raw-AST generation
   is explicitly scoped to low-level codegen work
 - implemented transforms lower, type/effect metadata erases only after
   representation selection, and missing or deferred runtime declarations fail
   with source-oriented diagnostics
-- `SCN-011` includes dedicated Phase 1 and Phase 2 suites proving the
+- `SCN-011` includes dedicated Phase 1, Phase 2, and Phase 3 suites proving the
   executable vertical slice, preservation of frontend failures, validated-unit
-  authority, and explicit declaration disposition
-- later phases introduce local and recursive call resolution, exhaustive pure
-  lowering, effect semantics, executable module/trait linkage, and the public
-  source-to-BEAM API
+  authority, explicit declaration disposition, resolved local call graphs, and
+  higher-order callable execution
+- later phases introduce exhaustive pure lowering, effect semantics,
+  executable module/trait linkage, and the public source-to-BEAM API
 - every phase ends with a dedicated integration-test section and must preserve
   specs governance, focused conformance, and the complete active suite
 
 Important caveat:
 
-- Phases 1 and 2 improve safety without expanding the promoted executable language;
-  the backend remains a working vertical slice with named-call, linkage,
-  trait-dispatch, exhaustive lowering, and public BEAM API gaps
-- Phase 3, local and higher-order call resolution, is the next
+- Phases 1 through 3 establish a fail-closed backend and expand the promoted
+  executable language through module-local and higher-order calls; linkage,
+  trait-dispatch, exhaustive lowering, effect-semantics, and public BEAM API
+  gaps remain
+- Phase 4, exhaustive expression, pattern, and data lowering, is the next
   backend-hardening phase
 
 ## Current Quality State
 
 The default `rebar3 eunit` entry point discovers, compiles, and executes the
-complete active test tree. The backend-hardening Phase 2 gate on 2026-07-24
-reported 4,906 passing, zero failing, and zero skipped tests. The earlier
-Phase 1 gate reported 4,873 passing tests, and the earlier
-4,838-test baseline remains recorded in the
+complete active test tree. The backend-hardening Phase 3 gate on 2026-07-24
+reported 4,928 passing, zero failing, and zero skipped tests. The earlier
+Phase 2 and Phase 1 gates reported 4,906 and 4,873 passing tests,
+respectively, and the earlier 4,838-test baseline remains recorded in the
 [Phase 7 test baseline](spec-source-reconciliation/phase-07-test-baseline.md).
 
 Promoted interpretation:
@@ -242,10 +248,10 @@ Promoted interpretation:
 - `make compile` and `rebar3 compile` compile the active source tree
 - `make test` and `rebar3 eunit` expose the complete active EUnit result
 - `make check-specs` validates 42 concrete requirements in five families, 11
-  scenarios, 22 executable evidence rows across 21 modules, 73 component
+  scenarios, 23 executable evidence rows across 22 modules, 73 component
   acceptance criteria, five ADRs, promoted paths, and local Markdown links
 - `make conformance` runs the unique EUnit modules named by the executable
-  scenario manifest; the Phase 2 gate passed all 442 focused tests
+  scenario manifest; the Phase 3 gate passed all 448 focused tests
 - `make verify` combines specs governance with the complete active suite and
   is the read-only CI contract for pull requests and pushes to `main`
 - the six Phase 2 standard-library/frontend modules pass all 170 focused tests

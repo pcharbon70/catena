@@ -4,7 +4,7 @@
 multi-function programs by resolving module-local transforms, recursion,
 constructors, and higher-order callable values before Core Erlang emission.
 
-**Status:** Planned.
+**Status:** Complete.
 
 **Dependencies:** Phase 2 complete.
 
@@ -13,98 +13,98 @@ constructors, and higher-order callable values before Core Erlang emission.
 **Description:** Build the complete local callable inventory before lowering
 any function body so resolution does not depend on declaration order.
 
-- [ ] **Section 3.1 Complete**
+- [x] **Section 3.1 Complete**
 
 ### Task 3.1.1: Predeclare Local Callable Symbols
 
 **Description:** Collect every implemented transform and constructor identity,
 arity, visibility, type, and source location into the validated unit.
 
-- [ ] **Task 3.1.1 Complete**
+- [x] **Task 3.1.1 Complete**
 
 #### Subtask 3.1.1.1: Index Transform Identities
 
 **Description:** Index all top-level transforms before body traversal,
 including later declarations and mutually recursive groups.
 
-- [ ] **Subtask 3.1.1.1 Complete**
+- [x] **Subtask 3.1.1.1 Complete**
 
 #### Subtask 3.1.1.2: Index Constructor Identities
 
 **Description:** Derive constructor arities and result-type ownership from type
 declarations before those declarations are erased.
 
-- [ ] **Subtask 3.1.1.2 Complete**
+- [x] **Subtask 3.1.1.2 Complete**
 
 ### Task 3.1.2: Enforce Name And Arity Rules
 
 **Description:** Resolve each unqualified callable name to one unambiguous local
 identity or return a structured diagnostic.
 
-- [ ] **Task 3.1.2 Complete**
+- [x] **Task 3.1.2 Complete**
 
 #### Subtask 3.1.2.1: Detect Duplicate And Ambiguous Callables
 
 **Description:** Reject symbol definitions or overload sets that the current
 language rules cannot distinguish at a call site.
 
-- [ ] **Subtask 3.1.2.1 Complete**
+- [x] **Subtask 3.1.2.1 Complete**
 
 #### Subtask 3.1.2.2: Detect Call Arity Mismatches
 
 **Description:** Compare source argument count with resolved callable arity and
 report the call and declaration locations on failure.
 
-- [ ] **Subtask 3.1.2.2 Complete**
+- [x] **Subtask 3.1.2.2 Complete**
 
 ## Section 3.2: Local, Forward, And Recursive Core Calls
 
 **Description:** Emit valid Core Erlang local function references for every
 resolved top-level transform call.
 
-- [ ] **Section 3.2 Complete**
+- [x] **Section 3.2 Complete**
 
 ### Task 3.2.1: Lower Direct Local Calls
 
 **Description:** Replace bare-variable application for resolved transforms with
 the OTP Core Erlang representation for a local function target and arity.
 
-- [ ] **Task 3.2.1 Complete**
+- [x] **Task 3.2.1 Complete**
 
 #### Subtask 3.2.1.1: Emit Resolved Function Names
 
 **Description:** Use Core function identities rather than ordinary unbound
 variables for direct transform invocation.
 
-- [ ] **Subtask 3.2.1.1 Complete**
+- [x] **Subtask 3.2.1.1 Complete**
 
 #### Subtask 3.2.1.2: Validate Forward References
 
 **Description:** Confirm calls to transforms declared later in the module emit
 the same valid Core form as calls to earlier declarations.
 
-- [ ] **Subtask 3.2.1.2 Complete**
+- [x] **Subtask 3.2.1.2 Complete**
 
 ### Task 3.2.2: Support Recursive Call Graphs
 
 **Description:** Preserve self-recursive and mutually recursive transform
 semantics without special declaration ordering or runtime lookup.
 
-- [ ] **Task 3.2.2 Complete**
+- [x] **Task 3.2.2 Complete**
 
 #### Subtask 3.2.2.1: Lower Self-Recursion
 
 **Description:** Resolve a transform's call to itself using its predeclared
 identity and verified arity.
 
-- [ ] **Subtask 3.2.2.1 Complete**
+- [x] **Subtask 3.2.2.1 Complete**
 
 #### Subtask 3.2.2.2: Lower Mutual Recursion
 
 **Description:** Resolve cycles among several local transforms and validate the
 resulting Core Erlang module as one recursive definition set.
 
-- [ ] **Subtask 3.2.2.2 Complete**
+- [x] **Subtask 3.2.2.2 Complete**
 
 ## Section 3.3: Higher-Order Values And Constructors
 
@@ -112,7 +112,7 @@ resulting Core Erlang module as one recursive definition set.
 constructor application so the same source identifier cannot be lowered by
 guesswork.
 
-- [ ] **Section 3.3 Complete**
+- [x] **Section 3.3 Complete**
 
 ### Task 3.3.1: Resolve Higher-Order Callable Values
 
@@ -120,14 +120,14 @@ guesswork.
 captured top-level transforms with semantics appropriate to their resolved
 callable kind.
 
-- [ ] **Task 3.3.1 Complete**
+- [x] **Task 3.3.1 Complete**
 
 #### Subtask 3.3.1.1: Preserve Closure Application
 
 **Description:** Continue using Core closure application only for values that
 type checking and scope resolution identify as callable runtime values.
 
-- [ ] **Subtask 3.3.1.1 Complete**
+- [x] **Subtask 3.3.1.1 Complete**
 
 #### Subtask 3.3.1.2: Represent Top-Level Functions As Values
 
@@ -135,28 +135,28 @@ type checking and scope resolution identify as callable runtime values.
 when a named transform is passed, stored, or returned instead of directly
 called.
 
-- [ ] **Subtask 3.3.1.2 Complete**
+- [x] **Subtask 3.3.1.2 Complete**
 
 ### Task 3.3.2: Resolve Constructor Applications Separately
 
 **Description:** Keep constructor identity and arity resolution distinct from
 ordinary transform and closure calls.
 
-- [ ] **Task 3.3.2 Complete**
+- [x] **Task 3.3.2 Complete**
 
 #### Subtask 3.3.2.1: Validate Constructor Arity
 
 **Description:** Reject under- and over-applied constructors unless the
 language explicitly promotes a partial-application rule.
 
-- [ ] **Subtask 3.3.2.1 Complete**
+- [x] **Subtask 3.3.2.1 Complete**
 
 #### Subtask 3.3.2.2: Emit Tagged Constructor Values
 
 **Description:** Preserve the accepted tagged-tuple representation for nullary,
 unary, and higher-arity constructors.
 
-- [ ] **Subtask 3.3.2.2 Complete**
+- [x] **Subtask 3.3.2.2 Complete**
 
 ## Section 3.4: Phase 3 Integration Tests
 
@@ -164,42 +164,42 @@ unary, and higher-arity constructors.
 programs compile to loadable BEAM while unresolved or misapplied targets fail
 before artifact success.
 
-- [ ] **Section 3.4 Complete**
+- [x] **Section 3.4 Complete**
 
 ### Task 3.4.1: Execute Local Call Graphs
 
 **Description:** Add source-to-BEAM programs that cover the complete
 module-local call-resolution surface.
 
-- [ ] **Task 3.4.1 Complete**
+- [x] **Task 3.4.1 Complete**
 
 #### Subtask 3.4.1.1: Test Direct And Forward Calls
 
 **Description:** Execute programs with earlier and later transform targets and
 assert their observable results.
 
-- [ ] **Subtask 3.4.1.1 Complete**
+- [x] **Subtask 3.4.1.1 Complete**
 
 #### Subtask 3.4.1.2: Test Self And Mutual Recursion
 
 **Description:** Execute terminating recursive programs and validate their
 results, Core compilation, and module loading behavior.
 
-- [ ] **Subtask 3.4.1.2 Complete**
+- [x] **Subtask 3.4.1.2 Complete**
 
 ### Task 3.4.2: Execute Higher-Order And Negative Paths
 
 **Description:** Test closure calls, named transforms as values, constructor
 calls, and rejected unresolved or arity-invalid targets.
 
-- [ ] **Task 3.4.2 Complete**
+- [x] **Task 3.4.2 Complete**
 
 #### Subtask 3.4.2.1: Test Higher-Order Execution
 
 **Description:** Execute lambda parameters, returned functions, let-bound
 functions, and named transform references passed to other transforms.
 
-- [ ] **Subtask 3.4.2.1 Complete**
+- [x] **Subtask 3.4.2.1 Complete**
 
 #### Subtask 3.4.2.2: Run Phase Completion Gates
 
@@ -207,4 +207,4 @@ functions, and named transform references passed to other transforms.
 and source-to-BEAM suites plus `make check-specs`, `make conformance`, and the
 complete active EUnit suite.
 
-- [ ] **Subtask 3.4.2.2 Complete**
+- [x] **Subtask 3.4.2.2 Complete**

@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 2 ending baseline, derived from the parser grammar, validated compilation
+Phase 3 ending baseline, derived from the parser grammar, validated compilation
 unit, normalized AST, declaration dispositions, and executable backend evidence
 on 2026-07-24.
 
@@ -28,7 +28,8 @@ The source inventory comes from
 `src/compiler/semantic/catena_desugar.erl` and
 `src/compiler/codegen/catena_codegen_lower.erl`. Validated authority and
 declaration classification come from `catena_compilation_unit` and
-`catena_declaration_disposition`. Backend evidence comes from the
+`catena_declaration_disposition`. Local callable classification comes from
+`catena_call_resolution`. Backend evidence comes from the
 `catena_codegen_*` modules and the tests linked below.
 
 ## Module And Declaration Inventory
@@ -39,7 +40,7 @@ declaration classification come from `catena_compilation_unit` and
 | Exported transform | Core export with source arity | Proven | `catena_codegen_lower_tests`, `catena_core_pipeline_tests` |
 | Exported type, trait, or effect | Frontend metadata only | Static-erased | `catena_codegen_erase:erase_decl/1`; executable export semantics are deferred |
 | Import: open, qualified, aliased, or selective | Explicit unsupported disposition retaining linkage metadata; no executable linkage | Deferred | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests`; Phase 6 roadmap |
-| Type declaration and constructors | Static-erased only after constructor representation metadata is retained | Static-erased | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests`, constructor rows below |
+| Type declaration and constructors | Static-erased only after constructor representation and callable metadata is retained | Static-erased | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests`, `catena_backend_hardening_phase3_tests`, constructor rows below |
 | Transform with implementation, including guarded and multi-clause forms | Function plus case clauses | Proven for simple and constructor clauses; otherwise Lowering-only | `catena_codegen_lower_tests`, `catena_core_pipeline_tests` |
 | Signature-only transform | Static-erased only when not runtime-exported; an exported signature fails with `missing_transform_implementation` | Deferred | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests` |
 | Effect declaration and operations | Static-erased after operation metadata is retained | Static-erased | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests` |
@@ -54,13 +55,13 @@ declaration classification come from `catena_compilation_unit` and
 | Parser-native surface | Backend representation | Class | Evidence |
 | --- | --- | --- | --- |
 | Integer, float, and string literals | Native BEAM terms | Proven for integer; Lowering-only for float/string | `catena_core_pipeline_tests`, `catena_codegen_expr_tests` |
-| Lower-case identifier | Core variable or callable value | Lowering-only; top-level named calls are Known-failing | `catena_codegen_expr_tests`, `catena_backend_baseline_tests` |
-| Nullary and applied upper-case constructor | Tagged tuple `{Constructor, ...}` | Proven for nullary/unary; Lowering-only for larger arities | `catena_core_pipeline_tests`, `catena_codegen_expr_tests` |
-| Function application | Core `apply` or explicit module call | Lowering-only; named local call is Known-failing | `catena_codegen_expr_tests`, `catena_backend_baseline_tests` |
+| Lower-case identifier | Lexical Core variable or resolved eta-expanded top-level callable value | Proven for transform parameters, pattern bindings, lambda/let values, and named transforms as values | `catena_codegen_higher_order_tests`, `catena_backend_hardening_phase3_tests` |
+| Nullary and applied upper-case constructor | Arity-validated tagged tuple `{Constructor, ...}` | Proven for nullary, unary, and higher-arity constructors | `catena_core_pipeline_tests`, `catena_codegen_higher_order_tests`, `catena_backend_hardening_phase3_tests` |
+| Function application | Resolved local function-name `apply`, closure `apply`, or explicit module call | Proven for local, forward, recursive, mutual, and higher-order local calls; imported calls remain Deferred | `catena_codegen_local_call_tests`, `catena_codegen_higher_order_tests`, `catena_backend_hardening_phase3_tests` |
 | Field access | `maps:get/2` | Lowering-only | `catena_codegen_expr_tests` |
-| `let` with variable binding | Core `let` | Lowering-only | `catena_codegen_expr_tests` |
+| `let` with variable binding | Core `let` with lexical callable-value scope | Proven for let-bound functions | `catena_codegen_expr_tests`, `catena_codegen_higher_order_tests`, `catena_backend_hardening_phase3_tests` |
 | `let` with a non-variable binding pattern | `unsupported_backend_construct` before Core emission | Deferred | `catena_backend_hardening_phase1_tests` |
-| Lambda | Core function | Lowering-only | `catena_codegen_expr_tests` |
+| Lambda | Core function with lexical parameter scope | Proven for creation and higher-order execution | `catena_codegen_expr_tests`, `catena_codegen_higher_order_tests`, `catena_backend_hardening_phase3_tests` |
 | Match function and match with scrutinee | Core case and clauses | Proven for constructor clauses; otherwise Lowering-only | `catena_core_pipeline_tests`, `catena_codegen_pattern_tests` |
 | Empty/non-empty list | Native list | Lowering-only | `catena_codegen_expr_tests` |
 | Tuple | Native tuple | Lowering-only | `catena_codegen_expr_tests` |

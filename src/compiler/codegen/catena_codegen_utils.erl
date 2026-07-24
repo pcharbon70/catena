@@ -18,7 +18,16 @@
 
     %% State management
     new_state/0,
+    new_state/1,
     with_scope/2,
+    with_function_scope/4,
+    with_bindings/3,
+    is_bound/2,
+    resolution_enabled/1,
+    resolve_transform/4,
+    resolve_constructor/4,
+    resolve_value/3,
+    callable_inventory/1,
 
     %% Core Erlang builders
     c_atom/1,
@@ -48,8 +57,10 @@
 
 -record(codegen_state, {
     var_counter = 0 :: non_neg_integer(),
-    scope = [] :: [atom()],          % Variable scope stack
-    module_name :: atom() | undefined
+    scope = [] :: [atom()],
+    module_name :: atom() | undefined,
+    current_transform :: atom() | undefined,
+    callables :: catena_call_resolution:inventory() | undefined
 }).
 
 -opaque codegen_state() :: #codegen_state{}.
@@ -63,6 +74,14 @@
 new_state() ->
     #codegen_state{}.
 
+%% @doc Create a state with the validated module resolution context.
+-spec new_state(map()) -> codegen_state().
+new_state(Context) when is_map(Context) ->
+    #codegen_state{
+        module_name = maps:get(module_name, Context, undefined),
+        callables = maps:get(callables, Context, undefined)
+    }.
+
 %% @doc Execute function with new scope, then restore
 -spec with_scope(fun((codegen_state()) -> {Result, codegen_state()}), codegen_state()) ->
     {Result, codegen_state()} when Result :: term().
@@ -70,6 +89,142 @@ with_scope(Fun, State) ->
     OldScope = State#codegen_state.scope,
     {Result, NewState} = Fun(State),
     {Result, NewState#codegen_state{scope = OldScope}}.
+
+%% @doc Compile a function body with its transform and parameters in scope.
+-spec with_function_scope(
+    atom(),
+    [atom()],
+    fun((codegen_state()) -> {Result, codegen_state()}),
+    codegen_state()
+) -> {Result, codegen_state()} when Result :: term().
+with_function_scope(Name, Bindings, Fun, State) ->
+    OldScope = State#codegen_state.scope,
+    OldTransform = State#codegen_state.current_transform,
+    FunctionState = State#codegen_state{
+        scope = lists:usort(Bindings ++ OldScope),
+        current_transform = Name
+    },
+    {Result, NewState} = Fun(FunctionState),
+    {Result, NewState#codegen_state{
+        scope = OldScope,
+        current_transform = OldTransform
+    }}.
+
+%% @doc Compile an expression with additional runtime values in lexical scope.
+-spec with_bindings(
+    [atom()],
+    fun((codegen_state()) -> {Result, codegen_state()}),
+    codegen_state()
+) -> {Result, codegen_state()} when Result :: term().
+with_bindings(Bindings, Fun, State) ->
+    OldScope = State#codegen_state.scope,
+    ScopedState = State#codegen_state{
+        scope = lists:usort(Bindings ++ OldScope)
+    },
+    {Result, NewState} = Fun(ScopedState),
+    {Result, NewState#codegen_state{scope = OldScope}}.
+
+%% @doc Return whether a source variable is bound as a runtime value.
+-spec is_bound(atom(), codegen_state()) -> boolean().
+is_bound(Name, #codegen_state{scope = Scope}) ->
+    lists:member(Name, Scope).
+
+%% @doc Return whether local callable resolution is enabled for this state.
+-spec resolution_enabled(codegen_state()) -> boolean().
+resolution_enabled(#codegen_state{callables = undefined}) ->
+    false;
+resolution_enabled(#codegen_state{callables = Inventory}) ->
+    catena_call_resolution:is_inventory(Inventory).
+
+%% @doc Resolve a direct local transform with source-oriented context.
+-spec resolve_transform(atom(), non_neg_integer(), term(), codegen_state()) ->
+    {ok, catena_call_resolution:callable()} |
+    {error, catena_backend_error:diagnostic()}.
+resolve_transform(
+    Name,
+    Arity,
+    SourceTerm,
+    #codegen_state{
+        module_name = Module,
+        current_transform = Transform,
+        callables = Inventory
+    }
+) ->
+    Context = catena_backend_error:context(
+        call_resolution,
+        call,
+        SourceTerm,
+        #{
+            module => Module,
+            transform => Transform
+        }
+    ),
+    catena_call_resolution:resolve_transform(
+        Name,
+        Arity,
+        Inventory,
+        Context
+    ).
+
+%% @doc Resolve a constructor application with source-oriented context.
+-spec resolve_constructor(atom(), non_neg_integer(), term(), codegen_state()) ->
+    {ok, catena_call_resolution:callable()} |
+    {error, catena_backend_error:diagnostic()}.
+resolve_constructor(
+    Name,
+    Arity,
+    SourceTerm,
+    #codegen_state{
+        module_name = Module,
+        current_transform = Transform,
+        callables = Inventory
+    }
+) ->
+    Context = catena_backend_error:context(
+        constructor_resolution,
+        constructor,
+        SourceTerm,
+        #{
+            module => Module,
+            transform => Transform
+        }
+    ),
+    catena_call_resolution:resolve_constructor(
+        Name,
+        Arity,
+        Inventory,
+        Context
+    ).
+
+%% @doc Resolve a top-level callable used as a first-class value.
+-spec resolve_value(atom(), term(), codegen_state()) ->
+    {ok, catena_call_resolution:callable()} |
+    {error, catena_backend_error:diagnostic()}.
+resolve_value(
+    Name,
+    SourceTerm,
+    #codegen_state{
+        module_name = Module,
+        current_transform = Transform,
+        callables = Inventory
+    }
+) ->
+    Context = catena_backend_error:context(
+        callable_value_resolution,
+        callable_value,
+        SourceTerm,
+        #{
+            module => Module,
+            transform => Transform
+        }
+    ),
+    catena_call_resolution:resolve_value(Name, Inventory, Context).
+
+%% @doc Return the callable inventory carried by the state.
+-spec callable_inventory(codegen_state()) ->
+    catena_call_resolution:inventory() | undefined.
+callable_inventory(#codegen_state{callables = Inventory}) ->
+    Inventory.
 
 %%====================================================================
 %% Variable Generation

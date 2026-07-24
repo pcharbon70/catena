@@ -20,6 +20,9 @@ validated_unit_retains_frontend_authority_test() ->
     ),
     ?assertEqual(validation_state(),
         catena_compilation_unit:validation_state(Unit)),
+    ?assertEqual(3, length(catena_call_resolution:callables(
+        catena_compilation_unit:callables(Unit)
+    ))),
     ?assertEqual(3, length(catena_compilation_unit:dispositions(Unit))),
     ?assert(lists:all(
         fun(Disposition) ->
@@ -50,6 +53,12 @@ unit_collects_symbols_and_locations_test() ->
         undefined,
         location(2, 1)
     )),
+    Callables = catena_call_resolution:callables(
+        catena_compilation_unit:callables(Unit)
+    ),
+    ?assert(has_callable(Callables, transform, run, 1, undefined)),
+    ?assert(has_callable(Callables, constructor, 'None', 0, 'Maybe')),
+    ?assert(has_callable(Callables, constructor, 'Some', 1, 'Maybe')),
     Locations = catena_compilation_unit:locations(Unit),
     ?assertEqual(location(1, 1), maps:get(module, Locations)),
     ?assertEqual([location(2, 1)], maps:get(imports, Locations)),
@@ -172,6 +181,17 @@ has_symbol(Symbols, Kind, Name, Arity, Location) ->
                 maps:get(location, Symbol) =:= Location
         end,
         Symbols
+    ).
+
+has_callable(Callables, Kind, Name, Arity, Owner) ->
+    lists:any(
+        fun(Callable) ->
+            maps:get(kind, Callable) =:= Kind andalso
+                maps:get(name, Callable) =:= Name andalso
+                maps:get(arity, Callable) =:= Arity andalso
+                maps:get(owner, Callable, undefined) =:= Owner
+        end,
+        Callables
     ).
 
 location(Line, Column) ->

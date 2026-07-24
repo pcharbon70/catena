@@ -2,7 +2,7 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
-named_top_level_call_reaches_core_lint_as_unbound_variable_test() ->
+named_top_level_call_resolves_as_core_function_test() ->
     Source =
         "module Calls\n"
         "export transform caller\n"
@@ -10,7 +10,7 @@ named_top_level_call_reaches_core_lint_as_unbound_variable_test() ->
         "transform caller x = callee(x)\n",
     {ok, CoreModule} = catena_compile:compile_string_to_core(Source),
     ?assertMatch(
-        {error, [{_, [{none, core_lint, {unbound_var, callee, {caller, 1}}}]}], []},
+        {ok, 'Calls', _Binary, _Warnings},
         compile_core(CoreModule)
     ).
 

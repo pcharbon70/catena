@@ -57,7 +57,11 @@ generate_validated_module(Unit) ->
                 {ok, BackendAST} ->
                     CompilerOpts = catena_compilation_unit:options(Unit),
                     CodegenOpts = maps:get(codegen_opts, CompilerOpts, #{}),
-                    generate_module(BackendAST, CodegenOpts);
+                    generate_module_with_inventory(
+                        BackendAST,
+                        CodegenOpts,
+                        catena_compilation_unit:callables(Unit)
+                    );
                 {error, _} = Error ->
                     Error
             end;
@@ -79,9 +83,45 @@ generate_module(ModuleAST) ->
 -spec generate_module(module_ast(), gen_opts()) -> {ok, cerl:cerl()} | {error, term()}.
 generate_module(ModuleAST, Opts) ->
     try
+        {module, Name, Exports, _Imports, SourceDecls, _Loc} = ModuleAST,
+        case catena_call_resolution:build(Name, Exports, SourceDecls) of
+            {ok, Inventory} ->
+                do_generate_module(ModuleAST, Opts, Inventory);
+            {error, ResolutionDiagnostic} ->
+                throw(ResolutionDiagnostic)
+        end
+    catch
+        error:{backend_error, _, _} = Diagnostic:_Stack ->
+            {error, Diagnostic};
+        error:Reason:_Stack ->
+            {error, {codegen_error, Reason}};
+        throw:{backend_error, _, _} = Diagnostic ->
+            {error, Diagnostic};
+        throw:Reason ->
+            {error, {codegen_error, Reason}}
+    end.
+
+generate_module_with_inventory(ModuleAST, Opts, Inventory) ->
+    try
+        do_generate_module(ModuleAST, Opts, Inventory)
+    catch
+        error:{backend_error, _, _} = Diagnostic:_Stack ->
+            {error, Diagnostic};
+        error:Reason:_Stack ->
+            {error, {codegen_error, Reason}};
+        throw:{backend_error, _, _} = Diagnostic ->
+            {error, Diagnostic};
+        throw:Reason ->
+            {error, {codegen_error, Reason}}
+    end.
+
+do_generate_module(ModuleAST, Opts, Inventory) ->
         {module, Name, Exports, _Imports, Decls, _Loc} =
             catena_codegen_lower:lower_module(ModuleAST),
-        State = catena_codegen_utils:new_state(),
+        State = catena_codegen_utils:new_state(#{
+            module_name => Name,
+            callables => Inventory
+        }),
 
         %% Erase types from declarations
         ErasedDecls = erase_types(Decls),
@@ -109,17 +149,7 @@ generate_module(ModuleAST, Opts) ->
             CoreFunctions
         ),
 
-        {ok, CoreModule}
-    catch
-        error:{backend_error, _, _} = Diagnostic:_Stack ->
-            {error, Diagnostic};
-        error:Reason:_Stack ->
-            {error, {codegen_error, Reason}};
-        throw:{backend_error, _, _} = Diagnostic ->
-            {error, Diagnostic};
-        throw:Reason ->
-            {error, {codegen_error, Reason}}
-    end.
+        {ok, CoreModule}.
 
 %% Erase types from declarations
 erase_types(Decls) ->
@@ -228,8 +258,16 @@ compile_function({transform, Name, Params, Body, _Loc}, State) ->
     %% Compile parameters to variables
     {ParamVars, State1} = compile_params(Params, State),
 
-    %% Compile body
-    {CoreBody0, State2} = catena_codegen_expr:translate_expr(Body, State1),
+    %% Compile body with parameters distinguished from top-level callables.
+    ParamNames = [cerl:var_name(ParamVar) || ParamVar <- ParamVars],
+    {CoreBody0, State2} = catena_codegen_utils:with_function_scope(
+        Name,
+        ParamNames,
+        fun(ScopedState) ->
+            catena_codegen_expr:translate_expr(Body, ScopedState)
+        end,
+        State1
+    ),
     CoreBody = maybe_wrap_effect_runtime(Body, CoreBody0),
 
     %% Create function definition

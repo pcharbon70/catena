@@ -168,8 +168,20 @@ translate_literal({literal, bool, false, _Loc}, State) ->
 %%====================================================================
 
 %% @doc Translate variables to Core Erlang
-translate_var({var, Name, _Loc}, State) ->
-    {cerl:c_var(Name), State}.
+translate_var({var, Name, _Loc} = Variable, State) ->
+    case catena_codegen_utils:is_bound(Name, State) orelse
+        not catena_codegen_utils:resolution_enabled(State)
+    of
+        true ->
+            {cerl:c_var(Name), State};
+        false ->
+            case catena_codegen_utils:resolve_value(Name, Variable, State) of
+                {ok, Callable} ->
+                    translate_callable_value(Callable, State);
+                {error, Diagnostic} ->
+                    throw(Diagnostic)
+            end
+    end.
 
 %%====================================================================
 %% Function Application Translation (1.3.1.1)
@@ -180,7 +192,25 @@ translate_var({var, Name, _Loc}, State) ->
 %% Function calls are translated to either:
 %% - cerl:c_apply for local function calls
 %% - cerl:c_call for module-qualified calls
-translate_app({app, Func, Args, _Loc}, State) ->
+translate_app({app, _Func, _Args, _Loc} = Application, State) ->
+    case direct_local_application(Application, State) of
+        {direct, FuncName, Args, Loc} ->
+            {CoreArgs, State1} = translate_exprs(Args, State),
+            translate_named_app(
+                FuncName,
+                CoreArgs,
+                Loc,
+                Application,
+                State1
+            );
+        closure ->
+            translate_closure_application(Application, State)
+    end.
+
+translate_closure_application(
+    {app, Func, Args, Loc} = Application,
+    State
+) ->
     %% Translate arguments first
     {CoreArgs, State1} = translate_exprs(Args, State),
 
@@ -194,14 +224,77 @@ translate_app({app, Func, Args, _Loc}, State) ->
 
         %% Direct function reference by name
         {var, FuncName, _} ->
-            %% Local function application
-            FuncVar = cerl:c_var(FuncName),
-            {cerl:c_apply(FuncVar, CoreArgs), State1};
+            translate_named_app(
+                FuncName,
+                CoreArgs,
+                Loc,
+                Application,
+                State1
+            );
 
         %% Lambda or other expression as function
         _ ->
             {CoreFunc, State2} = translate_expr(Func, State1),
             {cerl:c_apply(CoreFunc, CoreArgs), State2}
+    end.
+
+direct_local_application(Application, State) ->
+    case catena_codegen_utils:resolution_enabled(State) of
+        false ->
+            closure;
+        true ->
+            {Root, Arguments, Location} =
+                application_spine(Application),
+            case Root of
+                {var, Name, _}
+                  when is_atom(Name) ->
+                    case catena_codegen_utils:is_bound(Name, State) of
+                        true -> closure;
+                        false -> {direct, Name, Arguments, Location}
+                    end;
+                _ ->
+                    closure
+            end
+    end.
+
+application_spine({app, Function, Arguments, Location}) ->
+    case Function of
+        {app, _, [], _} ->
+            {Function, Arguments, Location};
+        {app, _, _, _} ->
+            {Root, EarlierArguments, _EarlierLocation} =
+                application_spine(Function),
+            {Root, EarlierArguments ++ Arguments, Location};
+        _ ->
+            {Function, Arguments, Location}
+    end.
+
+translate_named_app(FuncName, CoreArgs, _Loc, _Application, State)
+  when not is_atom(FuncName) ->
+    {cerl:c_apply(cerl:c_var(FuncName), CoreArgs), State};
+translate_named_app(FuncName, CoreArgs, _Loc, _Application, State) ->
+    case catena_codegen_utils:is_bound(FuncName, State) of
+        true ->
+            {cerl:c_apply(cerl:c_var(FuncName), CoreArgs), State};
+        false ->
+            case catena_codegen_utils:resolution_enabled(State) of
+                false ->
+                    {cerl:c_apply(cerl:c_var(FuncName), CoreArgs), State};
+                true ->
+                    case catena_codegen_utils:resolve_transform(
+                        FuncName,
+                        length(CoreArgs),
+                        _Application,
+                        State
+                    ) of
+                        {ok, Callable} ->
+                            Arity = maps:get(arity, Callable),
+                            Target = cerl:c_fname(FuncName, Arity),
+                            {cerl:c_apply(Target, CoreArgs), State};
+                        {error, Diagnostic} ->
+                            throw(Diagnostic)
+                    end
+            end
     end.
 
 %%====================================================================
@@ -213,21 +306,22 @@ translate_app({app, Func, Args, _Loc}, State) ->
 %% let x = expr1, y = expr2 in body
 %% becomes nested Core Erlang let expressions
 translate_let({let_expr, Bindings, Body, _Loc}, State) ->
-    %% Translate body first (for nested scoping)
-    {CoreBody, State1} = translate_expr(Body, State),
+    translate_let_bindings(Bindings, Body, State).
 
-    %% Fold bindings right-to-left to create nested lets
-    {FinalExpr, FinalState} = lists:foldr(
-        fun({Pattern, BindExpr}, {Acc, St}) ->
-            {CoreBindExpr, St1} = translate_expr(BindExpr, St),
-            CoreVar = pattern_to_var(Pattern),
-            Let = cerl:c_let([CoreVar], CoreBindExpr, Acc),
-            {Let, St1}
+translate_let_bindings([], Body, State) ->
+    translate_expr(Body, State);
+translate_let_bindings([{Pattern, BindExpr} | Rest], Body, State) ->
+    CoreVar = pattern_to_var(Pattern),
+    BindingName = cerl:var_name(CoreVar),
+    {CoreBindExpr, State1} = translate_expr(BindExpr, State),
+    {CoreBody, State2} = catena_codegen_utils:with_bindings(
+        [BindingName],
+        fun(ScopedState) ->
+            translate_let_bindings(Rest, Body, ScopedState)
         end,
-        {CoreBody, State1},
-        Bindings
+        State1
     ),
-    {FinalExpr, FinalState}.
+    {cerl:c_let([CoreVar], CoreBindExpr, CoreBody), State2}.
 
 %% Convert a pattern to a Core Erlang variable
 %% For simple variable patterns; complex patterns need pattern compilation
@@ -362,8 +456,15 @@ translate_lambda({lambda, Params, Body, _Loc}, State) ->
     %% Create parameter variables
     ParamVars = [cerl:c_var(param_name(P)) || P <- Params],
 
-    %% Translate body
-    {CoreBody, State1} = translate_expr(Body, State),
+    %% Translate body with lambda parameters in lexical value scope.
+    ParamNames = [cerl:var_name(ParamVar) || ParamVar <- ParamVars],
+    {CoreBody, State1} = catena_codegen_utils:with_bindings(
+        ParamNames,
+        fun(ScopedState) ->
+            translate_expr(Body, ScopedState)
+        end,
+        State
+    ),
 
     %% Create Core Erlang fun
     Fun = cerl:c_fun(ParamVars, CoreBody),
@@ -496,11 +597,42 @@ translate_record_access({record_access, Record, Field, _Loc}, State) ->
 %% Constructor Translation
 %%====================================================================
 
-translate_constructor({constructor, Name, Args, _Loc}, State) ->
+translate_constructor({constructor, Name, Args, _Loc} = Constructor, State) ->
+    case catena_codegen_utils:resolution_enabled(State) of
+        true ->
+            case catena_codegen_utils:resolve_constructor(
+                Name,
+                length(Args),
+                Constructor,
+                State
+            ) of
+                {ok, _Callable} ->
+                    translate_tagged_constructor(Name, Args, State);
+                {error, Diagnostic} ->
+                    throw(Diagnostic)
+            end;
+        false ->
+            translate_tagged_constructor(Name, Args, State)
+    end.
+
+translate_tagged_constructor(Name, Args, State) ->
     {CoreArgs, State1} = translate_exprs(Args, State),
-    %% Constructors translate to tagged tuples: {Name, Arg1, Arg2, ...}
-    Constructor = cerl:c_tuple([cerl:c_atom(Name) | CoreArgs]),
-    {Constructor, State1}.
+    {cerl:c_tuple([cerl:c_atom(Name) | CoreArgs]), State1}.
+
+translate_callable_value(#{kind := transform, name := Name, arity := Arity}, State) ->
+    {Arguments, State1} = catena_codegen_utils:fresh_vars(Arity, State),
+    Body = cerl:c_apply(cerl:c_fname(Name, Arity), Arguments),
+    {cerl:c_fun(Arguments, Body), State1};
+translate_callable_value(
+    #{kind := constructor, name := Name, arity := Arity},
+    State
+) ->
+    {Arguments, State1} = catena_codegen_utils:fresh_vars(Arity, State),
+    Body = cerl:c_tuple([cerl:c_atom(Name) | Arguments]),
+    case Arity of
+        0 -> {Body, State1};
+        _ -> {cerl:c_fun(Arguments, Body), State1}
+    end.
 
 unsupported(Stage, Construct, SourceTerm) ->
     unsupported(Stage, Construct, SourceTerm, #{}).

@@ -34,6 +34,9 @@ Based on the current `specs/` set, codebase, and test suite, the current promote
   validated compilation-unit assembly path, every declaration/import/export
   receives an explicit disposition, static metadata is retained before
   erasure, and deferred runtime behavior rejects application emission.
+- Backend-hardening Phase 3 is complete: local symbols are predeclared,
+  transform and constructor arities fail closed, local/forward/recursive calls
+  emit resolved Core identities, and higher-order callable values execute.
 
 ## Immediate Targets
 
@@ -41,9 +44,9 @@ Based on the current `specs/` set, codebase, and test suite, the current promote
   [ADR-0005](adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md)
   and the
   [Core Erlang and BEAM backend spec](compiler/core_erlang_and_beam_backend.md),
-  with Phase 3 of the
+  with Phase 4 of the
   [seven-phase implementation roadmap](planning/backend-hardening/README.md):
-  local, forward, recursive, mutual, and higher-order call resolution.
+  exhaustive expression, pattern, and data lowering.
 - Execute the
   [Dialyzer remediation roadmap](planning/dialyzer-remediation/README.md) to
   replace the visible 777-warning inventory with an enforced zero-warning

@@ -2,14 +2,17 @@
 
 ## Status
 
-Promoted target: accepted architecture with Phase 1 backend safety and Phase 2
-validated-unit/declaration-disposition enforcement implemented; later backend
-phases remain partial or planned.
+Promoted target: accepted architecture with Phase 1 backend safety, Phase 2
+validated-unit/declaration-disposition enforcement, and Phase 3 local and
+higher-order call resolution implemented; later backend phases remain partial
+or planned.
 
 The current repository proves a working source-to-BEAM vertical slice for
 representative transforms, arithmetic, algebraic data constructors, and
-constructor-pattern dispatch. It does not yet satisfy the complete backend
-contract in this spec.
+constructor-pattern dispatch. Local, forward, self-recursive, mutually
+recursive, higher-order, and constructor calls are now proven through
+executable source programs. The repository does not yet satisfy the complete
+backend contract in this spec.
 
 ## Purpose
 
@@ -38,6 +41,7 @@ It distinguishes:
 - `src/compiler/catena_compile.erl`
 - `src/compiler/catena_compilation_unit.erl`
 - `src/compiler/codegen/catena_declaration_disposition.erl`
+- `src/compiler/codegen/catena_call_resolution.erl`
 - `src/compiler/codegen/catena_codegen_lower.erl`
 - `src/compiler/codegen/catena_codegen_erase.erl`
 - `src/compiler/codegen/catena_codegen_module.erl`
@@ -47,6 +51,7 @@ It distinguishes:
 - `test/compiler/integration/catena_core_pipeline_tests.erl`
 - `test/compiler/integration/catena_backend_hardening_phase1_tests.erl`
 - `test/compiler/integration/catena_backend_hardening_phase2_tests.erl`
+- `test/compiler/integration/catena_backend_hardening_phase3_tests.erl`
 
 ## Compilation Boundary
 
@@ -101,11 +106,11 @@ silent omission.
 | --- | --- | --- |
 | Module and transform definitions | Core Erlang module and function definitions | Partial: simple exported transforms are proven. |
 | Primitive literals | Native BEAM terms | Implemented in lowering; arithmetic is proven end to end. |
-| Algebraic data constructors | Tagged tuples `{Constructor, ...}` | Proven for nullary and unary constructors. |
+| Algebraic data constructors | Tagged tuples `{Constructor, ...}` | Proven for nullary, unary, and higher-arity constructors with exact arity validation. |
 | Lists and tuples | Native BEAM lists and tuples | Lowering exists; executable feature coverage is incomplete. |
 | Structural records | BEAM maps keyed by field atoms | Lowering exists; executable feature coverage is incomplete. |
-| Lambdas and higher-order values | Core Erlang functions and `apply` | Lowering exists; executable feature coverage is incomplete. |
-| Local, forward, and recursive transform calls | Resolved Core Erlang function references | Not compliant: named local calls can become unbound variables. |
+| Lambdas and higher-order values | Core Erlang functions and `apply` | Proven for lambda parameters, let-bound functions, returned functions, and named transforms used as values. |
+| Local, forward, and recursive transform calls | Resolved Core Erlang function references | Proven for direct, forward, self-recursive, and mutually recursive calls. |
 | Imported transform calls | Resolved Core Erlang module calls | Deferred pending executable module linkage. |
 | Pattern matching and guards | Core Erlang cases and clauses | Partial: constructor clauses are proven; all parser-native pattern forms are not yet proven. |
 | Type declarations and annotations | Static-erased after validation | Implemented in principle; disposition must become explicit. |
@@ -132,7 +137,8 @@ arity. Resolution must not depend on source declaration order and must support:
 - forward calls
 - self-recursion
 - mutual recursion
-- multiple arities when the language permits them
+- unambiguous name and arity validation; the current language rejects
+  overloaded local callable names
 
 ### Imported Calls
 
@@ -260,8 +266,10 @@ does not promote a Catena feature to BEAM-supported status.
 the arithmetic and constructor-pattern vertical slice plus the dedicated
 fail-closed backend suite. Phase 2 adds validated-unit construction, frontend
 failure exclusion, declaration classification, representation-before-erasure,
-and missing/deferred-runtime rejection evidence. Later phases extend that suite
-to cover:
+and missing/deferred-runtime rejection evidence. Phase 3 adds direct, forward,
+self-recursive, mutually recursive, closure, named-function-value, and
+constructor-arity execution and rejection evidence. Later phases extend that
+suite to cover:
 
 - literals and primitive operators
 - local, forward, recursive, imported, and higher-order calls
