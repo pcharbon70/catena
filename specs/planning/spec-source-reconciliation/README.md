@@ -20,5 +20,5 @@ conformance checks that keep the two views synchronized.
 - [x] [Phase 3: Compiler, Codegen, and Pattern Integration](phase-03-compiler-codegen-and-pattern-integration.md)
 - [x] [Phase 4: Type and Effect Integration Boundary](phase-04-type-and-effect-integration-boundary.md)
 - [x] [Phase 5: Runtime, REPL, and Actor Boundaries](phase-05-runtime-repl-and-actor-boundaries.md)
-- Phase 6: Property and Law Status Reconciliation
+- [ ] [Phase 6: Property and Law Status Reconciliation](phase-06-property-and-law-status-reconciliation.md)
 - Phase 7: Executable Conformance and Governance

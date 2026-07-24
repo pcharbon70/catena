@@ -372,6 +372,32 @@ build_runtime_env_exposes_constructors_and_transforms_test() ->
     {IdFun, 1, runtime} = maps:get(id, Env),
     ?assertEqual(42, IdFun(42)).
 
+build_runtime_env_resolves_forward_transform_references_test() ->
+    Loc = {line, 1},
+    Decls = [
+        {transform_decl, caller, undefined,
+            [
+                {transform_clause,
+                    [{pat_var, x, Loc}],
+                    undefined,
+                    {app, {var, callee, Loc}, [{var, x, Loc}], Loc},
+                    Loc}
+            ],
+            Loc},
+        {transform_decl, callee, undefined,
+            [
+                {transform_clause,
+                    [{pat_var, x, Loc}],
+                    undefined,
+                    {binary_op, plus, {var, x, Loc}, {literal, 1, integer, Loc}, Loc},
+                    Loc}
+            ],
+            Loc}
+    ],
+    Env = catena_test_runner:build_runtime_env(Decls),
+    {CallerFun, 1, runtime} = maps:get(caller, Env),
+    ?assertEqual(42, CallerFun(41)).
+
 run_test_value_passes_test() ->
     TestValue = #{
         name => "law passes",
