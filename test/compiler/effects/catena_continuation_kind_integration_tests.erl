@@ -222,7 +222,7 @@ test_effects_multi_shot_wrapper() ->
                 catena_effects:perform(phase10_multi_shot_op, ignored)
             end
         ),
-        ?assertEqual({multi_shot, [{resumed, 1}, {resumed, 2}]}, Result)
+        ?assertEqual({multi_shot, [1, 2]}, Result)
     after
         catena_effects:shutdown()
     end.
@@ -243,7 +243,7 @@ test_effects_one_shot_wrapper() ->
             end,
             #{one_shot => true}
         ),
-        ?assertEqual({{resumed, first}, {error, already_consumed}}, Result)
+        ?assertEqual({first, {error, already_consumed}}, Result)
     after
         catena_effects:shutdown()
     end.

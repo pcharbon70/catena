@@ -508,7 +508,7 @@ continuation_test_() ->
 
 test_capture_resumption() ->
     Resumption = catena_effects:capture_resumption(),
-    ?assert(is_function(Resumption)).
+    ?assert(catena_resumption:is_resumption(Resumption)).
 
 test_resume() ->
     catena_effects:push_handler_scope(),
@@ -544,14 +544,22 @@ type_system_test_() ->
     }.
 
 test_infer_effect_type() ->
-    Result = catena_effects:infer_effect_type({some, expression}),
-    ?assertMatch({ok, _}, Result).
+    Loc = {location, 1, 1},
+    Expr = {perform_expr, 'IO', read, [], Loc},
+    ?assertEqual(
+        {ok, {effect_set, ['IO']}},
+        catena_effects:infer_effect_type(Expr)
+    ).
 
 test_check_effect_type() ->
     Env = #{},
-    Result = catena_effects:check_effect_type({expr}, Env),
-    ?assertMatch({ok, _}, Result).
+    Loc = {location, 1, 1},
+    Expr = {literal, integer, 42, Loc},
+    ?assertEqual(
+        {ok, {effect_set, []}},
+        catena_effects:check_effect_type(Expr, Env)
+    ).
 
 test_generalize_effects() ->
-    Result = catena_effects:generalize_effects({type, expr}),
-    ?assert(is_tuple(Result)).
+    Type = {tfun, {tvar, 1}, {tvar, 2}, {evar, 1}},
+    ?assertEqual(Type, catena_effects:generalize_effects(Type)).

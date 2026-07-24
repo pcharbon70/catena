@@ -13,7 +13,7 @@ It exists because some planning checklists are stale relative to later implement
 | Track | Current promoted status |
 | --- | --- |
 | Proof-of-concept | Implemented through Phases 1 to 3, with Phase 4 partial/minimal and later phases still planned or historically superseded. |
-| Algebraic-effects | Phase 7 handler/resumption foundations and Phase 8 equation/law surfaces are materially implemented; later effect-system surfaces exist with uneven maturity, and Phase 9 handler-depth work is the next active milestone. |
+| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary; full language-surface continuation support remains incomplete. |
 | Property testing | Phases 1 to 4 are materially implemented in `src/proptest`; Phases 5 and 6 are substantial but partial; Phase 7 remains planned. |
 | Law verification | Structural stdlib law definition is implemented; stdlib-native execution remains partial; the internal proptest law framework is materially ahead of the staged plan. |
 | Language revamp migration | Completed and now historical. |
@@ -90,13 +90,17 @@ Current promoted status:
 
 - Phase 7 handler/resumption foundations are materially implemented in `src/compiler/effects/catena_handler.erl`, `catena_resumption.erl`, `catena_perform.erl`, and their focused tests
 - Phase 8 equation and algebraic-law surfaces are materially implemented in `src/compiler/effects/catena_equations.erl`, `catena_equation_prover.erl`, `catena_equation_rewrite.erl`, `catena_effect_system.erl`, and dedicated effect-system optimization/verification tests
-- row-polymorphism integration, typed handlers, operation signatures, higher-order effects, and Phase 14 validation/orchestration surfaces are present in code and tests, but those later milestones are not yet reconciled as a single uniformly finished front-end track
+- row-polymorphism integration, typed handlers, operation signatures,
+  higher-order effects, and Phase 14 validation/orchestration surfaces are
+  present in code and pass the focused Phase 4 reconciliation gate
 - the promoted repo status is therefore "implemented algebraic-effects machinery with uneven language-surface rollout", not "effect polymorphism entirely deferred"
-- the next active milestone on this track is Phase 9 deep-versus-shallow handler semantics, which already has scaffold modules/tests in-tree but still needs section-by-section reconciliation
 
 Important caveat:
 
 - some of the newer effect machinery is better represented in internal compiler/runtime modules and focused tests than in the fully surfaced end-user syntax, so implementation maturity is ahead of total front-end polish
+- generated code uses the explicit-context runtime; the higher-level Erlang
+  orchestration facade uses process-local handler scopes and does not capture
+  true delimited continuations from ordinary Erlang call stacks
 
 ## Property-Testing Track
 
@@ -178,7 +182,7 @@ Current promoted status:
 
 The default `rebar3 eunit` entry point now discovers, compiles, and executes the
 complete active test tree. It is deterministic but not green. Two consecutive
-verified runs on 2026-07-23 each reported 4,725 passing, 93 failing, and zero
+verified runs on 2026-07-23 each reported 4,801 passing, 17 failing, and zero
 skipped tests.
 
 Promoted interpretation:
@@ -187,11 +191,12 @@ Promoted interpretation:
 - `make test` and `rebar3 eunit` expose the complete active EUnit result
 - the six Phase 2 standard-library/frontend modules pass all 170 focused tests
 - the 15 Phase 3 compiler/codegen/pattern modules pass all 397 focused tests
+- the ten Phase 4 effect/type/runtime modules pass all 244 focused tests
 - valid source reaches executable Core Erlang only after typed frontend
   validation
-- the 93 remaining failures are assigned to later spec-source reconciliation
+- the 17 remaining failures are assigned to later spec-source reconciliation
   phases in the
-  [Phase 3 test baseline](spec-source-reconciliation/phase-03-test-baseline.md)
+  [Phase 4 test baseline](spec-source-reconciliation/phase-04-test-baseline.md)
 - the internal property-testing transition is still underway
 - historical PropEr suites remain preserved under `test_legacy/proper/` as migration targets rather than active default tests
 

@@ -155,7 +155,8 @@ validate_handler_models() ->
     ShallowHandler = #{
         effect => state,
         handler => fun(_Op, _Args) -> shallow end,
-        scope => make_ref()
+        scope => make_ref(),
+        depth => 1
     },
     DeepContext = #{
         handlers => [DeepHandler],

@@ -325,8 +325,11 @@ test_handle_with_abort() ->
 test_handle_with_resume() ->
     Result = catena_effect_system:handle_with(
         resume_op,
-        fun(Val, Res) -> catena_resumption:resume(Res, Val * 2) end,
-        fun() -> 5 end
+        fun(Val, Res) ->
+            {resumed, Resumed} = catena_resumption:resume(Res, Val * 2),
+            Resumed
+        end,
+        fun() -> catena_effect_system:perform(resume_op, 5) end
     ),
     ?assertEqual(10, Result).
 

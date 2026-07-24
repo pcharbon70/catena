@@ -133,8 +133,8 @@ process_send_test() ->
     TestMsg = {test_message, 42},
     ?assertEqual(ok, catena_effect_runtime:perform(Ctx, 'Process', send, [Self, TestMsg])),
     receive
-        Msg ->
-            ?assertEqual(TestMsg, Msg)
+        TestMsg ->
+            ok
     after 1000 ->
         ?assert(false, "Timeout waiting for message")
     end.

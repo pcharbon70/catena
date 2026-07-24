@@ -22,6 +22,9 @@ Promoted status: implemented for the current compiler core, with trait resolutio
 - Trait constraints and instance resolution are first-class parts of typing, not add-on post-processing.
 - Higher-kinded type usage is validated before declaration typing proceeds.
 - Effect typing now spans both concrete effect sets and the implemented effect-row machinery used by the algebraic-effects track, including handler removal and row-variable generalization/instantiation helpers.
+- The public orchestration helpers infer/check effects by threading a fresh
+  `catena_infer_state` through `catena_effect_infer`; public generalization
+  delegates effect-variable quantification to `catena_effect_poly`.
 - Typed handlers, operation signatures, and higher-order effect support are present in the compiler/effects layers and validated by dedicated tests.
 - Standard-library validation is already part of the type-system story, not a separate future concern.
 
@@ -90,6 +93,9 @@ The following remain explicitly deferred and must not be implied as complete by 
 - the final ergonomics and optimization story for the entire effect system
 - the final law-verification story for all abstractions
 - the broader actor/distribution phases that build on top of the effect machinery
+- true delimited-continuation capture from an ordinary Erlang call stack;
+  current orchestration resumptions are opaque wrappers around a direct-style
+  result marker
 
 ## Reconciled Note
 

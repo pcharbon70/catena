@@ -687,13 +687,30 @@ inline_handlers(Program) ->
 %% @doc Check if an effect type is valid.
 -spec check_effect_type(term(), term()) -> {ok, term()} | {error, term()}.
 check_effect_type(Expr, Env) ->
-    catena_effect_infer:check(Expr, Env).
+    infer_effect_type(Expr, Env).
 
 %% @doc Infer the effect type of an expression.
 -spec infer_effect_type(term()) -> {ok, term()} | {error, term()}.
-infer_effect_type(_Expr) ->
-    %% TODO: Integrate with type inference
-    {ok, empty_effects}.
+infer_effect_type(Expr) ->
+    infer_effect_type(Expr, catena_type_env:empty()).
+
+%% @private Infer expression effects with a caller-provided type environment.
+-spec infer_effect_type(term(), catena_type_env:env()) ->
+    {ok, catena_infer_effect:effect_set()} | {error, term()}.
+infer_effect_type(Expr, Env) ->
+    try
+        State0 = catena_infer_state:new(),
+        State1 = catena_effect_infer:infer_effects(Expr, Env, State0),
+        case catena_infer_state:get_errors(State1) of
+            [] ->
+                {ok, catena_infer_state:get_effects(State1)};
+            Errors ->
+                {error, Errors}
+        end
+    catch
+        Class:Reason ->
+            {error, {Class, Reason}}
+    end.
 
 %% @doc Validate a row variable.
 -spec validate_row_var(catena_row_types:row_var()) -> ok | {error, term()}.
@@ -703,7 +720,8 @@ validate_row_var(RowVar) ->
 %% @doc Generalize effect types in a type scheme.
 -spec generalize_effects(term()) -> term().
 generalize_effects(Type) ->
-    catena_type_scheme:generalize_effects(Type).
+    VarIds = lists:usort(effect_var_ids(Type)),
+    catena_effect_poly:quantify_effects(Type, VarIds).
 
 %%====================================================================
 %% System State and Diagnostics
@@ -788,7 +806,7 @@ apply_options(Config, [{Key, Value} | Rest]) ->
             Config#system_config{optimization_level = Value};
         enable_equations when is_boolean(Value) ->
             Config#system_config{enable_equations = Value};
-        enable_heavy when is_boolean(Value) ->
+        enable_hefty when is_boolean(Value) ->
             Config#system_config{enable_hefty = Value};
         enable_row_poly when is_boolean(Value) ->
             Config#system_config{enable_row_poly = Value};
@@ -849,3 +867,18 @@ diagnostics_stats(Stats) ->
         resumptions => Stats#stats.resumptions,
         optimizations => Stats#stats.optimizations
     }.
+
+%% @private Collect effect-variable identifiers from a type expression.
+-spec effect_var_ids(term()) -> [pos_integer()].
+effect_var_ids({evar, Id}) when is_integer(Id), Id > 0 ->
+    [Id];
+effect_var_ids({constrained, Id, Constraints}) when is_integer(Id), Id > 0 ->
+    [Id | effect_var_ids(Constraints)];
+effect_var_ids(Term) when is_tuple(Term) ->
+    lists:append([effect_var_ids(Element) || Element <- tuple_to_list(Term)]);
+effect_var_ids(Term) when is_list(Term) ->
+    lists:append([effect_var_ids(Element) || Element <- Term]);
+effect_var_ids(Term) when is_map(Term) ->
+    effect_var_ids(maps:values(Term));
+effect_var_ids(_Term) ->
+    [].

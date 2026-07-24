@@ -49,18 +49,16 @@ handler_resumption_integration_test_() ->
     }.
 
 test_handler_receives_resumption() ->
-    %% Verify handler receives both value and resumption
-    PassedRef = make_ref(),
+    %% Verify the public handler receives an opaque, resumable value.
     Result = catena_effects:handle(
         test_op,
-        fun(_Val, Resumption) ->
-            %% Check resumption is a function
-            ?assert(is_function(Resumption, 1)),
-            handler_result
+        fun(Val, Resumption) ->
+            ?assert(is_map(Resumption)),
+            catena_effects:resume(Resumption, {handler_result, Val})
         end,
-        fun() -> computation_result end
+        fun() -> catena_effects:perform(test_op, operation_value) end
     ),
-    ?assertEqual(handler_result, Result).
+    ?assertEqual({handler_result, operation_value}, Result).
 
 test_resumption_continues() ->
     %% Verify resumption continues the computation
@@ -71,8 +69,7 @@ test_resumption_continues() ->
             catena_effects:resume(Resumption, 42)
         end,
         fun() ->
-            %% After resumption, this should receive 42
-            Received = catena_effects:perform(receive_value, dummy),
+            Received = catena_effects:perform(resumption_test_op, dummy),
             Received * 2
         end
     ),
@@ -236,7 +233,7 @@ higher_order_integration_test_() ->
 
 test_effectful_param() ->
     %% Test operations with effectful function parameters
-    Result = catena_effects:run_state(
+    {Result, FinalState} = catena_effects:run_state(
         fun() ->
             %% Use state operations within a computation
             S = catena_effects:state_get(),
@@ -245,17 +242,18 @@ test_effectful_param() ->
         end,
         10
     ),
-    ?assertEqual(11, Result).
+    ?assertEqual(11, Result),
+    ?assertEqual(11, FinalState).
 
 test_hefty_construction() ->
     %% Verify hefty tree operations exist
     %% Pure value
     Pure = catena_hefty:pure(42),
-    ?assert(is_function(Pure)),
+    ?assert(catena_hefty:is_hefty_tree(Pure)),
 
     %% Effect operation
     Effect = catena_hefty:effect(test_op, val, fun(_) -> catena_hefty:pure(result) end),
-    ?assert(is_function(Effect)).
+    ?assert(catena_hefty:is_hefty_tree(Effect)).
 
 %%====================================================================
 %% Equation-Based Optimization Integration Tests
@@ -327,6 +325,7 @@ test_state_management() ->
         #{}
     ),
 
+    ?assertEqual(FinalState, Result),
     ?assertEqual(5, maps:get(count, FinalState)),
     ?assertEqual(15, maps:get(total, FinalState)).
 
@@ -358,22 +357,22 @@ test_combined_effects() ->
     %% Test combining multiple effects
     {Result, WriterOutput} = catena_effects:run_writer(
         fun() ->
-            %% Combine state and reader in a single computation
-            InitialState = catena_effects:state_get(),
-            catena_effects:writer_tell({initial, InitialState}),
-
-            %% Modify state
-            catena_effects:state_put(InitialState * 2),
-            NewState = catena_effects:state_get(),
-            catena_effects:writer_tell({modified, NewState}),
-
-            %% Return final result
-            {final, NewState}
+            catena_effects:run_state(
+                fun() ->
+                    InitialState = catena_effects:state_get(),
+                    catena_effects:writer_tell({initial, InitialState}),
+                    catena_effects:state_put(InitialState * 2),
+                    NewState = catena_effects:state_get(),
+                    catena_effects:writer_tell({modified, NewState}),
+                    {final, NewState}
+                end,
+                5
+            )
         end
     ),
 
-    ?assertMatch({final, _}, Result),
-    ?assertEqual([{initial, 0}, {modified, 0}], WriterOutput).
+    ?assertEqual({{final, 10}, 10}, Result),
+    ?assertEqual([{initial, 5}, {modified, 10}], WriterOutput).
 
 %%====================================================================
 %% System State Consistency Tests
@@ -476,7 +475,7 @@ test_handler_error_recovery() ->
     Result = catch catena_effects:handle(
         bad_op,
         BadHandler,
-        fun() -> normal_result end
+        fun() -> catena_effects:perform(bad_op, value) end
     ),
 
     %% Should get an error, but system should still be functional

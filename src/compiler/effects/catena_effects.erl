@@ -90,7 +90,9 @@
     register_handler/3,
     unregister_handler/1,
     lookup_handler/1,
-    current_handlers/0
+    current_handlers/0,
+    push_handler_scope/0,
+    pop_handler_scope/0
 ]).
 
 %%====================================================================
@@ -503,6 +505,16 @@ lookup_handler(Operation) ->
 current_handlers() ->
     ?EFFECT_SYSTEM:current_handlers().
 
+%% @doc Push an empty public handler scope.
+-spec push_handler_scope() -> ok.
+push_handler_scope() ->
+    ?EFFECT_SYSTEM:push_handler_scope().
+
+%% @doc Pop the current public handler scope.
+-spec pop_handler_scope() -> {ok, map()} | {error, empty}.
+pop_handler_scope() ->
+    ?EFFECT_SYSTEM:pop_handler_scope().
+
 %%====================================================================
 %% Continuation Management
 %%====================================================================
@@ -515,7 +527,10 @@ capture_resumption() ->
 %% @doc Resume a computation with a value.
 -spec resume(term(), term()) -> term().
 resume(Resumption, Value) ->
-    catena_resumption:resume(Resumption, Value).
+    case catena_resumption:resume(Resumption, Value) of
+        {resumed, Result} -> Result;
+        Result -> Result
+    end.
 
 %% @doc Abort the computation with a value.
 -spec abort(term()) -> no_return().
@@ -606,9 +621,8 @@ run_state(Computation, InitialState) ->
 run_state(Computation, InitialState, Options) ->
     Ref = make_ref(),
     Handler = fun
-        (get, Resume) ->
-            Initial = get({state_ref, Ref}),
-            Resume(Initial);
+        (get, _Resume) ->
+            get({state_ref, Ref});
         ({put, Value}, _Resume) ->
             put({state_ref, Ref}, Value),
             Value;
@@ -617,11 +631,11 @@ run_state(Computation, InitialState, Options) ->
             NewState = Fun(Current),
             put({state_ref, Ref}, NewState),
             NewState;
-        ({get_and_put, Fun}, Resume) ->
+        ({get_and_put, Fun}, _Resume) ->
             Current = get({state_ref, Ref}),
             NewState = Fun(Current),
             put({state_ref, Ref}, NewState),
-            Resume(Current)
+            Current
     end,
     put({state_ref, Ref}, InitialState),
     try
@@ -669,18 +683,17 @@ run_reader(Computation, Env) ->
 run_reader(Computation, Env, Options) ->
     Ref = make_ref(),
     Handler = fun
-        (ask, Resume) ->
-            Value = get({reader_ref, Ref}),
-            Resume(Value);
+        (ask, _Resume) ->
+            get({reader_ref, Ref});
         ({local, LocalComp}, _Resume) ->
             CurrentEnv = get({reader_ref, Ref}),
             put({reader_ref, Ref}, CurrentEnv),
             Result = LocalComp(),
             put({reader_ref, Ref}, CurrentEnv),
             Result;
-        ({ask_local, Fun}, Resume) ->
+        ({ask_local, Fun}, _Resume) ->
             Value = get({reader_ref, Ref}),
-            Resume(Fun(Value))
+            Fun(Value)
     end,
     put({reader_ref, Ref}, Env),
     try
@@ -724,19 +737,19 @@ run_writer(Computation) ->
 run_writer(Computation, Options) ->
     Ref = make_ref(),
     Handler = fun
-        ({tell, Value}, Resume) ->
+        ({tell, Value}, _Resume) ->
             Output = get({writer_ref, Ref}),
             put({writer_ref, Ref}, [Value | Output]),
-            Resume(ok);
-        ({listen, InnerComp}, Resume) ->
+            ok;
+        ({listen, InnerComp}, _Resume) ->
             CurrentOutput = get({writer_ref, Ref}),
             put({writer_ref, Ref}, []),
             Result = InnerComp(),
             InnerOutput = lists:reverse(get({writer_ref, Ref})),
             put({writer_ref, Ref}, CurrentOutput),
-            Resume({Result, InnerOutput});
-        ({pass, Value}, Resume) ->
-            Resume(Value)
+            {Result, InnerOutput};
+        ({pass, Value}, _Resume) ->
+            Value
     end,
     put({writer_ref, Ref}, []),
     try
@@ -759,8 +772,8 @@ tell(Value) ->
 %% @doc Throw an error effect.
 -spec error_throw(term()) -> no_return().
 error_throw(Error) ->
-    perform(error, {throw, Error}),
-    error(unreachable).
+    Result = perform(error, {throw, Error}),
+    erlang:throw({catena_effect_abort, Result}).
 
 %% @doc Catch an error with a handler.
 -spec error_catch(computation(), function()) -> term().
@@ -790,20 +803,23 @@ run_error(Computation, ErrorHandler) ->
 run_error(Computation, ErrorHandler, Options) ->
     Handler = fun
         ({throw, Error}, _Resume) ->
-            ErrorHandler(Error);
-        ({'catch', InnerComp, _InnerHandler}, Resume) ->
+            {catena_effect_error, Error};
+        ({'catch', InnerComp, InnerHandler}, _Resume) ->
             try InnerComp() of
-                Result -> Resume(Result)
+                Result -> Result
             catch
-                _:_ -> error_handler_failed
+                throw:{catena_effect_abort, {catena_effect_error, Error}} ->
+                    InnerHandler(Error)
             end
     end,
-    handle(error, Handler, fun() ->
-        try Computation()
-        catch
-            {normal_abort, _} = Abort -> exit(Abort)
-        end
-    end, Options).
+    try
+        handle(error, Handler, Computation, Options)
+    catch
+        throw:{catena_effect_abort, {catena_effect_error, Error}} ->
+            ErrorHandler(Error);
+        throw:{catena_effect_abort, Result} ->
+            Result
+    end.
 
 %% @doc Convenience alias for error_throw.
 -spec throw(term()) -> no_return().

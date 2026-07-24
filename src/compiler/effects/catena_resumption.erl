@@ -122,9 +122,13 @@ cont_of(#resumption{cont = Cont}) -> Cont.
 
 %% @doc Capture the current continuation as a resumption.
 %%
-%% This function captures the current execution context using the process
-%% dictionary. The continuation represents "the rest of the computation"
-%% from the point where this function is called.
+%% The direct Erlang orchestration layer cannot capture the language-level
+%% continuation represented by an ordinary call stack. It therefore records
+%% capture metadata and uses a tagged placeholder result. The public
+%% catena_effects facade normalizes that marker to the value supplied by the
+%% handler. Generated Catena code uses the explicit-context runtime, while true
+%% delimited continuation capture remains a compiler/CPS transformation
+%% concern.
 %%
 %% Note: This is a simplified implementation. A full implementation would
 %% use CPS transformation or exceptions to capture the continuation.
@@ -137,8 +141,7 @@ capture_continuation() ->
 capture_with_metadata(Metadata) when is_map(Metadata) ->
     CapturedAt = erlang:system_time(millisecond),
     StackDepth = get_stack_depth(),
-    % Create a placeholder continuation
-    % In a full implementation, this would capture the actual continuation
+    % Direct-style placeholder: identify the value supplied at resume time.
     Cont = fun(Value) -> {resumed, Value} end,
     new(Cont, CapturedAt, StackDepth, Metadata).
 

@@ -341,11 +341,23 @@ test_process_send() ->
 test_process_handler_spec() ->
     {EffectName, Operations} = catena_effect_runtime:process_handler(),
     ?assertEqual('Process', EffectName),
-    ?assertEqual(3, length(Operations)),
+    ?assertEqual(12, length(Operations)),
     OpNames = [Name || {Name, _Fun} <- Operations],
-    ?assert(lists:member(spawn, OpNames)),
-    ?assert(lists:member(send, OpNames)),
-    ?assert(lists:member(self, OpNames)).
+    Required = [
+        spawn,
+        spawn_link,
+        send,
+        self,
+        link,
+        unlink,
+        monitor,
+        demonitor,
+        whereis,
+        register,
+        is_process_alive,
+        trap_exit
+    ],
+    ?assertEqual(lists:sort(Required), lists:sort(OpNames)).
 
 %%====================================================================
 %% Cross-Process Context Tests
