@@ -60,7 +60,9 @@ generate_validated_module(Unit) ->
                     generate_module_with_inventory(
                         BackendAST,
                         CodegenOpts,
-                        catena_compilation_unit:callables(Unit)
+                        catena_compilation_unit:callables(Unit),
+                        catena_compilation_unit:effectful_transforms(Unit),
+                        catena_compilation_unit:runtime_dependencies(Unit)
                     );
                 {error, _} = Error ->
                     Error
@@ -86,7 +88,17 @@ generate_module(ModuleAST, Opts) ->
         {module, Name, Exports, _Imports, SourceDecls, _Loc} = ModuleAST,
         case catena_call_resolution:build(Name, Exports, SourceDecls) of
             {ok, Inventory} ->
-                do_generate_module(ModuleAST, Opts, Inventory);
+                EffectfulTransforms =
+                    catena_effect_resolution:effectful_transforms(
+                        SourceDecls
+                    ),
+                do_generate_module(
+                    ModuleAST,
+                    Opts,
+                    Inventory,
+                    EffectfulTransforms,
+                    runtime_dependencies(EffectfulTransforms)
+                );
             {error, ResolutionDiagnostic} ->
                 throw(ResolutionDiagnostic)
         end
@@ -101,9 +113,21 @@ generate_module(ModuleAST, Opts) ->
             {error, {codegen_error, Reason}}
     end.
 
-generate_module_with_inventory(ModuleAST, Opts, Inventory) ->
+generate_module_with_inventory(
+    ModuleAST,
+    Opts,
+    Inventory,
+    EffectfulTransforms,
+    RuntimeDependencies
+) ->
     try
-        do_generate_module(ModuleAST, Opts, Inventory)
+        do_generate_module(
+            ModuleAST,
+            Opts,
+            Inventory,
+            EffectfulTransforms,
+            RuntimeDependencies
+        )
     catch
         error:{backend_error, _, _} = Diagnostic:_Stack ->
             {error, Diagnostic};
@@ -115,13 +139,26 @@ generate_module_with_inventory(ModuleAST, Opts, Inventory) ->
             {error, {codegen_error, Reason}}
     end.
 
-do_generate_module(ModuleAST, Opts, Inventory) ->
+do_generate_module(
+    ModuleAST,
+    Opts,
+    Inventory,
+    EffectfulTransforms,
+    RuntimeDependencies
+) ->
         {module, Name, Exports, _Imports, Decls, _Loc} =
             catena_codegen_lower:lower_module(ModuleAST),
         State = catena_codegen_utils:new_state(#{
             module_name => Name,
-            callables => Inventory
+            callables => Inventory,
+            effectful_transforms => EffectfulTransforms
         }),
+
+        ok = validate_runtime_dependencies(
+            RuntimeDependencies,
+            Opts,
+            Name
+        ),
 
         %% The raw-AST compatibility path must still classify every erasure
         %% input before static declarations can disappear.
@@ -143,7 +180,9 @@ do_generate_module(ModuleAST, Opts, Inventory) ->
         CoreExports = generate_module_exports(ActiveDecls, Exports),
 
         %% Build module attributes
-        Attrs = generate_attributes(Opts),
+        Attrs = generate_attributes(
+            Opts#{runtime_dependencies => RuntimeDependencies}
+        ),
 
         %% Create Core Erlang module
         CoreModule = cerl:c_module(
@@ -265,7 +304,27 @@ generate_attributes(Opts) ->
         Author -> [{cerl:c_atom(author), cerl:c_string(Author)}]
     end,
 
-    BaseAttrs ++ VersionAttr ++ AuthorAttr.
+    RuntimeDependencyAttr =
+        case maps:get(runtime_dependencies, Opts, []) of
+            [] ->
+                [];
+            Dependencies ->
+                DependencyTerms = [
+                    {
+                        maps:get(module, Dependency),
+                        maps:get(version, Dependency)
+                    }
+                    || Dependency <- Dependencies
+                ],
+                [
+                    {
+                        cerl:c_atom(catena_runtime_dependencies),
+                        cerl:abstract(DependencyTerms)
+                    }
+                ]
+        end,
+
+    BaseAttrs ++ VersionAttr ++ AuthorAttr ++ RuntimeDependencyAttr.
 
 %%====================================================================
 %% Function Compilation (1.3.4.2)
@@ -275,12 +334,33 @@ generate_attributes(Opts) ->
 -spec compile_functions([decl()], catena_codegen_utils:codegen_state()) ->
     {[{cerl:cerl(), cerl:cerl()}], catena_codegen_utils:codegen_state()}.
 compile_functions(Decls, State) ->
-    lists:mapfoldl(
-        fun(Decl, St) ->
-            compile_function(Decl, St)
+    {Definitions, FinalState} = lists:mapfoldl(
+        fun(Decl, CurrentState) ->
+            compile_function_definitions(Decl, CurrentState)
         end,
         State,
         [D || D <- Decls, is_function_decl(D)]
+    ),
+    {lists:append(Definitions), FinalState}.
+
+compile_function_definitions(
+    {transform, Name, _Params, _Body, _Location} = Declaration,
+    State
+) ->
+    case catena_codegen_utils:is_effectful_transform(Name, State) of
+        true ->
+            compile_effectful_function(Declaration, State);
+        false ->
+            {Definition, State1} = compile_function(Declaration, State),
+            {[Definition], State1}
+    end;
+compile_function_definitions(
+    {transform_typed, Name, _Type, Params, Body, Location},
+    State
+) ->
+    compile_function_definitions(
+        {transform, Name, Params, Body, Location},
+        State
     ).
 
 %% @doc Compile a single function declaration to Core Erlang
@@ -295,17 +375,39 @@ compile_function({transform, Name, Params, Body, _Loc}, State) ->
     %% Compile parameters to variables
     {ParamVars, State1} = compile_params(Params, State),
 
-    %% Compile body with parameters distinguished from top-level callables.
     ParamNames = [cerl:var_name(ParamVar) || ParamVar <- ParamVars],
-    {CoreBody0, State2} = catena_codegen_utils:with_function_scope(
-        Name,
-        ParamNames,
-        fun(ScopedState) ->
-            catena_codegen_expr:translate_expr(Body, ScopedState)
-        end,
-        State1
-    ),
-    CoreBody = maybe_wrap_effect_runtime(Body, CoreBody0),
+    {CoreBody, State2} = case requires_effect_runtime(Body) of
+        true ->
+            {ContextVar, ContextState} =
+                catena_codegen_utils:fresh_var(State1),
+            {TranslatedBody, BodyState} =
+                compile_function_body(
+                    Name,
+                    ParamNames,
+                    Body,
+                    ContextVar,
+                    ContextState
+                ),
+            {
+                catena_effect_codegen:with_runtime_call(
+                    ContextVar,
+                    TranslatedBody
+                ),
+                BodyState
+            };
+        false ->
+            catena_codegen_utils:with_function_scope(
+                Name,
+                ParamNames,
+                fun(ScopedState) ->
+                    catena_codegen_expr:translate_expr(
+                        Body,
+                        ScopedState
+                    )
+                end,
+                State1
+            )
+    end,
 
     %% Create function definition
     FunDef = cerl:c_fun(ParamVars, CoreBody),
@@ -315,6 +417,63 @@ compile_function({transform, Name, Params, Body, _Loc}, State) ->
 compile_function({transform_typed, Name, _TypeSig, Params, Body, Loc}, State) ->
     %% Treat same as untyped (types already erased)
     compile_function({transform, Name, Params, Body, Loc}, State).
+
+compile_effectful_function(
+    {transform, Name, Params, Body, _Location},
+    State
+) ->
+    Arity = length(Params),
+    {ParamVars, State1} = compile_params(Params, State),
+    ParamNames = [cerl:var_name(ParamVar) || ParamVar <- ParamVars],
+    {ContextVar, State2} = catena_codegen_utils:fresh_var(State1),
+    {CoreBody, State3} = compile_function_body(
+        Name,
+        ParamNames,
+        Body,
+        ContextVar,
+        State2
+    ),
+    EntryName = catena_codegen_utils:effect_entry_name(Name),
+    EntryFName = cerl:c_fname(EntryName, Arity + 1),
+    EntryDef = cerl:c_fun([ContextVar | ParamVars], CoreBody),
+    WrapperFName = cerl:c_fname(Name, Arity),
+    EntryCall = cerl:c_apply(
+        EntryFName,
+        [ContextVar | ParamVars]
+    ),
+    WrapperDef = cerl:c_fun(
+        ParamVars,
+        catena_effect_codegen:with_runtime_call(
+            ContextVar,
+            EntryCall
+        )
+    ),
+    {[{WrapperFName, WrapperDef}, {EntryFName, EntryDef}], State3}.
+
+compile_function_body(
+    Name,
+    ParamNames,
+    Body,
+    ContextVar,
+    State
+) ->
+    catena_codegen_utils:with_function_scope(
+        Name,
+        ParamNames,
+        fun(FunctionState) ->
+            catena_codegen_utils:with_runtime_context(
+                ContextVar,
+                fun(ScopedState) ->
+                    catena_codegen_expr:translate_expr(
+                        Body,
+                        ScopedState
+                    )
+                end,
+                FunctionState
+            )
+        end,
+        State
+    ).
 
 %% Compile parameters to Core Erlang variables
 compile_params(Params, State) ->
@@ -346,12 +505,6 @@ compile_param(Other, _State) ->
             Context
         )
     ).
-
-maybe_wrap_effect_runtime(Body, CoreBody) ->
-    case requires_effect_runtime(Body) of
-        true -> catena_effect_codegen:with_runtime_call(CoreBody);
-        false -> CoreBody
-    end.
 
 requires_effect_runtime({perform_expr, _, _, _, _}) ->
     true;
@@ -476,6 +629,74 @@ compile_to_string(ModuleAST) ->
             {error, Reason}
     end.
 
+runtime_dependencies(EffectfulTransforms)
+  when map_size(EffectfulTransforms) =:= 0 ->
+    [];
+runtime_dependencies(_EffectfulTransforms) ->
+    [
+        #{module => catena_effect_runtime, version => 1},
+        #{module => catena_effect_system, version => 1}
+    ].
+
+validate_runtime_dependencies(Dependencies, Opts, ModuleName) ->
+    Available = maps:get(
+        available_runtime_modules,
+        Opts,
+        auto
+    ),
+    lists:foreach(
+        fun(Dependency) ->
+            RuntimeModule = maps:get(module, Dependency),
+            Version = maps:get(version, Dependency),
+            case dependency_available(
+                RuntimeModule,
+                Version,
+                Available
+            ) of
+                true ->
+                    ok;
+                false ->
+                    Context = catena_backend_error:context(
+                        artifact_preparation,
+                        runtime_dependency,
+                        maps:get(location, Opts, undefined),
+                        #{
+                            module => ModuleName,
+                            available_runtime_modules => Available
+                        }
+                    ),
+                    throw(
+                        catena_backend_error:
+                            runtime_dependency_unavailable(
+                                RuntimeModule,
+                                Version,
+                                Context
+                            )
+                    )
+            end
+        end,
+        Dependencies
+    ),
+    ok.
+
+dependency_available(_Module, _Version, all) ->
+    true;
+dependency_available(Module, _Version, auto) ->
+    code:which(Module) =/= non_existing;
+dependency_available(Module, _Version, Available)
+  when is_list(Available) ->
+    lists:member(Module, Available);
+dependency_available(Module, Version, Available)
+  when is_map(Available) ->
+    case maps:get(Module, Available, unavailable) of
+        AvailableVersion when is_integer(AvailableVersion) ->
+            AvailableVersion >= Version;
+        _ ->
+            false
+    end;
+dependency_available(_Module, _Version, _Available) ->
+    false.
+
 %%====================================================================
 %% Type Definitions
 %%====================================================================
@@ -488,7 +709,9 @@ compile_to_string(ModuleAST) ->
     file => string(),
     version => string(),
     author => string(),
-    optimize => boolean()
+    optimize => boolean(),
+    available_runtime_modules =>
+        auto | all | [atom()] | #{atom() => pos_integer()}
 }.
 -type module_info() :: #{
     name => atom(),

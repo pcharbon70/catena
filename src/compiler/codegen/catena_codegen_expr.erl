@@ -297,8 +297,13 @@ translate_named_app(FuncName, CoreArgs, _Loc, _Application, State) ->
                     ) of
                         {ok, Callable} ->
                             Arity = maps:get(arity, Callable),
-                            Target = cerl:c_fname(FuncName, Arity),
-                            {cerl:c_apply(Target, CoreArgs), State};
+                            {Target, RuntimeArgs} = local_transform_target(
+                                FuncName,
+                                Arity,
+                                CoreArgs,
+                                State
+                            ),
+                            {cerl:c_apply(Target, RuntimeArgs), State};
                         {error, Diagnostic} ->
                             throw(Diagnostic)
                     end
@@ -634,7 +639,13 @@ translate_tagged_constructor(Name, Args, State) ->
 
 translate_callable_value(#{kind := transform, name := Name, arity := Arity}, State) ->
     {Arguments, State1} = catena_codegen_utils:fresh_vars(Arity, State),
-    Body = cerl:c_apply(cerl:c_fname(Name, Arity), Arguments),
+    {Target, RuntimeArguments} = local_transform_target(
+        Name,
+        Arity,
+        Arguments,
+        State1
+    ),
+    Body = cerl:c_apply(Target, RuntimeArguments),
     {cerl:c_fun(Arguments, Body), State1};
 translate_callable_value(
     #{kind := constructor, name := Name, arity := Arity},
@@ -645,6 +656,24 @@ translate_callable_value(
     case Arity of
         0 -> {Body, State1};
         _ -> {cerl:c_fun(Arguments, Body), State1}
+    end.
+
+local_transform_target(Name, Arity, Arguments, State) ->
+    case
+        catena_codegen_utils:is_effectful_transform(Name, State) andalso
+            catena_codegen_utils:has_runtime_context(State)
+    of
+        true ->
+            Context = catena_codegen_utils:runtime_context(State),
+            {
+                cerl:c_fname(
+                    catena_codegen_utils:effect_entry_name(Name),
+                    Arity + 1
+                ),
+                [Context | Arguments]
+            };
+        false ->
+            {cerl:c_fname(Name, Arity), Arguments}
     end.
 
 unsupported(Stage, Construct, SourceTerm) ->

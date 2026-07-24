@@ -2,11 +2,11 @@
 
 ## Status
 
-Promoted target: accepted architecture with Phases 1 through 4 implemented:
+Promoted target: accepted architecture with Phases 1 through 5 implemented:
 backend safety, validated-unit/declaration-disposition enforcement, local and
-higher-order call resolution, and exhaustive pure expression, pattern, and
-data lowering. Later runtime, linkage, and public-artifact phases remain
-partial or planned.
+higher-order call resolution, exhaustive pure expression/pattern/data
+lowering, and runtime-backed effect semantics. Later linkage and
+public-artifact phases remain partial or planned.
 
 The current repository proves a working source-to-BEAM vertical slice for
 representative transforms, arithmetic, algebraic data constructors, and
@@ -15,6 +15,9 @@ recursive, higher-order, and constructor calls are proven through executable
 source programs. The same evidence now covers primitive pure operators,
 collections, records, field access, parser-native patterns, guards, aliases,
 or-patterns, representation round trips, and fail-closed type erasure. The
+effect evidence additionally covers declared operation resolution, explicit
+context propagation across helper calls, lossless handlers, nested and
+multiple effects, lifecycle cleanup, and versioned runtime dependencies. The
 repository does not yet satisfy the complete backend contract in this spec.
 
 ## Purpose
@@ -43,6 +46,7 @@ It distinguishes:
 - [Backend Hardening Implementation Plan](../planning/backend-hardening/README.md)
 - `src/compiler/catena_compile.erl`
 - `src/compiler/catena_compilation_unit.erl`
+- `src/compiler/types/catena_effect_resolution.erl`
 - `src/compiler/codegen/catena_declaration_disposition.erl`
 - `src/compiler/codegen/catena_call_resolution.erl`
 - `src/compiler/codegen/catena_codegen_lower.erl`
@@ -56,6 +60,7 @@ It distinguishes:
 - `test/compiler/integration/catena_backend_hardening_phase2_tests.erl`
 - `test/compiler/integration/catena_backend_hardening_phase3_tests.erl`
 - `test/compiler/integration/catena_backend_hardening_phase4_tests.erl`
+- `test/compiler/integration/catena_backend_hardening_phase5_tests.erl`
 
 ## Compilation Boundary
 
@@ -118,8 +123,8 @@ silent omission.
 | Imported transform calls | Resolved Core Erlang module calls | Deferred pending executable module linkage. |
 | Pattern matching and guards | Core Erlang cases and clauses | Proven for every promoted parser-native pattern, recursive or-pattern expansion, bindings, pure guard conjunction, and source clause order. |
 | Type declarations and annotations | Static-erased after validation | Explicit, exhaustive, and fail-closed after disposition and representation selection. |
-| Effect declarations | Static-erased metadata | Explicit after operation metadata is retained; runtime effect execution remains a Phase 5 concern. |
-| `perform` and `handle` | Explicit calls to the Catena effect runtime with context passing | Partial: lowering and runtime paths exist; promoted source-to-BEAM coverage is incomplete. |
+| Effect declarations | Static-erased metadata | Proven after typed operation identities, uses, handlers, and runtime requirements are retained in the validated unit. |
+| `perform` and `handle` | Explicit calls to the Catena effect runtime with context passing | Proven for declared operations, zero/multiple arguments, nested/multiple handlers, effectful helper calls, handler patterns, and documented failure/cleanup paths. |
 | Traits and instances | Resolved runtime dictionaries | Deferred: validation and dictionary integration are incomplete. |
 | Test and property declarations | Explicit testing artifacts or runner registrations | Deferred: declarations are currently omitted from application emission. |
 | Actor/process surface | Explicit BEAM process/runtime operations | Outside the accepted frontend/backend surface until source-language integration exists. |
@@ -197,6 +202,7 @@ available. Stable diagnostic categories include:
 - `arity_mismatch`
 - `missing_transform_implementation`
 - `invalid_declaration_disposition`
+- `runtime_dependency_unavailable`
 - `core_validation_failed`
 - `beam_compilation_failed`
 
@@ -275,11 +281,13 @@ self-recursive, mutually recursive, closure, named-function-value, and
 constructor-arity execution and rejection evidence. Phase 4 adds primitive
 pure expressions and operators, collections, records, field access, every
 promoted parser-native pattern, guard and clause behavior, representation
-round trips, exhaustive erasure, and negative fail-closed paths. Later phases
-extend that suite to cover:
+round trips, exhaustive erasure, and negative fail-closed paths. Phase 5 adds
+effect-operation resolution, explicit context propagation, zero- and
+multi-argument operations, nested and multiple handlers, effectful helper
+calls, normal/error/unhandled/timeout cleanup, invalid-effect rejection, and
+runtime-dependency enforcement. Later phases extend that suite to cover:
 
 - local, forward, recursive, imported, and higher-order calls
-- basic effect performance and handling
 - trait dispatch when promoted
 - explicit rejection of deferred tests, properties, imports, traits, or actor
   constructs until their runtime contracts are implemented

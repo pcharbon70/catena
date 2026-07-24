@@ -11,6 +11,7 @@ stable_categories_test() ->
             arity_mismatch,
             missing_transform_implementation,
             invalid_declaration_disposition,
+            runtime_dependency_unavailable,
             core_validation_failed,
             beam_compilation_failed
         ],

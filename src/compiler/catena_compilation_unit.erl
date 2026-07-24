@@ -25,12 +25,18 @@
     validation_state/1,
     symbols/1,
     callables/1,
+    effect_inventory/1,
+    effect_operations/1,
+    effect_uses/1,
+    effect_handlers/1,
+    effectful_transforms/1,
+    runtime_dependencies/1,
     locations/1,
     dispositions/1,
     with_dispositions/2
 ]).
 
--define(UNIT_VERSION, 1).
+-define(UNIT_VERSION, 4).
 
 -opaque t() :: #{
     '$catena_compilation_unit' := pos_integer(),
@@ -46,6 +52,9 @@
     validation_state := validation_state(),
     symbols := [symbol()],
     callables := catena_call_resolution:inventory(),
+    effect_inventory := catena_effect_resolution:inventory(),
+    effectful_transforms := #{atom() => non_neg_integer()},
+    runtime_dependencies := [map()],
     locations := location_index(),
     dispositions := [map()]
 }.
@@ -103,41 +112,56 @@ new(
 ->
     case validate_evidence(ValidationState) of
         ok ->
-            case catena_call_resolution:build(
-                Name,
-                Exports,
-                Declarations
-            ) of
-                {ok, Callables} ->
-                    Symbols = collect_symbols(
+            case catena_effect_resolution:build(Declarations) of
+                {ok, EffectInventory} ->
+                    case catena_call_resolution:build(
                         Name,
                         Exports,
-                        Imports,
-                        Declarations,
-                        ModuleLocation
-                    ),
-                    Locations = collect_locations(
-                        ModuleLocation,
-                        Imports,
                         Declarations
-                    ),
-                    {ok, #{
-                        '$catena_compilation_unit' => ?UNIT_VERSION,
-                        module_name => Name,
-                        normalized_ast => NormalizedAST,
-                        typed_module => TypedModule,
-                        typed_declarations => TypedDeclarations,
-                        type_env => TypeEnv,
-                        imports => Imports,
-                        exports => Exports,
-                        options => Options,
-                        source_identity => SourceIdentity,
-                        validation_state => ValidationState,
-                        symbols => Symbols,
-                        callables => Callables,
-                        locations => Locations,
-                        dispositions => unclassified_dispositions(Declarations)
-                    }};
+                    ) of
+                        {ok, Callables} ->
+                            Symbols = collect_symbols(
+                                Name,
+                                Exports,
+                                Imports,
+                                Declarations,
+                                ModuleLocation
+                            ),
+                            Locations = collect_locations(
+                                ModuleLocation,
+                                Imports,
+                                Declarations
+                            ),
+                            EffectfulTransforms =
+                                catena_effect_resolution:
+                                    effectful_transforms(Declarations),
+                            {ok, #{
+                                '$catena_compilation_unit' => ?UNIT_VERSION,
+                                module_name => Name,
+                                normalized_ast => NormalizedAST,
+                                typed_module => TypedModule,
+                                typed_declarations => TypedDeclarations,
+                                type_env => TypeEnv,
+                                imports => Imports,
+                                exports => Exports,
+                                options => Options,
+                                source_identity => SourceIdentity,
+                                validation_state => ValidationState,
+                                symbols => Symbols,
+                                callables => Callables,
+                                effect_inventory => EffectInventory,
+                                effectful_transforms => EffectfulTransforms,
+                                runtime_dependencies =>
+                                    effect_runtime_dependencies(
+                                        EffectfulTransforms
+                                    ),
+                                locations => Locations,
+                                dispositions =>
+                                    unclassified_dispositions(Declarations)
+                            }};
+                        {error, _} = Error ->
+                            Error
+                    end;
                 {error, _} = Error ->
                     Error
             end;
@@ -179,6 +203,9 @@ is_compilation_unit(#{
     validation_state := ValidationState,
     symbols := Symbols,
     callables := Callables,
+    effect_inventory := EffectInventory,
+    effectful_transforms := EffectfulTransforms,
+    runtime_dependencies := RuntimeDependencies,
     locations := Locations,
     dispositions := Dispositions
 }) ->
@@ -187,6 +214,9 @@ is_compilation_unit(#{
         is_map(Options) andalso
         is_list(Symbols) andalso
         catena_call_resolution:is_inventory(Callables) andalso
+        catena_effect_resolution:is_inventory(EffectInventory) andalso
+        is_map(EffectfulTransforms) andalso
+        is_list(RuntimeDependencies) andalso
         is_map(Locations) andalso
         is_list(Dispositions) andalso
         validate_evidence(ValidationState) =:= ok;
@@ -233,6 +263,29 @@ symbols(Unit) -> maps:get(symbols, Unit).
 
 -spec callables(t()) -> catena_call_resolution:inventory().
 callables(Unit) -> maps:get(callables, Unit).
+
+-spec effect_inventory(t()) -> catena_effect_resolution:inventory().
+effect_inventory(Unit) -> maps:get(effect_inventory, Unit).
+
+-spec effect_operations(t()) -> #{{atom(), atom()} => map()}.
+effect_operations(Unit) ->
+    catena_effect_resolution:operations(effect_inventory(Unit)).
+
+-spec effect_uses(t()) -> [map()].
+effect_uses(Unit) ->
+    catena_effect_resolution:uses(effect_inventory(Unit)).
+
+-spec effect_handlers(t()) -> [map()].
+effect_handlers(Unit) ->
+    catena_effect_resolution:handlers(effect_inventory(Unit)).
+
+-spec effectful_transforms(t()) -> #{atom() => non_neg_integer()}.
+effectful_transforms(Unit) ->
+    maps:get(effectful_transforms, Unit).
+
+-spec runtime_dependencies(t()) -> [map()].
+runtime_dependencies(Unit) ->
+    maps:get(runtime_dependencies, Unit).
 
 -spec locations(t()) -> location_index().
 locations(Unit) -> maps:get(locations, Unit).
@@ -556,3 +609,12 @@ element_or_undefined(Index, Term) when
     element(Index, Term);
 element_or_undefined(_Index, _Term) ->
     undefined.
+
+effect_runtime_dependencies(EffectfulTransforms)
+  when map_size(EffectfulTransforms) =:= 0 ->
+    [];
+effect_runtime_dependencies(_EffectfulTransforms) ->
+    [
+        #{module => catena_effect_runtime, version => 1},
+        #{module => catena_effect_system, version => 1}
+    ].

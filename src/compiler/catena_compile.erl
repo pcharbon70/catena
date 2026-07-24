@@ -224,28 +224,35 @@ type_check_with_imports({module, Name, Exports, Imports, Declarations, Location}
 
 %% @doc Type check with a pre-built imported environment.
 type_check_with_env({module, Name, _Exports, _Imports, Declarations, _Location}, ImportedEnv) ->
-    %% Build kind environment and validate HKT usage
-    KindEnv = catena_kind:build_kind_env(Declarations),
-    case catena_kind:validate_hkt(Declarations, KindEnv) of
-        {ok, _} ->
-            %% Build initial type environment from local declarations
-            case build_type_env(Declarations) of
-                {ok, LocalEnv} ->
-                    %% Merge imported env with local env
-                    %% Local definitions shadow imports
-                    Env = catena_type_env:merge(ImportedEnv, LocalEnv),
-                    %% Type check all declarations
-                    case type_check_declarations(Declarations, Env) of
-                        {ok, TypedDecls} ->
-                            {ok, {typed_module, Name, TypedDecls, Env}};
+    %% Resolve effect operations before type checking can consume or erase
+    %% their declarations.
+    case catena_effect_resolution:build(Declarations) of
+        {ok, _EffectInventory} ->
+            %% Build kind environment and validate HKT usage
+            KindEnv = catena_kind:build_kind_env(Declarations),
+            case catena_kind:validate_hkt(Declarations, KindEnv) of
+                {ok, _} ->
+                    %% Build initial type environment from local declarations
+                    case build_type_env(Declarations) of
+                        {ok, LocalEnv} ->
+                            %% Merge imported env with local env
+                            %% Local definitions shadow imports
+                            Env = catena_type_env:merge(ImportedEnv, LocalEnv),
+                            %% Type check all declarations
+                            case type_check_declarations(Declarations, Env) of
+                                {ok, TypedDecls} ->
+                                    {ok, {typed_module, Name, TypedDecls, Env}};
+                                {error, _} = Error ->
+                                    Error
+                            end;
                         {error, _} = Error ->
                             Error
                     end;
-                {error, _} = Error ->
-                    Error
+                {error, KindErrors} ->
+                    {error, {kind_errors, KindErrors}}
             end;
-        {error, KindErrors} ->
-            {error, {kind_errors, KindErrors}}
+        {error, _} = Error ->
+            Error
     end.
 
 %% @doc Type check a module AST.
@@ -473,6 +480,9 @@ add_decl_to_env({transform_decl, Name, Type, _Clauses, _Location}, Env) ->
             end
     end;
 
+add_decl_to_env({effect_decl, Effect, Operations, _Location}, Env) ->
+    add_effect_operations_to_env(Effect, Operations, Env);
+
 add_decl_to_env({trait_decl, _Name, _Params, _Extends, Members, _Location}, Env) ->
     add_trait_members_to_env(Members, Env);
 
@@ -483,6 +493,39 @@ add_decl_to_env({instance_decl, _Trait, _Type, _Constraints, _Methods, _Location
 add_decl_to_env(_Other, Env) ->
     %% Skip unknown declarations
     {ok, Env}.
+
+add_effect_operations_to_env(_Effect, [], Env) ->
+    {ok, Env};
+add_effect_operations_to_env(
+    Effect,
+    [{effect_operation, Operation, Type, _Location} | Rest],
+    Env
+) ->
+    case convert_type_sig(Type) of
+        {ok, InternalType} ->
+            Binding = catena_effect_resolution:binding_name(
+                Effect,
+                Operation
+            ),
+            Scheme = generalize_type(InternalType),
+            add_effect_operations_to_env(
+                Effect,
+                Rest,
+                catena_type_env:extend(Env, Binding, Scheme)
+            );
+        {error, _} = Error ->
+            Error
+    end;
+add_effect_operations_to_env(Effect, [Invalid | _Rest], _Env) ->
+    {error,
+        {effect_resolution_error,
+            invalid_operation_declaration,
+            catena_backend_error:context(
+                effect_resolution,
+                effect_operation,
+                Invalid,
+                #{effect => Effect}
+            )}}.
 
 %% @doc Register trait method signatures so defaults and instances can call
 %% methods from the same trait or an inherited trait.

@@ -22,7 +22,12 @@
     with_scope/2,
     with_function_scope/4,
     with_bindings/3,
+    with_runtime_context/3,
     is_bound/2,
+    runtime_context/1,
+    has_runtime_context/1,
+    is_effectful_transform/2,
+    effect_entry_name/1,
     resolution_enabled/1,
     resolve_transform/4,
     resolve_constructor/4,
@@ -60,7 +65,9 @@
     scope = [] :: [atom()],
     module_name :: atom() | undefined,
     current_transform :: atom() | undefined,
-    callables :: catena_call_resolution:inventory() | undefined
+    callables :: catena_call_resolution:inventory() | undefined,
+    runtime_context :: cerl:cerl() | undefined,
+    effectful_transforms = #{} :: #{atom() => non_neg_integer()}
 }).
 
 -opaque codegen_state() :: #codegen_state{}.
@@ -79,7 +86,12 @@ new_state() ->
 new_state(Context) when is_map(Context) ->
     #codegen_state{
         module_name = maps:get(module_name, Context, undefined),
-        callables = maps:get(callables, Context, undefined)
+        callables = maps:get(callables, Context, undefined),
+        effectful_transforms = maps:get(
+            effectful_transforms,
+            Context,
+            #{}
+        )
     }.
 
 %% @doc Execute function with new scope, then restore
@@ -124,10 +136,45 @@ with_bindings(Bindings, Fun, State) ->
     {Result, NewState} = Fun(ScopedState),
     {Result, NewState#codegen_state{scope = OldScope}}.
 
+%% @doc Compile inside one explicit effect-runtime context.
+-spec with_runtime_context(
+    cerl:cerl(),
+    fun((codegen_state()) -> {Result, codegen_state()}),
+    codegen_state()
+) -> {Result, codegen_state()} when Result :: term().
+with_runtime_context(ContextVar, Fun, State) ->
+    OldContext = State#codegen_state.runtime_context,
+    {Result, NewState} = Fun(
+        State#codegen_state{runtime_context = ContextVar}
+    ),
+    {Result, NewState#codegen_state{runtime_context = OldContext}}.
+
 %% @doc Return whether a source variable is bound as a runtime value.
 -spec is_bound(atom(), codegen_state()) -> boolean().
 is_bound(Name, #codegen_state{scope = Scope}) ->
     lists:member(Name, Scope).
+
+%% @doc Return the explicit runtime context currently in lexical scope.
+-spec runtime_context(codegen_state()) -> cerl:cerl() | undefined.
+runtime_context(#codegen_state{runtime_context = Context}) ->
+    Context.
+
+-spec has_runtime_context(codegen_state()) -> boolean().
+has_runtime_context(State) ->
+    runtime_context(State) =/= undefined.
+
+%% @doc Return whether a local transform consumes a threaded context.
+-spec is_effectful_transform(atom(), codegen_state()) -> boolean().
+is_effectful_transform(
+    Name,
+    #codegen_state{effectful_transforms = EffectfulTransforms}
+) ->
+    maps:is_key(Name, EffectfulTransforms).
+
+%% @doc Collision-resistant internal entry point for an effectful transform.
+-spec effect_entry_name(atom()) -> atom().
+effect_entry_name(Name) ->
+    list_to_atom("$catena_effect_entry$" ++ atom_to_list(Name)).
 
 %% @doc Return whether local callable resolution is enabled for this state.
 -spec resolution_enabled(codegen_state()) -> boolean().

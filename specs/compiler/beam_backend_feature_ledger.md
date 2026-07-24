@@ -2,9 +2,9 @@
 
 ## Status
 
-Phase 4 ending baseline, derived from the parser grammar, validated compilation
-unit, normalized AST, declaration dispositions, and executable backend evidence
-on 2026-07-24.
+Phase 5 ending baseline, derived from the parser grammar, validated compilation
+unit, normalized AST, declaration dispositions, resolved effect metadata, and
+executable backend evidence on 2026-07-24.
 
 This ledger is the maintained inventory required by
 [ADR-0005](../adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md).
@@ -29,8 +29,9 @@ The source inventory comes from
 `src/compiler/codegen/catena_codegen_lower.erl`. Validated authority and
 declaration classification come from `catena_compilation_unit` and
 `catena_declaration_disposition`. Local callable classification comes from
-`catena_call_resolution`. Backend evidence comes from the
-`catena_codegen_*` modules and the tests linked below.
+`catena_call_resolution`. Effect and handler classification comes from
+`catena_effect_resolution`. Backend evidence comes from the `catena_codegen_*`
+modules and the tests linked below.
 
 ## Module And Declaration Inventory
 
@@ -43,7 +44,7 @@ declaration classification come from `catena_compilation_unit` and
 | Type declaration and constructors | Static-erased only after constructor representation and callable metadata is retained | Static-erased | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests`, `catena_backend_hardening_phase3_tests`, constructor rows below |
 | Transform with implementation, including guarded and multi-clause forms | Function plus source-ordered Core case clauses | Proven | `catena_codegen_lower_tests`, `catena_codegen_lossless_pattern_tests`, `catena_backend_hardening_phase4_tests` |
 | Signature-only transform | Static-erased only when not runtime-exported; an exported signature fails with `missing_transform_implementation` | Deferred | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests` |
-| Effect declaration and operations | Static-erased after operation metadata is retained | Static-erased | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests` |
+| Effect declaration and operations | Static-erased after typed operation identities, arities, uses, handlers, and runtime dependencies are retained | Static-erased | `catena_effect_resolution_tests`, `catena_handler_runtime_dependency_tests`, `catena_backend_hardening_phase5_tests` |
 | Trait declaration, extends list, signatures, and default members | Explicit unsupported disposition retaining dispatch metadata | Deferred | `catena_declaration_disposition_tests`, `catena_backend_hardening_phase2_tests`; Phase 6 roadmap |
 | Instance declaration and methods | Explicit unsupported disposition retaining dictionary metadata | Deferred | `catena_declaration_disposition_tests`; Phase 6 roadmap |
 | Test declaration | Explicit unsupported disposition and application-artifact rejection | Deferred | `catena_backend_hardening_phase1_tests`, `catena_backend_hardening_phase2_tests` |
@@ -66,8 +67,8 @@ declaration classification come from `catena_compilation_unit` and
 | Empty/non-empty list | Native list | Proven | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
 | Tuple | Native tuple | Proven | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
 | Empty/non-empty record | BEAM map | Proven | `catena_codegen_pure_expr_tests`, `catena_codegen_data_erasure_tests`, `catena_backend_hardening_phase4_tests` |
-| `perform Effect.operation(...)` | Catena effect-runtime call | Runtime-lowered | `catena_effect_codegen_tests` |
-| `handle ... then` and handler operation cases | Catena effect-runtime handler boundary | Runtime-lowered | `catena_effect_codegen_tests` |
+| `perform Effect.operation(...)` | Resolved Catena effect-runtime call with the current explicit context, effect identity, operation identity, and arguments | Proven | `catena_effect_resolution_tests`, `catena_effect_context_codegen_tests`, `catena_backend_hardening_phase5_tests` |
+| `handle ... then` and handler operation cases | Validated Catena effect-runtime handler boundary with lossless parameter patterns and child context | Proven | `catena_handler_runtime_dependency_tests`, `catena_effect_context_codegen_tests`, `catena_backend_hardening_phase5_tests` |
 | `do { ... }` with bind, let, action, and return statements | Desugared to `chain`, lambda, and `let` | Proven when `chain` resolves to an accepted local callable; standard-library trait dispatch remains Deferred | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
 | Unknown normalized expression | `unsupported_backend_construct` before Core emission | Deferred | `catena_backend_hardening_phase1_tests` |
 
