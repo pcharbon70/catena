@@ -62,49 +62,49 @@ report the call and declaration locations on failure.
 **Description:** Emit valid Core Erlang local function references for every
 resolved top-level transform call.
 
-- [ ] **Section 3.2 Complete**
+- [x] **Section 3.2 Complete**
 
 ### Task 3.2.1: Lower Direct Local Calls
 
 **Description:** Replace bare-variable application for resolved transforms with
 the OTP Core Erlang representation for a local function target and arity.
 
-- [ ] **Task 3.2.1 Complete**
+- [x] **Task 3.2.1 Complete**
 
 #### Subtask 3.2.1.1: Emit Resolved Function Names
 
 **Description:** Use Core function identities rather than ordinary unbound
 variables for direct transform invocation.
 
-- [ ] **Subtask 3.2.1.1 Complete**
+- [x] **Subtask 3.2.1.1 Complete**
 
 #### Subtask 3.2.1.2: Validate Forward References
 
 **Description:** Confirm calls to transforms declared later in the module emit
 the same valid Core form as calls to earlier declarations.
 
-- [ ] **Subtask 3.2.1.2 Complete**
+- [x] **Subtask 3.2.1.2 Complete**
 
 ### Task 3.2.2: Support Recursive Call Graphs
 
 **Description:** Preserve self-recursive and mutually recursive transform
 semantics without special declaration ordering or runtime lookup.
 
-- [ ] **Task 3.2.2 Complete**
+- [x] **Task 3.2.2 Complete**
 
 #### Subtask 3.2.2.1: Lower Self-Recursion
 
 **Description:** Resolve a transform's call to itself using its predeclared
 identity and verified arity.
 
-- [ ] **Subtask 3.2.2.1 Complete**
+- [x] **Subtask 3.2.2.1 Complete**
 
 #### Subtask 3.2.2.2: Lower Mutual Recursion
 
 **Description:** Resolve cycles among several local transforms and validate the
 resulting Core Erlang module as one recursive definition set.
 
-- [ ] **Subtask 3.2.2.2 Complete**
+- [x] **Subtask 3.2.2.2 Complete**
 
 ## Section 3.3: Higher-Order Values And Constructors
 

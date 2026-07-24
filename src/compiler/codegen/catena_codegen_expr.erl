@@ -180,7 +180,7 @@ translate_var({var, Name, _Loc}, State) ->
 %% Function calls are translated to either:
 %% - cerl:c_apply for local function calls
 %% - cerl:c_call for module-qualified calls
-translate_app({app, Func, Args, _Loc}, State) ->
+translate_app({app, Func, Args, Loc} = Application, State) ->
     %% Translate arguments first
     {CoreArgs, State1} = translate_exprs(Args, State),
 
@@ -194,14 +194,46 @@ translate_app({app, Func, Args, _Loc}, State) ->
 
         %% Direct function reference by name
         {var, FuncName, _} ->
-            %% Local function application
-            FuncVar = cerl:c_var(FuncName),
-            {cerl:c_apply(FuncVar, CoreArgs), State1};
+            translate_named_app(
+                FuncName,
+                CoreArgs,
+                Loc,
+                Application,
+                State1
+            );
 
         %% Lambda or other expression as function
         _ ->
             {CoreFunc, State2} = translate_expr(Func, State1),
             {cerl:c_apply(CoreFunc, CoreArgs), State2}
+    end.
+
+translate_named_app(FuncName, CoreArgs, _Loc, _Application, State)
+  when not is_atom(FuncName) ->
+    {cerl:c_apply(cerl:c_var(FuncName), CoreArgs), State};
+translate_named_app(FuncName, CoreArgs, _Loc, _Application, State) ->
+    case catena_codegen_utils:is_bound(FuncName, State) of
+        true ->
+            {cerl:c_apply(cerl:c_var(FuncName), CoreArgs), State};
+        false ->
+            case catena_codegen_utils:resolution_enabled(State) of
+                false ->
+                    {cerl:c_apply(cerl:c_var(FuncName), CoreArgs), State};
+                true ->
+                    case catena_codegen_utils:resolve_transform(
+                        FuncName,
+                        length(CoreArgs),
+                        _Application,
+                        State
+                    ) of
+                        {ok, Callable} ->
+                            Arity = maps:get(arity, Callable),
+                            Target = cerl:c_fname(FuncName, Arity),
+                            {cerl:c_apply(Target, CoreArgs), State};
+                        {error, Diagnostic} ->
+                            throw(Diagnostic)
+                    end
+            end
     end.
 
 %%====================================================================
