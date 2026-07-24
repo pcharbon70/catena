@@ -233,17 +233,14 @@ Current promoted status:
 - implemented transforms lower, type/effect metadata erases only after
   representation selection, and missing or deferred runtime declarations fail
   with source-oriented diagnostics
-- `SCN-011` has dedicated Phase 1 through Phase 6 implementation suites proving the
-  executable vertical slice, preservation of frontend failures, validated-unit
-  authority, explicit declaration disposition, resolved local call graphs, and
-  higher-order callable execution, pure expression and pattern coverage,
-  representation round trips, fail-closed erasure, resolved effect programs,
-  explicit runtime contexts, handler execution and cleanup, and runtime
-  dependency enforcement, deterministic module/interface linkage, executable
-  import variants, source-oriented link failures, trait validation, dictionary
-  dispatch, and desugared trait operations
-- Phase 7 introduces the public source-to-BEAM API and maintained conformance
-  enforcement
+- `SCN-011` now points to the dedicated
+  `catena_backend_conformance_tests` evidence module. It covers the public
+  source-to-BEAM API, pure expressions and operators, recursive and
+  higher-order calls, patterns and data representations, imports, effects,
+  traits, artifact diagnostics, and fail-closed deferred surfaces
+- Phase 7 has introduced the public source-to-BEAM API and made the dedicated
+  backend scenario part of `make verify`; final integration and baseline
+  publication remain in progress
 - every phase ends with a dedicated integration-test section and must preserve
   specs governance, focused conformance, and the complete active suite
 
@@ -271,12 +268,13 @@ Promoted interpretation:
 - `make compile` and `rebar3 compile` compile the active source tree
 - `make test` and `rebar3 eunit` expose the complete active EUnit result
 - `make check-specs` validates 42 concrete requirements in five families, 11
-  scenarios, 25 executable evidence rows across 24 modules, 73 component
+  scenarios, 20 executable evidence rows across 20 modules, 73 component
   acceptance criteria, five ADRs, promoted paths, and local Markdown links
 - `make conformance` runs the unique EUnit modules named by the executable
   scenario manifest; the Phase 6 gate passed all 463 focused tests
-- `make verify` combines specs governance with the complete active suite and
-  is the read-only CI contract for pull requests and pushes to `main`
+- `make verify` combines specs governance, manifest-selected conformance, and
+  the complete active suite and is the read-only CI contract for pull requests
+  and pushes to `main`
 - the six Phase 2 standard-library/frontend modules pass all 170 focused tests
 - the 15 Phase 3 compiler/codegen/pattern modules pass all 397 focused tests
 - the ten Phase 4 effect/type/runtime modules pass all 244 focused tests

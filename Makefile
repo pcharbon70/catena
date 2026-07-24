@@ -11,7 +11,7 @@ help:
 	@echo "  make check-modules   - Verify Erlang module names are unique"
 	@echo "  make check-specs     - Validate specs governance and evidence mappings"
 	@echo "  make conformance     - Validate specs and run scenario evidence"
-	@echo "  make verify          - Validate specs and run the complete test suite"
+	@echo "  make verify          - Run conformance and the complete test suite"
 	@echo "  make compile         - Compile all source modules"
 	@echo "  make test            - Run all tests"
 	@echo "  make coverage        - Run tests with coverage reporting"
@@ -30,7 +30,7 @@ conformance: check-specs
 	test -n "$$modules"; \
 	$(REBAR3) eunit --module="$$modules"
 
-verify: check-specs
+verify: conformance
 	@$(MAKE) --no-print-directory test
 
 compile: check-modules

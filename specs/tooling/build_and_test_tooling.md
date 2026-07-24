@@ -33,7 +33,8 @@ conformance, subsystem-organized coverage, and a green complete EUnit surface.
   evidence, component criteria, ADRs, paths, and local Markdown links.
 - `make conformance` runs the unique EUnit module set named by
   `specs/conformance/executable_scenarios.tsv`.
-- `make verify` composes specs governance and the complete active test suite.
+- `make verify` composes specs governance, manifest-selected conformance, and
+  the complete active test suite.
 - The read-only GitHub Actions workflow runs `make verify` for pull requests
   and pushes to `main`.
 

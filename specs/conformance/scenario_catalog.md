@@ -24,6 +24,10 @@ Each manifest row contains a scenario ID, EUnit module, and repository-relative
 source path. A scenario may map to more than one module when its promoted
 boundary crosses subsystems.
 
+`SCN-011` is intentionally consolidated in
+`catena_backend_conformance_tests`, which is the maintained positive and
+negative source-to-BEAM feature matrix.
+
 The focused conformance command executes the unique module set from the
 manifest. It complements rather than replaces the complete active-suite gate:
 
