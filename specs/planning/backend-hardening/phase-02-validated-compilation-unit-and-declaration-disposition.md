@@ -5,7 +5,7 @@ with a validated compilation unit that keeps normalized source, typed results,
 symbol metadata, declaration dispositions, options, and source locations
 together through code generation.
 
-**Status:** Planned.
+**Status:** Complete.
 
 **Dependencies:** Phase 1 complete.
 
@@ -169,14 +169,14 @@ otherwise omit required behavior.
 validated unit and that every declaration receives a reviewable disposition
 before module emission.
 
-- [ ] **Section 2.4 Complete**
+- [x] **Section 2.4 Complete**
 
 ### Task 2.4.1: Test Validated Unit Construction
 
 **Description:** Exercise successful and failing frontend paths through the new
 unit assembly boundary.
 
-- [ ] **Task 2.4.1 Complete**
+- [x] **Task 2.4.1 Complete**
 
 #### Subtask 2.4.1.1: Verify Unit Contents
 
@@ -184,28 +184,28 @@ unit assembly boundary.
 imports, exports, dispositions, options, and locations agree for representative
 modules.
 
-- [ ] **Subtask 2.4.1.1 Complete**
+- [x] **Subtask 2.4.1.1 Complete**
 
 #### Subtask 2.4.1.2: Verify Invalid Source Cannot Produce A Unit
 
 **Description:** Confirm every frontend validation family prevents validated
 unit construction and backend invocation.
 
-- [ ] **Subtask 2.4.1.2 Complete**
+- [x] **Subtask 2.4.1.2 Complete**
 
 ### Task 2.4.2: Test Declaration Disposition Enforcement
 
 **Description:** Exercise implemented, static-only, runtime-backed, and
 deferred declarations through public Core compilation.
 
-- [ ] **Task 2.4.2 Complete**
+- [x] **Task 2.4.2 Complete**
 
 #### Subtask 2.4.2.1: Verify Explicit Erasure And Rejection
 
 **Description:** Confirm static declarations erase only after metadata capture
 and unsupported runtime declarations fail with source-oriented diagnostics.
 
-- [ ] **Subtask 2.4.2.1 Complete**
+- [x] **Subtask 2.4.2.1 Complete**
 
 #### Subtask 2.4.2.2: Run Phase Completion Gates
 
@@ -213,4 +213,18 @@ and unsupported runtime declarations fail with source-oriented diagnostics.
 plus `make check-specs`, `make conformance`, and the complete active EUnit
 suite.
 
-- [ ] **Subtask 2.4.2.2 Complete**
+- [x] **Subtask 2.4.2.2 Complete**
+
+## Phase 2 Verification Evidence
+
+Phase 2 completed on 2026-07-24 with:
+
+- 16 passing tests in
+  `catena_backend_hardening_phase2_tests`
+- passing focused validated-unit, compiler-handoff, declaration-disposition,
+  Core-pipeline, and Phase 1 backend suites
+- `make check-specs` passing 42 requirements, 11 scenarios, 22 executable
+  evidence rows across 21 modules, 73 acceptance criteria, and five ADRs
+- `make conformance` passing all 442 focused scenario tests
+- `make test` passing all 4,906 active EUnit tests with zero failures and zero
+  skips

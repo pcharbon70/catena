@@ -2,8 +2,9 @@
 
 ## Status
 
-Promoted target: accepted architecture with Phase 1 backend safety implemented
-and later backend phases partial or planned.
+Promoted target: accepted architecture with Phase 1 backend safety and Phase 2
+validated-unit/declaration-disposition enforcement implemented; later backend
+phases remain partial or planned.
 
 The current repository proves a working source-to-BEAM vertical slice for
 representative transforms, arithmetic, algebraic data constructors, and
@@ -35,6 +36,8 @@ It distinguishes:
 - [Effect Runtime](../runtime/effect_runtime.md)
 - [Backend Hardening Implementation Plan](../planning/backend-hardening/README.md)
 - `src/compiler/catena_compile.erl`
+- `src/compiler/catena_compilation_unit.erl`
+- `src/compiler/codegen/catena_declaration_disposition.erl`
 - `src/compiler/codegen/catena_codegen_lower.erl`
 - `src/compiler/codegen/catena_codegen_erase.erl`
 - `src/compiler/codegen/catena_codegen_module.erl`
@@ -43,6 +46,7 @@ It distinguishes:
 - `src/compiler/codegen/catena_effect_codegen.erl`
 - `test/compiler/integration/catena_core_pipeline_tests.erl`
 - `test/compiler/integration/catena_backend_hardening_phase1_tests.erl`
+- `test/compiler/integration/catena_backend_hardening_phase2_tests.erl`
 
 ## Compilation Boundary
 
@@ -64,8 +68,9 @@ Catena source
 
 `compile_string/1,2` remains the typed-module API.
 `compile_string_to_core/1,2` and `compile_file_to_core/1,2` remain explicit
-Core Erlang APIs. Backend hardening adds in-memory BEAM APIs with the same
-validated frontend authority:
+Core Erlang APIs. They now share `compile_string_to_unit/1,2`, which constructs
+the validated backend authority only after the canonical frontend succeeds.
+Backend hardening later adds in-memory BEAM APIs with the same authority:
 
 ```erlang
 catena_compile:compile_string_to_beam(Source).
@@ -164,6 +169,13 @@ Before module emission, each declaration receives one disposition:
 
 Unknown declarations are always rejected.
 
+Phase 2 implements this boundary with an explicit disposition pass. Implemented
+transforms lower; type and effect declarations erase only after their
+constructor/operation metadata is retained; unused non-exported signatures may
+erase; exported signatures without implementations fail; and imports, traits,
+instances, tests, properties, and unknown declarations remain explicit
+unsupported dispositions until their later runtime/linkage contracts exist.
+
 ## Diagnostics
 
 Backend failures must retain the source stage, construct, and location whenever
@@ -246,7 +258,10 @@ does not promote a Catena feature to BEAM-supported status.
 
 `SCN-011` owns the executable BEAM backend contract. Phase 1 evidence includes
 the arithmetic and constructor-pattern vertical slice plus the dedicated
-fail-closed backend suite. Later phases extend that suite to cover:
+fail-closed backend suite. Phase 2 adds validated-unit construction, frontend
+failure exclusion, declaration classification, representation-before-erasure,
+and missing/deferred-runtime rejection evidence. Later phases extend that suite
+to cover:
 
 - literals and primitive operators
 - local, forward, recursive, imported, and higher-order calls

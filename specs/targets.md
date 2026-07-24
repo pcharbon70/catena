@@ -30,6 +30,10 @@ Based on the current `specs/` set, codebase, and test suite, the current promote
 - Backend-hardening Phase 1 is complete: backend support is inventoried,
   diagnostics have stable categories and source context, and lossy codegen
   fallbacks reject before successful Core artifact emission.
+- Backend-hardening Phase 2 is complete: typed and Core APIs share one
+  validated compilation-unit assembly path, every declaration/import/export
+  receives an explicit disposition, static metadata is retained before
+  erasure, and deferred runtime behavior rejects application emission.
 
 ## Immediate Targets
 
@@ -37,9 +41,9 @@ Based on the current `specs/` set, codebase, and test suite, the current promote
   [ADR-0005](adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md)
   and the
   [Core Erlang and BEAM backend spec](compiler/core_erlang_and_beam_backend.md),
-  with Phase 2 of the
+  with Phase 3 of the
   [seven-phase implementation roadmap](planning/backend-hardening/README.md):
-  validated compilation units and complete declaration disposition.
+  local, forward, recursive, mutual, and higher-order call resolution.
 - Execute the
   [Dialyzer remediation roadmap](planning/dialyzer-remediation/README.md) to
   replace the visible 777-warning inventory with an enforced zero-warning

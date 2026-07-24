@@ -60,7 +60,7 @@ The roadmap starts from the backend analysis and promoted specs recorded on
 ## Phases
 
 - [x] [Phase 1: Backend Safety Baseline And Fail-Closed Diagnostics](phase-01-backend-safety-baseline-and-fail-closed-diagnostics.md)
-- [ ] [Phase 2: Validated Compilation Unit And Declaration Disposition](phase-02-validated-compilation-unit-and-declaration-disposition.md)
+- [x] [Phase 2: Validated Compilation Unit And Declaration Disposition](phase-02-validated-compilation-unit-and-declaration-disposition.md)
 - [ ] [Phase 3: Local And Higher-Order Call Resolution](phase-03-local-and-higher-order-call-resolution.md)
 - [ ] [Phase 4: Exhaustive Expression, Pattern, And Data Lowering](phase-04-exhaustive-expression-pattern-and-data-lowering.md)
 - [ ] [Phase 5: Effect And Runtime-Backed Semantics](phase-05-effect-and-runtime-backed-semantics.md)
