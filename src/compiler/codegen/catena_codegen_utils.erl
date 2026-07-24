@@ -36,6 +36,7 @@
     resolve_trait_value/3,
     callable_inventory/1,
     import_resolution/1,
+    origin_context/1,
 
     %% Core Erlang builders
     c_atom/1,
@@ -68,6 +69,7 @@
     scope = [] :: [atom()],
     module_name :: atom() | undefined,
     current_transform :: atom() | undefined,
+    source_file = "nofile" :: string(),
     callables :: catena_call_resolution:inventory() | undefined,
     imports :: catena_import_resolution:resolution() | undefined,
     traits :: catena_trait_dictionary:inventory() | undefined,
@@ -91,6 +93,7 @@ new_state() ->
 new_state(Context) when is_map(Context) ->
     #codegen_state{
         module_name = maps:get(module_name, Context, undefined),
+        source_file = maps:get(source_file, Context, "nofile"),
         callables = maps:get(callables, Context, undefined),
         imports = maps:get(import_resolution, Context, undefined),
         traits = maps:get(trait_inventory, Context, undefined),
@@ -318,6 +321,15 @@ callable_inventory(#codegen_state{callables = Inventory}) ->
 import_resolution(#codegen_state{imports = Imports}) ->
     Imports.
 
+%% @doc Return stable source scope used by Core origin annotations.
+-spec origin_context(codegen_state()) -> map().
+origin_context(#codegen_state{
+    module_name = Module,
+    current_transform = Transform,
+    source_file = File
+}) ->
+    #{module => Module, transform => Transform, file => File}.
+
 %% @doc Resolve a trait method to its visible runtime dictionaries.
 -spec resolve_trait_method(
     atom(),
@@ -401,7 +413,13 @@ resolve_trait_value(
 -spec fresh_var(codegen_state()) -> {cerl:cerl(), codegen_state()}.
 fresh_var(#codegen_state{var_counter = N} = State) ->
     VarName = list_to_atom("_@c" ++ integer_to_list(N)),
-    Var = cerl:c_var(VarName),
+    Var = catena_core_origin:synthetic(
+        cerl:c_var(VarName),
+        generated_variable,
+        undefined,
+        State,
+        #{generated_identity => VarName}
+    ),
     {Var, State#codegen_state{var_counter = N + 1}}.
 
 %% @doc Generate multiple fresh variables

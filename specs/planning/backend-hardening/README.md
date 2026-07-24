@@ -65,7 +65,7 @@ The roadmap starts from the backend analysis and promoted specs recorded on
 - [x] [Phase 4: Exhaustive Expression, Pattern, And Data Lowering](phase-04-exhaustive-expression-pattern-and-data-lowering.md)
 - [x] [Phase 5: Effect And Runtime-Backed Semantics](phase-05-effect-and-runtime-backed-semantics.md)
 - [x] [Phase 6: Module Linkage, Imported Calls, And Trait Dispatch](phase-06-module-linkage-imported-calls-and-trait-dispatch.md)
-- [ ] [Phase 7: Public BEAM API And Conformance Enforcement](phase-07-public-beam-api-and-conformance-enforcement.md)
+- [x] [Phase 7: Public BEAM API And Conformance Enforcement](phase-07-public-beam-api-and-conformance-enforcement.md)
 
 ## Requirement And Scenario Traceability
 
@@ -81,17 +81,17 @@ The roadmap starts from the backend analysis and promoted specs recorded on
 
 ## Roadmap Completion Gate
 
-- [ ] Every frontend construct has a documented backend support class
-- [ ] Named local, forward, recursive, higher-order, and imported calls resolve
+- [x] Every frontend construct has a documented backend support class
+- [x] Named local, forward, recursive, higher-order, and imported calls resolve
       correctly
-- [ ] Unknown expressions, patterns, declarations, and operators fail closed
-- [ ] Static erasure and runtime lowering are explicit and ordered
-- [ ] Promoted effect and trait behavior executes through accepted runtime
+- [x] Unknown expressions, patterns, declarations, and operators fail closed
+- [x] Static erasure and runtime lowering are explicit and ordered
+- [x] Promoted effect and trait behavior executes through accepted runtime
       representations
-- [ ] Public source-to-BEAM APIs return only OTP-accepted binaries
-- [ ] Backend errors preserve source identity and location
-- [ ] `SCN-011` has positive and negative evidence for the complete promoted
+- [x] Public source-to-BEAM APIs return only OTP-accepted binaries
+- [x] Backend errors preserve source identity and location
+- [x] `SCN-011` has positive and negative evidence for the complete promoted
       backend surface
-- [ ] `make check-specs`, `make conformance`, and the complete active suite pass
-- [ ] Compiler, tooling, and current-status specs record the verified final
+- [x] `make check-specs`, `make conformance`, and the complete active suite pass
+- [x] Compiler, tooling, and current-status specs record the verified final
       boundary

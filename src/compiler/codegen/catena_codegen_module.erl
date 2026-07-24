@@ -165,6 +165,7 @@ do_generate_module(
             catena_codegen_lower:lower_module(ModuleAST),
         State = catena_codegen_utils:new_state(#{
             module_name => Name,
+            source_file => maps:get(file, Opts, "nofile"),
             callables => Inventory,
             import_resolution => ImportResolution,
             trait_inventory => TraitInventory,
@@ -193,11 +194,15 @@ do_generate_module(
         %% Compile functions
         {CoreFunctions, State1} = compile_functions(ActiveDecls, State),
 
-        {DictionaryFunctions, _State2, DictionaryExports} =
+        {DictionaryFunctions0, _State2, DictionaryExports} =
             catena_trait_dictionary:compile_dictionaries(
                 TraitInventory,
                 State1
             ),
+        DictionaryFunctions = [
+            annotate_dictionary_definition(Definition, State1)
+            || Definition <- DictionaryFunctions0
+        ],
 
         %% Generate exports
         CoreExports =
@@ -213,11 +218,18 @@ do_generate_module(
         ),
 
         %% Create Core Erlang module
-        CoreModule = cerl:c_module(
+        CoreModule0 = cerl:c_module(
             cerl:c_atom(Name),
             CoreExports,
             Attrs,
             CoreFunctions ++ DictionaryFunctions
+        ),
+        CoreModule = catena_core_origin:user(
+            CoreModule0,
+            module,
+            ModuleAST,
+            State,
+            #{generated_identity => Name}
         ),
 
         {ok, CoreModule}.
@@ -408,14 +420,23 @@ compile_function_definitions(
 %% @doc Compile a single function declaration to Core Erlang
 -spec compile_function(decl(), catena_codegen_utils:codegen_state()) ->
     {{cerl:cerl(), cerl:cerl()}, catena_codegen_utils:codegen_state()}.
-compile_function({transform, Name, Params, Body, _Loc}, State) ->
+compile_function(
+    {transform, Name, Params, Body, _Loc} = Declaration,
+    State
+) ->
     Arity = length(Params),
 
     %% Create function name
-    FName = cerl:c_fname(Name, Arity),
+    FName = catena_core_origin:user(
+        cerl:c_fname(Name, Arity),
+        transform_name,
+        Declaration,
+        State,
+        #{transform => Name, generated_identity => {Name, Arity}}
+    ),
 
     %% Compile parameters to variables
-    {ParamVars, State1} = compile_params(Params, State),
+    {ParamVars, State1} = compile_params(Params, Name, State),
 
     ParamNames = [cerl:var_name(ParamVar) || ParamVar <- ParamVars],
     {CoreBody, State2} = case requires_effect_runtime(Body) of
@@ -452,7 +473,13 @@ compile_function({transform, Name, Params, Body, _Loc}, State) ->
     end,
 
     %% Create function definition
-    FunDef = cerl:c_fun(ParamVars, CoreBody),
+    FunDef = catena_core_origin:user(
+        cerl:c_fun(ParamVars, CoreBody),
+        transform,
+        Declaration,
+        State,
+        #{transform => Name, generated_identity => {Name, Arity}}
+    ),
 
     {{FName, FunDef}, State2};
 
@@ -461,11 +488,11 @@ compile_function({transform_typed, Name, _TypeSig, Params, Body, Loc}, State) ->
     compile_function({transform, Name, Params, Body, Loc}, State).
 
 compile_effectful_function(
-    {transform, Name, Params, Body, _Location},
+    {transform, Name, Params, Body, _Location} = Declaration,
     State
 ) ->
     Arity = length(Params),
-    {ParamVars, State1} = compile_params(Params, State),
+    {ParamVars, State1} = compile_params(Params, Name, State),
     ParamNames = [cerl:var_name(ParamVar) || ParamVar <- ParamVars],
     {ContextVar, State2} = catena_codegen_utils:fresh_var(State1),
     {CoreBody, State3} = compile_function_body(
@@ -476,19 +503,52 @@ compile_effectful_function(
         State2
     ),
     EntryName = catena_codegen_utils:effect_entry_name(Name),
-    EntryFName = cerl:c_fname(EntryName, Arity + 1),
-    EntryDef = cerl:c_fun([ContextVar | ParamVars], CoreBody),
-    WrapperFName = cerl:c_fname(Name, Arity),
+    EntryIdentity = {EntryName, Arity + 1},
+    EntryFName = catena_core_origin:synthetic(
+        cerl:c_fname(EntryName, Arity + 1),
+        effect_runtime_entry,
+        Declaration,
+        State,
+        #{transform => Name, generated_identity => EntryIdentity}
+    ),
+    AnnotatedContextVar = catena_core_origin:synthetic(
+        ContextVar,
+        effect_runtime_context,
+        Declaration,
+        State,
+        #{transform => Name}
+    ),
+    EntryDef = catena_core_origin:synthetic(
+        cerl:c_fun([AnnotatedContextVar | ParamVars], CoreBody),
+        effect_runtime_entry,
+        Declaration,
+        State,
+        #{transform => Name, generated_identity => EntryIdentity}
+    ),
+    WrapperIdentity = {Name, Arity},
+    WrapperFName = catena_core_origin:user(
+        cerl:c_fname(Name, Arity),
+        transform_name,
+        Declaration,
+        State,
+        #{transform => Name, generated_identity => WrapperIdentity}
+    ),
     EntryCall = cerl:c_apply(
         EntryFName,
         [ContextVar | ParamVars]
     ),
-    WrapperDef = cerl:c_fun(
-        ParamVars,
-        catena_effect_codegen:with_runtime_call(
-            ContextVar,
-            EntryCall
-        )
+    WrapperDef = catena_core_origin:synthetic(
+        cerl:c_fun(
+            ParamVars,
+            catena_effect_codegen:with_runtime_call(
+                ContextVar,
+                EntryCall
+            )
+        ),
+        effect_runtime_wrapper,
+        Declaration,
+        State,
+        #{transform => Name, generated_identity => WrapperIdentity}
     ),
     {[{WrapperFName, WrapperDef}, {EntryFName, EntryDef}], State3}.
 
@@ -518,23 +578,63 @@ compile_function_body(
     ).
 
 %% Compile parameters to Core Erlang variables
-compile_params(Params, State) ->
+compile_params(Params, Transform, State) ->
     lists:mapfoldl(
         fun(Param, St) ->
-            compile_param(Param, St)
+            compile_param(Param, Transform, St)
         end,
         State,
         Params
     ).
 
-compile_param({pat_var, Name, _Loc}, State) ->
-    {cerl:c_var(Name), State};
-compile_param({pat_wildcard, _Loc}, State) ->
+compile_param({pat_var, Name, _Loc} = Pattern, Transform, State) ->
+    OriginKind = case lists:prefix(
+        "$catena_arg_",
+        atom_to_list(Name)
+    ) of
+        true -> synthetic;
+        false -> user
+    end,
+    {annotate_parameter(
+        OriginKind,
+        cerl:c_var(Name),
+        Pattern,
+        Transform,
+        State
+    ), State};
+compile_param(
+    {pat_wildcard, _Loc} = Pattern,
+    Transform,
+    State
+) ->
     %% Generate fresh variable for wildcard
-    catena_codegen_utils:fresh_var(State);
-compile_param({pat_typed_var, Name, _Type, _Loc}, State) ->
-    {cerl:c_var(Name), State};
-compile_param(Other, _State) ->
+    {Var, State1} = catena_codegen_utils:fresh_var(State),
+    {
+        catena_core_origin:synthetic(
+            Var,
+            wildcard_parameter,
+            Pattern,
+            State,
+            #{transform => Transform}
+        ),
+        State1
+    };
+compile_param(
+    {pat_typed_var, Name, _Type, _Loc} = Pattern,
+    Transform,
+    State
+) ->
+    {
+        catena_core_origin:user(
+            cerl:c_var(Name),
+            parameter_pattern,
+            Pattern,
+            State,
+            #{transform => Transform}
+        ),
+        State
+    };
+compile_param(Other, _Transform, _State) ->
     Context =
         catena_backend_error:context(
             function_compilation,
@@ -547,6 +647,42 @@ compile_param(Other, _State) ->
             Context
         )
     ).
+
+annotate_parameter(user, Node, Pattern, Transform, State) ->
+    catena_core_origin:user(
+        Node,
+        parameter_pattern,
+        Pattern,
+        State,
+        #{transform => Transform}
+    );
+annotate_parameter(synthetic, Node, Pattern, Transform, State) ->
+    catena_core_origin:synthetic(
+        Node,
+        generated_parameter,
+        Pattern,
+        State,
+        #{transform => Transform}
+    ).
+
+annotate_dictionary_definition({NameNode, Definition}, State) ->
+    Identity = cerl:var_name(NameNode),
+    {
+        catena_core_origin:synthetic(
+            NameNode,
+            trait_dictionary,
+            undefined,
+            State,
+            #{generated_identity => Identity}
+        ),
+        catena_core_origin:synthetic(
+            Definition,
+            trait_dictionary,
+            undefined,
+            State,
+            #{generated_identity => Identity}
+        )
+    }.
 
 requires_effect_runtime({perform_expr, _, _, _, _}) ->
     true;

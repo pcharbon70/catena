@@ -2,12 +2,12 @@
 
 ## Status
 
-Promoted target: accepted architecture with Phases 1 through 6 implemented:
+Promoted target: accepted architecture with Phases 1 through 7 implemented:
 backend safety, validated-unit/declaration-disposition enforcement, local and
 higher-order call resolution, exhaustive pure expression/pattern/data
 lowering, runtime-backed effect semantics, executable module linkage, imported
-calls, and validated trait dictionary dispatch. The public-artifact phase
-remains planned.
+calls, validated trait dictionary dispatch, public validated BEAM artifacts,
+source-oriented OTP diagnostics, and enforced backend conformance.
 
 The current repository proves a working source-to-BEAM vertical slice for
 representative transforms, arithmetic, algebraic data constructors, and
@@ -21,9 +21,10 @@ context propagation across helper calls, lossless handlers, nested and
 multiple effects, lifecycle cleanup, and versioned runtime dependencies. The
 same executable boundary now proves dependency-ordered module sets, open,
 qualified, aliased, selective, dotted, and higher-order imports, plus concrete
-local and imported trait instances. The repository does not yet satisfy the
-complete backend contract in this spec because the public BEAM API and final
-conformance enforcement remain Phase 7 work.
+local and imported trait instances. Public string, file, and closed-source-set
+APIs now return only versioned artifacts whose Core passes explicit validation
+and OTP `from_core` compilation. The dedicated `SCN-011` suite enforces the
+promoted matrix and fail-closed deferred boundary through `make verify`.
 
 ## Purpose
 
@@ -67,6 +68,9 @@ It distinguishes:
 - `src/compiler/codegen/catena_codegen_expr.erl`
 - `src/compiler/codegen/catena_codegen_pattern.erl`
 - `src/compiler/codegen/catena_effect_codegen.erl`
+- `src/compiler/codegen/catena_beam_artifact.erl`
+- `src/compiler/codegen/catena_artifact_diagnostic.erl`
+- `src/compiler/codegen/catena_core_origin.erl`
 - `test/compiler/integration/catena_core_pipeline_tests.erl`
 - `test/compiler/integration/catena_backend_hardening_phase1_tests.erl`
 - `test/compiler/integration/catena_backend_hardening_phase2_tests.erl`
@@ -76,6 +80,10 @@ It distinguishes:
 - `test/compiler/integration/catena_backend_hardening_phase6_import_tests.erl`
 - `test/compiler/integration/catena_backend_hardening_phase6_trait_tests.erl`
 - `test/compiler/integration/catena_backend_hardening_phase6_integration_tests.erl`
+- `test/compiler/integration/catena_backend_hardening_phase7_api_tests.erl`
+- `test/compiler/integration/catena_backend_hardening_phase7_diagnostic_tests.erl`
+- `test/compiler/integration/catena_backend_hardening_phase7_integration_tests.erl`
+- `test/compiler/integration/catena_backend_conformance_tests.erl`
 
 ## Compilation Boundary
 
@@ -101,19 +109,25 @@ Core Erlang APIs. They now share `compile_string_to_unit/1,2`, which constructs
 the validated backend authority only after the canonical frontend succeeds.
 The compiler-internal `catena_module_compile:compile_source_set/2` compiles a
 closed source map in dependency order and returns each accepted unit, Core
-module, BEAM binary, interface, and artifact dependency set. Phase 7 exposes
-public in-memory BEAM APIs with the same authority:
+module, BEAM binary, interface, and artifact dependency set. The public
+in-memory BEAM APIs reuse that authority:
 
 ```erlang
 catena_compile:compile_string_to_beam(Source).
 catena_compile:compile_string_to_beam(Source, Options).
 catena_compile:compile_file_to_beam(Path).
 catena_compile:compile_file_to_beam(Path, Options).
+catena_compile:compile_source_set_to_beam(SourceSet).
+catena_compile:compile_source_set_to_beam(SourceSet, Options).
 ```
 
-The success result must identify the module and carry the BEAM binary. The
-exact options and diagnostic envelope may evolve, but a success result must
-not be returned until OTP accepts the emitted Core Erlang.
+Single-module success returns a versioned artifact with `module_identity`,
+`source_module`, `runtime_module`, `beam`, `core`, `source_identity`,
+`runtime_dependencies`, `artifact_dependencies`, `warnings`, `interface`, and
+validation/origin metadata. Source-set success returns the dependency order
+and the same public artifact shape keyed by source module. No result is
+successful until explicit Core lint and OTP compilation accept the emitted
+Core Erlang.
 
 ## Backend Support Classes
 
@@ -227,6 +241,13 @@ available. Stable diagnostic categories include:
 
 Generated placeholder terms are not diagnostics.
 
+Core nodes retain tuple-encoded, versioned Catena origin annotations so they
+survive Core text round trips on supported OTP releases. The public diagnostic
+shape distinguishes user and synthetic origins, resolves generated function
+identities back to their closest Catena construct, and includes the original
+OTP reason under `otp_detail`. Aggregate failure results retain the unmodified
+`otp_errors` or `otp_warnings` alongside normalized Catena diagnostics.
+
 ## Acceptance Criteria
 
 ### AC-BEAM-001 Validated Backend Authority
@@ -308,9 +329,12 @@ runtime-dependency enforcement. Phase 6 adds deterministic module identity and
 dependency order, versioned interfaces, executable import variants and remote
 closures, source-oriented linkage failures, validated local and imported trait
 dictionaries, concrete runtime selection, and desugared standard-library
-operations. Phase 7 extends that suite with public BEAM API enforcement,
-explicit rejection of the remaining deferred tests, properties, and actor
-constructs, and maintained conformance wiring.
+operations. Phase 7 adds public string, file, and dependency-ordered source-set
+BEAM APIs, source-origin and normalized diagnostic evidence, explicit
+rejection of the remaining deferred tests, properties, and actor constructs,
+and maintained conformance wiring. The dedicated
+`catena_backend_conformance_tests` module is the single `SCN-011` manifest
+entry and executes as part of `make verify`.
 
 ## Out Of Scope
 

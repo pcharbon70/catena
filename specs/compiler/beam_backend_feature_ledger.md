@@ -2,10 +2,10 @@
 
 ## Status
 
-Phase 6 ending baseline, derived from the parser grammar, validated compilation
-unit, normalized AST, declaration dispositions, executable module interfaces,
-resolved imports, validated trait dictionaries, and executable backend
-evidence on 2026-07-24.
+Phase 7 completion baseline, derived from the parser grammar, validated
+compilation unit, normalized AST, declaration dispositions, executable module
+interfaces, resolved imports, validated trait dictionaries, public validated
+BEAM artifacts, and executable backend conformance on 2026-07-24.
 
 This ledger is the maintained inventory required by
 [ADR-0005](../adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md).
@@ -20,7 +20,7 @@ term.
 | Proven | Source reaches OTP `from_core`, loads, and exhibits the expected behavior in an executable test. |
 | Lowering-only | An explicit backend lowering exists and has focused tests, but source-to-BEAM execution is not yet conformance evidence. |
 | Static-erased | A validated construct is intentionally removed before runtime emission. |
-| Runtime-lowered | Lowering targets an explicit Catena runtime boundary; complete source-to-BEAM evidence is still pending. |
+| Runtime-lowered | Lowering targets an explicit Catena runtime boundary and requires source-to-BEAM evidence for the promoted behavior. |
 | Known-failing | A reproducible fixture demonstrates invalid Core, semantic approximation, placeholder output, or silent omission. |
 | Deferred | The frontend surface exists, but the accepted backend representation is incomplete and application emission is not supported. |
 
@@ -34,8 +34,11 @@ declaration classification come from `catena_compilation_unit` and
 `catena_module_interface`, `catena_module_linkage`, and
 `catena_import_resolution`. Effect and handler classification comes from
 `catena_effect_resolution`; trait validation and dispatch come from
-`catena_trait_dictionary` and `catena_trait_runtime`. Backend evidence comes
-from the `catena_codegen_*` modules and the tests linked below.
+`catena_trait_dictionary` and `catena_trait_runtime`. Artifact validation and
+source diagnostics come from `catena_beam_artifact`,
+`catena_artifact_diagnostic`, and `catena_core_origin`. Backend evidence comes
+from the `catena_codegen_*` modules, the focused tests linked below, and the
+consolidated `catena_backend_conformance_tests` suite.
 
 ## Module And Declaration Inventory
 
@@ -112,8 +115,20 @@ parser-native surface entries.
 | `<$>`, `<*>`, `>>=` | Desugared to validated `map`, `apply`, and `chain` dictionary dispatch | Proven for concrete Mapper, Applicator, and Chainable instances | `catena_backend_hardening_phase6_integration_tests` |
 | `>>>`, `<<<`, `***`, `&&&` | Desugared to validated System/Flow dictionary dispatch | Proven for concrete System and Flow instances | `catena_backend_hardening_phase6_integration_tests` |
 | `<>` | Desugared to `combine` | Proven when `combine` resolves to an accepted local callable; trait dispatch remains Deferred | `catena_codegen_pure_expr_tests`, `catena_backend_hardening_phase4_tests` |
-| `>=>` | Desugared to `kleisli` | Deferred | `catena_desugar`; Phase 6 roadmap |
+| `>=>` | Desugared to `kleisli` | Deferred | `catena_desugar`; no accepted executable target |
 | Unknown normalized binary or unary operator | `unsupported_backend_construct` before Core emission | Deferred | `catena_backend_baseline_tests`, `catena_backend_hardening_phase1_tests` |
+
+## Artifact And Conformance Boundary
+
+| Boundary | Current contract | Evidence |
+| --- | --- | --- |
+| Validated unit | The canonical frontend succeeds before backend lowering; raw AST helpers remain test-only. | `catena_compilation_unit`, `catena_backend_hardening_phase7_api_tests` |
+| Core validation | Explicit Core lint runs before artifact success. | `catena_beam_artifact`, `catena_backend_hardening_phase7_diagnostic_tests` |
+| OTP compilation | `compile:forms` uses `from_core`, `binary`, and structured errors/warnings; failure returns no partial artifact. | `catena_beam_artifact`, `catena_backend_hardening_phase7_api_tests` |
+| Public single-module API | String and file APIs return a versioned artifact with identity, BEAM, Core, dependencies, warnings, interface, and metadata. | `catena_backend_hardening_phase7_api_tests`, `catena_backend_conformance_tests` |
+| Public source-set API | Closed source sets compile in dependency order and expose only stable public artifacts. | `catena_backend_hardening_phase7_integration_tests` |
+| Origin and diagnostics | User and synthetic origins survive Core text round trips; OTP failures are normalized without discarding original detail. | `catena_backend_hardening_phase7_diagnostic_tests` |
+| Promoted conformance | Every Proven or Runtime-lowered row has positive source-to-BEAM evidence; Deferred rows fail artifact generation or remain outside the accepted grammar. | `catena_backend_conformance_tests`, `SCN-011` |
 
 ## Maintenance Rule
 

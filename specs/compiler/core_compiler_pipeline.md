@@ -2,16 +2,16 @@
 
 ## Status
 
-Promoted status: implemented through typed-module compilation, an explicit
-type-validated source-to-Core Erlang API, and a compiler-internal,
-dependency-ordered multi-module BEAM boundary whose handoff is a validated
-compilation unit.
+Promoted status: implemented through typed-module compilation, explicit
+type-validated source-to-Core Erlang APIs, and public validated in-memory BEAM
+APIs for source strings, files, and dependency-ordered source sets. Every
+backend handoff is a validated compilation unit.
 
 ## Purpose
 
 This spec promotes the compiler pipeline that Catena currently ships in code.
 It covers the typed-module API and the public path from source text through
-frontend validation to Core Erlang output.
+frontend validation to Core Erlang and OTP-accepted BEAM output.
 
 ## Design Anchors
 
@@ -34,6 +34,10 @@ frontend validation to Core Erlang output.
 - The public compile path currently returns `{ok, {typed_module, Name, TypedDecls, Env}}` or a stage-specific error.
 - `compile_string_to_core/1,2` and `compile_file_to_core/1,2` reuse the same
   frontend and type-checking path, then return a Core Erlang module.
+- `compile_string_to_beam/1,2`, `compile_file_to_beam/1,2`, and
+  `compile_source_set_to_beam/1,2` reuse the validated unit, require explicit
+  Core validation and OTP `from_core` compilation, and return stable versioned
+  in-memory artifacts without internal compilation-unit state.
 - `compile_string_to_unit/1,2` is the maintained compiler-internal handoff for
   artifact backends. It retains normalized source, typed declarations, the
   effective environment, imports, exports, options, validation evidence,
@@ -74,7 +78,8 @@ The canonical success artifact of the current top-level compiler API is a typed 
 - the merged type environment used for later compilation or interactive work
 
 The typed-module API remains the canonical interactive/compiler-analysis
-boundary. Callers that need a backend artifact use the explicit Core APIs.
+boundary. Callers that need a backend artifact use the explicit Core or BEAM
+APIs.
 
 ### AC-CPIPE-003 Executable Import Resolution
 
@@ -118,16 +123,16 @@ Any compiler-facing status or design document must describe the current pipeline
 
 - materially implemented through typed modules
 - able to emit validated Core Erlang through an explicit public API
-- able to compile closed module sets to accepted in-memory BEAM artifacts
-  through a compiler-internal API
-- still short of a public BEAM API, on-disk emission, packaging, and a polished
-  executable build workflow
+- able to compile source strings, files, and closed module sets to accepted
+  in-memory BEAM artifacts through public APIs
+- still short of on-disk emission, packaging, and a polished executable build
+  workflow
 
 This criterion exists to keep the promoted spec aligned with the actual code instead of the aspirational roadmap alone.
 
 ### AC-CPIPE-007 Fail-Closed Backend Handoff
 
-The public Core Erlang and future BEAM APIs must hand the backend a validated
+The public Core Erlang and BEAM APIs must hand the backend a validated
 compilation unit with the source, symbol, arity, type, declaration-disposition,
 callable-resolution, and location information required by
 [Core Erlang And BEAM Backend](core_erlang_and_beam_backend.md). Passing type

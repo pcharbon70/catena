@@ -37,20 +37,28 @@ Based on the current `specs/` set, codebase, and test suite, the current promote
 - Backend-hardening Phase 3 is complete: local symbols are predeclared,
   transform and constructor arities fail closed, local/forward/recursive calls
   emit resolved Core identities, and higher-order callable values execute.
+- Backend-hardening Phase 4 is complete: pure expressions, parser-native
+  patterns, guards, data representations, operators, and erasure are
+  exhaustive and fail closed.
+- Backend-hardening Phase 5 is complete: effects resolve to explicit,
+  dependency-tracked runtime calls with context propagation and deterministic
+  handler cleanup.
+- Backend-hardening Phase 6 is complete: module identity, dependency order,
+  executable imports, versioned interfaces, and concrete trait dictionaries
+  compile and execute.
+- Backend-hardening Phase 7 is complete: public string, file, and source-set
+  APIs return only validated versioned BEAM artifacts; source-oriented OTP
+  diagnostics and the complete promoted feature ledger are enforced by
+  `SCN-011` and `make verify`.
 
 ## Immediate Targets
 
-- Continue the fail-closed backend hardening defined by
-  [ADR-0005](adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md)
-  and the
-  [Core Erlang and BEAM backend spec](compiler/core_erlang_and_beam_backend.md),
-  with Phase 4 of the
-  [seven-phase implementation roadmap](planning/backend-hardening/README.md):
-  exhaustive expression, pattern, and data lowering.
 - Execute the
   [Dialyzer remediation roadmap](planning/dialyzer-remediation/README.md) to
-  replace the visible 777-warning inventory with an enforced zero-warning
+  replace the visible 822-warning inventory with an enforced zero-warning
   boundary.
+- Raise coverage of the new BEAM artifact, source-origin, and diagnostic
+  modules to the repository's 90% modified-module target.
 - Decide whether the next implementation track resumes the proof-of-concept
   module system, advances source-language actor integration, or deepens the
   already-implemented property-testing framework.

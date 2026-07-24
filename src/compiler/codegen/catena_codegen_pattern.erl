@@ -168,7 +168,11 @@ validate_or_pattern_bindings([First | Rest], Location, Pattern) ->
 %% @doc Compile a single clause (pattern, guard, body)
 -spec compile_clause(clause(), catena_codegen_utils:codegen_state(), compile_opts()) ->
     {cerl:cerl(), catena_codegen_utils:codegen_state()}.
-compile_clause({clause, Patterns, Guards, Body}, State, _Opts) ->
+compile_clause(
+    {clause, Patterns, Guards, Body} = SourceClause,
+    State,
+    _Opts
+) ->
     %% Compile patterns
     {CorePatterns, State1} = compile_patterns(Patterns, State),
 
@@ -194,12 +198,22 @@ compile_clause({clause, Patterns, Guards, Body}, State, _Opts) ->
         ),
 
     %% Build clause
-    Clause = cerl:c_clause(CorePatterns, CoreGuard, CoreBody),
+    Clause = catena_core_origin:user(
+        cerl:c_clause(CorePatterns, CoreGuard, CoreBody),
+        clause,
+        clause_source_term(SourceClause),
+        State
+    ),
     {Clause, State3};
 
 %% Simple clause format: {patterns, body}
 compile_clause({Patterns, Body}, State, Opts) ->
     compile_clause({clause, Patterns, [], Body}, State, Opts).
+
+clause_source_term({clause, [Pattern | _], _Guards, _Body}) ->
+    Pattern;
+clause_source_term({clause, [], _Guards, Body}) ->
+    Body.
 
 %% Compile multiple patterns
 compile_patterns(Patterns, State) ->
@@ -236,42 +250,58 @@ pattern_bindings(_Pattern) ->
 %% @doc Compile a single pattern to Core Erlang
 -spec compile_pattern(pattern(), catena_codegen_utils:codegen_state()) ->
     {cerl:cerl(), catena_codegen_utils:codegen_state()}.
+compile_pattern(Pattern, State) ->
+    {CorePattern, State1} = compile_pattern_node(Pattern, State),
+    {
+        catena_core_origin:user(
+            CorePattern,
+            pattern_construct(Pattern),
+            Pattern,
+            State
+        ),
+        State1
+    }.
 
 %% Variable pattern: x -> cerl:c_var(x)
-compile_pattern({pat_var, Name, _Loc}, State) ->
+compile_pattern_node({pat_var, Name, _Loc}, State) ->
     {cerl:c_var(Name), State};
 
 %% Wildcard pattern: _ -> cerl:c_var('_')
-compile_pattern({pat_wildcard, _Loc}, State) ->
+compile_pattern_node({pat_wildcard, _Loc}, State) ->
     {cerl:c_var('_'), State};
 
 %% Literal patterns
-compile_pattern({pat_literal, Value, integer, _Loc}, State) ->
+compile_pattern_node({pat_literal, Value, integer, _Loc}, State) ->
     {cerl:c_int(Value), State};
 
-compile_pattern({pat_literal, Value, float, _Loc}, State) ->
+compile_pattern_node({pat_literal, Value, float, _Loc}, State) ->
     {cerl:c_float(Value), State};
 
-compile_pattern({pat_literal, Value, string, _Loc}, State) when is_list(Value) ->
+compile_pattern_node({pat_literal, Value, string, _Loc}, State)
+  when is_list(Value) ->
     {cerl:c_string(Value), State};
 
-compile_pattern({pat_literal, Value, string, _Loc}, State) when is_binary(Value) ->
+compile_pattern_node({pat_literal, Value, string, _Loc}, State)
+  when is_binary(Value) ->
     {cerl:c_string(binary_to_list(Value)), State};
 
-compile_pattern({pat_literal, Value, atom, _Loc}, State) ->
+compile_pattern_node({pat_literal, Value, atom, _Loc}, State) ->
     {cerl:c_atom(Value), State};
 
-compile_pattern({pat_literal, Value, char, _Loc}, State) ->
+compile_pattern_node({pat_literal, Value, char, _Loc}, State) ->
     {cerl:c_int(Value), State};
 
-compile_pattern({pat_literal, true, bool, _Loc}, State) ->
+compile_pattern_node({pat_literal, true, bool, _Loc}, State) ->
     {cerl:c_atom(true), State};
 
-compile_pattern({pat_literal, false, bool, _Loc}, State) ->
+compile_pattern_node({pat_literal, false, bool, _Loc}, State) ->
     {cerl:c_atom(false), State};
 
 %% Constructor pattern: Some(x) -> {Some, X}
-compile_pattern({pat_constructor, Name, Args, _Loc} = Pattern, State) ->
+compile_pattern_node(
+    {pat_constructor, Name, Args, _Loc} = Pattern,
+    State
+) ->
     case catena_codegen_utils:resolution_enabled(State) of
         true ->
             case catena_codegen_utils:resolve_constructor(
@@ -290,28 +320,28 @@ compile_pattern({pat_constructor, Name, Args, _Loc} = Pattern, State) ->
     end;
 
 %% List pattern: [] or [x, y, ...]
-compile_pattern({pat_list, [], _Loc}, State) ->
+compile_pattern_node({pat_list, [], _Loc}, State) ->
     {cerl:c_nil(), State};
 
-compile_pattern({pat_list, Elements, _Loc}, State) ->
+compile_pattern_node({pat_list, Elements, _Loc}, State) ->
     {CoreElements, State1} = compile_patterns(Elements, State),
     %% Build list from elements
     List = lists:foldr(fun cerl:c_cons/2, cerl:c_nil(), CoreElements),
     {List, State1};
 
 %% Cons pattern: [h | t]
-compile_pattern({pat_cons, Head, Tail, _Loc}, State) ->
+compile_pattern_node({pat_cons, Head, Tail, _Loc}, State) ->
     {CoreHead, State1} = compile_pattern(Head, State),
     {CoreTail, State2} = compile_pattern(Tail, State1),
     {cerl:c_cons(CoreHead, CoreTail), State2};
 
 %% Tuple pattern: (x, y)
-compile_pattern({pat_tuple, Elements, _Loc}, State) ->
+compile_pattern_node({pat_tuple, Elements, _Loc}, State) ->
     {CoreElements, State1} = compile_patterns(Elements, State),
     {cerl:c_tuple(CoreElements), State1};
 
 %% As-pattern: x as Some(y)
-compile_pattern({pat_as, Name, Pattern, _Loc}, State) ->
+compile_pattern_node({pat_as, Name, Pattern, _Loc}, State) ->
     %% Core Erlang uses alias patterns
     {CorePattern, State1} = compile_pattern(Pattern, State),
     Alias = cerl:c_alias(cerl:c_var(Name), CorePattern),
@@ -320,12 +350,12 @@ compile_pattern({pat_as, Name, Pattern, _Loc}, State) ->
 %% Or-pattern: p1 | p2 | ... | pn
 %% Or-patterns must be expanded at the clause level, not pattern level
 %% This compile_pattern is only called for individual alternatives
-compile_pattern({pat_or, _Patterns, _Loc} = Pattern, _State) ->
+compile_pattern_node({pat_or, _Patterns, _Loc} = Pattern, _State) ->
     %% Or-patterns must be expanded by compile_clauses/3.
     unsupported(or_pattern, Pattern);
 
 %% Record pattern: {field: x, ...}
-compile_pattern({pat_record, Fields, _Loc}, State) ->
+compile_pattern_node({pat_record, Fields, _Loc}, State) ->
     %% Records become maps in Core Erlang
     {CorePairs, State1} = compile_record_patterns(Fields, State),
     %% Build map pattern
@@ -333,8 +363,17 @@ compile_pattern({pat_record, Fields, _Loc}, State) ->
     {Map, State1};
 
 %% Fallback for unknown patterns
-compile_pattern(Unknown, _State) ->
+compile_pattern_node(Unknown, _State) ->
     unsupported(pattern, Unknown).
+
+pattern_construct(Pattern) when
+    is_tuple(Pattern),
+    tuple_size(Pattern) > 0,
+    is_atom(element(1, Pattern))
+->
+    element(1, Pattern);
+pattern_construct(_) ->
+    pattern.
 
 %% Helper for record field patterns
 compile_record_patterns(Fields, State) ->
