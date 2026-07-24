@@ -66,35 +66,35 @@ metadata and reject unresolved or invalid effect constraints before lowering.
 **Description:** Make runtime context creation, propagation, nesting, and
 cleanup explicit and structurally valid in every effectful generated function.
 
-- [ ] **Section 5.2 Complete**
+- [x] **Section 5.2 Complete**
 
 ### Task 5.2.1: Lower Effectful Function Boundaries
 
 **Description:** Wrap effectful transforms exactly once with the accepted
 runtime lifecycle and bind the explicit context used by all nested operations.
 
-- [ ] **Task 5.2.1 Complete**
+- [x] **Task 5.2.1 Complete**
 
 #### Subtask 5.2.1.1: Bind Runtime Context Variables Safely
 
 **Description:** Generate hygienic Core variables for effect contexts and avoid
 capture or unbound-context failures in nested lambdas and matches.
 
-- [ ] **Subtask 5.2.1.1 Complete**
+- [x] **Subtask 5.2.1.1 Complete**
 
 #### Subtask 5.2.1.2: Preserve Runtime Lifecycle Semantics
 
 **Description:** Ensure runtime initialization, body execution, handler cleanup,
 and shutdown behavior remain correct on success, error, and timeout paths.
 
-- [ ] **Subtask 5.2.1.2 Complete**
+- [x] **Subtask 5.2.1.2 Complete**
 
 ### Task 5.2.2: Lower Perform Operations
 
 **Description:** Emit resolved calls to the accepted Catena effect runtime with
 the current context, effect identity, operation identity, and argument list.
 
-- [ ] **Task 5.2.2 Complete**
+- [x] **Task 5.2.2 Complete**
 
 #### Subtask 5.2.2.1: Emit Explicit Runtime Calls
 
@@ -102,14 +102,14 @@ the current context, effect identity, operation identity, and argument list.
 string-based lookup, implicit process-dictionary authority, or unresolved
 operation atoms.
 
-- [ ] **Subtask 5.2.2.1 Complete**
+- [x] **Subtask 5.2.2.1 Complete**
 
 #### Subtask 5.2.2.2: Propagate Runtime Failures
 
 **Description:** Preserve unhandled effects, handler failures, and timeouts as
 documented Catena runtime outcomes rather than backend crashes.
 
-- [ ] **Subtask 5.2.2.2 Complete**
+- [x] **Subtask 5.2.2.2 Complete**
 
 ## Section 5.3: Handler Compilation And Runtime Dependencies
 

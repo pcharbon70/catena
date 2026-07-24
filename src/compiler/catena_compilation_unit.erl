@@ -28,12 +28,13 @@
     effect_inventory/1,
     effect_operations/1,
     effect_uses/1,
+    effectful_transforms/1,
     locations/1,
     dispositions/1,
     with_dispositions/2
 ]).
 
--define(UNIT_VERSION, 2).
+-define(UNIT_VERSION, 3).
 
 -opaque t() :: #{
     '$catena_compilation_unit' := pos_integer(),
@@ -50,6 +51,7 @@
     symbols := [symbol()],
     callables := catena_call_resolution:inventory(),
     effect_inventory := catena_effect_resolution:inventory(),
+    effectful_transforms := #{atom() => non_neg_integer()},
     locations := location_index(),
     dispositions := [map()]
 }.
@@ -142,6 +144,9 @@ new(
                                 symbols => Symbols,
                                 callables => Callables,
                                 effect_inventory => EffectInventory,
+                                effectful_transforms =>
+                                    catena_effect_resolution:
+                                        effectful_transforms(Declarations),
                                 locations => Locations,
                                 dispositions =>
                                     unclassified_dispositions(Declarations)
@@ -191,6 +196,7 @@ is_compilation_unit(#{
     symbols := Symbols,
     callables := Callables,
     effect_inventory := EffectInventory,
+    effectful_transforms := EffectfulTransforms,
     locations := Locations,
     dispositions := Dispositions
 }) ->
@@ -200,6 +206,7 @@ is_compilation_unit(#{
         is_list(Symbols) andalso
         catena_call_resolution:is_inventory(Callables) andalso
         catena_effect_resolution:is_inventory(EffectInventory) andalso
+        is_map(EffectfulTransforms) andalso
         is_map(Locations) andalso
         is_list(Dispositions) andalso
         validate_evidence(ValidationState) =:= ok;
@@ -257,6 +264,10 @@ effect_operations(Unit) ->
 -spec effect_uses(t()) -> [map()].
 effect_uses(Unit) ->
     catena_effect_resolution:uses(effect_inventory(Unit)).
+
+-spec effectful_transforms(t()) -> #{atom() => non_neg_integer()}.
+effectful_transforms(Unit) ->
+    maps:get(effectful_transforms, Unit).
 
 -spec locations(t()) -> location_index().
 locations(Unit) -> maps:get(locations, Unit).

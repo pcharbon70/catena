@@ -17,7 +17,8 @@
     uses/1,
     lookup_effect/2,
     lookup_operation/3,
-    binding_name/2
+    binding_name/2,
+    effectful_transforms/1
 ]).
 
 -define(INVENTORY_VERSION, 1).
@@ -103,6 +104,33 @@ binding_name(Effect, Operation) ->
         "$catena_effect$" ++ atom_to_list(Effect) ++ "$" ++
             atom_to_list(Operation)
     ).
+
+%% @doc Return local transforms that require an explicit runtime context.
+%%
+%% Direct effect syntax starts the set and local call edges propagate the
+%% requirement so an effectful helper shares its caller's context.
+-spec effectful_transforms([term()]) ->
+    #{atom() => non_neg_integer()}.
+effectful_transforms(Declarations) ->
+    TransformInfo = maps:from_list([
+        {Name, #{
+            arity => transform_arity(Clauses),
+            direct => clauses_require_runtime(Clauses),
+            calls => lists:usort(clauses_local_calls(Clauses))
+        }}
+        || {transform_decl, Name, _Type, Clauses, _Location} <- Declarations,
+           Clauses =/= []
+    ]),
+    Initial = sets:from_list([
+        Name
+        || {Name, Info} <- maps:to_list(TransformInfo),
+           maps:get(direct, Info)
+    ]),
+    Effectful = close_effectful_calls(TransformInfo, Initial),
+    maps:from_list([
+        {Name, maps:get(arity, maps:get(Name, TransformInfo))}
+        || Name <- sets:to_list(Effectful)
+    ]).
 
 index_declarations([], Effects, Operations) ->
     {ok, Effects, Operations};
@@ -318,3 +346,73 @@ resolution_error(Reason, SourceTerm, Extra) ->
         Extra
     ),
     {error, {effect_resolution_error, Reason, Context}}.
+
+transform_arity([{transform_clause, Patterns, _Guards, _Body, _Location} | _]) ->
+    length(Patterns).
+
+clauses_require_runtime(Clauses) ->
+    lists:any(
+        fun({transform_clause, _Patterns, Guards, Body, _Location}) ->
+            term_requires_runtime(Guards) orelse
+                term_requires_runtime(Body)
+        end,
+        Clauses
+    ).
+
+term_requires_runtime({perform_expr, _, _, _, _}) ->
+    true;
+term_requires_runtime({handle_expr, _, _, _}) ->
+    true;
+term_requires_runtime({try_with_expr, _, _, _}) ->
+    true;
+term_requires_runtime(Term) when is_tuple(Term) ->
+    term_requires_runtime(tuple_to_list(Term));
+term_requires_runtime(Terms) when is_list(Terms) ->
+    lists:any(fun term_requires_runtime/1, Terms);
+term_requires_runtime(_) ->
+    false.
+
+clauses_local_calls(Clauses) ->
+    lists:append([
+        term_local_calls(Guards) ++ term_local_calls(Body)
+        || {transform_clause, _Patterns, Guards, Body, _Location} <- Clauses
+    ]).
+
+term_local_calls({app, Function, _Arguments, _Location} = Application) ->
+    Root = application_root(Function),
+    Direct = case Root of
+        {var, Name, _} when is_atom(Name) -> [Name];
+        _ -> []
+    end,
+    Direct ++ term_local_calls(tl(tuple_to_list(Application)));
+term_local_calls(Term) when is_tuple(Term) ->
+    term_local_calls(tuple_to_list(Term));
+term_local_calls(Terms) when is_list(Terms) ->
+    lists:append([term_local_calls(Term) || Term <- Terms]);
+term_local_calls(_) ->
+    [].
+
+application_root({app, Function, _Arguments, _Location}) ->
+    application_root(Function);
+application_root(Function) ->
+    Function.
+
+close_effectful_calls(TransformInfo, Effectful) ->
+    Expanded = maps:fold(
+        fun(Name, Info, Acc) ->
+            Calls = maps:get(calls, Info),
+            case lists:any(
+                fun(Called) -> sets:is_element(Called, Acc) end,
+                Calls
+            ) of
+                true -> sets:add_element(Name, Acc);
+                false -> Acc
+            end
+        end,
+        Effectful,
+        TransformInfo
+    ),
+    case sets:size(Expanded) =:= sets:size(Effectful) of
+        true -> Expanded;
+        false -> close_effectful_calls(TransformInfo, Expanded)
+    end.

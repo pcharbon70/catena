@@ -17,6 +17,7 @@
     translate_handler/2,
     runtime_context_var/0,
     with_runtime_call/1,
+    with_runtime_call/2,
     runtime_init_call/0,
     runtime_shutdown_call/0
 ]).
@@ -31,7 +32,7 @@ translate_perform({perform_expr, Effect, Operation, Args, _Loc}, State) ->
         cerl:c_atom(catena_effect_runtime),
         cerl:c_atom(perform),
         [
-            runtime_context_var(),
+            current_context(State),
             cerl:c_atom(Effect),
             cerl:c_atom(Operation),
             build_list(CoreArgs)
@@ -42,15 +43,22 @@ translate_perform({perform_expr, Effect, Operation, Args, _Loc}, State) ->
 -spec translate_handle(term(), catena_codegen_utils:codegen_state()) ->
     {cerl:cerl(), catena_codegen_utils:codegen_state()}.
 translate_handle({handle_expr, Body, Handlers, _Loc}, State) ->
-    {CoreBody, State1} = catena_codegen_expr:translate_expr(Body, State),
-    {HandlerSpecs, State2} = translate_handlers(Handlers, State1),
-    BodyFun = cerl:c_fun([runtime_context_var()], CoreBody),
+    {HandlerSpecs, State1} = translate_handlers(Handlers, State),
+    {ChildContext, State2} = catena_codegen_utils:fresh_var(State1),
+    {CoreBody, State3} = catena_codegen_utils:with_runtime_context(
+        ChildContext,
+        fun(ScopedState) ->
+            catena_codegen_expr:translate_expr(Body, ScopedState)
+        end,
+        State2
+    ),
+    BodyFun = cerl:c_fun([ChildContext], CoreBody),
     WithHandlers = cerl:c_call(
         cerl:c_atom(catena_effect_runtime),
         cerl:c_atom(with_handlers),
-        [runtime_context_var(), HandlerSpecs, BodyFun]
+        [current_context(State), HandlerSpecs, BodyFun]
     ),
-    {WithHandlers, State2};
+    {WithHandlers, State3};
 translate_handle({try_with_expr, Body, Handlers, Loc}, State) ->
     translate_handle({handle_expr, Body, Handlers, Loc}, State).
 
@@ -97,7 +105,11 @@ runtime_context_var() ->
 
 -spec with_runtime_call(cerl:cerl()) -> cerl:cerl().
 with_runtime_call(CoreBody) ->
-    BodyFun = cerl:c_fun([runtime_context_var()], CoreBody),
+    with_runtime_call(runtime_context_var(), CoreBody).
+
+-spec with_runtime_call(cerl:cerl(), cerl:cerl()) -> cerl:cerl().
+with_runtime_call(ContextVar, CoreBody) ->
+    BodyFun = cerl:c_fun([ContextVar], CoreBody),
     cerl:c_call(
         cerl:c_atom(catena_effect_system),
         cerl:c_atom(with_runtime),
@@ -124,6 +136,12 @@ param_name({var, Name, _}) -> Name;
 param_name({typed_var, Name, _, _}) -> Name;
 param_name({pat_var, Name, _}) -> Name;
 param_name(_) -> '_'.
+
+current_context(State) ->
+    case catena_codegen_utils:runtime_context(State) of
+        undefined -> runtime_context_var();
+        Context -> Context
+    end.
 
 build_list(Elements) ->
     lists:foldr(fun cerl:c_cons/2, cerl:c_nil(), Elements).

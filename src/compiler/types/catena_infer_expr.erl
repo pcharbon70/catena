@@ -85,14 +85,24 @@ infer({app, Fun, Arg}, Env, State) ->
                     % Generate fresh type variable for result
                     {ResultType, State3} = catena_infer_state:fresh_var(State2),
 
-                    % Unify function type with ArgType → ResultType
-                    ExpectedFunType = {tfun, ArgType, ResultType, {effect_set, []}},
+                    % Preserve the callable's declared effects while
+                    % constraining its argument and result types.
+                    FunctionEffects = operation_function_effects(FunType),
+                    ExpectedFunType = {
+                        tfun,
+                        ArgType,
+                        ResultType,
+                        FunctionEffects
+                    },
                     case catena_infer_unify:unify(FunType, ExpectedFunType, State3) of
                         {ok, _Subst, State4} ->
                             % Apply current substitution to result type
                             FinalSubst = catena_infer_state:get_subst(State4),
                             FinalResultType = catena_type_subst:apply(FinalSubst, ResultType),
-                            {FinalResultType, State4};
+                            {
+                                FinalResultType,
+                                add_effect_set(FunctionEffects, State4)
+                            };
                         {error, _, _} = Error ->
                             Error
                     end;
@@ -427,16 +437,27 @@ infer({perform_expr, EffectName, OperationName, Args, _Loc}, Env, State) ->
 %
 % The handle expression removes an effect from the function's effect set
 % by providing handlers for all operations of that effect.
-infer({handle_expr, Body, _Handlers, _Loc}, Env, State) ->
+infer({handle_expr, Body, Handlers, _Loc}, Env, State) ->
     %% Infer the type of the body
     case infer(Body, Env, State) of
         {BodyType, State1} ->
-            %% The handle removes effects from the body's effect set
-            %% For now, just return the body type
-            %% In a full implementation, we'd:
-            %% 1. Check that handlers cover all operations
-            %% 2. Remove the handled effect from the effect set
-            {BodyType, State1};
+            HandledEffects = [
+                Effect
+                || {handler_clause, Effect, _Operations, _Location} <-
+                    Handlers
+            ],
+            RemainingEffects = lists:foldl(
+                fun catena_types:remove_effect/2,
+                catena_infer_state:get_effects(State1),
+                HandledEffects
+            ),
+            {
+                BodyType,
+                catena_infer_state:set_effects(
+                    RemainingEffects,
+                    State1
+                )
+            };
         {error, _, _} = Error ->
             Error
     end.
@@ -476,6 +497,13 @@ operation_function_effects({tfun, _From, _To, Effects}) ->
     Effects;
 operation_function_effects(_Type) ->
     catena_types:empty_effects().
+
+add_effect_set({effect_set, Effects}, State) ->
+    lists:foldl(
+        fun catena_infer_state:add_effect/2,
+        State,
+        Effects
+    ).
 
 %% @doc Instantiate a type scheme by replacing quantified variables with fresh ones
 %%
