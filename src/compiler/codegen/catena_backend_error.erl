@@ -19,6 +19,7 @@
     arity_mismatch/4,
     missing_transform_implementation/2,
     invalid_declaration_disposition/2,
+    runtime_dependency_unavailable/3,
     core_validation_failed/3,
     beam_compilation_failed/3,
     is_diagnostic/1,
@@ -35,6 +36,7 @@
     arity_mismatch |
     missing_transform_implementation |
     invalid_declaration_disposition |
+    runtime_dependency_unavailable |
     core_validation_failed |
     beam_compilation_failed.
 
@@ -52,6 +54,7 @@ categories() ->
         arity_mismatch,
         missing_transform_implementation,
         invalid_declaration_disposition,
+        runtime_dependency_unavailable,
         core_validation_failed,
         beam_compilation_failed
     ].
@@ -138,6 +141,19 @@ invalid_declaration_disposition(Declaration, Context) ->
         Context#{
             construct => declaration,
             declaration => Declaration
+        }
+    ).
+
+-spec runtime_dependency_unavailable(atom(), pos_integer(), map()) ->
+    diagnostic().
+runtime_dependency_unavailable(Module, Version, Context) ->
+    new(
+        runtime_dependency_unavailable,
+        Context#{
+            construct => runtime_dependency,
+            source_identity => {Module, Version},
+            dependency_module => Module,
+            required_version => Version
         }
     ).
 
@@ -247,6 +263,14 @@ category_message(missing_transform_implementation, _Details) ->
     "requires an implementation for transform";
 category_message(invalid_declaration_disposition, _Details) ->
     "could not classify a declaration for emission";
+category_message(runtime_dependency_unavailable, Details) ->
+    io_lib:format(
+        "requires unavailable runtime dependency ~p version ~p",
+        [
+            maps:get(dependency_module, Details, undefined),
+            maps:get(required_version, Details, undefined)
+        ]
+    );
 category_message(core_validation_failed, _Details) ->
     "generated Core Erlang that OTP rejected";
 category_message(beam_compilation_failed, _Details) ->

@@ -15,13 +15,14 @@
     effects/1,
     operations/1,
     uses/1,
+    handlers/1,
     lookup_effect/2,
     lookup_operation/3,
     binding_name/2,
     effectful_transforms/1
 ]).
 
--define(INVENTORY_VERSION, 1).
+-define(INVENTORY_VERSION, 2).
 
 -type operation_identity() :: {atom(), atom(), non_neg_integer()}.
 -type operation() :: #{
@@ -40,7 +41,8 @@
     '$catena_effect_inventory' := pos_integer(),
     effects := #{atom() => map()},
     operations := #{{atom(), atom()} => operation()},
-    uses := [map()]
+    uses := [map()],
+    handlers := [map()]
 }.
 
 -export_type([inventory/0, operation/0, operation_identity/0]).
@@ -54,11 +56,24 @@ build(Declarations) when is_list(Declarations) ->
                 '$catena_effect_inventory' => ?INVENTORY_VERSION,
                 effects => Effects,
                 operations => Operations,
-                uses => []
+                uses => [],
+                handlers => []
             },
             case collect_terms(Declarations, Inventory0, []) of
                 {ok, Uses} ->
-                    {ok, Inventory0#{uses := lists:reverse(Uses)}};
+                    case collect_handlers(
+                        Declarations,
+                        Inventory0,
+                        []
+                    ) of
+                        {ok, Handlers} ->
+                            {ok, Inventory0#{
+                                uses := lists:reverse(Uses),
+                                handlers := lists:reverse(Handlers)
+                            }};
+                        {error, _} = Error ->
+                            Error
+                    end;
                 {error, _} = Error ->
                     Error
             end;
@@ -71,9 +86,13 @@ is_inventory(#{
     '$catena_effect_inventory' := ?INVENTORY_VERSION,
     effects := Effects,
     operations := Operations,
-    uses := Uses
+    uses := Uses,
+    handlers := Handlers
 }) ->
-    is_map(Effects) andalso is_map(Operations) andalso is_list(Uses);
+    is_map(Effects) andalso
+        is_map(Operations) andalso
+        is_list(Uses) andalso
+        is_list(Handlers);
 is_inventory(_) ->
     false.
 
@@ -88,6 +107,10 @@ operations(Inventory) ->
 -spec uses(inventory()) -> [map()].
 uses(Inventory) ->
     maps:get(uses, Inventory).
+
+-spec handlers(inventory()) -> [map()].
+handlers(Inventory) ->
+    maps:get(handlers, Inventory).
 
 -spec lookup_effect(atom(), inventory()) -> {ok, map()} | error.
 lookup_effect(Effect, Inventory) ->
@@ -337,6 +360,235 @@ collect_term(Terms, Inventory, Uses) when is_list(Terms) ->
     collect_terms(Terms, Inventory, Uses);
 collect_term(_Term, _Inventory, Uses) ->
     {ok, Uses}.
+
+collect_handlers([], _Inventory, Handlers) ->
+    {ok, Handlers};
+collect_handlers([Term | Rest], Inventory, Handlers) ->
+    case collect_handler_term(Term, Inventory, Handlers) of
+        {ok, Handlers1} ->
+            collect_handlers(Rest, Inventory, Handlers1);
+        {error, _} = Error ->
+            Error
+    end.
+
+collect_handler_term(
+    {handle_expr, Body, HandlerClauses, _Location},
+    Inventory,
+    Handlers
+) ->
+    case validate_handler_clauses(
+        HandlerClauses,
+        Inventory,
+        sets:new(),
+        Handlers
+    ) of
+        {ok, Handlers1} ->
+            HandlerBodies = [
+                OperationBody
+                || {handler_clause, _Effect, Operations0, _HandlerLocation} <-
+                    HandlerClauses,
+                   {operation_case, _Operation, _Params, OperationBody, _OpLocation} <-
+                    Operations0
+            ],
+            collect_handlers(
+                [Body | HandlerBodies],
+                Inventory,
+                Handlers1
+            );
+        {error, _} = Error ->
+            Error
+    end;
+collect_handler_term(
+    {try_with_expr, Body, HandlerClauses, Location},
+    Inventory,
+    Handlers
+) ->
+    collect_handler_term(
+        {handle_expr, Body, HandlerClauses, Location},
+        Inventory,
+        Handlers
+    );
+collect_handler_term(Term, Inventory, Handlers) when is_tuple(Term) ->
+    collect_handlers(tl(tuple_to_list(Term)), Inventory, Handlers);
+collect_handler_term(Terms, Inventory, Handlers) when is_list(Terms) ->
+    collect_handlers(Terms, Inventory, Handlers);
+collect_handler_term(_Term, _Inventory, Handlers) ->
+    {ok, Handlers}.
+
+validate_handler_clauses(
+    [],
+    _Inventory,
+    _HandledEffects,
+    Handlers
+) ->
+    {ok, Handlers};
+validate_handler_clauses(
+    [{handler_clause, Effect, Cases, Location} = Handler | Rest],
+    Inventory,
+    HandledEffects,
+    Handlers
+) ->
+    case sets:is_element(Effect, HandledEffects) of
+        true ->
+            resolution_error(
+                duplicate_effect_handler,
+                Handler,
+                #{effect => Effect, location => Location}
+            );
+        false ->
+            case lookup_effect(Effect, Inventory) of
+                error ->
+                    resolution_error(
+                        unknown_handled_effect,
+                        Handler,
+                        #{effect => Effect, location => Location}
+                    );
+                {ok, EffectInfo} ->
+                    case validate_operation_cases(
+                        Effect,
+                        Cases,
+                        Inventory,
+                        sets:new(),
+                        []
+                    ) of
+                        {ok, CaseIdentities, SeenOperations} ->
+                            DeclaredOperations = [
+                                Operation
+                                || {Effect0, Operation, _Arity} <-
+                                    maps:get(operations, EffectInfo),
+                                   Effect0 =:= Effect
+                            ],
+                            Missing = lists:sort(
+                                DeclaredOperations --
+                                    sets:to_list(SeenOperations)
+                            ),
+                            case Missing of
+                                [] ->
+                                    HandlerInfo = #{
+                                        effect => Effect,
+                                        operations =>
+                                            lists:reverse(CaseIdentities),
+                                        location => Location
+                                    },
+                                    validate_handler_clauses(
+                                        Rest,
+                                        Inventory,
+                                        sets:add_element(
+                                            Effect,
+                                            HandledEffects
+                                        ),
+                                        [HandlerInfo | Handlers]
+                                    );
+                                _ ->
+                                    resolution_error(
+                                        missing_handler_operations,
+                                        Handler,
+                                        #{
+                                            effect => Effect,
+                                            missing_operations => Missing,
+                                            location => Location
+                                        }
+                                    )
+                            end;
+                        {error, _} = Error ->
+                            Error
+                    end
+            end
+    end;
+validate_handler_clauses(
+    [Invalid | _Rest],
+    _Inventory,
+    _HandledEffects,
+    _Handlers
+) ->
+    resolution_error(
+        invalid_handler_clause,
+        Invalid,
+        #{}
+    ).
+
+validate_operation_cases(
+    _Effect,
+    [],
+    _Inventory,
+    Seen,
+    Identities
+) ->
+    {ok, Identities, Seen};
+validate_operation_cases(
+    Effect,
+    [{operation_case, Operation, Params, _Body, Location} = Case | Rest],
+    Inventory,
+    Seen,
+    Identities
+) ->
+    case sets:is_element(Operation, Seen) of
+        true ->
+            resolution_error(
+                duplicate_handler_operation,
+                Case,
+                #{
+                    effect => Effect,
+                    operation => Operation,
+                    location => Location
+                }
+            );
+        false ->
+            case lookup_operation(Effect, Operation, Inventory) of
+                error ->
+                    resolution_error(
+                        unknown_handler_operation,
+                        Case,
+                        #{
+                            effect => Effect,
+                            operation => Operation,
+                            location => Location
+                        }
+                    );
+                {ok, OperationInfo} ->
+                    Expected = maps:get(arity, OperationInfo),
+                    Actual = length(Params),
+                    case Expected =:= Actual of
+                        true ->
+                            validate_operation_cases(
+                                Effect,
+                                Rest,
+                                Inventory,
+                                sets:add_element(Operation, Seen),
+                                [
+                                    maps:get(identity, OperationInfo)
+                                    | Identities
+                                ]
+                            );
+                        false ->
+                            resolution_error(
+                                handler_arity_mismatch,
+                                Case,
+                                #{
+                                    effect => Effect,
+                                    operation => Operation,
+                                    expected_arity => Expected,
+                                    actual_arity => Actual,
+                                    declaration_location =>
+                                        maps:get(location, OperationInfo),
+                                    location => Location
+                                }
+                            )
+                    end
+            end
+    end;
+validate_operation_cases(
+    Effect,
+    [Invalid | _Rest],
+    _Inventory,
+    _Seen,
+    _Identities
+) ->
+    resolution_error(
+        invalid_handler_operation,
+        Invalid,
+        #{effect => Effect}
+    ).
 
 resolution_error(Reason, SourceTerm, Extra) ->
     Context = catena_backend_error:context(

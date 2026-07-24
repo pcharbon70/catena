@@ -116,28 +116,28 @@ documented Catena runtime outcomes rather than backend crashes.
 **Description:** Compile handler clauses and make the generated module's Catena
 runtime requirements explicit and testable.
 
-- [ ] **Section 5.3 Complete**
+- [x] **Section 5.3 Complete**
 
 ### Task 5.3.1: Compile Handler Clauses Losslessly
 
 **Description:** Resolve handled effects and operations, validate coverage, and
 compile handler parameters and bodies without replacing complex patterns.
 
-- [ ] **Task 5.3.1 Complete**
+- [x] **Task 5.3.1 Complete**
 
 #### Subtask 5.3.1.1: Validate Handler Operation Coverage
 
 **Description:** Detect missing, duplicate, unknown, and arity-invalid operation
 cases against the resolved effect declaration.
 
-- [ ] **Subtask 5.3.1.1 Complete**
+- [x] **Subtask 5.3.1.1 Complete**
 
 #### Subtask 5.3.1.2: Preserve Handler Parameters And Scope
 
 **Description:** Compile operation parameters, nested bindings, handler-local
 calls, and child contexts with the same scope rules as ordinary transforms.
 
-- [ ] **Subtask 5.3.1.2 Complete**
+- [x] **Subtask 5.3.1.2 Complete**
 
 ### Task 5.3.2: Declare Runtime Artifact Dependencies
 
@@ -145,21 +145,21 @@ calls, and child contexts with the same scope rules as ordinary transforms.
 modules so loading and packaging layers can satisfy those dependencies
 deliberately.
 
-- [ ] **Task 5.3.2 Complete**
+- [x] **Task 5.3.2 Complete**
 
 #### Subtask 5.3.2.1: Collect Runtime Dependency Metadata
 
 **Description:** Add effect-system and effect-runtime dependencies to the
 backend artifact metadata whenever emitted code references them.
 
-- [ ] **Subtask 5.3.2.1 Complete**
+- [x] **Subtask 5.3.2.1 Complete**
 
 #### Subtask 5.3.2.2: Reject Unavailable Runtime Contracts
 
 **Description:** Fail artifact preparation with an actionable diagnostic when
 the selected target cannot supply a required Catena runtime module or version.
 
-- [ ] **Subtask 5.3.2.2 Complete**
+- [x] **Subtask 5.3.2.2 Complete**
 
 ## Section 5.4: Phase 5 Integration Tests
 

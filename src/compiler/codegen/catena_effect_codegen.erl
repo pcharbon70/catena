@@ -81,12 +81,18 @@ translate_handlers(Handlers, State) ->
 
 -spec translate_handler(term(), catena_codegen_utils:codegen_state()) ->
     {cerl:cerl(), catena_codegen_utils:codegen_state()}.
-translate_handler({handler_clause, Effect, Operations, _Loc}, State) ->
+translate_handler({handler_clause, Effect, Operations, HandlerLocation}, State) ->
     {OpCases, State1} = lists:mapfoldl(
-        fun({operation_case, OpName, Params, Body, _OpLoc}, St) ->
-            ParamVars = [cerl:c_var(param_name(P)) || P <- Params],
-            {CoreBody, St1} = catena_codegen_expr:translate_expr(Body, St),
-            HandlerFun = cerl:c_fun(ParamVars, CoreBody),
+        fun(
+            {operation_case, OpName, Params, Body, OperationLocation},
+            St
+        ) ->
+            {HandlerFun, St1} = translate_operation_handler(
+                Params,
+                Body,
+                OperationLocation,
+                St
+            ),
             OpSpec = cerl:c_tuple([cerl:c_atom(OpName), HandlerFun]),
             {OpSpec, St1}
         end,
@@ -97,7 +103,40 @@ translate_handler({handler_clause, Effect, Operations, _Loc}, State) ->
         cerl:c_atom(Effect),
         build_list(OpCases)
     ]),
+    _ = HandlerLocation,
     {HandlerSpec, State1}.
+
+translate_operation_handler([], Body, _Location, State) ->
+    {CoreBody, State1} = catena_codegen_expr:translate_expr(
+        Body,
+        State
+    ),
+    {cerl:c_fun([], CoreBody), State1};
+translate_operation_handler(Params, Body, Location, State) ->
+    {Arguments, State1} = catena_codegen_utils:fresh_vars(
+        length(Params),
+        State
+    ),
+    {Scrutinee, Pattern} = handler_match_shape(
+        Arguments,
+        Params,
+        Location
+    ),
+    {CoreBody, State2} = catena_codegen_pattern:compile_match(
+        Scrutinee,
+        [{clause, [Pattern], [], Body}],
+        State1,
+        #{optimize => true, warn_incomplete => true}
+    ),
+    {cerl:c_fun(Arguments, CoreBody), State2}.
+
+handler_match_shape([Argument], [Pattern], _Location) ->
+    {Argument, Pattern};
+handler_match_shape(Arguments, Params, Location) ->
+    {
+        cerl:c_tuple(Arguments),
+        {pat_tuple, Params, Location}
+    }.
 
 -spec runtime_context_var() -> cerl:cerl().
 runtime_context_var() ->
@@ -131,11 +170,6 @@ runtime_shutdown_call() ->
         cerl:c_atom(stop_runtime),
         []
     ).
-
-param_name({var, Name, _}) -> Name;
-param_name({typed_var, Name, _, _}) -> Name;
-param_name({pat_var, Name, _}) -> Name;
-param_name(_) -> '_'.
 
 current_context(State) ->
     case catena_codegen_utils:runtime_context(State) of
