@@ -79,8 +79,12 @@ generate_module(ModuleAST, Opts) ->
 
         {ok, CoreModule}
     catch
+        error:{backend_error, _, _} = Diagnostic:_Stack ->
+            {error, Diagnostic};
         error:Reason:_Stack ->
             {error, {codegen_error, Reason}};
+        throw:{backend_error, _, _} = Diagnostic ->
+            {error, Diagnostic};
         throw:Reason ->
             {error, {codegen_error, Reason}}
     end.

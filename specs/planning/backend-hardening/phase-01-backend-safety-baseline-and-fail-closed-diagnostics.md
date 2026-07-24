@@ -69,14 +69,14 @@ and silently ignored declarations.
 fail-closed change can report the construct, compiler stage, and source
 location instead of crashing or returning a generated placeholder.
 
-- [ ] **Section 1.2 Complete**
+- [x] **Section 1.2 Complete**
 
 ### Task 1.2.1: Define Backend Error Types
 
 **Description:** Add a shared backend diagnostic representation covering the
 accepted categories in the backend spec.
 
-- [ ] **Task 1.2.1 Complete**
+- [x] **Task 1.2.1 Complete**
 
 #### Subtask 1.2.1.1: Model Stable Error Categories
 
@@ -84,21 +84,21 @@ accepted categories in the backend spec.
 calls, arity mismatches, invalid declaration dispositions, Core validation
 failures, and BEAM compilation failures.
 
-- [ ] **Subtask 1.2.1.1 Complete**
+- [x] **Subtask 1.2.1.1 Complete**
 
 #### Subtask 1.2.1.2: Preserve Source Context
 
 **Description:** Carry module, transform, construct kind, original source
 location, and relevant generated identity through backend error terms.
 
-- [ ] **Subtask 1.2.1.2 Complete**
+- [x] **Subtask 1.2.1.2 Complete**
 
 ### Task 1.2.2: Propagate Backend Errors Through Public Core APIs
 
 **Description:** Make the existing source-to-Core entry points return
 structured backend errors without collapsing earlier frontend error families.
 
-- [ ] **Task 1.2.2 Complete**
+- [x] **Task 1.2.2 Complete**
 
 #### Subtask 1.2.2.1: Normalize Backend Return Contracts
 
@@ -106,14 +106,14 @@ structured backend errors without collapsing earlier frontend error families.
 consistent `{ok, Artifact}` or `{error, Diagnostic}` contract at the
 orchestration boundary.
 
-- [ ] **Subtask 1.2.2.1 Complete**
+- [x] **Subtask 1.2.2.1 Complete**
 
 #### Subtask 1.2.2.2: Add Backend Diagnostic Formatting
 
 **Description:** Format backend errors in Catena vocabulary and prefer source
 names and locations over generated Core Erlang identifiers.
 
-- [ ] **Subtask 1.2.2.2 Complete**
+- [x] **Subtask 1.2.2.2 Complete**
 
 ## Section 1.3: Fail-Closed Code Generation Fallbacks
 
