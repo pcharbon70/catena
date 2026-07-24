@@ -1,0 +1,29 @@
+name: Verification
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: OTP 28 / rebar3 3.27
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Erlang and rebar3
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: "28"
+          rebar3-version: "3.27.0"
+
+      - name: Run canonical verification
+        run: make verify

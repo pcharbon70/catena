@@ -191,12 +191,21 @@ Current promoted status:
 
 The default `rebar3 eunit` entry point discovers, compiles, and executes the
 complete active test tree. Two consecutive final verified runs on 2026-07-24
-each reported 4,829 passing, zero failing, and zero skipped tests.
+each reported 4,838 passing, zero failing, and zero skipped tests, as recorded
+in the
+[Phase 7 test baseline](spec-source-reconciliation/phase-07-test-baseline.md).
 
 Promoted interpretation:
 
 - `make compile` and `rebar3 compile` compile the active source tree
 - `make test` and `rebar3 eunit` expose the complete active EUnit result
+- `make check-specs` validates 35 concrete requirements in five families, ten
+  scenarios, executable evidence, 63 component acceptance criteria, four
+  ADRs, promoted paths, and local Markdown links
+- `make conformance` runs the unique EUnit modules named by the executable
+  scenario manifest
+- `make verify` combines specs governance with the complete active suite and
+  is the read-only CI contract for pull requests and pushes to `main`
 - the six Phase 2 standard-library/frontend modules pass all 170 focused tests
 - the 15 Phase 3 compiler/codegen/pattern modules pass all 397 focused tests
 - the ten Phase 4 effect/type/runtime modules pass all 244 focused tests

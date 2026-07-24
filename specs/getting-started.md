@@ -48,3 +48,15 @@ Current component specs live under:
 - `tooling/`
 
 Component specs should define `AC-*` acceptance criteria and be mapped in `conformance/spec_conformance_matrix.md`.
+
+## 6. Map Stable Scenarios To Executable Evidence
+
+When a promoted scenario is added or materially changed:
+
+- update [conformance/scenario_catalog.md](conformance/scenario_catalog.md)
+- update [conformance/spec_conformance_matrix.md](conformance/spec_conformance_matrix.md)
+- add maintained EUnit evidence to
+  [conformance/executable_scenarios.tsv](conformance/executable_scenarios.tsv)
+
+The manifest is a focused traceability layer. It does not replace the complete
+active test suite.
