@@ -147,6 +147,13 @@ are:
 {resume_expr, ResumptionExpr, ValueExpr, Loc}
 ```
 
+At the parsed boundary, the operation-case metadata slot is optional:
+legacy value-handler tuples retain their five-element shape, while canonical
+constructors may represent the same absence as `none`. A user-written control
+case always uses the six-element shape with `{resumption_binder, Binder, Loc}`.
+This compatibility union preserves source intent without forcing pre-existing
+value-handler consumers to infer whether punctuation was present.
+
 Value handlers normalize to the same operation-case shape with a synthetic
 binder and a synthetic tail `resume_expr`. A successful normalized module
 therefore makes automatic and explicit control behavior distinguishable

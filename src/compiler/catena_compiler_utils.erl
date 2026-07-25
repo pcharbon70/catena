@@ -218,9 +218,12 @@ extract_location({transform_decl, _Name, _Type, _Clauses, Loc}) -> Loc;
 extract_location({effect_decl, _Name, _Operations, Loc}) -> Loc;
 extract_location({effect_operation, _Name, _Type, Loc}) -> Loc;
 extract_location({perform_expr, _Effect, _Operation, _Args, Loc}) -> Loc;
+extract_location({resume_expr, _Resumption, _Value, Loc}) -> Loc;
 extract_location({try_with_expr, _Body, _Handlers, Loc}) -> Loc;
 extract_location({handler_clause, _Effect, _Operations, Loc}) -> Loc;
 extract_location({operation_case, _Operation, _Params, _Body, Loc}) -> Loc;
+extract_location({operation_case, _Operation, _Params, _Resumption, _Body, Loc}) -> Loc;
+extract_location({resumption_binder, _Name, Loc}) -> Loc;
 extract_location({type_effect, _Type, _Effects, Loc}) -> Loc;
 extract_location(Tuple) when is_tuple(Tuple) ->
     %% Generic case: location is usually the last element

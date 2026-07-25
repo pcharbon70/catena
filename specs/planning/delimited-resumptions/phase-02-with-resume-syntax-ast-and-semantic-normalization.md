@@ -76,7 +76,7 @@ focused attribution audit in Section 2.4.
 **Description:** Make the new source forms first-class parsed AST nodes rather
 than punctuation reconstructed by later compiler passes.
 
-- [ ] **Section 2.2 Complete**
+- [x] **Section 2.2 Complete**
 
 ### Task 2.2.1: Define Canonical Parsed Shapes
 
@@ -84,14 +84,14 @@ than punctuation reconstructed by later compiler passes.
 metadata and add a dedicated `resume_expr` carrying both operands and source
 origin.
 
-- [ ] **Task 2.2.1 Complete**
+- [x] **Task 2.2.1 Complete**
 
 #### Subtask 2.2.1.1: Update AST Contracts
 
 **Description:** Update AST unions, type documentation, location extraction,
 depth, traversal, mapping, folding, equality, and validation utilities.
 
-- [ ] **Subtask 2.2.1.1 Complete**
+- [x] **Subtask 2.2.1.1 Complete**
 
 #### Subtask 2.2.1.2: Preserve Explicit Source Intent
 
@@ -99,28 +99,38 @@ depth, traversal, mapping, folding, equality, and validation utilities.
 and formatting do not confuse user-written control handlers with generated
 value-handler sugar.
 
-- [ ] **Subtask 2.2.1.2 Complete**
+- [x] **Subtask 2.2.1.2 Complete**
 
 ### Task 2.2.2: Extend Pretty Printing And Round Trips
 
 **Description:** Print valid canonical source for explicit binders and resume
 expressions while keeping value-handler source concise.
 
-- [ ] **Task 2.2.2 Complete**
+- [x] **Task 2.2.2 Complete**
 
 #### Subtask 2.2.2.1: Print New Forms
 
 **Description:** Emit `with k` only for explicit control handlers and print
 `resume(k, value)` with stable precedence and layout.
 
-- [ ] **Subtask 2.2.2.1 Complete**
+- [x] **Subtask 2.2.2.1 Complete**
 
 #### Subtask 2.2.2.2: Add Parse/Print Round Trips
 
 **Description:** Cover nested handlers, patterns, multiline bodies, resume in
 larger expressions, comments, and source forms that resemble ordinary calls.
 
-- [ ] **Subtask 2.2.2.2 Complete**
+- [x] **Subtask 2.2.2.2 Complete**
+
+**Implementation evidence:** The AST contract now includes first-class
+`resume_expr` and optional resumption-binder metadata while retaining the
+legacy value-case tuple as an explicit compatibility member. Smart
+constructors, location extraction, depth limits, bottom-up map/fold/walk,
+location-insensitive equality, and structural validation preserve the new
+nodes. Pretty printing emits `with k` only when explicit metadata is present,
+keeps value cases compact, maps operator tags back to source spellings, and
+round-trips nested handlers, patterns, multiline bodies, comments, ordinary
+call lookalikes, and resume expressions in larger expressions.
 
 ## Section 2.3: Semantic Normalization And Early Validation
 

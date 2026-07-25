@@ -71,12 +71,23 @@ pp_expr_iolist({lambda, Params, Body, _Loc}) ->
     ParamStrs = [pp_pattern_iolist(P) || P <- Params],
     ["fn ", join(ParamStrs, " "), " -> ", pp_expr_iolist(Body)];
 
+pp_expr_iolist({let_expr, [Pattern, BoundExpr], Body, _Loc})
+        when is_tuple(Pattern) ->
+    [
+        "let ",
+        pp_pattern_iolist(Pattern),
+        " = ",
+        pp_expr_iolist(BoundExpr),
+        " in ",
+        pp_expr_iolist(Body)
+    ];
+
 pp_expr_iolist({let_expr, Bindings, Body, _Loc}) ->
     BindStrs = [pp_binding(B) || B <- Bindings],
     ["let ", join(BindStrs, ", "), " in ", pp_expr_iolist(Body)];
 
 pp_expr_iolist({binary_op, Op, Left, Right, _Loc}) ->
-    [pp_expr_with_parens(Left), " ", atom_to_list(Op), " ", pp_expr_with_parens(Right)];
+    [pp_expr_with_parens(Left), " ", pp_operator(Op), " ", pp_expr_with_parens(Right)];
 
 pp_expr_iolist({tuple_expr, Elems, _Loc}) ->
     ElemStrs = [pp_expr_iolist(E) || E <- Elems],
@@ -116,7 +127,14 @@ pp_expr_iolist({perform_expr, Effect, Op, Args, _Loc}) ->
     ArgStrs = [pp_expr_iolist(A) || A <- Args],
     ["perform ", atom_to_list(Effect), ".", atom_to_list(Op), "(", join(ArgStrs, ", "), ")"];
 
+pp_expr_iolist({resume_expr, Resumption, Value, _Loc}) ->
+    ["resume(", pp_expr_iolist(Resumption), ", ", pp_expr_iolist(Value), ")"];
+
 pp_expr_iolist({handle_expr, Body, Handlers, _Loc}) ->
+    HandlerStrs = [pp_handler(H) || H <- Handlers],
+    ["handle ", pp_expr_iolist(Body), " then { ", join(HandlerStrs, " "), " }"];
+
+pp_expr_iolist({try_with_expr, Body, Handlers, _Loc}) ->
     HandlerStrs = [pp_handler(H) || H <- Handlers],
     ["handle ", pp_expr_iolist(Body), " then { ", join(HandlerStrs, " "), " }"];
 
@@ -172,11 +190,32 @@ pp_do_stmt({do_return, Expr, _Loc}) ->
 %% Helper for effect handlers
 pp_handler({handler_clause, Effect, Ops, _Loc}) ->
     OpStrs = [pp_handler_op(O) || O <- Ops],
-    [atom_to_list(Effect), " { ", join(OpStrs, ", "), " }"].
+    [atom_to_list(Effect), " { ", join(OpStrs, " "), " }"].
 
-pp_handler_op({Op, Params, Body, _Loc}) ->
+pp_handler_op({operation_case, Op, Params, Body, _Loc}) ->
     ParamStrs = [pp_pattern_iolist(P) || P <- Params],
-    [atom_to_list(Op), "(", join(ParamStrs, ", "), ") -> ", pp_expr_iolist(Body)].
+    [atom_to_list(Op), "(", join(ParamStrs, ", "), ") -> ", pp_expr_iolist(Body)];
+pp_handler_op({operation_case, Op, Params, none, Body, _Loc}) ->
+    ParamStrs = [pp_pattern_iolist(P) || P <- Params],
+    [atom_to_list(Op), "(", join(ParamStrs, ", "), ") -> ", pp_expr_iolist(Body)];
+pp_handler_op({
+    operation_case,
+    Op,
+    Params,
+    {resumption_binder, Binder, _BinderLoc},
+    Body,
+    _Loc
+}) ->
+    ParamStrs = [pp_pattern_iolist(P) || P <- Params],
+    [
+        atom_to_list(Op),
+        "(",
+        join(ParamStrs, ", "),
+        ") with ",
+        atom_to_list(Binder),
+        " -> ",
+        pp_expr_iolist(Body)
+    ].
 
 %%%===================================================================
 %%% Pattern Pretty-Printing
@@ -321,3 +360,32 @@ escape_char($\r) -> "\\r";
 escape_char($\\) -> "\\\\";
 escape_char($") -> "\\\"";
 escape_char(C) -> [C].
+
+%% Source spellings for parsed binary-operator tags.
+pp_operator(pipe_right) -> "|>";
+pp_operator(arrow) -> "->";
+pp_operator(setoid_eq) -> "===";
+pp_operator(setoid_neq) -> "!==";
+pp_operator(eq) -> "==";
+pp_operator(neq) -> "/=";
+pp_operator(lte) -> "<=";
+pp_operator(gte) -> ">=";
+pp_operator(lt) -> "<";
+pp_operator(gt) -> ">";
+pp_operator('or') -> "||";
+pp_operator('and') -> "&&";
+pp_operator(cons) -> "::";
+pp_operator(plus) -> "+";
+pp_operator(minus) -> "-";
+pp_operator(star) -> "*";
+pp_operator(slash) -> "/";
+pp_operator(fmap) -> "<$>";
+pp_operator(ap) -> "<*>";
+pp_operator(bind) -> ">>=";
+pp_operator(mappend) -> "<>";
+pp_operator(kleisli) -> ">=>";
+pp_operator(flow_then) -> ">>>";
+pp_operator(flow_before) -> "<<<";
+pp_operator(flow_parallel) -> "***";
+pp_operator(flow_split) -> "&&&";
+pp_operator(Op) -> atom_to_list(Op).
