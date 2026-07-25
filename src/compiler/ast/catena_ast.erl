@@ -653,12 +653,15 @@ location({location, _, _} = Loc) ->
     Loc;
 location({location, _, _, _, _} = Loc) ->
     Loc;
+location({synthetic, _Kind, _SourceLoc} = Loc) ->
+    Loc;
 location(Node) when is_tuple(Node) ->
     %% Extract location from last element of tuple (AST node convention)
     case element(tuple_size(Node), Node) of
         {line, _} = Loc -> Loc;
         {location, _, _} = Loc -> Loc;
         {location, _, _, _, _} = Loc -> Loc;
+        {synthetic, _Kind, _SourceLoc} = Loc -> Loc;
         _ -> default_location()
     end;
 location(_) ->

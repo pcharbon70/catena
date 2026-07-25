@@ -339,7 +339,10 @@ analyze_string(Source) ->
     end.
 
 %% @doc Type check with import processing.
-type_check_with_imports({module, Name, Exports, Imports, Declarations, Location} = AST, Opts) ->
+type_check_with_imports(
+    {module, _Name, _Exports, Imports, _Declarations, _Location} = AST,
+    Opts
+) ->
     %% Get imported environment
     ImportedEnvResult = case maps:get(import_env, Opts, undefined) of
         undefined ->
@@ -359,7 +362,24 @@ type_check_with_imports({module, Name, Exports, Imports, Declarations, Location}
     end.
 
 %% @doc Type check with a pre-built imported environment.
-type_check_with_env({module, Name, _Exports, _Imports, Declarations, _Location}, ImportedEnv) ->
+type_check_with_env(
+    {module, _Name, _Exports, _Imports, _Declarations, _Location} = AST,
+    ImportedEnv
+) ->
+    case catena_resumption_normalize:project_legacy_value_handlers(
+        AST,
+        type_inference
+    ) of
+        {ok, TypingAST} ->
+            type_check_supported_ast(TypingAST, ImportedEnv);
+        {error, _} = Error ->
+            Error
+    end.
+
+type_check_supported_ast(
+    {module, Name, _Exports, _Imports, Declarations, _Location},
+    ImportedEnv
+) ->
     %% Resolve effect operations before type checking can consume or erase
     %% their declarations.
     case catena_effect_resolution:build(Declarations) of

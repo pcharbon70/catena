@@ -224,6 +224,7 @@ extract_location({handler_clause, _Effect, _Operations, Loc}) -> Loc;
 extract_location({operation_case, _Operation, _Params, _Body, Loc}) -> Loc;
 extract_location({operation_case, _Operation, _Params, _Resumption, _Body, Loc}) -> Loc;
 extract_location({resumption_binder, _Name, Loc}) -> Loc;
+extract_location({synthetic, _Kind, _SourceLoc} = Loc) -> Loc;
 extract_location({type_effect, _Type, _Effects, Loc}) -> Loc;
 extract_location(Tuple) when is_tuple(Tuple) ->
     %% Generic case: location is usually the last element
@@ -232,6 +233,7 @@ extract_location(Tuple) when is_tuple(Tuple) ->
         {line, _} -> Loc;
         {location, _, _} -> Loc;
         {location, _, _, _, _} -> Loc;
+        {synthetic, _Kind, _SourceLoc} -> Loc;
         _ when is_integer(Loc) -> catena_location:new(Loc, 0);
         _ -> {location, 1, 0}  % Fallback
     end.
@@ -666,6 +668,8 @@ format_location(Line) when is_integer(Line) ->
     io_lib:format("~p", [Line]);
 format_location({line, Line}) ->
     io_lib:format("~p", [Line]);
+format_location({synthetic, _Kind, SourceLocation}) ->
+    format_location(SourceLocation);
 format_location(Loc) ->
     catena_location:format(Loc).
 

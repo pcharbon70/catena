@@ -227,6 +227,8 @@ lower_expr({perform_expr, Effect, Operation, Arguments, Location}) ->
         Operation,
         [lower_expr(Argument) || Argument <- Arguments],
         Location};
+lower_expr({resume_expr, _Resumption, _Value, _Location} = ResumeExpr) ->
+    missing_resumption_lowering(resume_expr, ResumeExpr);
 lower_expr({handle_expr, Body, Handlers, Location}) ->
     {handle_expr,
         lower_expr(Body),
@@ -272,6 +274,11 @@ lower_operation({operation_case, Name, Params, Body, Location}) ->
         [lower_pattern(Param) || Param <- Params],
         lower_expr(Body),
         Location};
+lower_operation(
+    {operation_case, _Name, _Params, _Resumption, _Body, _Location} =
+        OperationCase
+) ->
+    missing_resumption_lowering(operation_case, OperationCase);
 lower_operation(Other) ->
     Other.
 
@@ -366,6 +373,19 @@ unsupported(Stage, Construct, SourceTerm) ->
         ),
     throw(
         catena_backend_error:unsupported_backend_construct(
+            Construct,
+            Context
+        )
+    ).
+
+missing_resumption_lowering(Construct, SourceTerm) ->
+    Context = catena_backend_error:context(
+        resumption_lowering,
+        Construct,
+        SourceTerm
+    ),
+    throw(
+        catena_backend_error:missing_resumption_lowering(
             Construct,
             Context
         )

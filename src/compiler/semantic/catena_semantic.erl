@@ -20,7 +20,9 @@ analyze({module, Name, Exports, Imports, Declarations, Location}) ->
         {ok, AnalyzedDecls} ->
             %% Desugar do-notation after grouping transforms
             DesugaredDecls = catena_desugar:desugar(AnalyzedDecls),
-            {ok, {module, Name, Exports, Imports, DesugaredDecls, Location}};
+            normalize_resumptions(
+                {module, Name, Exports, Imports, DesugaredDecls, Location}
+            );
         {error, _} = Error ->
             Error
     end;
@@ -28,7 +30,7 @@ analyze(Declarations) when is_list(Declarations) ->
     case analyze_declarations(Declarations) of
         {ok, AnalyzedDecls} ->
             %% Desugar do-notation
-            {ok, catena_desugar:desugar(AnalyzedDecls)};
+            normalize_resumptions(catena_desugar:desugar(AnalyzedDecls));
         {error, _} = Error ->
             Error
     end.
@@ -37,6 +39,9 @@ analyze(Declarations) when is_list(Declarations) ->
 -spec analyze_module(term()) -> {ok, term()} | {error, term()}.
 analyze_module(Module) ->
     analyze(Module).
+
+normalize_resumptions(AST) ->
+    catena_resumption_normalize:normalize(AST).
 
 %% @doc Analyze a list of declarations.
 %% Groups transforms by name and validates them.
@@ -279,5 +284,9 @@ format_error({or_pattern_binding_mismatch, Expected, Actual, Location}) ->
         "Or-pattern alternatives bind different names: expected ~p, got ~p at ~p",
         [Expected, Actual, Location]
     );
+format_error({invalid_resumption_binder, _Details} = Error) ->
+    catena_resumption_normalize:format_error(Error);
+format_error({resumption_binder_scope, _Details} = Error) ->
+    catena_resumption_normalize:format_error(Error);
 format_error(Other) ->
     io_lib:format("Semantic error: ~p", [Other]).

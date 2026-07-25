@@ -171,6 +171,9 @@ erase_expr({match_expr, Scrutinee, Clauses, Loc}) ->
 erase_expr({perform_expr, Effect, Op, Args, Loc}) ->
     {perform_expr, Effect, Op, [erase_expr(A) || A <- Args], Loc};
 
+erase_expr({resume_expr, _Resumption, _Value, _Loc} = ResumeExpr) ->
+    missing_resumption_lowering(resume_expr, ResumeExpr);
+
 erase_expr({try_with_expr, Body, Handlers, Loc}) ->
     ErasedBody = erase_expr(Body),
     ErasedHandlers = [erase_handler(H) || H <- Handlers],
@@ -222,6 +225,11 @@ erase_operation({operation_case, Name, Params, Body, Loc}) ->
     ErasedParams = [erase_pattern(P) || P <- Params],
     ErasedBody = erase_expr(Body),
     {operation_case, Name, ErasedParams, ErasedBody, Loc};
+erase_operation(
+    {operation_case, _Name, _Params, _Resumption, _Body, _Loc} =
+        OperationCase
+) ->
+    missing_resumption_lowering(operation_case, OperationCase);
 erase_operation(Other) ->
     unsupported(handler_operation, Other).
 
@@ -493,6 +501,19 @@ unsupported(Construct, SourceTerm) ->
         ),
     throw(
         catena_backend_error:unsupported_backend_construct(
+            Construct,
+            Context
+        )
+    ).
+
+missing_resumption_lowering(Construct, SourceTerm) ->
+    Context = catena_backend_error:context(
+        type_erasure,
+        Construct,
+        SourceTerm
+    ),
+    throw(
+        catena_backend_error:missing_resumption_lowering(
             Construct,
             Context
         )

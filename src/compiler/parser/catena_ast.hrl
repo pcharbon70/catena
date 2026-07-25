@@ -4,8 +4,12 @@
 %% This header file defines all AST node types for the Topos compiler.
 %% All nodes include location metadata for error reporting.
 
-%% Location metadata
--type location() :: {line, pos_integer()} | catena_location:location().
+%% Location metadata. Generated nodes retain a link to the user-written source
+%% location that caused their creation.
+-type concrete_location() :: {line, pos_integer()} | catena_location:location().
+-type location() ::
+    concrete_location() |
+    {synthetic, atom(), concrete_location()}.
 
 %%====================================================================
 %% Module Structure

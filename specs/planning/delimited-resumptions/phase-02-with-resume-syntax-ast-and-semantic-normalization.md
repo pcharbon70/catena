@@ -5,7 +5,7 @@ inventing backend behavior prematurely. It parses explicit resumption binders
 and resume expressions, preserves their source identity, and normalizes
 existing value handlers into explicit tail-resume semantics.
 
-**Status:** In progress (Section 2.1 complete).
+**Status:** In progress (Sections 2.1 through 2.3 complete).
 
 **Dependencies:** Phase 1 complete.
 
@@ -137,14 +137,14 @@ call lookalikes, and resume expressions in larger expressions.
 **Description:** Normalize both handler forms into a common semantic shape and
 reject structurally invalid control usage before type inference.
 
-- [ ] **Section 2.3 Complete**
+- [x] **Section 2.3 Complete**
 
 ### Task 2.3.1: Normalize Value And Control Handlers
 
 **Description:** Give every normalized operation case explicit resumption
 metadata without changing existing value-handler evaluation order.
 
-- [ ] **Task 2.3.1 Complete**
+- [x] **Task 2.3.1 Complete**
 
 #### Subtask 2.3.1.1: Generate Tail Auto-Resume
 
@@ -152,21 +152,21 @@ metadata without changing existing value-handler evaluation order.
 `resume_expr`, preserve the original case origin, and ensure the operation
 result expression is evaluated exactly once.
 
-- [ ] **Subtask 2.3.1.1 Complete**
+- [x] **Subtask 2.3.1.1 Complete**
 
 #### Subtask 2.3.1.2: Preserve Explicit Control Cases
 
 **Description:** Carry the user's binder and body unchanged and mark the case
 as requiring explicit control so no later pass inserts an implicit resume.
 
-- [ ] **Subtask 2.3.1.2 Complete**
+- [x] **Subtask 2.3.1.2 Complete**
 
 ### Task 2.3.2: Add Structural Control Diagnostics
 
 **Description:** Reject resume syntax that is invalid independently of its
 eventual type and establish fail-closed dispositions for later phases.
 
-- [ ] **Task 2.3.2 Complete**
+- [x] **Task 2.3.2 Complete**
 
 #### Subtask 2.3.2.1: Validate Binder Scope And Shadowing
 
@@ -174,7 +174,7 @@ eventual type and establish fail-closed dispositions for later phases.
 names where ambiguous, and preserve deliberate nested shadowing with clear
 locations.
 
-- [ ] **Subtask 2.3.2.1 Complete**
+- [x] **Subtask 2.3.2.1 Complete**
 
 #### Subtask 2.3.2.2: Reject Unsupported Backend Leakage
 
@@ -182,7 +182,24 @@ locations.
 backend boundary until later phases supply typing and CPS dispositions; never
 lower them as ordinary calls or marker closures.
 
-- [ ] **Subtask 2.3.2.2 Complete**
+- [x] **Subtask 2.3.2.2 Complete**
+
+**Implementation evidence:** Semantic analysis now gives every operation case
+the canonical six-element form. Value cases receive a collision-free
+`__catena_resumption_N` binder and one synthetic tail `resume_expr` whose
+origin points back to the source case; explicit cases retain their binder and
+body. Normalization is recursive and idempotent, including handler bodies,
+resume operands, perform arguments, record bases, and desugared lets.
+
+The early validator enforces active lexical binders, deliberate nested
+shadowing, and distinct operation-pattern and resumption names. Type and
+backend entry points reject explicit or malformed normalized resumptions with
+`missing_resumption_lowering`. To preserve the already promoted value-handler
+behavior, legacy consumers receive a compatibility view only when the
+synthetic binder, origin, resume target, and tail shape exactly match compiler
+output. The normalized AST remains authoritative in semantic results and
+compilation units, and direct backend leakage still fails closed rather than
+becoming an ordinary call or marker closure.
 
 ## Section 2.4: Phase 2 Integration Tests
 

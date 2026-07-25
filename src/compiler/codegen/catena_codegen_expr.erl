@@ -117,6 +117,12 @@ translate_expression({match_expr, Scrutinee, Clauses, _Loc}, State) ->
 translate_expression({perform_expr, Effect, Operation, Args, Loc}, State) ->
     translate_perform({perform_expr, Effect, Operation, Args, Loc}, State);
 
+translate_expression(
+    {resume_expr, _Resumption, _Value, _Loc} = ResumeExpr,
+    _State
+) ->
+    missing_resumption_lowering(resume_expr, ResumeExpr);
+
 %% Handle expression (parser AST)
 translate_expression({handle_expr, Body, Handlers, Loc}, State) ->
     catena_effect_codegen:translate_handle({handle_expr, Body, Handlers, Loc}, State);
@@ -823,6 +829,19 @@ unsupported(Stage, Construct, SourceTerm, Extra) ->
         ),
     throw(
         catena_backend_error:unsupported_backend_construct(
+            Construct,
+            Context
+        )
+    ).
+
+missing_resumption_lowering(Construct, SourceTerm) ->
+    Context = catena_backend_error:context(
+        expression_translation,
+        Construct,
+        SourceTerm
+    ),
+    throw(
+        catena_backend_error:missing_resumption_lowering(
             Construct,
             Context
         )

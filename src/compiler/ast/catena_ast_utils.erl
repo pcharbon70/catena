@@ -363,6 +363,8 @@ erase_locations({location, _Line, _Column}) ->
     '$catena_location';
 erase_locations({location, _StartLine, _StartColumn, _EndLine, _EndColumn}) ->
     '$catena_location';
+erase_locations({synthetic, Kind, SourceLocation}) ->
+    {synthetic, Kind, erase_locations(SourceLocation)};
 erase_locations(Tuple) when is_tuple(Tuple) ->
     list_to_tuple([erase_locations(Element) || Element <- tuple_to_list(Tuple)]);
 erase_locations(List) when is_list(List) ->
@@ -446,6 +448,8 @@ check_location_formats(AST) ->
 is_valid_location({line, N}) when is_integer(N), N > 0 -> true;
 is_valid_location({location, Line, Col}) when is_integer(Line), is_integer(Col),
                                                Line > 0, Col >= 0 -> true;
+is_valid_location({synthetic, Kind, SourceLocation}) when is_atom(Kind) ->
+    is_valid_location(SourceLocation);
 is_valid_location(_) -> false.
 
 %% @doc Check that all literals have valid type annotations

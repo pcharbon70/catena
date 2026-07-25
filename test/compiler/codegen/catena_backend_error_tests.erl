@@ -6,6 +6,7 @@ stable_categories_test() ->
     ?assertEqual(
         [
             unsupported_backend_construct,
+            missing_resumption_lowering,
             unresolved_call,
             ambiguous_call,
             arity_mismatch,
@@ -52,6 +53,14 @@ diagnostic_context_preserves_source_and_generated_identity_test() ->
 constructor_payloads_are_stable_test_() ->
     Context = catena_backend_error:context(call_resolution, call, undefined),
     [
+        ?_assertMatch(
+            {backend_error, missing_resumption_lowering,
+                #{construct := resume_expr}},
+            catena_backend_error:missing_resumption_lowering(
+                resume_expr,
+                Context
+            )
+        ),
         ?_assertMatch(
             {backend_error, unresolved_call, #{source_identity := {run, 1}}},
             catena_backend_error:unresolved_call(run, 1, Context)

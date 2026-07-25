@@ -120,31 +120,38 @@ new(
     is_map(Options),
     is_map(ValidationState)
 ->
-    case validate_evidence(ValidationState) of
-        ok ->
-            case catena_effect_resolution:build(Declarations) of
+    case validated_compatibility_declarations(
+        ValidationState,
+        Declarations
+    ) of
+        {ok, CompatibilityDeclarations} ->
+            case catena_effect_resolution:build(
+                CompatibilityDeclarations
+            ) of
                 {ok, EffectInventory} ->
                     case catena_call_resolution:build(
                         Name,
                         Exports,
-                        Declarations
+                        CompatibilityDeclarations
                     ) of
                         {ok, Callables} ->
                             Symbols = collect_symbols(
                                 Name,
                                 Exports,
                                 Imports,
-                                Declarations,
+                                CompatibilityDeclarations,
                                 ModuleLocation
                             ),
                             Locations = collect_locations(
                                 ModuleLocation,
                                 Imports,
-                                Declarations
+                                CompatibilityDeclarations
                             ),
                             EffectfulTransforms =
                                 catena_effect_resolution:
-                                    effectful_transforms(Declarations),
+                                    effectful_transforms(
+                                        CompatibilityDeclarations
+                                    ),
                             RuntimeDependencies =
                                 effect_runtime_dependencies(
                                     EffectfulTransforms
@@ -161,7 +168,7 @@ new(
                             ),
                             case catena_trait_dictionary:build(
                                 Name,
-                                Declarations,
+                                CompatibilityDeclarations,
                                 TypedDeclarations,
                                 Interfaces,
                                 ImportResolution
@@ -192,7 +199,7 @@ new(
                             case catena_module_interface:build(
                                 Name,
                                 Exports,
-                                Declarations,
+                                CompatibilityDeclarations,
                                 Symbols,
                                 AllArtifactDependencies,
                                 SourceIdentity,
@@ -266,6 +273,17 @@ new(_NormalizedAST, _TypedModule, Metadata) ->
             {error, {invalid_compilation_unit, invalid_frontend_artifacts}};
         _ ->
             {error, {invalid_compilation_unit, {missing_metadata, Missing}}}
+    end.
+
+validated_compatibility_declarations(ValidationState, Declarations) ->
+    case validate_evidence(ValidationState) of
+        ok ->
+            catena_resumption_normalize:project_legacy_value_handlers(
+                Declarations,
+                compilation_unit_validation
+            );
+        {error, _} = Error ->
+            Error
     end.
 
 %% @doc Return whether a term satisfies the maintained unit envelope.
