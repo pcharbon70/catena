@@ -10,6 +10,7 @@ execute from Catena source through loaded BEAM at this boundary.
 ## Design Anchors
 
 - [ADR-0003: Explicit Effect Context Runtime](../adr/ADR-0003-explicit-effect-context-runtime.md)
+- [ADR-0006: First-Class Resumptions Through Selective CPS](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
 - [Current Status](../planning/current_status.md)
 - [Runtime Contract](../contracts/runtime_contract.md)
 - `src/compiler/runtime/catena_effect_runtime.erl`
@@ -44,6 +45,24 @@ execute from Catena source through loaded BEAM at this boundary.
   tree as a separate Erlang-facing facade. It uses process-local handler scopes
   for direct component execution and does not replace the explicit-context
   generated-code boundary.
+
+## Accepted Runtime Evolution
+
+ADR-0006 preserves explicit contexts as the authority for handler lookup and
+adds a planned runtime distinction:
+
+- resumable source handler frames execute on the computation's originating
+  BEAM process so a continuation preserves `self`, mailbox ownership, and
+  process-local failure behavior
+- process-backed builtin or external providers may continue to calculate
+  operation results, but they do not execute the captured continuation
+- opaque, process-affine `Resumption` values carry a compiler-reified CPS
+  continuation, delimiter, captured context, kind, ownership, and consumption
+  authority
+
+That evolution is not implemented by the current request/response runtime.
+The current handler-process lifecycle acceptance criteria remain authoritative
+until the staged delimited-resumption work is implemented and promoted.
 
 ## Acceptance Criteria
 
@@ -104,4 +123,6 @@ The effect runtime is only promoted as correct when it lines up with the compile
   Erlang actor toolkit is specified separately in
   [Actor Runtime](actor_runtime.md)
 - distributed effect handling
+- true delimited source-level resumptions, which are accepted and planned in
+  [Delimited Resumption Architecture](../compiler/delimited_resumption_architecture.md)
 - the full future runtime story beyond the proof-of-concept

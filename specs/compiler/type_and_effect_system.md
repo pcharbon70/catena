@@ -9,6 +9,8 @@ Promoted status: implemented for the current compiler core, with trait resolutio
 - [Current Status](../planning/current_status.md)
 - [Compiler Contract](../contracts/compiler_contract.md)
 - [Standard Library Surface](../stdlib/standard_library_surface.md)
+- [ADR-0006: First-Class Resumptions Through Selective CPS](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
+- [Delimited Resumption Architecture](delimited_resumption_architecture.md)
 - `src/compiler/types/*`
 - `src/compiler/effects/*`
 - `src/compiler/validation/*`
@@ -93,9 +95,10 @@ The following remain explicitly deferred and must not be implied as complete by 
 - the final ergonomics and optimization story for the entire effect system
 - the final law-verification story for all abstractions
 - the broader actor/distribution phases that build on top of the effect machinery
-- true delimited-continuation capture from an ordinary Erlang call stack;
-  current orchestration resumptions are opaque wrappers around a direct-style
-  result marker
+- the accepted but unimplemented `Resumption k a b e` surface, `with`/`resume`
+  syntax, and effect-directed selective CPS lowering required for true
+  delimited source-level control; current orchestration resumptions remain
+  opaque wrappers around a direct-style result marker
 
 ## Reconciled Note
 

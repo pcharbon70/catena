@@ -53,6 +53,7 @@ The structure follows the layered model used by `../epic/jido_os/specs`, adapted
 - [adr/ADR-0003-explicit-effect-context-runtime.md](adr/ADR-0003-explicit-effect-context-runtime.md)
 - [adr/ADR-0004-flow-as-arrow.md](adr/ADR-0004-flow-as-arrow.md)
 - [adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md](adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md)
+- [adr/ADR-0006-first-class-resumptions-and-selective-cps.md](adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
 
 ## Conformance
 
@@ -66,6 +67,7 @@ The structure follows the layered model used by `../epic/jido_os/specs`, adapted
 - [planning/current_status.md](planning/current_status.md)
 - [planning/law_verification_staged_plan.md](planning/law_verification_staged_plan.md)
 - [planning/backend-hardening/README.md](planning/backend-hardening/README.md)
+- [planning/delimited-resumptions/README.md](planning/delimited-resumptions/README.md)
 - [operations/README.md](operations/README.md)
 
 ## Research
@@ -76,6 +78,7 @@ The structure follows the layered model used by `../epic/jido_os/specs`, adapted
 
 - [compiler/README.md](compiler/README.md)
 - [compiler/core_erlang_and_beam_backend.md](compiler/core_erlang_and_beam_backend.md)
+- [compiler/delimited_resumption_architecture.md](compiler/delimited_resumption_architecture.md)
 - [runtime/README.md](runtime/README.md)
 - [stdlib/README.md](stdlib/README.md)
 - [tooling/README.md](tooling/README.md)

@@ -7,5 +7,10 @@ This index covers the promoted compiler-domain surfaces.
 - [beam_backend_feature_ledger.md](beam_backend_feature_ledger.md)
 - [type_and_effect_system.md](type_and_effect_system.md)
 - [pattern_matching_engine.md](pattern_matching_engine.md)
+- [delimited_resumption_architecture.md](delimited_resumption_architecture.md)
 
-These specs capture the current compiler that exists in `src/compiler/*`, including the fact that some roadmap items are partially implemented beyond what the raw planning checklists show.
+These specs capture the current compiler that exists in `src/compiler/*`,
+including the fact that some roadmap items are partially implemented beyond
+what the raw planning checklists show. The delimited-resumption architecture
+is explicitly marked as an accepted target rather than a currently
+implemented compiler surface.

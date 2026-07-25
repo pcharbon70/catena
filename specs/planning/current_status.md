@@ -13,7 +13,7 @@ It exists because some planning checklists are stale relative to later implement
 | Track | Current promoted status |
 | --- | --- |
 | Proof-of-concept | Implemented through Phases 1 to 3, with Phase 4 partial/minimal and a verified local Phase 5 actor runtime toolkit whose source-language integration remains incomplete. |
-| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary; full language-surface continuation support remains incomplete. |
+| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary. ADR-0006 now accepts first-class `Resumption`, `with`/`resume`, and selective CPS as the planned path to true language-level delimited control; that path is not implemented. |
 | Property testing | Phases 1 to 4 are materially implemented in `src/proptest`; Phases 5 and 6 are substantial but partial; explicit Phase 7 helper surfaces are also materially implemented, while automatic language integration remains incomplete. |
 | Law verification | Structural and concrete stdlib laws execute, and known-instance generic checks bridge into the internal proptest framework; automatic derivation and broader workflow ergonomics remain future work. |
 | Language revamp migration | Completed and now historical. |
@@ -111,6 +111,24 @@ Important caveat:
 - generated code uses the explicit-context runtime; the higher-level Erlang
   orchestration facade uses process-local handler scopes and does not capture
   true delimited continuations from ordinary Erlang call stacks
+- [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
+  resolves the architecture gap: the accepted target uses first-class
+  `Resumption` values, explicit `with` and `resume` syntax, deep one-shot
+  defaults, process-affine runtime ownership, and effect-directed selective
+  CPS while retaining explicit contexts for handler lookup
+- ADR-0006 is a decision and implementation plan, not evidence that the lexer,
+  parser, type system, CPS IR, runtime, or backend already support that source
+  surface
+
+Next clear steps on this track:
+
+- follow the
+  [delimited-resumptions implementation plan](delimited-resumptions/README.md),
+  beginning with operational semantics and a feature ledger
+- implement and validate `with`/`resume` parsing and
+  `Resumption k a b e` typing before adding backend behavior
+- promote deep one-shot execution before separately accepting source spelling
+  and executable evidence for shallow or multi-shot opt-ins
 
 ## Property-Testing Track
 
@@ -271,7 +289,7 @@ Promoted interpretation:
 - `make test` and `rebar3 eunit` expose the complete active EUnit result
 - `make check-specs` validates 42 concrete requirements in five families, 11
   scenarios, 20 executable evidence rows across 20 modules, 73 component
-  acceptance criteria, five ADRs, promoted paths, and local Markdown links
+  acceptance criteria, six ADRs, promoted paths, and local Markdown links
 - `make conformance` runs the unique EUnit modules named by the executable
   scenario manifest; the Phase 7 gate passed all 418 focused tests
 - `make verify` combines specs governance, manifest-selected conformance, and

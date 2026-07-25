@@ -20,6 +20,7 @@ frontend validation to Core Erlang and OTP-accepted BEAM output.
 - [Compiler Contract](../contracts/compiler_contract.md)
 - [Core Erlang And BEAM Backend](core_erlang_and_beam_backend.md)
 - [ADR-0005: Fail-Closed, Semantics-Preserving BEAM Backend](../adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md)
+- [ADR-0006: First-Class Resumptions Through Selective CPS](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
 - `src/compiler/catena_compile.erl`
 - `src/compiler/catena_module_loader.erl`
 - `src/compiler/semantic/*`
@@ -54,6 +55,18 @@ frontend validation to Core Erlang and OTP-accepted BEAM output.
 - The typed-module and Core APIs share one frontend-success assembly path.
   Production Core generation accepts the resulting validated unit; direct raw
   AST generation remains a documented low-level codegen test helper.
+
+## Accepted Next Pipeline Extension
+
+ADR-0006 adds a planned control-flow boundary after validated typing, effect
+analysis, and call resolution and before ordinary Core Erlang expression
+emission. That boundary will classify callables as direct or resumable and
+lower only resumable regions through a validated CPS IR.
+
+The extension is specified in
+[Delimited Resumption Architecture](delimited_resumption_architecture.md).
+It is not part of the currently implemented pipeline and must remain
+fail-closed until its source-to-BEAM promotion evidence exists.
 
 ## Acceptance Criteria
 
