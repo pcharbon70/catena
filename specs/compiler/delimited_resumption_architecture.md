@@ -10,6 +10,9 @@ This document makes
 concrete enough to guide parser, type-system, lowering, runtime, diagnostics,
 and conformance work without representing that work as complete.
 
+The normative deep one-shot reduction rules are defined in
+[Delimited Resumption Operational Semantics](delimited_resumption_operational_semantics.md).
+
 ## Purpose
 
 Catena needs to distinguish three concepts that the current direct-style
@@ -417,5 +420,6 @@ describe true delimited source-level resumptions as planned.
 - [ADR-0005: Fail-Closed Backend](../adr/ADR-0005-fail-closed-semantics-preserving-beam-backend.md)
 - [ADR-0006: First-Class Resumptions](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
 - [Type And Effect System](type_and_effect_system.md)
+- [Operational Semantics](delimited_resumption_operational_semantics.md)
 - [Effect Runtime](../runtime/effect_runtime.md)
 - [Implementation Plan](../planning/delimited-resumptions/README.md)

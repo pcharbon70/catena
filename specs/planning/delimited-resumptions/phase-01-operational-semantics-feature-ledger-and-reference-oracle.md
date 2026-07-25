@@ -6,7 +6,7 @@ defines one executable semantic oracle and one feature ledger that distinguish
 real continuation behavior from the current request/response and marker-based
 implementations.
 
-**Status:** Planned.
+**Status:** In progress; Section 1.1 complete.
 
 **Dependencies:** ADR-0006 and the Delimited Resumption Architecture accepted.
 
@@ -16,7 +16,7 @@ implementations.
 deep one-shot handlers, explicit resumption, compatible value handlers, and
 delimited return.
 
-- [ ] **Section 1.1 Complete**
+- [x] **Section 1.1 Complete**
 
 ### Task 1.1.1: Define Evaluation Configurations And Control Boundaries
 
@@ -24,7 +24,7 @@ delimited return.
 with explicit effect contexts, handler frames, delimiters, continuations, and
 resumption ownership.
 
-- [ ] **Task 1.1.1 Complete**
+- [x] **Task 1.1.1 Complete**
 
 #### Subtask 1.1.1.1: Define Semantic Terms And Runtime State
 
@@ -32,7 +32,7 @@ resumption ownership.
 delimiter identities, continuation frames, resumption kinds, owner identity,
 and consumption states without depending on Erlang stack capture.
 
-- [ ] **Subtask 1.1.1.1 Complete**
+- [x] **Subtask 1.1.1.1 Complete**
 
 #### Subtask 1.1.1.2: Define Normal Return And Delimited Return
 
@@ -40,7 +40,7 @@ and consumption states without depending on Erlang stack capture.
 how a resumed computation returns a result to the handler at its matching
 delimiter.
 
-- [ ] **Subtask 1.1.1.2 Complete**
+- [x] **Subtask 1.1.1.2 Complete**
 
 ### Task 1.1.2: Define Perform, Handle, Resume, And Abort Reductions
 
@@ -48,7 +48,7 @@ delimiter.
 handler through the explicit context, construct a resumption, invoke it, or
 discard its continuation.
 
-- [ ] **Task 1.1.2 Complete**
+- [x] **Task 1.1.2 Complete**
 
 #### Subtask 1.1.2.1: Define Capture And Handler Transfer
 
@@ -56,7 +56,7 @@ discard its continuation.
 delimiter, packages it as `Resumption OneShot a b e`, and transfers control to
 the selected operation case.
 
-- [ ] **Subtask 1.1.2.1 Complete**
+- [x] **Subtask 1.1.2.1 Complete**
 
 #### Subtask 1.1.2.2: Define Resume And Non-Resume Completion
 
@@ -64,7 +64,7 @@ the selected operation case.
 delimiter completion, one-shot consumption, and the abort semantics of
 returning from a control handler without invoking its resumption.
 
-- [ ] **Subtask 1.1.2.2 Complete**
+- [x] **Subtask 1.1.2.2 Complete**
 
 ## Section 1.2: Compatibility, Ownership, And Semantic Modes
 

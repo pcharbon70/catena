@@ -8,6 +8,7 @@ This index covers the promoted compiler-domain surfaces.
 - [type_and_effect_system.md](type_and_effect_system.md)
 - [pattern_matching_engine.md](pattern_matching_engine.md)
 - [delimited_resumption_architecture.md](delimited_resumption_architecture.md)
+- [delimited_resumption_operational_semantics.md](delimited_resumption_operational_semantics.md)
 
 These specs capture the current compiler that exists in `src/compiler/*`,
 including the fact that some roadmap items are partially implemented beyond
