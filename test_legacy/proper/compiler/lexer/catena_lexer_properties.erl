@@ -66,12 +66,12 @@ valid_float() ->
          integer_to_list(I) ++ "." ++ integer_to_list(F)).
 
 %% Generate actual keywords (from catena_lexer.xrl)
-%% Note: "if", "else", "extends", "try", "with" are NOT keywords
+%% Note: "if", "else", "extends", and "try" are NOT keywords
 keyword() ->
     oneof([
         "type", "transform", "match", "where", "let", "in", "do", "end",
         "then", "case", "of", "when", "fn", "as", "forall",
-        "trait", "instance", "effect", "operation", "perform",
+        "trait", "instance", "effect", "operation", "perform", "with", "resume",
         "handle", "actor", "module", "import", "export", "exports",
         "qualified", "private"
     ]).

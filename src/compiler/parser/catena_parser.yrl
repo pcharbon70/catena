@@ -39,7 +39,7 @@ Nonterminals
   record_fields record_field
   record_pattern_fields record_pattern_field
   literal
-  perform_expr try_with_expr
+  perform_expr try_with_expr resume_expr
   handler_clauses handler_clause operation_cases operation_case
   effect_list effect_list_nonempty
   type_expr type_expr_primary type_expr_app type_expr_primary_list
@@ -63,7 +63,7 @@ Terminals
   test property
 
   %% Syntax Keywords (supplementary keywords)
-  'case' 'of' 'when' as forall fn
+  'case' 'of' 'when' as forall fn with resume
 
   %% Trait system keywords
   extend constrain
@@ -955,6 +955,8 @@ expr_primary -> perform_expr : '$1'.
 
 expr_primary -> try_with_expr : '$1'.
 
+expr_primary -> resume_expr : '$1'.
+
 expr_primary -> do_expr : '$1'.
 
 %% Match expressions
@@ -1056,6 +1058,13 @@ perform_expr -> perform upper_ident dot lower_ident lparen expr_list_opt rparen 
         '$6',
         extract_location('$1')}.
 
+%% Resume expression: resume(resumption, value)
+%% Parse the maintained expression-list surface once, then validate arity in
+%% the semantic action so malformed calls receive one stable diagnostic
+%% without adding overlapping grammar productions.
+resume_expr -> resume lparen expr_list_opt rparen :
+    make_resume_expr('$1', '$3').
+
 %% Handle expression: handle expr then { handlers }
 %% Using 'then' keyword to separate expr from handler block
 try_with_expr -> handle expr then lbrace handler_clauses rbrace :
@@ -1090,11 +1099,42 @@ operation_case -> lower_ident lparen pattern_list_comma rparen arrow expr_primar
         '$6',
         extract_location('$1')}.
 
+operation_case -> lower_ident lparen rparen arrow expr_primary :
+    {operation_case,
+        extract_atom('$1'),
+        [],
+        '$5',
+        extract_location('$1')}.
+
 operation_case -> lower_ident arrow expr_primary :
     {operation_case,
         extract_atom('$1'),
         [],
         '$3',
+        extract_location('$1')}.
+
+operation_case -> lower_ident lparen pattern_list_comma rparen with lower_ident arrow expr_primary :
+    {operation_case,
+        extract_atom('$1'),
+        '$3',
+        {resumption_binder, extract_atom('$6'), extract_location('$6')},
+        '$8',
+        extract_location('$1')}.
+
+operation_case -> lower_ident lparen rparen with lower_ident arrow expr_primary :
+    {operation_case,
+        extract_atom('$1'),
+        [],
+        {resumption_binder, extract_atom('$5'), extract_location('$5')},
+        '$7',
+        extract_location('$1')}.
+
+operation_case -> lower_ident with lower_ident arrow expr_primary :
+    {operation_case,
+        extract_atom('$1'),
+        [],
+        {resumption_binder, extract_atom('$3'), extract_location('$3')},
+        '$5',
         extract_location('$1')}.
 
 %%----------------------------------------------------------------------------
@@ -1241,6 +1281,25 @@ extract_value(Token) -> catena_compiler_utils:extract_value(Token).
 %% Delegates to catena_compiler_utils to avoid code duplication
 %% Supports both legacy {line, N} format and enhanced {location, ...} format
 extract_location(Node) -> catena_compiler_utils:extract_location(Node).
+
+%% @doc Extract the integer source line expected by yecc's return_error/2.
+extract_error_line({_Token, Line}) when is_integer(Line) -> Line;
+extract_error_line({_Token, Line, _Value}) when is_integer(Line) -> Line;
+extract_error_line(Node) ->
+    case extract_location(Node) of
+        {line, Line} when is_integer(Line) -> Line;
+        Line when is_integer(Line) -> Line;
+        _ -> 0
+    end.
+
+%% @doc Build a resume expression or reject every non-binary arity.
+make_resume_expr(ResumeToken, [Resumption, Value]) ->
+    {resume_expr, Resumption, Value, extract_location(ResumeToken)};
+make_resume_expr(ResumeToken, _Operands) ->
+    return_error(
+        extract_error_line(ResumeToken),
+        "resume expects exactly two operands"
+    ).
 
 %% @doc Extract transform name from transform signature
 extract_transform_name({transform_sig, Name, _Type, _Loc}) -> Name.

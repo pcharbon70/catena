@@ -5,7 +5,7 @@ inventing backend behavior prematurely. It parses explicit resumption binders
 and resume expressions, preserves their source identity, and normalizes
 existing value handlers into explicit tail-resume semantics.
 
-**Status:** Planned.
+**Status:** In progress (Section 2.1 complete).
 
 **Dependencies:** Phase 1 complete.
 
@@ -14,35 +14,35 @@ existing value handlers into explicit tail-resume semantics.
 **Description:** Add `with` and `resume` to the maintained lexer/parser
 boundary with precise identifier handling, recovery, and conflict accounting.
 
-- [ ] **Section 2.1 Complete**
+- [x] **Section 2.1 Complete**
 
 ### Task 2.1.1: Add Language Tokens
 
 **Description:** Recognize `with` and `resume` as context-sensitive language
 words with stable locations and identifier-boundary behavior.
 
-- [ ] **Task 2.1.1 Complete**
+- [x] **Task 2.1.1 Complete**
 
 #### Subtask 2.1.1.1: Extend The Lexer Source
 
 **Description:** Add rules to `catena_lexer.xrl`, update token inventories and
 generators, and regenerate outputs only through the canonical build.
 
-- [ ] **Subtask 2.1.1.1 Complete**
+- [x] **Subtask 2.1.1.1 Complete**
 
 #### Subtask 2.1.1.2: Test Keyword Boundaries
 
 **Description:** Verify `with`, `resume`, identifiers such as `within` and
 `resumed`, comments, whitespace, malformed boundaries, and source locations.
 
-- [ ] **Subtask 2.1.1.2 Complete**
+- [x] **Subtask 2.1.1.2 Complete**
 
 ### Task 2.1.2: Extend Handler And Expression Grammar
 
 **Description:** Parse `operation(patterns) with k -> body` and
 `resume(resumption, value)` without weakening existing handler syntax.
 
-- [ ] **Task 2.1.2 Complete**
+- [x] **Task 2.1.2 Complete**
 
 #### Subtask 2.1.2.1: Parse Resumption Binders
 
@@ -50,7 +50,7 @@ generators, and regenerate outputs only through the canonical build.
 preserve its name and location, and reject missing, uppercase, duplicated, or
 malformed binders with focused recovery.
 
-- [ ] **Subtask 2.1.2.1 Complete**
+- [x] **Subtask 2.1.2.1 Complete**
 
 #### Subtask 2.1.2.2: Parse Resume Expressions
 
@@ -58,7 +58,18 @@ malformed binders with focused recovery.
 well-defined precedence, nested-expression support, and targeted arity
 diagnostics.
 
-- [ ] **Subtask 2.1.2.2 Complete**
+- [x] **Subtask 2.1.2.2 Complete**
+
+**Implementation evidence:** The maintained lexer recognizes `with` and
+`resume` without splitting longer identifiers. The grammar accepts both
+nullary and parameterized explicit resumption binders, represents
+`resume(resumption, value)` directly, and reports a stable error for every
+non-binary resume arity. Focused lexer/parser regressions cover comments,
+locations, boundaries, precedence, nesting, malformed binders, and legacy
+value-handler syntax. The parser conflict audit moved from the Phase 1
+baseline of 37 shift/reduce and 0 reduce/reduce conflicts to 39 shift/reduce
+and 0 reduce/reduce conflicts. The two-conflict delta is recorded for the
+focused attribution audit in Section 2.4.
 
 ## Section 2.2: Parsed AST, Utilities, And Pretty Printing
 
