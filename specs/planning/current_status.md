@@ -13,7 +13,7 @@ It exists because some planning checklists are stale relative to later implement
 | Track | Current promoted status |
 | --- | --- |
 | Proof-of-concept | Implemented through Phases 1 to 3, with Phase 4 partial/minimal and a verified local Phase 5 actor runtime toolkit whose source-language integration remains incomplete. |
-| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary; full language-surface continuation support remains incomplete. |
+| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary. Delimited-resumption Phase 1 now provides normative deep one-shot semantics, a feature ledger, and an executable oracle. The `with`/`resume` source-to-BEAM path remains unimplemented. |
 | Property testing | Phases 1 to 4 are materially implemented in `src/proptest`; Phases 5 and 6 are substantial but partial; explicit Phase 7 helper surfaces are also materially implemented, while automatic language integration remains incomplete. |
 | Law verification | Structural and concrete stdlib laws execute, and known-instance generic checks bridge into the internal proptest framework; automatic derivation and broader workflow ergonomics remain future work. |
 | Language revamp migration | Completed and now historical. |
@@ -111,6 +111,28 @@ Important caveat:
 - generated code uses the explicit-context runtime; the higher-level Erlang
   orchestration facade uses process-local handler scopes and does not capture
   true delimited continuations from ordinary Erlang call stacks
+- [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
+  resolves the architecture gap: the accepted target uses first-class
+  `Resumption` values, explicit `with` and `resume` syntax, deep one-shot
+  defaults, process-affine runtime ownership, and effect-directed selective
+  CPS while retaining explicit contexts for handler lookup
+- Phase 1 of the
+  [delimited-resumptions implementation plan](delimited-resumptions/README.md)
+  is complete with normative operational semantics, a classified feature and
+  diagnostic ledger, the independent `catena_resumption_oracle`, and exact
+  positive/negative integration traces
+- the oracle is comparison evidence, not a production runtime; the lexer,
+  parser, type system, CPS IR, runtime, and backend do not yet support the
+  accepted resumption source surface
+
+Next clear steps on this track:
+
+- begin Phase 2 with `with`/`resume` lexing, parsing, AST representation, and
+  value-handler normalization
+- implement `Resumption k a b e` typing in Phase 3 before adding backend
+  behavior
+- promote deep one-shot execution before separately accepting source spelling
+  and executable evidence for shallow or multi-shot opt-ins
 
 ## Property-Testing Track
 
@@ -258,11 +280,12 @@ Important caveat:
 ## Current Quality State
 
 The default `rebar3 eunit` entry point discovers, compiles, and executes the
-complete active test tree. The backend-hardening Phase 7 gate on 2026-07-24
-passed 5,029 tests with zero failures or skips. The earlier Phase 6 gate was
-also green; Phase 5, Phase 4, Phase 3, Phase 2, and Phase 1 reported 4,985,
-4,954, 4,928, 4,906, and 4,873 passing tests, respectively, and the earlier
-4,838-test baseline remains recorded in the
+complete active test tree. Delimited-resumption Phase 1 passed 5,061 tests
+with zero failures or skips on 2026-07-25. The preceding backend-hardening
+Phase 7 gate passed 5,029 tests. Its Phase 6 gate was also green; Phase 5,
+Phase 4, Phase 3, Phase 2, and Phase 1 reported 4,985, 4,954, 4,928, 4,906,
+and 4,873 passing tests, respectively. The earlier 4,838-test baseline remains
+recorded in the
 [Phase 7 test baseline](spec-source-reconciliation/phase-07-test-baseline.md).
 
 Promoted interpretation:
@@ -271,7 +294,7 @@ Promoted interpretation:
 - `make test` and `rebar3 eunit` expose the complete active EUnit result
 - `make check-specs` validates 42 concrete requirements in five families, 11
   scenarios, 20 executable evidence rows across 20 modules, 73 component
-  acceptance criteria, five ADRs, promoted paths, and local Markdown links
+  acceptance criteria, six ADRs, promoted paths, and local Markdown links
 - `make conformance` runs the unique EUnit modules named by the executable
   scenario manifest; the Phase 7 gate passed all 418 focused tests
 - `make verify` combines specs governance, manifest-selected conformance, and
@@ -288,8 +311,8 @@ Promoted interpretation:
   from Phase 5 are resolved in the
   [Phase 6 test baseline](spec-source-reconciliation/phase-06-test-baseline.md)
 - the Phase 7 coverage run passed the complete suite and reports 27%
-  repository-wide coverage; newly introduced artifact/diagnostic/origin
-  modules remain below the 90% modified-module target
+  repository-wide coverage; focused Phase 1 coverage reports 93% for the new
+  `catena_resumption_oracle`
 - `rebar3 dialyzer` remains non-green with 822 repository-wide warnings
 - historical PropEr suites remain preserved under `test_legacy/proper/` as migration targets rather than active default tests
 

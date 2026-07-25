@@ -23,3 +23,9 @@ Catena's effect runtime will use explicit effect-context passing as the canonica
 - spawned processes can receive effect context explicitly
 - tests can mock handler context without process-global setup
 - runtime entry points must create and thread an initial context deliberately
+
+## Related Decisions
+
+- [ADR-0006: First-Class Resumptions Through Effect-Directed Selective CPS](ADR-0006-first-class-resumptions-and-selective-cps.md)
+  preserves explicit contexts as handler-lookup authority while adding
+  compiler-reified continuations and same-process resumable handler frames.

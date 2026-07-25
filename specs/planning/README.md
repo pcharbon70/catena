@@ -11,6 +11,9 @@ Current promoted planning view:
   executable across the promoted language surface
 - [dialyzer-remediation/](dialyzer-remediation/README.md) - phased work to
   reach and enforce a zero-warning static-analysis boundary
+- [delimited-resumptions/](delimited-resumptions/README.md) - staged
+  implementation of first-class `Resumption`, `with`/`resume`, and
+  effect-directed selective CPS under ADR-0006
 - [spec-source-reconciliation/](spec-source-reconciliation/) - phased work to
   align promoted specifications with executable repository evidence
 - `algebraic-effects/` - restored Phase 7 through Phase 14 algebraic-effects phase documents
