@@ -6,7 +6,7 @@ defines one executable semantic oracle and one feature ledger that distinguish
 real continuation behavior from the current request/response and marker-based
 implementations.
 
-**Status:** In progress; Sections 1.1 through 1.3 complete.
+**Status:** Complete.
 
 **Dependencies:** ADR-0006 and the Delimited Resumption Architecture accepted.
 
@@ -180,7 +180,7 @@ ownership, lifetime, and consumption.
 ledger, and current repository baseline describe the same deep one-shot
 behavior before compiler changes begin.
 
-- [ ] **Section 1.4 Complete**
+- [x] **Section 1.4 Complete**
 
 ### Task 1.4.1: Validate Semantic And Oracle Agreement
 
@@ -188,14 +188,14 @@ behavior before compiler changes begin.
 and compare every control event and final result with the written reduction
 rules.
 
-- [ ] **Task 1.4.1 Complete**
+- [x] **Task 1.4.1 Complete**
 
 #### Subtask 1.4.1.1: Test Positive Control Traces
 
 **Description:** Verify explicit resume, auto-resume, abort, nested deep
 handlers, transformed results, retained resumptions, and sequential performs.
 
-- [ ] **Subtask 1.4.1.1 Complete**
+- [x] **Subtask 1.4.1.1 Complete**
 
 #### Subtask 1.4.1.2: Test Negative Control Traces
 
@@ -203,14 +203,14 @@ handlers, transformed results, retained resumptions, and sequential performs.
 delimiter, and unsupported multi-shot attempts produce the specified oracle
 failure categories.
 
-- [ ] **Subtask 1.4.1.2 Complete**
+- [x] **Subtask 1.4.1.2 Complete**
 
 ### Task 1.4.2: Run Phase Completion Gates
 
 **Description:** Preserve the existing compiler while establishing a stable,
 reviewable semantic baseline for Phase 2.
 
-- [ ] **Task 1.4.2 Complete**
+- [x] **Task 1.4.2 Complete**
 
 #### Subtask 1.4.2.1: Verify Current Behavior Remains Honest
 
@@ -218,11 +218,34 @@ reviewable semantic baseline for Phase 2.
 backend tests and confirm none are relabeled as true source-level
 continuation evidence.
 
-- [ ] **Subtask 1.4.2.1 Complete**
+- [x] **Subtask 1.4.2.1 Complete**
 
 #### Subtask 1.4.2.2: Run Repository Gates
 
 **Description:** Run the oracle integration suite, `make check-specs`, and the
 complete active EUnit suite and publish the exact phase-ending evidence.
 
-- [ ] **Subtask 1.4.2.2 Complete**
+- [x] **Subtask 1.4.2.2 Complete**
+
+### Phase 1 Completion Evidence
+
+**Description:** The 2026-07-25 phase gate records executable agreement with
+the semantic model while preserving the distinction between the oracle and
+the unimplemented source-to-BEAM resumption path.
+
+| Gate | Result |
+| --- | --- |
+| Oracle unit and Phase 1 integration modules | 32 tests passed |
+| Positive integration behavior | explicit resume, auto-resume, abort, transformed result, nested deep handling, sequential performs, and retained same-owner resume passed |
+| Negative integration behavior | consumed, re-entrant, wrong-owner, expired-owner, stale-delimiter, and unsupported multi-shot categories passed |
+| Legacy boundary | marker capture still returns `{resumed, Value}`; `with` and `resume` remain ordinary identifiers |
+| Focused legacy effect/runtime/backend matrix | 216 tests passed before the additional oracle edge fixtures |
+| Modified oracle coverage | 93% focused line coverage |
+| Specs governance | 42 requirements, 11 scenarios, 20 evidence rows, 73 acceptance criteria, 6 ADRs, and 289 local links passed |
+| Parser baseline | 37 shift/reduce and 0 reduce/reduce conflicts |
+| Complete active EUnit suite | 5,061 tests passed; 0 failures; 0 skips |
+| Dialyzer | Not rerun; the existing repository-wide baseline remains 822 warnings |
+
+The initial complete-suite attempt correctly exposed a stale governance test
+that expected five ADRs. Updating that assertion to the catalog's six ADRs
+made the focused governance module and the complete suite green.

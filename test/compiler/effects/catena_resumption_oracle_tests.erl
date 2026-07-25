@@ -201,3 +201,201 @@ second_one_shot_invocation_fails_deterministically_test() ->
         {failure, resumption_already_consumed, #{id => 1}},
         lists:last(?ORACLE:trace(State3))
     ).
+
+pure_failure_and_unhandled_request_are_distinct_test() ->
+    {ok, value, _PureState} = ?ORACLE:run(?ORACLE:pure(value)),
+    {error, explicit_failure, details, FailedState} =
+        ?ORACLE:run(?ORACLE:fail(explicit_failure, details)),
+    ?assertEqual(
+        [{failure, explicit_failure, details}],
+        ?ORACLE:trace(FailedState)
+    ),
+    UnhandledDetails = #{
+        effect => missing,
+        operation => operation,
+        arguments => [argument]
+    },
+    {error, unhandled_effect, UnhandledDetails, UnhandledState} =
+        ?ORACLE:run(?ORACLE:perform(missing, operation, [argument])),
+    ?assertEqual(
+        [
+            {perform, missing, operation, [argument]},
+            {failure, unhandled_effect, UnhandledDetails}
+        ],
+        ?ORACLE:trace(UnhandledState)
+    ).
+
+invalid_computation_and_callback_failures_are_stable_test() ->
+    {error, invalid_oracle_computation, #{term := invalid}, _} =
+        ?ORACLE:run(invalid),
+    ContinuationFailure = ?ORACLE:bind(
+        ?ORACLE:pure(value),
+        fun(_Value) -> error(continuation_failed) end
+    ),
+    {error, oracle_callback_failure, ContinuationDetails, _} =
+        ?ORACLE:run(ContinuationFailure),
+    ?assertEqual(continuation, maps:get(phase, ContinuationDetails)),
+    ?assertEqual(error, maps:get(class, ContinuationDetails)),
+    ?assertEqual(
+        continuation_failed,
+        maps:get(reason, ContinuationDetails)
+    ),
+    HandlerFailure = ?ORACLE:handle(
+        ?ORACLE:perform(effect, operation, []),
+        [
+            ?ORACLE:control_case(effect, operation, fun([], _K) ->
+                error(handler_failed)
+            end)
+        ]
+    ),
+    {error, oracle_callback_failure, HandlerDetails, HandlerState} =
+        ?ORACLE:run(HandlerFailure),
+    ?assertEqual(handler, maps:get(phase, HandlerDetails)),
+    ?assert(lists:member(
+        {consume, 1, handler_failed},
+        ?ORACLE:trace(HandlerState)
+    )).
+
+value_handler_failure_does_not_auto_resume_test() ->
+    Computation = ?ORACLE:handle(
+        ?ORACLE:perform(effect, operation, []),
+        [
+            ?ORACLE:value_case(effect, operation, fun([]) ->
+                error(value_handler_failed)
+            end)
+        ]
+    ),
+    {error, oracle_callback_failure, #{phase := handler}, State} =
+        ?ORACLE:run(Computation),
+    ?assertEqual([], [
+        Event
+     || {auto_resume, _Id, _Value} = Event <- ?ORACLE:trace(State)
+    ]).
+
+value_handler_body_can_suspend_outward_before_auto_resume_test() ->
+    Inner = ?ORACLE:handle(
+        ?ORACLE:perform(inner, operation, []),
+        [
+            ?ORACLE:value_case(inner, operation, fun([]) ->
+                ?ORACLE:perform(outer, provide, [])
+            end)
+        ]
+    ),
+    Computation = ?ORACLE:handle(
+        Inner,
+        [
+            ?ORACLE:value_case(outer, provide, fun([]) ->
+                ?ORACLE:pure(provided)
+            end)
+        ]
+    ),
+    {ok, provided, State} = ?ORACLE:run(Computation),
+    ?assert(lists:member({auto_resume, 1, provided}, ?ORACLE:trace(State))).
+
+retained_resume_can_suspend_into_an_unhandled_request_test() ->
+    Computation = ?ORACLE:handle(
+        ?ORACLE:bind(
+            ?ORACLE:perform(capture, operation, []),
+            fun(_Value) -> ?ORACLE:perform(missing, operation, []) end
+        ),
+        [
+            ?ORACLE:control_case(capture, operation, fun([], K) ->
+                ?ORACLE:pure(K)
+            end)
+        ]
+    ),
+    {ok, Resumption, State1} = ?ORACLE:run(Computation),
+    {error, unhandled_effect, _Details, State2} =
+        ?ORACLE:run(?ORACLE:resume(Resumption, supplied), State1),
+    ?assert(lists:member(
+        {propagate, 1, missing, operation},
+        ?ORACLE:trace(State2)
+    )).
+
+invalid_resumption_shapes_have_stable_categories_test() ->
+    {error, invalid_resumption_version, #{version := 99}, _} =
+        ?ORACLE:run(
+            ?ORACLE:resume(
+                {catena_oracle_resumption, 99, 1},
+                value
+            )
+        ),
+    {error, invalid_resumption, #{id := 99}, _} =
+        ?ORACLE:run(
+            ?ORACLE:resume(
+                {catena_oracle_resumption, 1, 99},
+                value
+            )
+        ),
+    {error, invalid_resumption, #{term := not_a_resumption}, _} =
+        ?ORACLE:run(?ORACLE:resume(not_a_resumption, value)).
+
+missing_delimiter_and_registered_mode_fail_closed_test() ->
+    {Resumption, State1} = retained_resumption_state(),
+    Delimiters = maps:get(delimiters, State1),
+    MissingDelimiterState = State1#{
+        delimiters := maps:remove(1, Delimiters)
+    },
+    {error, stale_resumption_delimiter, #{id := 1, delimiter := 1}, _} =
+        ?ORACLE:run(
+            ?ORACLE:resume(Resumption, value),
+            MissingDelimiterState
+        ),
+    Resumptions = maps:get(resumptions, State1),
+    Entry = maps:get(1, Resumptions),
+    UnsupportedState = State1#{
+        resumptions := Resumptions#{
+            1 => Entry#{kind => multi_shot}
+        }
+    },
+    {error, unsupported_semantic_mode, #{id := 1, kind := multi_shot}, _} =
+        ?ORACLE:run(?ORACLE:resume(Resumption, value), UnsupportedState).
+
+resumption_retention_detects_nested_data_test() ->
+    lists:foreach(
+        fun(Wrap) ->
+            Computation = ?ORACLE:handle(
+                ?ORACLE:perform(capture, operation, []),
+                [
+                    ?ORACLE:control_case(
+                        capture,
+                        operation,
+                        fun([], K) -> ?ORACLE:pure(Wrap(K)) end
+                    )
+                ]
+            ),
+            {ok, _Value, State} = ?ORACLE:run(Computation),
+            ?assert(lists:member({retain, 1, 1}, ?ORACLE:trace(State)))
+        end,
+        [
+            fun(K) -> [K] end,
+            fun(K) -> {saved, K} end,
+            fun(K) -> #{saved => K} end
+        ]
+    ).
+
+expire_helpers_ignore_unknown_handles_test() ->
+    State = ?ORACLE:new(),
+    ?assertEqual(State, ?ORACLE:expire_delimiter(unknown, State)),
+    ?assertEqual(
+        State,
+        ?ORACLE:expire_delimiter(
+            {catena_oracle_resumption, 1, 99},
+            State
+        )
+    ).
+
+retained_resumption_state() ->
+    Computation = ?ORACLE:handle(
+        ?ORACLE:bind(
+            ?ORACLE:perform(capture, operation, []),
+            fun(Value) -> ?ORACLE:pure(Value) end
+        ),
+        [
+            ?ORACLE:control_case(capture, operation, fun([], K) ->
+                ?ORACLE:pure(K)
+            end)
+        ]
+    ),
+    {ok, Resumption, State} = ?ORACLE:run(Computation),
+    {Resumption, State}.
