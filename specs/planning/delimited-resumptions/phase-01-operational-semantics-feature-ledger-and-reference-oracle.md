@@ -6,7 +6,7 @@ defines one executable semantic oracle and one feature ledger that distinguish
 real continuation behavior from the current request/response and marker-based
 implementations.
 
-**Status:** In progress; Section 1.1 complete.
+**Status:** In progress; Sections 1.1 and 1.2 complete.
 
 **Dependencies:** ADR-0006 and the Delimited Resumption Architecture accepted.
 
@@ -72,14 +72,14 @@ returning from a control handler without invoking its resumption.
 handlers, BEAM process identity, and the deliberately deferred shallow and
 multi-shot modes.
 
-- [ ] **Section 1.2 Complete**
+- [x] **Section 1.2 Complete**
 
 ### Task 1.2.1: Specify Value-Handler Auto-Resume
 
 **Description:** Define the source-compatible translation from an operation
 case without `with` to a synthetic deep one-shot tail resumption.
 
-- [ ] **Task 1.2.1 Complete**
+- [x] **Task 1.2.1 Complete**
 
 #### Subtask 1.2.1.1: Define The Synthetic Translation
 
@@ -87,7 +87,7 @@ case without `with` to a synthetic deep one-shot tail resumption.
 tail-resume placement, source-origin ownership, and the absence of implicit
 resume in an explicit `with` case.
 
-- [ ] **Subtask 1.2.1.1 Complete**
+- [x] **Subtask 1.2.1.1 Complete**
 
 #### Subtask 1.2.1.2: Prove Compatibility Examples
 
@@ -95,7 +95,7 @@ resume in an explicit `with` case.
 error, and timeout examples under both the current value-handler reading and
 the normalized auto-resume reading.
 
-- [ ] **Subtask 1.2.1.2 Complete**
+- [x] **Subtask 1.2.1.2 Complete**
 
 ### Task 1.2.2: Specify Process Affinity And Mode Defaults
 
@@ -103,7 +103,7 @@ the normalized auto-resume reading.
 capturing BEAM process and that deep one-shot behavior is the only initial
 promotion target.
 
-- [ ] **Task 1.2.2 Complete**
+- [x] **Task 1.2.2 Complete**
 
 #### Subtask 1.2.2.1: Define Ownership And Lifetime Rules
 
@@ -111,7 +111,7 @@ promotion target.
 retention, owner death, stale delimiters, re-entrancy, and deterministic
 one-shot consumption.
 
-- [ ] **Subtask 1.2.2.1 Complete**
+- [x] **Subtask 1.2.2.1 Complete**
 
 #### Subtask 1.2.2.2: Bound Shallow And Multi-Shot Semantics
 
@@ -119,7 +119,7 @@ one-shot consumption.
 Phase 7 syntax, type, runtime, and evidence before either mode is source
 promoted.
 
-- [ ] **Subtask 1.2.2.2 Complete**
+- [x] **Subtask 1.2.2.2 Complete**
 
 ## Section 1.3: Reference Oracle, Feature Ledger, And Baseline
 

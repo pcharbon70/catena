@@ -23,9 +23,9 @@ The core model covers:
 - returning from a handler without resume;
 - nested handlers and unhandled-operation propagation.
 
-Value-handler auto-resume, detailed ownership/lifetime policy, shallow
-handlers, and multi-shot admissibility are layered on this core in later
-sections of the Phase 1 plan.
+Value-handler auto-resume and the process-affine ownership/lifetime policy are
+defined below as layers on this core. Shallow handlers and multi-shot
+resumptions have bounded meanings but remain deferred promotion targets.
 
 ## Semantic Vocabulary
 
@@ -296,6 +296,235 @@ outer context
 - Every perform captures a new resumption identity; one-shot consumption is
   per identity, not per effect or operation.
 
+## Value-Handler Compatibility
+
+An operation case without an explicit `with` binder is a value case:
+
+```catena
+FileIO {
+  read(path) -> read_from_disk(path)
+}
+```
+
+Normalization translates it to a control case before type checking or
+lowering:
+
+```text
+E.op(patterns) -> body
+
+  ==normalize==>
+
+E.op(patterns) with __k@synthetic ->
+  bind(body, __value@synthetic ->
+    resume(__k, __value))
+```
+
+The concrete source-equivalent form is:
+
+```catena
+FileIO {
+  read(path) with __k ->
+    let __value = read_from_disk(path)
+    in resume(__k, __value)
+}
+```
+
+`__k` and `__value` are fresh compiler identities, not names introduced into
+the user's namespace. The operation case owns the primary source origin. Each
+synthetic binder and `resume` has a synthetic origin whose parent is that
+case; the original body retains its original origin. Diagnostics may explain
+the compatibility translation, but must report the user's operation case
+rather than a generated identifier.
+
+The translation fixes evaluation order:
+
+1. match the operation and arguments;
+2. capture a fresh deep, one-shot resumption;
+3. evaluate `body` exactly once outside the selected handler frame;
+4. if `body` produces an operation result `v`, invoke `resume(__k, v)` exactly
+   once in tail position;
+5. return the result produced when the resumed computation reaches its
+   delimiter.
+
+If `body` fails or does not terminate, the synthetic resume is not invoked.
+If it performs another effect, that request propagates to an outer handler;
+after that request returns, evaluation proceeds to the synthetic resume.
+
+A case written with `with k` is a control case. It is never wrapped in an
+implicit resume, even when static analysis can see no explicit use of `k`.
+Returning from that case therefore has the abort behavior defined above.
+
+### Compatibility theorem
+
+Let `B` be an existing value-handler body that produces an operation result
+`v`. Let `K` be the remainder of the handled computation. The existing
+request/response reading is:
+
+```text
+evaluate B -> v
+return v to perform
+continue K(v)
+```
+
+The normalized reading is:
+
+```text
+evaluate B -> v
+resume(__k, v), where __k contains K
+continue K(v)
+```
+
+Both execute `B` once, substitute the same `v` into the same remainder, and
+observe the same result and residual effects. The equivalence applies only to
+value cases. An explicit control case intentionally adds the ability to
+abort, retain, conditionally resume, or transform the result of resume.
+
+### Representative compatibility cases
+
+| Case | Existing value-handler trace | Normalized trace | Preserved observation |
+| --- | --- | --- | --- |
+| `FileIO.read(path)` | provider reads; returns bytes; remainder consumes bytes | body reads; `resume(k, bytes)`; remainder consumes bytes | bytes, provider effects, and remainder |
+| `Process.self()` | provider returns owner PID; remainder observes it | body returns the same PID on the owner process; tail resume runs the remainder there | process identity and mailbox ownership |
+| inner miss, outer match | inner frame forwards; outer returns value; inner remainder continues | wrapped continuation reaches outer case; outer tail-resumes; inner frame and delimiter are restored | innermost-first lookup and inner context |
+| provider exception | provider fails the perform; remainder is not entered | body fails before synthetic resume; remainder is not entered | failure category and no post-perform effects |
+| provider timeout | timeout fails the perform; remainder is not entered | timeout fails the body before synthetic resume; remainder is not entered | timeout policy and no post-perform effects |
+
+This compatibility argument assumes the existing provider itself has not
+already resumed or otherwise executed Catena continuation code. Provider
+processes may compute `v`; continuation execution remains on the capturing
+process.
+
+## Ownership And Lifetime
+
+A `Resumption` is an opaque first-class capability. Catena code may pass it to
+another transform, store it in a data structure, or return it from a handler.
+Those operations transfer a reference to the capability, not its process
+ownership and not a serializable copy of its continuation.
+
+### Process affinity
+
+Capturing a resumption records the identity `o = self()` of the evaluating
+BEAM process. The continuation may execute only while the invoker is that
+same live process:
+
+```text
+current_owner = r.owner = live
+```
+
+Sending the opaque term to another process is not itself forbidden, because
+ordinary BEAM values can be sent. Invoking it there fails before continuation
+code runs. The runtime must not forward the invocation to the owner, move the
+continuation to a provider process, or silently substitute a direct callback.
+
+This rule preserves `self`, mailbox ownership, links, monitors, exception
+propagation, and other process-local behavior across resume.
+
+### One-shot authority
+
+The authoritative state machine is:
+
+```text
+fresh --authorize--> running --complete-or-fail--> consumed
+```
+
+- only `fresh` may begin invocation;
+- observing `running` is a re-entrant invocation failure;
+- observing `consumed` is a second-invocation failure;
+- completion, exception, timeout, and cancellation after authorization all
+  transition the authority to `consumed`;
+- validation failure before authorization does not execute or consume the
+  continuation;
+- state transitions are atomic with respect to all references to the same
+  opaque capability.
+
+Runtime validation is mandatory. Static detection of obviously duplicated
+uses is useful but cannot establish affine use through arbitrary
+higher-order values in the initial type system.
+
+### Retention and delimiter lifetime
+
+Returning a fresh resumption as data retains:
+
+- its immutable compiler-reified continuation;
+- its captured lexical environment;
+- the selected handler frame and explicit effect context;
+- its logical delimiter and delimiter result type;
+- its owner, version, kind, depth, origin, and authority state.
+
+The enclosing `handle` may return the opaque value, but the retained logical
+delimiter does not expire merely because the original Erlang call returned.
+Invoking the resumption later on its owner process re-enters the retained
+delimited computation. Reaching that delimiter supplies the result of
+`resume`; it does not re-run the handler case that retained the capability.
+
+The runtime may reclaim retained state when no capability can reach it.
+Owner-process death is an unconditional lifetime boundary: runtime authority
+monitors the owner and releases continuation, context, and delimiter
+resources. A handle that survives elsewhere then reports an expired-owner
+failure and cannot revive the state.
+
+A delimiter is stale when its retained metadata or handler frame is missing,
+expired, has an incompatible runtime version, or no longer denotes the frame
+recorded by the capability. Stale validation fails before authorization.
+Malformed or source-forged values fail opaque-representation validation
+before any ownership, state, or continuation action.
+
+### Validation order
+
+The semantic validation order is:
+
+1. opaque representation and supported runtime version;
+2. registered resumption identity and type identity;
+3. live owner;
+4. current-process ownership;
+5. live, matching delimiter and handler frame;
+6. supported kind and depth;
+7. expected operation-result value type;
+8. atomic one-shot authorization.
+
+This order keeps malformed, cross-process, stale, unsupported, re-entrant,
+and consumed failures deterministic. Section 1.3 assigns stable diagnostic
+categories to these outcomes.
+
+## Semantic Mode Boundary
+
+The only Phase 1 executable and initial source-promotion mode is:
+
+```text
+depth = Deep
+kind = OneShot
+```
+
+Deep means that resume reinstalls the selected handler frame while evaluating
+the captured remainder. One-shot means that one authority may begin at most
+one invocation.
+
+The accepted conceptual meaning of a shallow handler is narrower: it captures
+the same delimited remainder, but resume does not reinstall the selected
+handler frame. A repeated operation from the remainder therefore searches
+only the surrounding context. Shallow behavior changes context restoration,
+not what continuation is captured.
+
+The accepted conceptual meaning of a multi-shot resumption is that each
+authorized invocation starts from the same immutable captured continuation
+and lexical environment with independent branch execution. It does not clone
+mailboxes, PIDs, ports, mutable external resources, provider state, or the
+outside world.
+
+Neither mode has source syntax or production runtime authority in Phase 1.
+Promotion of either requires:
+
+- an accepted surface spelling and normalized representation;
+- type and effect rules for selecting the mode;
+- runtime versioning and authorization support;
+- diagnostics for unsupported or inadmissible use;
+- shallow context-restoration evidence or, for multi-shot, a conservative
+  residual-effect admissibility rule and branch-sharing policy;
+- resource bounds and executable integration evidence.
+
+A Phase 1 request for shallow or multi-shot behavior fails explicitly as an
+unsupported semantic mode. It must never fall back to deep one-shot behavior.
+
 ## Representative Derivation
 
 Consider:
@@ -358,8 +587,6 @@ The reference oracle and later production implementation must preserve:
 
 ## Deferred From The Core Rules
 
-- value-handler tail auto-resume translation;
-- detailed owner death and retained-resource cleanup;
 - cross-process transfer, which ADR-0006 rejects for the initial design;
 - shallow handler context restoration;
 - multi-shot residual-effect admissibility and branch state;
