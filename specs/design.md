@@ -30,7 +30,8 @@ The research corpus under `specs/research/` covers a much larger design space th
 - [ADR-0006](adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
   accepts first-class `Resumption` values, explicit `with`/`resume` control,
   and effect-directed selective CPS as the path to true delimited handlers;
-  that language/backend path is planned rather than currently implemented
+  the syntax, AST, and normalization frontend is implemented, while typing,
+  selective CPS, and executable explicit resumptions remain planned
 
 ### Runtime Direction
 

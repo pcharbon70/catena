@@ -5,7 +5,7 @@ inventing backend behavior prematurely. It parses explicit resumption binders
 and resume expressions, preserves their source identity, and normalizes
 existing value handlers into explicit tail-resume semantics.
 
-**Status:** In progress (Sections 2.1 through 2.3 complete).
+**Status:** Complete.
 
 **Dependencies:** Phase 1 complete.
 
@@ -67,9 +67,10 @@ nullary and parameterized explicit resumption binders, represents
 non-binary resume arity. Focused lexer/parser regressions cover comments,
 locations, boundaries, precedence, nesting, malformed binders, and legacy
 value-handler syntax. The parser conflict audit moved from the Phase 1
-baseline of 37 shift/reduce and 0 reduce/reduce conflicts to 39 shift/reduce
-and 0 reduce/reduce conflicts. The two-conflict delta is recorded for the
-focused attribution audit in Section 2.4.
+baseline of 37 shift/reduce and 0 reduce/reduce conflicts to an interim 39
+shift/reduce and 0 reduce/reduce conflicts. Section 2.4 removed two redundant
+nullary operation-case productions and records the final 38/0 count and its
+single remaining attribution.
 
 ## Section 2.2: Parsed AST, Utilities, And Pretty Printing
 
@@ -207,14 +208,14 @@ becoming an ordinary call or marker closure.
 understands `with` and `resume`, preserves existing handlers, and still fails
 closed before unsupported backend execution.
 
-- [ ] **Section 2.4 Complete**
+- [x] **Section 2.4 Complete**
 
 ### Task 2.4.1: Exercise Source And Normalization Paths
 
 **Description:** Run lexer, parser, AST utility, pretty-printer, semantic, and
 diagnostic paths on representative control-handler programs.
 
-- [ ] **Task 2.4.1 Complete**
+- [x] **Task 2.4.1 Complete**
 
 #### Subtask 2.4.1.1: Test Positive Syntax And Round Trips
 
@@ -222,7 +223,7 @@ diagnostic paths on representative control-handler programs.
 resumption binders, nested resume expressions, value-handler compatibility,
 and parse/normalize/print/parse stability.
 
-- [ ] **Subtask 2.4.1.1 Complete**
+- [x] **Subtask 2.4.1.1 Complete**
 
 #### Subtask 2.4.1.2: Test Negative Syntax And Leakage
 
@@ -230,14 +231,14 @@ and parse/normalize/print/parse stability.
 boundaries, invalid scope, parser recovery, and explicit rejection at typed
 and backend boundaries that are not implemented yet.
 
-- [ ] **Subtask 2.4.1.2 Complete**
+- [x] **Subtask 2.4.1.2 Complete**
 
 ### Task 2.4.2: Run Phase Completion Gates
 
 **Description:** Validate generated frontend artifacts, parser-conflict
 accounting, backward compatibility, and repository health before typing work.
 
-- [ ] **Task 2.4.2 Complete**
+- [x] **Task 2.4.2 Complete**
 
 #### Subtask 2.4.2.1: Audit Parser And Compatibility Deltas
 
@@ -245,11 +246,29 @@ accounting, backward compatibility, and repository health before typing work.
 understood or removed, and run the maintained lexer, parser, semantic, AST,
 stdlib-source, and handler regression suites.
 
-- [ ] **Subtask 2.4.2.1 Complete**
+- [x] **Subtask 2.4.2.1 Complete**
 
 #### Subtask 2.4.2.2: Run Repository Gates
 
 **Description:** Run Phase 2 integration tests, `make check-specs`, and the
 complete active EUnit suite and record the exact phase-ending evidence.
 
-- [ ] **Subtask 2.4.2.2 Complete**
+- [x] **Subtask 2.4.2.2 Complete**
+
+**Implementation evidence:** The dedicated
+`catena_delimited_resumption_phase2_tests` integration contract covers
+nullary and parameterized control cases, nested handlers, explicit and
+automatic normalization, parse/print/parse and normalization stability,
+lexical shadowing, keyword boundaries, malformed binders, resume arity,
+panic-mode diagnostic preservation, invalid scope, typed/backend leakage, and
+loaded-BEAM compatibility for existing value handlers.
+
+The parser-conflict audit removed the explicit nullary value/control
+productions added during Section 2.1 because the maintained
+`pattern_list_comma` production already accepts an empty list. The final count
+is 38 shift/reduce and 0 reduce/reduce conflicts. The one-conflict delta from
+the Phase 1 baseline is the expected application-grammar choice on lookahead
+`resume`: as with every other primary-expression starter, Yecc shifts so
+`f resume(k, value)` remains juxtaposition application. Focused suites,
+`make check-specs`, and the complete active EUnit suite pass; the phase-ending
+suite contains 5,128 passing tests with no failures or skips.

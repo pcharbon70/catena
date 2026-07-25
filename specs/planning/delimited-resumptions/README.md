@@ -68,7 +68,7 @@ accepted:
 ## Phases
 
 - [x] [Phase 1: Operational Semantics, Feature Ledger, And Reference Oracle](phase-01-operational-semantics-feature-ledger-and-reference-oracle.md)
-- [ ] [Phase 2: `with`/`resume` Syntax, AST, And Semantic Normalization](phase-02-with-resume-syntax-ast-and-semantic-normalization.md)
+- [x] [Phase 2: `with`/`resume` Syntax, AST, And Semantic Normalization](phase-02-with-resume-syntax-ast-and-semantic-normalization.md)
 - [ ] [Phase 3: First-Class `Resumption` Kinds, Types, And Effects](phase-03-first-class-resumption-kinds-types-and-effects.md)
 - [ ] [Phase 4: Control-Mode Analysis And Selective CPS IR](phase-04-control-mode-analysis-and-selective-cps-ir.md)
 - [ ] [Phase 5: Deep One-Shot Runtime And Resumption Ownership](phase-05-deep-one-shot-runtime-and-resumption-ownership.md)

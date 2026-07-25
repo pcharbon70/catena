@@ -95,9 +95,10 @@ The following remain explicitly deferred and must not be implied as complete by 
 - the final ergonomics and optimization story for the entire effect system
 - the final law-verification story for all abstractions
 - the broader actor/distribution phases that build on top of the effect machinery
-- the accepted but unimplemented `Resumption k a b e` surface, `with`/`resume`
-  syntax, and effect-directed selective CPS lowering required for true
-  delimited source-level control; current orchestration resumptions remain
+- the accepted but unimplemented `Resumption k a b e` typing and
+  effect-directed selective CPS lowering required for true delimited
+  source-level control; `with`/`resume` syntax and semantic normalization are
+  implemented, while current executable orchestration resumptions remain
   opaque wrappers around a direct-style result marker
 
 ## Reconciled Note

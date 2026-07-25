@@ -2,8 +2,10 @@
 
 ## Status
 
-Accepted target architecture, not yet an implemented or promoted
-source-to-BEAM feature.
+Accepted target architecture. Phase 2 implements the lexer, parser, AST,
+pretty-printer, semantic normalization, and structural diagnostics. First-
+class typing, selective CPS, and executable explicit resumptions remain
+unimplemented, so this is not yet a promoted source-to-BEAM feature.
 
 This document makes
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
@@ -158,6 +160,20 @@ Value handlers normalize to the same operation-case shape with a synthetic
 binder and a synthetic tail `resume_expr`. A successful normalized module
 therefore makes automatic and explicit control behavior distinguishable
 without requiring later passes to reconstruct source punctuation.
+
+The implemented synthetic origin is:
+
+```erlang
+{synthetic, value_handler_auto_resume, SourceLocation}
+```
+
+Semantic results and validated compilation units retain this normalized form.
+Until the Phase 3 and Phase 4 type/CPS boundaries exist, legacy type and
+request/response backend consumers receive a compatibility view only when the
+binder, origin, resume target, and tail shape exactly match compiler-generated
+auto-resume output. Explicit, standalone, or malformed resumptions fail with
+`missing_resumption_lowering`; they are never lowered as ordinary calls or
+marker closures.
 
 AST traversal, pretty-printing, erasure, origin mapping, and diagnostic
 utilities must preserve these nodes. Pretty-printing must retain whether the

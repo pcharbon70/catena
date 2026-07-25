@@ -14,5 +14,5 @@ This index covers the promoted compiler-domain surfaces.
 These specs capture the current compiler that exists in `src/compiler/*`,
 including the fact that some roadmap items are partially implemented beyond
 what the raw planning checklists show. The delimited-resumption architecture
-is explicitly marked as an accepted target rather than a currently
-implemented compiler surface.
+is an accepted target whose Phase 2 frontend surface is implemented; typing,
+selective CPS, and executable explicit resumptions remain deferred.

@@ -1099,13 +1099,6 @@ operation_case -> lower_ident lparen pattern_list_comma rparen arrow expr_primar
         '$6',
         extract_location('$1')}.
 
-operation_case -> lower_ident lparen rparen arrow expr_primary :
-    {operation_case,
-        extract_atom('$1'),
-        [],
-        '$5',
-        extract_location('$1')}.
-
 operation_case -> lower_ident arrow expr_primary :
     {operation_case,
         extract_atom('$1'),
@@ -1119,14 +1112,6 @@ operation_case -> lower_ident lparen pattern_list_comma rparen with lower_ident 
         '$3',
         {resumption_binder, extract_atom('$6'), extract_location('$6')},
         '$8',
-        extract_location('$1')}.
-
-operation_case -> lower_ident lparen rparen with lower_ident arrow expr_primary :
-    {operation_case,
-        extract_atom('$1'),
-        [],
-        {resumption_binder, extract_atom('$5'), extract_location('$5')},
-        '$7',
         extract_location('$1')}.
 
 operation_case -> lower_ident with lower_ident arrow expr_primary :
