@@ -12,6 +12,8 @@ and conformance work without representing that work as complete.
 
 The normative deep one-shot reduction rules are defined in
 [Delimited Resumption Operational Semantics](delimited_resumption_operational_semantics.md).
+The implementation boundary and diagnostic names are maintained in the
+[Delimited Resumption Feature Ledger](delimited_resumption_feature_ledger.md).
 
 ## Purpose
 
@@ -421,5 +423,6 @@ describe true delimited source-level resumptions as planned.
 - [ADR-0006: First-Class Resumptions](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
 - [Type And Effect System](type_and_effect_system.md)
 - [Operational Semantics](delimited_resumption_operational_semantics.md)
+- [Feature Ledger](delimited_resumption_feature_ledger.md)
 - [Effect Runtime](../runtime/effect_runtime.md)
 - [Implementation Plan](../planning/delimited-resumptions/README.md)

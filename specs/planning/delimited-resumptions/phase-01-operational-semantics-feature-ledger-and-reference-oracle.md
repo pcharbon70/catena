@@ -6,7 +6,7 @@ defines one executable semantic oracle and one feature ledger that distinguish
 real continuation behavior from the current request/response and marker-based
 implementations.
 
-**Status:** In progress; Sections 1.1 and 1.2 complete.
+**Status:** In progress; Sections 1.1 through 1.3 complete.
 
 **Dependencies:** ADR-0006 and the Delimited Resumption Architecture accepted.
 
@@ -126,7 +126,7 @@ promoted.
 **Description:** Turn the semantics into executable comparison evidence and
 record the exact repository boundary from which implementation begins.
 
-- [ ] **Section 1.3 Complete**
+- [x] **Section 1.3 Complete**
 
 ### Task 1.3.1: Implement The Reference Semantic Oracle
 
@@ -134,14 +134,14 @@ record the exact repository boundary from which implementation begins.
 that executes the normative deep one-shot rules independently of the
 production Core Erlang backend.
 
-- [ ] **Task 1.3.1 Complete**
+- [x] **Task 1.3.1 Complete**
 
 #### Subtask 1.3.1.1: Implement Traceable Semantic Steps
 
 **Description:** Emit stable events for delimiter entry, perform, capture,
 handler selection, resume, abort, delimiter return, and consumption failure.
 
-- [ ] **Subtask 1.3.1.1 Complete**
+- [x] **Subtask 1.3.1.1 Complete**
 
 #### Subtask 1.3.1.2: Add Deterministic Oracle Fixtures
 
@@ -149,7 +149,7 @@ handler selection, resume, abort, delimiter return, and consumption failure.
 multiple operations, nested deep handlers, auto-resume, retention, and invalid
 second invocation with deterministic expected traces.
 
-- [ ] **Subtask 1.3.1.2 Complete**
+- [x] **Subtask 1.3.1.2 Complete**
 
 ### Task 1.3.2: Publish The Feature And Diagnostic Baseline
 
@@ -157,14 +157,14 @@ second invocation with deterministic expected traces.
 tests, parser conflicts, and placeholder resumption behavior before source
 implementation begins.
 
-- [ ] **Task 1.3.2 Complete**
+- [x] **Task 1.3.2 Complete**
 
 #### Subtask 1.3.2.1: Classify Existing Effect Surfaces
 
 **Description:** Mark each relevant module and behavior as request/response,
 internal helper, marker-backed, target semantic oracle, or deferred.
 
-- [ ] **Subtask 1.3.2.1 Complete**
+- [x] **Subtask 1.3.2.1 Complete**
 
 #### Subtask 1.3.2.2: Define Stable Failure Categories
 
@@ -172,7 +172,7 @@ internal helper, marker-backed, target semantic oracle, or deferred.
 invalid binder use, invalid resume targets, type/effect mismatch, ABI failure,
 ownership, lifetime, and consumption.
 
-- [ ] **Subtask 1.3.2.2 Complete**
+- [x] **Subtask 1.3.2.2 Complete**
 
 ## Section 1.4: Phase 1 Integration Tests
 
