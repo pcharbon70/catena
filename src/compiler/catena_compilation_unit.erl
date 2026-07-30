@@ -38,12 +38,14 @@
     interface/1,
     locations/1,
     control_modes/1,
+    control_ir/1,
     dispositions/1,
     with_dispositions/2,
-    with_control_modes/2
+    with_control_modes/2,
+    with_control_ir/2
 ]).
 
--define(UNIT_VERSION, 8).
+-define(UNIT_VERSION, 9).
 
 -opaque t() :: #{
     '$catena_compilation_unit' := pos_integer(),
@@ -69,6 +71,7 @@
     interface := catena_module_interface:interface(),
     locations := location_index(),
     control_modes := catena_control_mode:inventory(),
+    control_ir := catena_control_ir:ir() | pending,
     dispositions := [map()]
 }.
 
@@ -248,9 +251,18 @@ new(
                                 Options
                             ) of
                                 {ok, ControlModes} ->
-                                    {ok, Unit0#{
-                                        control_modes => ControlModes
-                                    }};
+                                    Unit1 = Unit0#{
+                                        control_modes => ControlModes,
+                                        control_ir => pending
+                                    },
+                                    case catena_selective_cps:lower(Unit1) of
+                                        {ok, ControlIR} ->
+                                            {ok, Unit1#{
+                                                control_ir => ControlIR
+                                            }};
+                                        {error, _} = Error ->
+                                            Error
+                                    end;
                                 {error, _} = Error ->
                                     Error
                             end;
@@ -327,6 +339,7 @@ is_compilation_unit(#{
     interface := Interface,
     locations := Locations,
     control_modes := ControlModes,
+    control_ir := ControlIR,
     dispositions := Dispositions
 }) ->
     is_atom(Name) andalso
@@ -344,6 +357,10 @@ is_compilation_unit(#{
         catena_module_interface:is_interface(Interface) andalso
         is_map(Locations) andalso
         catena_control_mode:is_inventory(ControlModes) andalso
+        (
+            ControlIR =:= pending orelse
+                catena_control_ir:is_ir(ControlIR)
+        ) andalso
         is_list(Dispositions) andalso
         validate_evidence(ValidationState) =:= ok;
 is_compilation_unit(_) ->
@@ -436,6 +453,9 @@ locations(Unit) -> maps:get(locations, Unit).
 -spec control_modes(t()) -> catena_control_mode:inventory().
 control_modes(Unit) -> maps:get(control_modes, Unit).
 
+-spec control_ir(t()) -> catena_control_ir:ir() | pending.
+control_ir(Unit) -> maps:get(control_ir, Unit).
+
 -spec dispositions(t()) -> [map()].
 dispositions(Unit) -> maps:get(dispositions, Unit).
 
@@ -480,6 +500,19 @@ with_control_modes(Unit, ControlModes) ->
         true -> {ok, Candidate};
         false ->
             {error, {invalid_compilation_unit, invalid_control_modes}}
+    end.
+
+%% @doc Attach a canonical selective-CPS graph.
+-spec with_control_ir(t(), catena_control_ir:ir()) ->
+    {ok, t()} | {error, term()}.
+with_control_ir(Unit, ControlIR) ->
+    Candidate = Unit#{control_ir => ControlIR},
+    case catena_control_ir:is_ir(ControlIR) andalso
+        is_compilation_unit(Candidate)
+    of
+        true -> {ok, Candidate};
+        false ->
+            {error, {invalid_compilation_unit, invalid_control_ir}}
     end.
 
 validate_evidence(ValidationState) when is_map(ValidationState) ->

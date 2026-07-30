@@ -77,14 +77,14 @@ authority. The focused Section 4.1 and compilation-unit suites pass 10 tests.
 **Description:** Introduce a small validated IR for returns, delimiters,
 performs, resumptions, resume invocation, abort, calls, and mode bridges.
 
-- [ ] **Section 4.2 Complete**
+- [x] **Section 4.2 Complete**
 
 ### Task 4.2.1: Define The Control IR
 
 **Description:** Specify canonical nodes, invariants, types, and source origins
 for direct and CPS control flow independently of Core Erlang syntax.
 
-- [ ] **Task 4.2.1 Complete**
+- [x] **Task 4.2.1 Complete**
 
 #### Subtask 4.2.1.1: Define Core Control Nodes
 
@@ -92,7 +92,7 @@ for direct and CPS control flow independently of Core Erlang syntax.
 delimiter entry/exit, handler installation, perform suspension, resumption
 construction, resume invocation, abort, and bridge operations.
 
-- [ ] **Subtask 4.2.1.1 Complete**
+- [x] **Subtask 4.2.1.1 Complete**
 
 #### Subtask 4.2.1.2: Define IR Type And Origin Contracts
 
@@ -100,14 +100,14 @@ construction, resume invocation, abort, and bridge operations.
 identity, continuation arity, runtime disposition, and source/synthetic origin
 to every control-bearing node.
 
-- [ ] **Subtask 4.2.1.2 Complete**
+- [x] **Subtask 4.2.1.2 Complete**
 
 ### Task 4.2.2: Lower Typed AST Into Selective CPS
 
 **Description:** Translate only resumable regions while preserving direct
 evaluation order, pattern semantics, errors, and tail positions.
 
-- [ ] **Task 4.2.2 Complete**
+- [x] **Task 4.2.2 Complete**
 
 #### Subtask 4.2.2.1: Lower Expressions And Delimiters
 
@@ -115,7 +115,7 @@ evaluation order, pattern semantics, errors, and tail positions.
 auto-resume, explicit resume, and abort into control IR with exactly-once
 evaluation.
 
-- [ ] **Subtask 4.2.2.1 Complete**
+- [x] **Subtask 4.2.2.1 Complete**
 
 #### Subtask 4.2.2.2: Preserve Patterns, Guards, And Failures
 
@@ -123,7 +123,19 @@ evaluation.
 fallthrough, exceptions, and source-origin diagnostics intact across generated
 continuation closures.
 
-- [ ] **Subtask 4.2.2.2 Complete**
+- [x] **Subtask 4.2.2.2 Complete**
+
+**Implementation evidence:** `catena_control_ir` defines versioned return,
+direct-expression, bind, match, direct/CPS call, delimiter, handler-install,
+perform, resumption-construction, resume, abort, bridge, and closure nodes.
+Every node retains value-type and effect-row evidence, control mode,
+delimiter, continuation arity, runtime disposition, and a source or synthetic
+origin. `catena_selective_cps` lowers validated normalized transforms with
+deterministic delimiter/continuation identities, explicit exactly-once bind
+sequencing, tail returns, suspension/resumption links, abort semantics, and
+preserved patterns, pure guards, fallthrough, and source evaluation order.
+Validated units retain the graph before Core Erlang emission. The focused IR,
+mode, and compilation-unit suites pass 15 tests.
 
 ## Section 4.3: Calling Conventions, Bridges, And IR Validation
 
