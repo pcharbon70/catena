@@ -13,7 +13,7 @@ It exists because some planning checklists are stale relative to later implement
 | Track | Current promoted status |
 | --- | --- |
 | Proof-of-concept | Implemented through Phases 1 to 3, with Phase 4 partial/minimal and a verified local Phase 5 actor runtime toolkit whose source-language integration remains incomplete. |
-| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary. Delimited-resumption Phase 1 now provides normative deep one-shot semantics, a feature ledger, and an executable oracle. The `with`/`resume` source-to-BEAM path remains unimplemented. |
+| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary. Delimited-resumption Phases 1 and 2 now provide normative deep one-shot semantics, an executable oracle, `with`/`resume` syntax, canonical AST support, and semantic normalization. First-class typing and executable selective-CPS resumptions remain unimplemented. |
 | Property testing | Phases 1 to 4 are materially implemented in `src/proptest`; Phases 5 and 6 are substantial but partial; explicit Phase 7 helper surfaces are also materially implemented, while automatic language integration remains incomplete. |
 | Law verification | Structural and concrete stdlib laws execute, and known-instance generic checks bridge into the internal proptest framework; automatic derivation and broader workflow ergonomics remain future work. |
 | Language revamp migration | Completed and now historical. |
@@ -121,14 +121,18 @@ Important caveat:
   is complete with normative operational semantics, a classified feature and
   diagnostic ledger, the independent `catena_resumption_oracle`, and exact
   positive/negative integration traces
-- the oracle is comparison evidence, not a production runtime; the lexer,
-  parser, type system, CPS IR, runtime, and backend do not yet support the
-  accepted resumption source surface
+- Phase 2 is complete with `with` and `resume` lexer/parser support, canonical
+  AST nodes and utilities, synthetic value-handler tail auto-resume,
+  structural binder diagnostics, and fail-closed typed/backend boundaries
+- existing value handlers preserve their executable request/response behavior
+  through an exact compiler-generated compatibility projection while their
+  normalized AST remains authoritative
+- the oracle is comparison evidence, not a production runtime; first-class
+  `Resumption` typing, selective-CPS IR, runtime authority, and executable
+  explicit `resume` remain deferred
 
 Next clear steps on this track:
 
-- begin Phase 2 with `with`/`resume` lexing, parsing, AST representation, and
-  value-handler normalization
 - implement `Resumption k a b e` typing in Phase 3 before adding backend
   behavior
 - promote deep one-shot execution before separately accepting source spelling

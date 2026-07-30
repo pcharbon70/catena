@@ -14,6 +14,7 @@
     context/3,
     context/4,
     unsupported_backend_construct/2,
+    missing_resumption_lowering/2,
     unresolved_call/3,
     ambiguous_call/4,
     arity_mismatch/4,
@@ -31,6 +32,7 @@
 
 -type category() ::
     unsupported_backend_construct |
+    missing_resumption_lowering |
     unresolved_call |
     ambiguous_call |
     arity_mismatch |
@@ -49,6 +51,7 @@
 categories() ->
     [
         unsupported_backend_construct,
+        missing_resumption_lowering,
         unresolved_call,
         ambiguous_call,
         arity_mismatch,
@@ -87,6 +90,13 @@ context(Stage, Construct, SourceTerm, Extra) when is_map(Extra) ->
 unsupported_backend_construct(Construct, Context) ->
     new(
         unsupported_backend_construct,
+        Context#{construct => Construct}
+    ).
+
+-spec missing_resumption_lowering(term(), map()) -> diagnostic().
+missing_resumption_lowering(Construct, Context) ->
+    new(
+        missing_resumption_lowering,
         Context#{construct => Construct}
     ).
 
@@ -199,6 +209,8 @@ source_location(#{location := Location}) ->
     Location;
 source_location({location, _Line, _Column} = Location) ->
     Location;
+source_location({synthetic, _Kind, _SourceLocation} = Location) ->
+    Location;
 source_location(Term) when is_tuple(Term), tuple_size(Term) > 1 ->
     Candidate = element(tuple_size(Term), Term),
     case is_location(Candidate) of
@@ -235,6 +247,8 @@ default_context() ->
 is_location({location, Line, Column})
   when is_integer(Line), is_integer(Column) ->
     true;
+is_location({synthetic, Kind, SourceLocation}) when is_atom(Kind) ->
+    is_location(SourceLocation);
 is_location({Line, Column}) when is_integer(Line), is_integer(Column) ->
     true;
 is_location(Line) when is_integer(Line) ->
@@ -245,6 +259,11 @@ is_location(_) ->
 category_message(unsupported_backend_construct, Details) ->
     io_lib:format(
         "does not support the ~p construct",
+        [maps:get(construct, Details, undefined)]
+    );
+category_message(missing_resumption_lowering, Details) ->
+    io_lib:format(
+        "has no validated resumption lowering for the ~p construct",
         [maps:get(construct, Details, undefined)]
     );
 category_message(unresolved_call, _Details) ->
@@ -299,6 +318,8 @@ source_scope(Module, Transform) ->
 
 format_location({location, Line, Column}) ->
     io_lib:format(" at line ~p, column ~p", [Line, Column]);
+format_location({synthetic, _Kind, SourceLocation}) ->
+    format_location(SourceLocation);
 format_location({Line, Column}) when is_integer(Line), is_integer(Column) ->
     io_lib:format(" at line ~p, column ~p", [Line, Column]);
 format_location(Line) when is_integer(Line) ->

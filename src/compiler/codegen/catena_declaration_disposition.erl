@@ -254,8 +254,11 @@ classify_declaration(
     }.
 
 %% @doc Enforce disposition completeness and return only declarations that may
-%% enter lowering.  Static declarations are filtered only after their
-%% representation metadata has been retained in the unit.
+%% enter lowering. Static declarations are filtered only after their
+%% representation metadata has been retained in the unit. Exact
+%% compiler-generated auto-resume forms are projected to the established value
+%% handler representation here; all explicit or malformed resumptions remain
+%% closed to the backend.
 -spec prepare_for_codegen(catena_compilation_unit:t()) ->
     {ok, term()} | {error, term()}.
 prepare_for_codegen(Unit) ->
@@ -282,13 +285,16 @@ prepare_for_codegen(Unit) ->
                             ),
                            emits_runtime_declaration(Disposition)
                     ],
-                    {ok,
-                        {module,
-                            Name,
-                            Exports,
-                            Imports,
-                            ActiveDeclarations,
-                            Location}};
+                    catena_resumption_normalize:
+                        project_legacy_value_handlers(
+                            {module,
+                                Name,
+                                Exports,
+                                Imports,
+                                ActiveDeclarations,
+                                Location},
+                            backend_compatibility
+                        );
                 {invalid, Disposition} ->
                     disposition_error(Unit, Disposition)
             end;

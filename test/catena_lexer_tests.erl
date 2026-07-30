@@ -38,9 +38,10 @@ core_keywords_test() ->
 
 syntax_keywords_test() ->
     %% Test syntax support keywords
-    Input = "in end case of when as forall operation",
+    Input = "in end case of when as forall operation with resume",
     {ok, Tokens} = catena_lexer:tokenize(Input),
-    Expected = ['in', 'end', 'case', 'of', 'when', as, forall, operation],
+    Expected = ['in', 'end', 'case', 'of', 'when', as, forall, operation,
+                with, resume],
     ?assertEqual(Expected, token_types(Tokens)).
 
 module_keywords_test() ->
@@ -53,22 +54,24 @@ module_keywords_test() ->
 all_keywords_test() ->
     %% Test comprehensive keyword list (minimal core)
     Input = "type transform let match trait instance effect perform handle actor process module "
-            "in end case of when as forall operation import export exports qualified private",
+            "in end case of when as forall operation with resume "
+            "import export exports qualified private",
     {ok, Tokens} = catena_lexer:tokenize(Input),
     Expected = [type, transform, 'let', match, trait, instance, effect, perform, handle, actor, process, 'module',
-                'in', 'end', 'case', 'of', 'when', as, forall, operation, 'import', 'export', exports, qualified, private],
+                'in', 'end', 'case', 'of', 'when', as, forall, operation, with, resume,
+                'import', 'export', exports, qualified, private],
     ?assertEqual(Expected, token_types(Tokens)).
 
 removed_keywords_are_identifiers_test() ->
     %% Test that some former keywords are now recognized as identifiers
     %% Note: do, then, where are still keywords (used in grammar)
-    %% Only if, else, extends, try, with, supervisor were removed
-    Input = "if else extends try with supervisor",
+    %% Only if, else, extends, try, and supervisor remain removed.
+    Input = "if else extends try supervisor",
     {ok, Tokens} = catena_lexer:tokenize(Input),
     %% All should be lower_ident now, not keywords
     Types = token_types(Tokens),
     ?assertEqual([lower_ident, lower_ident, lower_ident,
-                  lower_ident, lower_ident, lower_ident], Types).
+                  lower_ident, lower_ident], Types).
 
 operators_two_char_test() ->
     %% Test two-character and three-character operators

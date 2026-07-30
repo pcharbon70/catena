@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 1 implementation baseline for
+Phase 2 frontend implementation boundary for
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md).
 
 This ledger prevents internal helper names, marker callbacks, request/response
@@ -30,6 +30,16 @@ recorded in [Current Status](../planning/current_status.md), not fresh claims
 made by adding the oracle. Section 1.4 records the Phase 1 completion test
 count. Parser conflicts are checked on every ordinary compilation.
 
+## Phase 2 Snapshot
+
+| Measurement | Phase 2 result | Interpretation |
+| --- | ---: | --- |
+| Complete active EUnit suite | 5,128 pass; 0 failures; 0 skips | Source, AST, normalization, compatibility, and leakage gates are green |
+| Parser conflicts | 38 shift/reduce; 0 reduce/reduce | One audited delta: `resume` begins a primary expression in juxtaposition application |
+| Resumption source syntax | implemented frontend | `with` binders and binary `resume` expressions parse, round-trip, and carry locations |
+| Resumption normalized AST | implemented frontend | Explicit cases are preserved; value cases receive compiler-authored tail auto-resume |
+| Resumption typing/CPS/runtime | absent | Explicit control fails closed before type inference/backend execution |
+
 ## Classification Vocabulary
 
 | Classification | Meaning |
@@ -38,6 +48,7 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Internal helper | Implements useful handler, kind, depth, type, or state behavior but is not itself a source-level delimited-control implementation |
 | Marker-backed | Wraps a function or value that demonstrates an API shape without executing the actual remainder after `perform` |
 | Semantic oracle | Independently executes the normative model for comparison and tests; never linked by generated application code |
+| Frontend implementation | Source parses, preserves intent, normalizes, and validates structurally, but lacks the typing/lowering/runtime evidence required for promotion |
 | Planned source implementation | Accepted by the ADR and architecture but absent from the compiler/runtime path |
 | Deferred mode | Has an accepted conceptual meaning but lacks the required syntax, typing, runtime authority, or evidence for promotion |
 
@@ -46,10 +57,10 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Surface | Current implementation | Classification | Promotion target |
 | --- | --- | --- | --- |
 | `perform` syntax and AST | Parsed and typed as the existing effect expression | Request/response | Preserve syntax; classify resumable suspension points |
-| `handle` and operation cases | Parsed value cases with direct-style bodies | Request/response | Normalize value cases to synthetic tail resume |
-| `with k` operation binder | No lexer token, grammar production, AST node, scope, or type | Planned source implementation | First-class `Resumption OneShot a b e` binder |
-| `resume(k, value)` | No source expression or backend lowering | Planned source implementation | Typed control expression with selective-CPS lowering |
-| Value-handler compatibility | Runtime/provider result returns through an Erlang call | Request/response | Proved-equivalent synthetic `resume` in tail position |
+| `handle` and operation cases | Parsed value/control cases normalize to one explicit semantic shape | Frontend implementation | Feed classified cases into typed selective CPS |
+| `with k` operation binder | Lexer, grammar, AST, pretty-print, scope, and diagnostics implemented; type absent | Frontend implementation | First-class `Resumption OneShot a b e` binder |
+| `resume(k, value)` | Dedicated parsed/normalized expression with arity and lexical checks; typing/lowering absent | Frontend implementation | Typed control expression with selective-CPS lowering |
+| Value-handler compatibility | Synthetic tail auto-resume is retained in normalized AST and exactly projected for existing consumers | Frontend implementation plus request/response compatibility | Execute the same normalized form through selective CPS |
 | Effect context | Explicit context exists in the compiler runtime | Internal helper | Add same-process handler frame and delimiter entries |
 | Core Erlang effect backend | Emits `catena_effect_runtime:perform/4` and `with_handlers/3` calls | Request/response | Direct/resumable mode classification plus explicit bridges |
 | Continuation capture | `catena_resumption` and `catena_perform` use supplied functions or `{resumed, Value}` placeholders | Marker-backed | Compiler-reified remainder to the selected delimiter |
@@ -98,6 +109,13 @@ type or lower the accepted `Resumption k a b e` source construct:
 - `src/compiler/validation/catena_effect_validation.erl`;
 - the lexer, parser, AST, semantic normalization, compilation-unit, call
   resolution, erasure, origin, and backend modules named by the phased plan.
+
+Phase 2 adds `catena_resumption_normalize` as the maintained semantic
+normalizer. The typechecker, compilation-unit validators, and declaration
+disposition pass may project only its exact compiler-generated value-handler
+shape to the legacy request/response representation. Backend lowering,
+erasure, expression translation, and effect translation independently reject
+normalized resumption leakage.
 
 ### Reference oracle
 
@@ -188,5 +206,6 @@ rows from planned/deferred to implemented.
 - [Delimited Resumption Operational Semantics](delimited_resumption_operational_semantics.md)
 - [Delimited Resumption Architecture](delimited_resumption_architecture.md)
 - [Phase 1 Plan](../planning/delimited-resumptions/phase-01-operational-semantics-feature-ledger-and-reference-oracle.md)
+- [Phase 2 Plan](../planning/delimited-resumptions/phase-02-with-resume-syntax-ast-and-semantic-normalization.md)
 - [Effect Runtime](../runtime/effect_runtime.md)
 - [Current Status](../planning/current_status.md)

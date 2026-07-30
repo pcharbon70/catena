@@ -83,7 +83,24 @@ translate_handlers(Handlers, State) ->
     {cerl:cerl(), catena_codegen_utils:codegen_state()}.
 translate_handler({handler_clause, Effect, Operations, HandlerLocation}, State) ->
     {OpCases, State1} = lists:mapfoldl(
-        fun(
+        fun
+        (
+            {operation_case, _OpName, _Params, _Resumption, _Body, _Location} =
+                OperationCase,
+            _St
+        ) ->
+            Context = catena_backend_error:context(
+                effect_handler_translation,
+                operation_case,
+                OperationCase
+            ),
+            throw(
+                catena_backend_error:missing_resumption_lowering(
+                    operation_case,
+                    Context
+                )
+            );
+        (
             {operation_case, OpName, Params, Body, OperationLocation},
             St
         ) ->

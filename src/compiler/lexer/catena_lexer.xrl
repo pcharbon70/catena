@@ -73,6 +73,8 @@ when : {token, {'when', TokenLine}}.
 as : {token, {as, TokenLine}}.
 forall : {token, {forall, TokenLine}}.
 operation : {token, {operation, TokenLine}}.
+with : {token, {with, TokenLine}}.
+resume : {token, {resume, TokenLine}}.
 
 %% Module system keywords
 import : {token, {'import', TokenLine}}.
@@ -94,7 +96,7 @@ constrain : {token, {constrain, TokenLine}}.
 
 %% Removed keywords (moved to library/desugar):
 %% - if/then/else: desugar to match on Bool
-%% - try/with: replaced by handle keyword
+%% - try: replaced by handle keyword
 %% - supervisor: library convention
 
 %% Two-character and three-character operators (must come before single-character)

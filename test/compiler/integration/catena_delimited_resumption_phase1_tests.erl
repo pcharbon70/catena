@@ -326,12 +326,12 @@ legacy_capture_remains_an_explicit_marker_test() ->
         catena_resumption:resume(MarkerResumption, supplied_value)
     ).
 
-with_and_resume_are_not_yet_promoted_lexer_words_test() ->
+with_and_resume_are_promoted_by_phase2_without_changing_phase1_runtime_test() ->
     ?assertEqual(
         {ok,
             [
-                {lower_ident, 1, "with"},
-                {lower_ident, 1, "resume"}
+                {with, 1},
+                {resume, 1}
             ],
             1},
         catena_lexer:string("with resume")

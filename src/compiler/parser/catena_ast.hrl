@@ -4,8 +4,12 @@
 %% This header file defines all AST node types for the Topos compiler.
 %% All nodes include location metadata for error reporting.
 
-%% Location metadata
--type location() :: {line, pos_integer()}.
+%% Location metadata. Generated nodes retain a link to the user-written source
+%% location that caused their creation.
+-type concrete_location() :: {line, pos_integer()} | catena_location:location().
+-type location() ::
+    concrete_location() |
+    {synthetic, atom(), concrete_location()}.
 
 %%====================================================================
 %% Module Structure
@@ -277,6 +281,13 @@
     location :: location()
 }).
 
+%% Resume a first-class delimited resumption with an operation result value.
+-record(resume_expr, {
+    resumption :: expr(),
+    value :: expr(),
+    location :: location()
+}).
+
 %% Try-with expression (effect handler)
 -record(try_with_expr, {
     body :: expr(),
@@ -292,19 +303,33 @@
 
 -type handler_clause() :: #handler_clause{}.
 
+%% Parsed value handlers use `none`; explicit control handlers retain the
+%% user-written binder and its source location. Semantic normalization replaces
+%% `none` with a synthetic binder before typed and backend phases.
+-type resumption_binder() ::
+    none |
+    {resumption_binder, atom(), location()}.
+
 -record(operation_case, {
     operation :: atom(),
     params :: [pattern()],
+    resumption = none :: resumption_binder(),
     body :: expr(),
     location :: location()
 }).
 
--type operation_case() :: #operation_case{}.
+%% The five-element tuple remains part of the parsed boundary until semantic
+%% normalization expands value-handler sugar. New and explicit forms use the
+%% record-compatible six-element tuple.
+-type legacy_value_operation_case() ::
+    {operation_case, atom(), [pattern()], expr(), location()}.
+-type operation_case() :: #operation_case{} | legacy_value_operation_case().
 
 -type expr() :: #literal{} | #var{} | #app{} | #lambda{} | #let_expr{} |
                 #match_expr{} | #if_expr{} | #do_expr{} | #record_expr{} |
                 #record_access{} | #binary_op{} | #unary_op{} | #list_expr{} |
-                #tuple_expr{} | #perform_expr{} | #try_with_expr{}.
+                #tuple_expr{} | #perform_expr{} | #resume_expr{} |
+                #try_with_expr{}.
 
 %%====================================================================
 %% Patterns

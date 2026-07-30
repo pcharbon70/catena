@@ -108,6 +108,8 @@ desugar_expr({binary_op, Op, Left, Right, Loc}) ->
 %% Recursive cases
 desugar_expr({let_expr, [{Pat, Val}], Body, Loc}) ->
     {let_expr, [{Pat, desugar_expr(Val)}], desugar_expr(Body), Loc};
+desugar_expr({let_expr, [Pat, Val], Body, Loc}) ->
+    {let_expr, [Pat, desugar_expr(Val)], desugar_expr(Body), Loc};
 desugar_expr({lambda, Params, Body, Loc}) ->
     {lambda, Params, desugar_expr(Body), Loc};
 desugar_expr({app, Fun, Args, Loc}) ->
@@ -127,17 +129,67 @@ desugar_expr({list_expr, Elems, Loc}) ->
     {list_expr, [desugar_expr(E) || E <- Elems], Loc};
 desugar_expr({record_expr, Fields, Base, Loc}) ->
     DesugaredFields = [{N, desugar_expr(V)} || {N, V} <- Fields],
-    {record_expr, DesugaredFields, Base, Loc};
+    DesugaredBase = case Base of
+        undefined -> undefined;
+        _ -> desugar_expr(Base)
+    end,
+    {record_expr, DesugaredFields, DesugaredBase, Loc};
 desugar_expr({record_access, Expr, Field, Loc}) ->
     {record_access, desugar_expr(Expr), Field, Loc};
 desugar_expr({handle_expr, Body, Handlers, Loc}) ->
-    {handle_expr, desugar_expr(Body), Handlers, Loc};
+    {
+        handle_expr,
+        desugar_expr(Body),
+        [desugar_handler(Handler) || Handler <- Handlers],
+        Loc
+    };
+desugar_expr({resume_expr, Resumption, Value, Loc}) ->
+    {
+        resume_expr,
+        desugar_expr(Resumption),
+        desugar_expr(Value),
+        Loc
+    };
 
 %% Base cases (no sub-expressions to desugar)
 desugar_expr({var, _, _} = Expr) -> Expr;
 desugar_expr({literal, _, _, _} = Expr) -> Expr;
-desugar_expr({perform_expr, _, _, _, _} = Expr) -> Expr;
+desugar_expr({perform_expr, Effect, Operation, Args, Loc}) ->
+    {
+        perform_expr,
+        Effect,
+        Operation,
+        [desugar_expr(Arg) || Arg <- Args],
+        Loc
+    };
 desugar_expr(Other) -> Other.
+
+desugar_handler({handler_clause, Effect, Operations, Loc}) ->
+    {
+        handler_clause,
+        Effect,
+        [desugar_operation_case(Operation) || Operation <- Operations],
+        Loc
+    }.
+
+desugar_operation_case({operation_case, Name, Params, Body, Loc}) ->
+    {operation_case, Name, Params, desugar_expr(Body), Loc};
+desugar_operation_case({
+    operation_case,
+    Name,
+    Params,
+    Resumption,
+    Body,
+    Loc
+}) ->
+    {
+        operation_case,
+        Name,
+        Params,
+        Resumption,
+        desugar_expr(Body),
+        Loc
+    }.
 
 %% @doc Desugar a match clause
 desugar_match_clause({match_clause, Pattern, Guards, Body, Loc}) ->

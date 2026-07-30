@@ -50,7 +50,8 @@
 %% AST Validation
 -export([
     validate_ast/1,
-    check_duplicate_names/1
+    check_duplicate_names/1,
+    equivalent/2
 ]).
 
 %% AST Pretty-printing
@@ -114,10 +115,20 @@ map_expr(Fun, Expr, Depth) ->
             #record_access{record=map_expr(Fun, Record, NextDepth), field=Field, location=Loc};
         #perform_expr{effect=Effect, operation=Operation, args=Args, location=Loc} ->
             #perform_expr{effect=Effect, operation=Operation, args=[map_expr(Fun, Arg, NextDepth) || Arg <- Args], location=Loc};
+        #resume_expr{resumption=Resumption, value=Value, location=Loc} ->
+            #resume_expr{
+                resumption=map_expr(Fun, Resumption, NextDepth),
+                value=map_expr(Fun, Value, NextDepth),
+                location=Loc
+            };
         #try_with_expr{body=Body, handlers=Handlers, location=Loc} ->
             NewBody = map_expr(Fun, Body, NextDepth),
             NewHandlers = [map_handler(Fun, H, NextDepth) || H <- Handlers],
             #try_with_expr{body=NewBody, handlers=NewHandlers, location=Loc};
+        {handle_expr, Body, Handlers, Loc} ->
+            NewBody = map_expr(Fun, Body, NextDepth),
+            NewHandlers = [map_handler(Fun, H, NextDepth) || H <- Handlers],
+            {handle_expr, NewBody, NewHandlers, Loc};
         _ ->
             %% Leaf nodes (literals, variables)
             Expr
@@ -136,8 +147,26 @@ map_handler(Fun, #handler_clause{effect=Effect, operations=Operations, location=
     NewOps = [map_operation_case(Fun, Op, Depth) || Op <- Operations],
     #handler_clause{effect=Effect, operations=NewOps, location=Loc}.
 
-map_operation_case(Fun, #operation_case{operation=Operation, params=Params, body=Body, location=Loc}, Depth) ->
-    #operation_case{operation=Operation, params=Params, body=map_expr(Fun, Body, Depth), location=Loc}.
+map_operation_case(
+    Fun,
+    #operation_case{
+        operation=Operation,
+        params=Params,
+        resumption=Resumption,
+        body=Body,
+        location=Loc
+    },
+    Depth
+) ->
+    #operation_case{
+        operation=Operation,
+        params=Params,
+        resumption=Resumption,
+        body=map_expr(Fun, Body, Depth),
+        location=Loc
+    };
+map_operation_case(Fun, {operation_case, Operation, Params, Body, Loc}, Depth) ->
+    {operation_case, Operation, Params, map_expr(Fun, Body, Depth), Loc}.
 
 %% @doc Fold over all sub-expressions in an expression (bottom-up)
 %% First recursively processes children, then applies function to parent node
@@ -185,7 +214,13 @@ fold_expr(Fun, Acc, Expr, Depth) ->
             fold_expr(Fun, Acc, Record, NextDepth);
         #perform_expr{args=Args} ->
             lists:foldl(fun(Arg, A) -> fold_expr(Fun, A, Arg, NextDepth) end, Acc, Args);
+        #resume_expr{resumption=Resumption, value=Value} ->
+            Acc2 = fold_expr(Fun, Acc, Resumption, NextDepth),
+            fold_expr(Fun, Acc2, Value, NextDepth);
         #try_with_expr{body=Body, handlers=Handlers} ->
+            Acc2 = fold_expr(Fun, Acc, Body, NextDepth),
+            lists:foldl(fun(H, A) -> fold_handler(Fun, A, H, NextDepth) end, Acc2, Handlers);
+        {handle_expr, Body, Handlers, _Loc} ->
             Acc2 = fold_expr(Fun, Acc, Body, NextDepth),
             lists:foldl(fun(H, A) -> fold_handler(Fun, A, H, NextDepth) end, Acc2, Handlers);
         _ ->
@@ -206,6 +241,8 @@ fold_handler(Fun, Acc, #handler_clause{operations=Operations}, Depth) ->
     lists:foldl(fun(Op, A) -> fold_operation_case(Fun, A, Op, Depth) end, Acc, Operations).
 
 fold_operation_case(Fun, Acc, #operation_case{body=Body}, Depth) ->
+    fold_expr(Fun, Acc, Body, Depth);
+fold_operation_case(Fun, Acc, {operation_case, _Operation, _Params, Body, _Loc}, Depth) ->
     fold_expr(Fun, Acc, Body, Depth).
 
 %% @doc Walk the AST, executing a function for each node (bottom-up)
@@ -254,7 +291,13 @@ walk_expr(Fun, Expr, Depth) ->
             walk_expr(Fun, Record, NextDepth);
         #perform_expr{args=Args} ->
             [walk_expr(Fun, Arg, NextDepth) || Arg <- Args];
+        #resume_expr{resumption=Resumption, value=Value} ->
+            walk_expr(Fun, Resumption, NextDepth),
+            walk_expr(Fun, Value, NextDepth);
         #try_with_expr{body=Body, handlers=Handlers} ->
+            walk_expr(Fun, Body, NextDepth),
+            [walk_handler(Fun, H, NextDepth) || H <- Handlers];
+        {handle_expr, Body, Handlers, _Loc} ->
             walk_expr(Fun, Body, NextDepth),
             [walk_handler(Fun, H, NextDepth) || H <- Handlers];
         _ ->
@@ -275,6 +318,8 @@ walk_handler(Fun, #handler_clause{operations=Operations}, Depth) ->
     [walk_operation_case(Fun, Op, Depth) || Op <- Operations].
 
 walk_operation_case(Fun, #operation_case{body=Body}, Depth) ->
+    walk_expr(Fun, Body, Depth);
+walk_operation_case(Fun, {operation_case, _Operation, _Params, Body, _Loc}, Depth) ->
     walk_expr(Fun, Body, Depth).
 
 %%====================================================================
@@ -288,6 +333,7 @@ validate_ast(AST) ->
         check_location_formats(AST),
         check_literal_types(AST),
         check_valid_names(AST),
+        check_control_shapes(AST),
         check_duplicate_names(AST),
         ok
     catch
@@ -304,6 +350,56 @@ check_duplicate_names(#module{declarations=Declarations}) ->
     end;
 check_duplicate_names(_) ->
     ok.
+
+%% @doc Compare two AST fragments while ignoring source-location differences.
+%% Explicit resumption metadata remains significant, so a value handler never
+%% compares equal to a user-written control handler.
+equivalent(Left, Right) ->
+    erase_locations(Left) =:= erase_locations(Right).
+
+erase_locations({line, _Line}) ->
+    '$catena_location';
+erase_locations({location, _Line, _Column}) ->
+    '$catena_location';
+erase_locations({location, _StartLine, _StartColumn, _EndLine, _EndColumn}) ->
+    '$catena_location';
+erase_locations({synthetic, Kind, SourceLocation}) ->
+    {synthetic, Kind, erase_locations(SourceLocation)};
+erase_locations(Tuple) when is_tuple(Tuple) ->
+    list_to_tuple([erase_locations(Element) || Element <- tuple_to_list(Tuple)]);
+erase_locations(List) when is_list(List) ->
+    [erase_locations(Element) || Element <- List];
+erase_locations(Other) ->
+    Other.
+
+%% @doc Validate the shape, name, and location of parsed resumption metadata.
+check_control_shapes({operation_case, _Operation, _Params, Resumption, Body, _Loc}) ->
+    check_resumption_binder(Resumption),
+    check_control_shapes(Body);
+check_control_shapes({resume_expr, Resumption, Value, Loc}) ->
+    check_control_location(Loc),
+    check_control_shapes(Resumption),
+    check_control_shapes(Value);
+check_control_shapes(Tuple) when is_tuple(Tuple) ->
+    lists:foreach(fun check_control_shapes/1, tuple_to_list(Tuple));
+check_control_shapes(List) when is_list(List) ->
+    lists:foreach(fun check_control_shapes/1, List);
+check_control_shapes(_Other) ->
+    ok.
+
+check_resumption_binder(none) ->
+    ok;
+check_resumption_binder({resumption_binder, Name, Loc})
+        when is_atom(Name), Name =/= undefined, Name =/= '' ->
+    check_control_location(Loc);
+check_resumption_binder(Binder) ->
+    throw({error, {invalid_resumption_binder, Binder}}).
+
+check_control_location(Loc) ->
+    case is_valid_location(Loc) of
+        true -> ok;
+        false -> throw({error, {invalid_location, Loc}})
+    end.
 
 %% @doc Check that all location metadata is in valid format
 check_location_formats(AST) ->
@@ -352,6 +448,8 @@ check_location_formats(AST) ->
 is_valid_location({line, N}) when is_integer(N), N > 0 -> true;
 is_valid_location({location, Line, Col}) when is_integer(Line), is_integer(Col),
                                                Line > 0, Col >= 0 -> true;
+is_valid_location({synthetic, Kind, SourceLocation}) when is_atom(Kind) ->
+    is_valid_location(SourceLocation);
 is_valid_location(_) -> false.
 
 %% @doc Check that all literals have valid type annotations
@@ -466,8 +564,47 @@ format_expr(#tuple_expr{elements=Elements}) ->
 format_expr(#perform_expr{effect=Effect, operation=Operation, args=Args}) ->
     ArgsStr = string:join([format_expr(Arg) || Arg <- Args], ", "),
     io_lib:format("perform ~s.~s(~s)", [atom_to_list(Effect), atom_to_list(Operation), ArgsStr]);
+format_expr(#resume_expr{resumption=Resumption, value=Value}) ->
+    io_lib:format(
+        "resume(~s, ~s)",
+        [format_expr(Resumption), format_expr(Value)]
+    );
+format_expr(#try_with_expr{body=Body, handlers=Handlers}) ->
+    HandlerStr = string:join([format_handler(Handler) || Handler <- Handlers], " "),
+    io_lib:format("handle ~s then { ~s }", [format_expr(Body), HandlerStr]);
 format_expr(_) ->
     "<??>".
+
+format_handler(#handler_clause{effect=Effect, operations=Operations}) ->
+    OperationStr = string:join(
+        [format_operation_case(Operation) || Operation <- Operations],
+        " "
+    ),
+    io_lib:format("~s { ~s }", [atom_to_list(Effect), OperationStr]).
+
+format_operation_case(
+    #operation_case{
+        operation=Operation,
+        params=Params,
+        resumption=Resumption,
+        body=Body
+    }
+) ->
+    format_operation_case(Operation, Params, Resumption, Body);
+format_operation_case({operation_case, Operation, Params, Body, _Loc}) ->
+    format_operation_case(Operation, Params, none, Body).
+
+format_operation_case(Operation, Params, Resumption, Body) ->
+    ParamsStr = string:join([format_pattern(Param) || Param <- Params], ", "),
+    BinderStr = case Resumption of
+        none -> "";
+        {resumption_binder, Name, _Loc} ->
+            [" with ", atom_to_list(Name)]
+    end,
+    io_lib:format(
+        "~s(~s)~s -> ~s",
+        [atom_to_list(Operation), ParamsStr, BinderStr, format_expr(Body)]
+    ).
 
 format_literal(Value, integer) -> integer_to_list(Value);
 format_literal(Value, float) -> float_to_list(Value);

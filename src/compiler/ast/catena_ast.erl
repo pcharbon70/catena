@@ -29,9 +29,10 @@
     record_access/3, record_access/2,
     % Effect expressions
     perform_expr/4, perform_expr/3,
+    resume_expr/3, resume_expr/2,
     try_with_expr/3, try_with_expr/2,
     handler_clause/3, handler_clause/2,
-    operation_case/4, operation_case/3,
+    operation_case/5, operation_case/4, operation_case/3,
     % Patterns
     pat_var/2, pat_var/1,
     pat_wildcard/1, pat_wildcard/0,
@@ -294,6 +295,20 @@ perform_expr(Effect, Operation, Args, Loc) when is_atom(Effect), is_atom(Operati
 perform_expr(Effect, Operation, Args) ->
     perform_expr(Effect, Operation, Args, default_location()).
 
+%% @doc Create a resume expression with explicit location
+-spec resume_expr(expr(), expr(), location()) -> #resume_expr{}.
+resume_expr(Resumption, Value, Loc) ->
+    #resume_expr{
+        resumption = Resumption,
+        value = Value,
+        location = Loc
+    }.
+
+%% @doc Create a resume expression with location inferred from its target
+-spec resume_expr(expr(), expr()) -> #resume_expr{}.
+resume_expr(Resumption, Value) ->
+    resume_expr(Resumption, Value, location(Resumption)).
+
 %% @doc Create a try-with expression with explicit location
 -spec try_with_expr(expr(), [#handler_clause{}], location()) -> #try_with_expr{}.
 try_with_expr(Body, Handlers, Loc) when is_list(Handlers) ->
@@ -314,15 +329,28 @@ handler_clause(Effect, Operations, Loc) when is_atom(Effect), is_list(Operations
 handler_clause(Effect, Operations) ->
     handler_clause(Effect, Operations, default_location()).
 
-%% @doc Create an operation case with explicit location
--spec operation_case(atom(), [pattern()], expr(), location()) -> #operation_case{}.
-operation_case(Operation, Params, Body, Loc) when is_atom(Operation), is_list(Params) ->
+%% @doc Create an operation case with resumption metadata and explicit location
+-spec operation_case(
+    atom(),
+    [pattern()],
+    resumption_binder(),
+    expr(),
+    location()
+) -> #operation_case{}.
+operation_case(Operation, Params, Resumption, Body, Loc)
+        when is_atom(Operation), is_list(Params) ->
     #operation_case{
         operation = Operation,
         params = Params,
+        resumption = Resumption,
         body = Body,
         location = Loc
     }.
+
+%% @doc Create a value operation case with explicit location
+-spec operation_case(atom(), [pattern()], expr(), location()) -> #operation_case{}.
+operation_case(Operation, Params, Body, Loc) when is_atom(Operation), is_list(Params) ->
+    operation_case(Operation, Params, none, Body, Loc).
 
 %% @doc Create an operation case with location inferred from body
 -spec operation_case(atom(), [pattern()], expr()) -> #operation_case{}.
@@ -625,12 +653,15 @@ location({location, _, _} = Loc) ->
     Loc;
 location({location, _, _, _, _} = Loc) ->
     Loc;
+location({synthetic, _Kind, _SourceLoc} = Loc) ->
+    Loc;
 location(Node) when is_tuple(Node) ->
     %% Extract location from last element of tuple (AST node convention)
     case element(tuple_size(Node), Node) of
         {line, _} = Loc -> Loc;
         {location, _, _} = Loc -> Loc;
         {location, _, _, _, _} = Loc -> Loc;
+        {synthetic, _Kind, _SourceLoc} = Loc -> Loc;
         _ -> default_location()
     end;
 location(_) ->
