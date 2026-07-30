@@ -99,8 +99,18 @@ unify_normalized_rows(
             bind_row_var(RowVar2, catena_row_types:effect_row(OnlyLeft), Subst);
         {[], OnlyRight, RowVar1, undefined} ->
             bind_row_var(RowVar1, catena_row_types:effect_row(OnlyRight), Subst);
-        {[], [], RowVar1, RowVar2} ->
-            unify_row_vars(RowVar1, RowVar2, Subst);
+        {OnlyLeft, [], RowVar1, RowVar2} ->
+            bind_row_var(
+                RowVar2,
+                catena_row_types:effect_row(OnlyLeft, RowVar1),
+                Subst
+            );
+        {[], OnlyRight, RowVar1, RowVar2} ->
+            bind_row_var(
+                RowVar1,
+                catena_row_types:effect_row(OnlyRight, RowVar2),
+                Subst
+            );
         {OnlyLeft, OnlyRight, RowVar1, RowVar2} ->
             case bind_row_var(RowVar1, catena_row_types:effect_row(OnlyRight, RowVar2), Subst) of
                 {ok, Subst1} when OnlyLeft =:= [] ->

@@ -6,7 +6,7 @@ from handled operations and delimiters, types `resume`, and permits
 resumptions to flow through ordinary Catena values without overstating
 one-shot guarantees that Hindley-Milner inference cannot prove.
 
-**Status:** In progress (Section 3.1 complete).
+**Status:** In progress (Sections 3.1-3.2 complete).
 
 **Dependencies:** Phase 2 complete.
 
@@ -79,14 +79,14 @@ EUnit module passes 8 tests.
 **Description:** Derive resumption types from operation signatures and the
 enclosing handled computation, then enforce the accepted `resume` typing rule.
 
-- [ ] **Section 3.2 Complete**
+- [x] **Section 3.2 Complete**
 
 ### Task 3.2.1: Infer Operation-Case Resumption Binders
 
 **Description:** Bind each explicit or synthetic resumption using the
 operation result, delimiter result, selected kind, and residual effect row.
 
-- [ ] **Task 3.2.1 Complete**
+- [x] **Task 3.2.1 Complete**
 
 #### Subtask 3.2.1.1: Derive Operation And Delimiter Types
 
@@ -94,7 +94,7 @@ operation result, delimiter result, selected kind, and residual effect row.
 patterns, infer the handled computation result, and produce the `a` and `b`
 parameters of `Resumption OneShot a b e`.
 
-- [ ] **Subtask 3.2.1.1 Complete**
+- [x] **Subtask 3.2.1.1 Complete**
 
 #### Subtask 3.2.1.2: Derive Residual Effect Rows
 
@@ -102,14 +102,14 @@ parameters of `Resumption OneShot a b e`.
 justify it, preserve open row variables, and include effects exercised by the
 resumed computation.
 
-- [ ] **Subtask 3.2.1.2 Complete**
+- [x] **Subtask 3.2.1.2 Complete**
 
 ### Task 3.2.2: Type And Effect-Check Resume Expressions
 
 **Description:** Enforce that `resume(k, value)` receives typed resumption
 authority and returns the matching delimiter result with its residual effects.
 
-- [ ] **Task 3.2.2 Complete**
+- [x] **Task 3.2.2 Complete**
 
 #### Subtask 3.2.2.1: Infer Resume Operands And Result
 
@@ -117,7 +117,7 @@ authority and returns the matching delimiter result with its residual effects.
 the supplied value with `a`, assign result type `b`, and accumulate effect row
 `e`.
 
-- [ ] **Subtask 3.2.2.1 Complete**
+- [x] **Subtask 3.2.2.1 Complete**
 
 #### Subtask 3.2.2.2: Report Dual-Origin Type Failures
 
@@ -125,7 +125,19 @@ the supplied value with `a`, assign result type `b`, and accumulate effect row
 operation declaration, binder, delimiter, and resume expression rather than
 reporting only an internal unification term.
 
-- [ ] **Subtask 3.2.2.2 Complete**
+- [x] **Subtask 3.2.2.2 Complete**
+
+**Implementation evidence:** Normalized operation cases now resolve their
+declared signatures, type their patterns, and bind explicit or synthetic
+authority as `Resumption OneShot a b e`. Handler inference isolates the
+handled computation, removes only handled labels, retains closed or open
+residual rows, and relates every case result to the delimiter result.
+`resume(target, value)` requires typed authority, checks the supplied
+operation result, returns the delimiter result, and reintroduces known
+residual effects. Typed transforms retain binder and resume evidence with
+operation-declaration, binder, delimiter, target, and resume origins while
+the backend remains fail-closed for explicit control. The focused Section
+3.2 and surrounding Phase 2/type/effect/compiler suites pass 189 tests.
 
 ## Section 3.3: First-Class Flow And One-Shot Static Boundaries
 

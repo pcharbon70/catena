@@ -366,15 +366,7 @@ type_check_with_env(
     {module, _Name, _Exports, _Imports, _Declarations, _Location} = AST,
     ImportedEnv
 ) ->
-    case catena_resumption_normalize:project_legacy_value_handlers(
-        AST,
-        type_inference
-    ) of
-        {ok, TypingAST} ->
-            type_check_supported_ast(TypingAST, ImportedEnv);
-        {error, _} = Error ->
-            Error
-    end.
+    type_check_supported_ast(AST, ImportedEnv).
 
 type_check_supported_ast(
     {module, Name, _Exports, _Imports, Declarations, _Location},
@@ -636,8 +628,8 @@ add_decl_to_env({transform_decl, Name, Type, _Clauses, _Location}, Env) ->
             end
     end;
 
-add_decl_to_env({effect_decl, Effect, Operations, _Location}, Env) ->
-    add_effect_operations_to_env(Effect, Operations, Env);
+add_decl_to_env({effect_decl, Effect, Operations, Location}, Env) ->
+    add_effect_operations_to_env(Effect, Location, Operations, Env);
 
 add_decl_to_env({trait_decl, _Name, _Params, _Extends, Members, _Location}, Env) ->
     add_trait_members_to_env(Members, Env);
@@ -650,11 +642,12 @@ add_decl_to_env(_Other, Env) ->
     %% Skip unknown declarations
     {ok, Env}.
 
-add_effect_operations_to_env(_Effect, [], Env) ->
+add_effect_operations_to_env(_Effect, _EffectLocation, [], Env) ->
     {ok, Env};
 add_effect_operations_to_env(
     Effect,
-    [{effect_operation, Operation, Type, _Location} | Rest],
+    EffectLocation,
+    [{effect_operation, Operation, Type, OperationLocation} | Rest],
     Env
 ) ->
     case convert_type_sig(Type) of
@@ -664,15 +657,33 @@ add_effect_operations_to_env(
                 Operation
             ),
             Scheme = generalize_type(InternalType),
+            Env1 = catena_type_env:extend(Env, Binding, Scheme),
+            Env2 = catena_type_env:put_metadata(
+                Env1,
+                {effect_operation, Effect, Operation},
+                #{
+                    effect => Effect,
+                    operation => Operation,
+                    declared_type => Type,
+                    effect_location => EffectLocation,
+                    location => OperationLocation
+                }
+            ),
             add_effect_operations_to_env(
                 Effect,
+                EffectLocation,
                 Rest,
-                catena_type_env:extend(Env, Binding, Scheme)
+                Env2
             );
         {error, _} = Error ->
             Error
     end;
-add_effect_operations_to_env(Effect, [Invalid | _Rest], _Env) ->
+add_effect_operations_to_env(
+    Effect,
+    _EffectLocation,
+    [Invalid | _Rest],
+    _Env
+) ->
     {error,
         {effect_resolution_error,
             invalid_operation_declaration,
@@ -909,8 +920,14 @@ type_check_declaration({type_decl, Name, Params, Constructors, Derives, Location
 type_check_declaration({transform_decl, Name, Type, Clauses, Location}, Env) ->
     %% Type check transform body
     case type_check_transform(Name, Type, Clauses, Env) of
-        {ok, InferredType} ->
-            TypedDecl = {typed_transform, Name, InferredType, Clauses, Location},
+        {ok, InferredType, ResumptionEvidence} ->
+            TypedDecl = typed_transform_declaration(
+                Name,
+                InferredType,
+                Clauses,
+                ResumptionEvidence,
+                Location
+            ),
             %% Add inferred type to environment for subsequent declarations
             Scheme = generalize_type(InferredType),
             NewEnv = catena_type_env:extend(Env, Name, Scheme),
@@ -945,7 +962,10 @@ type_check_transform(Name, DeclaredType, Clauses, Env) ->
                 undefined ->
                     {error, {no_implementation, Name}};
                 _ ->
-                    convert_type_sig(DeclaredType)
+                    case convert_type_sig(DeclaredType) of
+                        {ok, Type} -> {ok, Type, []};
+                        {error, _} = Error -> Error
+                    end
             end;
         [{transform_clause, Patterns, _Guards, _Body, _Loc} | _] ->
             %% Infer every clause through one synthetic match. This keeps
@@ -955,8 +975,8 @@ type_check_transform(Name, DeclaredType, Clauses, Env) ->
             Expr = transform_clauses_to_lambda(Clauses, Arity),
             EffectExpr = transform_clauses_to_effect_expr(Clauses, Arity),
             %% Infer type
-            case catena_infer:infer_expr(Expr, Env) of
-                {ok, InferredType} ->
+            case catena_infer:infer_expr_detailed(Expr, Env) of
+                {ok, InferredType, InferenceDetails} ->
                     State0 = catena_infer_state:new(),
                     {SynthesizedEffects, State1} =
                         catena_effect_synthesis:synthesize(EffectExpr, State0),
@@ -968,13 +988,24 @@ type_check_transform(Name, DeclaredType, Clauses, Env) ->
                         {ok, State4} ->
                             InferredType1 =
                                 apply_effects_to_inferred_type(InferredType, SynthesizedEffects),
-                            validate_declared_effects(
+                            case validate_declared_effects(
                                 Name,
                                 DeclaredType,
                                 InferredType1,
                                 SynthesizedEffects,
                                 State4
-                            );
+                            ) of
+                                {ok, ValidatedType} ->
+                                    {ok,
+                                        ValidatedType,
+                                        maps:get(
+                                            resumptions,
+                                            InferenceDetails,
+                                            []
+                                        )};
+                                {error, _} = Error ->
+                                    Error
+                            end;
                         {error, Constraints, Message} ->
                             {error, {effect_constraint_error, Name, Constraints, Message}}
                     end;
@@ -982,6 +1013,18 @@ type_check_transform(Name, DeclaredType, Clauses, Env) ->
                     {error, {type_error, Name, Errors}}
             end
     end.
+
+typed_transform_declaration(Name, Type, Clauses, [], Location) ->
+    {typed_transform, Name, Type, Clauses, Location};
+typed_transform_declaration(Name, Type, Clauses, Evidence, Location) ->
+    {
+        typed_transform,
+        Name,
+        Type,
+        Clauses,
+        #{resumptions => Evidence},
+        Location
+    }.
 
 %% @doc Type check instance methods.
 type_check_instance_methods(Methods, Env) ->
@@ -1108,8 +1151,8 @@ convert_expr({var, true, _Loc}) ->
     {lit, {bool, true}};
 convert_expr({var, false, _Loc}) ->
     {lit, {bool, false}};
-convert_expr({var, Name, _Loc}) ->
-    {var, Name};
+convert_expr({var, Name, Loc}) ->
+    {var, Name, Loc};
 convert_expr({literal, Value, Type, Loc})
   when Type =:= integer; Type =:= float; Type =:= string;
        Type =:= atom; Type =:= char; Type =:= bool ->
@@ -1149,7 +1192,19 @@ convert_expr({match_expr, Scrutinee, Cases, _Loc}) ->
 convert_expr({perform_expr, Effect, Operation, Args, Loc}) ->
     {perform_expr, Effect, Operation, [convert_expr(Arg) || Arg <- Args], Loc};
 convert_expr({handle_expr, Body, Handlers, Loc}) ->
-    {handle_expr, convert_expr(Body), Handlers, Loc};
+    {
+        handle_expr,
+        convert_expr(Body),
+        [convert_inference_handler(Handler) || Handler <- Handlers],
+        Loc
+    };
+convert_expr({resume_expr, Target, Value, Loc}) ->
+    {
+        resume_expr,
+        convert_expr(Target),
+        convert_expr(Value),
+        Loc
+    };
 convert_expr({record_expr, Fields, _Base, _Loc}) ->
     {record, [{Name, convert_expr(Expr)} || {Name, Expr} <- Fields]};
 convert_expr({record_access, Expr, FieldName, _Loc}) ->
@@ -1165,6 +1220,36 @@ convert_expr({cons_expr, Head, Tail, Loc}) ->
 convert_expr(_Other) ->
     %% Fallback for unhandled expressions
     {lit, {int, 0}}.
+
+convert_inference_handler(
+    {handler_clause, Effect, Operations, Location}
+) ->
+    {
+        handler_clause,
+        Effect,
+        [
+            convert_inference_operation_case(Operation)
+            || Operation <- Operations
+        ],
+        Location
+    }.
+
+convert_inference_operation_case({
+    operation_case,
+    Operation,
+    Patterns,
+    ResumptionBinder,
+    Body,
+    Location
+}) ->
+    {
+        operation_case,
+        Operation,
+        [convert_pattern(Pattern) || Pattern <- Patterns],
+        ResumptionBinder,
+        convert_expr(Body),
+        Location
+    }.
 
 convert_lambda([], Body) ->
     convert_expr(Body);

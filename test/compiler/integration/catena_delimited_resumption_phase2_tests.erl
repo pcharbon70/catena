@@ -2,8 +2,8 @@
 %%% @doc Phase 2 integration contract for resumption source forms.
 %%%
 %%% These tests prove the source-to-normalized-AST boundary and its
-%%% fail-closed handoffs. They deliberately do not claim that explicit
-%%% resumptions have types or executable selective-CPS lowering yet.
+%%% fail-closed handoffs. Later phases advance the typed frontend boundary,
+%%% while these tests continue to require fail-closed backend lowering.
 %%%-------------------------------------------------------------------
 -module(catena_delimited_resumption_phase2_tests).
 
@@ -127,21 +127,31 @@ parser_recovery_preserves_resumption_diagnostic_test() ->
         )
     ).
 
-invalid_scope_and_explicit_typed_boundary_fail_closed_test() ->
+invalid_scope_and_explicit_typed_boundary_progression_test() ->
     ?assertMatch(
         {error, {resumption_binder_scope, #{target := k}}},
         analyze("transform run = resume(k, 1)")
     ),
+    Source =
+        "module ExplicitBoundary\n"
+        "effect Choice\n"
+        "operation choose : Int\n"
+        "end\n"
+        "transform run ignored = handle perform Choice.choose() then { "
+        "Choice { choose() with k -> resume(k, 1) } }\n",
+    ?assertMatch(
+        {ok, {typed_module, _, [_, {typed_transform, run, _, _, #{
+            resumptions := [_ | _]
+        }, _}], _}},
+        catena_compile:compile_string(Source)
+    ),
     ?assertMatch(
         {error, {missing_resumption_lowering, #{
-            stage := type_inference,
+            stage := backend_compatibility,
             construct := operation_case,
             mode := explicit_control
         }}},
-        catena_compile:compile_string(
-            "transform run = handle 1 then { "
-            "Choice { choose() with k -> resume(k, 1) } }"
-        )
+        catena_compile:compile_string_to_core(Source)
     ).
 
 normalized_explicit_control_cannot_leak_to_backend_test() ->
