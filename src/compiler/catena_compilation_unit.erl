@@ -39,13 +39,15 @@
     locations/1,
     control_modes/1,
     control_ir/1,
+    control_validation/1,
     dispositions/1,
     with_dispositions/2,
     with_control_modes/2,
-    with_control_ir/2
+    with_control_ir/2,
+    with_control_validation/2
 ]).
 
--define(UNIT_VERSION, 9).
+-define(UNIT_VERSION, 10).
 
 -opaque t() :: #{
     '$catena_compilation_unit' := pos_integer(),
@@ -72,6 +74,7 @@
     locations := location_index(),
     control_modes := catena_control_mode:inventory(),
     control_ir := catena_control_ir:ir() | pending,
+    control_validation := catena_control_validate:report() | pending,
     dispositions := [map()]
 }.
 
@@ -253,13 +256,25 @@ new(
                                 {ok, ControlModes} ->
                                     Unit1 = Unit0#{
                                         control_modes => ControlModes,
-                                        control_ir => pending
+                                        control_ir => pending,
+                                        control_validation => pending
                                     },
                                     case catena_selective_cps:lower(Unit1) of
                                         {ok, ControlIR} ->
-                                            {ok, Unit1#{
+                                            Unit2 = Unit1#{
                                                 control_ir => ControlIR
-                                            }};
+                                            },
+                                            case catena_control_validate:
+                                                validate(Unit2)
+                                            of
+                                                {ok, ValidationReport} ->
+                                                    {ok, Unit2#{
+                                                        control_validation =>
+                                                            ValidationReport
+                                                    }};
+                                                {error, _} = Error ->
+                                                    Error
+                                            end;
                                         {error, _} = Error ->
                                             Error
                                     end;
@@ -340,6 +355,7 @@ is_compilation_unit(#{
     locations := Locations,
     control_modes := ControlModes,
     control_ir := ControlIR,
+    control_validation := ControlValidation,
     dispositions := Dispositions
 }) ->
     is_atom(Name) andalso
@@ -360,6 +376,10 @@ is_compilation_unit(#{
         (
             ControlIR =:= pending orelse
                 catena_control_ir:is_ir(ControlIR)
+        ) andalso
+        (
+            ControlValidation =:= pending orelse
+                catena_control_validate:is_report(ControlValidation)
         ) andalso
         is_list(Dispositions) andalso
         validate_evidence(ValidationState) =:= ok;
@@ -456,6 +476,10 @@ control_modes(Unit) -> maps:get(control_modes, Unit).
 -spec control_ir(t()) -> catena_control_ir:ir() | pending.
 control_ir(Unit) -> maps:get(control_ir, Unit).
 
+-spec control_validation(t()) ->
+    catena_control_validate:report() | pending.
+control_validation(Unit) -> maps:get(control_validation, Unit).
+
 -spec dispositions(t()) -> [map()].
 dispositions(Unit) -> maps:get(dispositions, Unit).
 
@@ -513,6 +537,21 @@ with_control_ir(Unit, ControlIR) ->
         true -> {ok, Candidate};
         false ->
             {error, {invalid_compilation_unit, invalid_control_ir}}
+    end.
+
+%% @doc Attach a successful fail-closed control-graph validation report.
+-spec with_control_validation(t(), catena_control_validate:report()) ->
+    {ok, t()} | {error, term()}.
+with_control_validation(Unit, Report) ->
+    Candidate = Unit#{control_validation => Report},
+    case catena_control_validate:is_report(Report) andalso
+        is_compilation_unit(Candidate)
+    of
+        true -> {ok, Candidate};
+        false ->
+            {error,
+                {invalid_compilation_unit,
+                    invalid_control_validation}}
     end.
 
 validate_evidence(ValidationState) when is_map(ValidationState) ->

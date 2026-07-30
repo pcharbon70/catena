@@ -7,6 +7,8 @@ stable_categories_test() ->
         [
             unsupported_backend_construct,
             missing_resumption_lowering,
+            invalid_control_ir,
+            resumption_abi_mismatch,
             unresolved_call,
             ambiguous_call,
             arity_mismatch,

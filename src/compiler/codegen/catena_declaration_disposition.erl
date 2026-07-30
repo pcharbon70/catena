@@ -264,9 +264,37 @@ classify_declaration(
 prepare_for_codegen(Unit) ->
     case catena_compilation_unit:is_compilation_unit(Unit) of
         true ->
-            case first_invalid_disposition(
-                catena_compilation_unit:dispositions(Unit)
+            case catena_control_validate:is_report(
+                catena_compilation_unit:control_validation(Unit)
             ) of
+                false ->
+                    Context = catena_backend_error:context(
+                        control_ir_validation,
+                        control_ir,
+                        catena_compilation_unit:normalized_ast(Unit),
+                        #{
+                            module =>
+                                catena_compilation_unit:module_name(Unit),
+                            source_identity =>
+                                catena_compilation_unit:
+                                    source_identity(Unit)
+                        }
+                    ),
+                    {error, catena_backend_error:invalid_control_ir(
+                        missing_control_validation,
+                        Context
+                    )};
+                true ->
+                    prepare_validated_unit(Unit)
+            end;
+        false ->
+            {error, {invalid_compilation_unit, unchecked_backend_input}}
+    end.
+
+prepare_validated_unit(Unit) ->
+    case first_invalid_disposition(
+        catena_compilation_unit:dispositions(Unit)
+    ) of
                 none ->
                     {module, Name, Exports, Imports, Declarations, Location} =
                         catena_compilation_unit:normalized_ast(Unit),
@@ -297,9 +325,6 @@ prepare_for_codegen(Unit) ->
                         );
                 {invalid, Disposition} ->
                     disposition_error(Unit, Disposition)
-            end;
-        false ->
-            {error, {invalid_compilation_unit, unchecked_backend_input}}
     end.
 
 classify_import(

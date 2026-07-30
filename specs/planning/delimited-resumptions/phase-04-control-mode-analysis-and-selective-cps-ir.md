@@ -5,7 +5,7 @@ explicit in compiler-owned IR. It classifies callables as direct or resumable,
 lowers resumable regions into selective CPS, defines all cross-mode calling
 conventions, and validates the control graph before Core Erlang emission.
 
-**Status:** In progress (Section 4.1 complete).
+**Status:** In progress (Sections 4.1-4.3 complete).
 
 **Dependencies:** Phase 3 complete.
 
@@ -142,14 +142,14 @@ mode, and compilation-unit suites pass 15 tests.
 **Description:** Define stable direct/CPS private entries and reject malformed
 control graphs before any Core Erlang is emitted.
 
-- [ ] **Section 4.3 Complete**
+- [x] **Section 4.3 Complete**
 
 ### Task 4.3.1: Implement Direct And Resumable Calling Conventions
 
 **Description:** Preserve public source arity while giving private resumable
 entries explicit context and continuation parameters.
 
-- [ ] **Task 4.3.1 Complete**
+- [x] **Task 4.3.1 Complete**
 
 #### Subtask 4.3.1.1: Define Entry And Closure Shapes
 
@@ -157,7 +157,7 @@ entries explicit context and continuation parameters.
 entries, final continuations, named transform values, imported closures, and
 trait dictionary entries with resolved arities.
 
-- [ ] **Subtask 4.3.1.1 Complete**
+- [x] **Subtask 4.3.1.1 Complete**
 
 #### Subtask 4.3.1.2: Implement Explicit Mode Bridges
 
@@ -165,14 +165,14 @@ trait dictionary entries with resolved arities.
 resumable-to-direct calls only when non-suspension is proven, and reject
 unresolved or cyclic ABI mismatches.
 
-- [ ] **Subtask 4.3.1.2 Complete**
+- [x] **Subtask 4.3.1.2 Complete**
 
 ### Task 4.3.2: Validate The Complete Control IR
 
 **Description:** Add a fail-closed validator that proves delimiter,
 continuation, resumption, bridge, type, arity, and origin invariants.
 
-- [ ] **Task 4.3.2 Complete**
+- [x] **Task 4.3.2 Complete**
 
 #### Subtask 4.3.2.1: Validate Control Ownership
 
@@ -180,7 +180,7 @@ continuation, resumption, bridge, type, arity, and origin invariants.
 errors, resumption-kind mismatch, resume without authority, and invalid abort
 targets.
 
-- [ ] **Subtask 4.3.2.1 Complete**
+- [x] **Subtask 4.3.2.1 Complete**
 
 #### Subtask 4.3.2.2: Validate Backend Readiness
 
@@ -188,7 +188,20 @@ targets.
 CPS-lowered, runtime-lowered, intentionally erased, or rejected with a
 source-oriented diagnostic.
 
-- [ ] **Subtask 4.3.2.2 Complete**
+- [x] **Subtask 4.3.2.2 Complete**
+
+**Implementation evidence:** `catena_control_abi` defines stable public,
+direct-private, and CPS-private entry shapes, final continuations, and
+mode-carrying local, imported, higher-order, and trait-dictionary closures.
+Cross-mode calls use proof-carrying bridge records, with resumable-to-direct
+entry rejected unless non-suspension is proven. `catena_control_validate`
+checks the complete graph before backend projection, including mode and entry
+agreement, origins, continuation arities and uniqueness, delimiter ownership,
+one-shot authority, abort targets, bridges, and runtime dispositions.
+Successful validation is retained in the compilation unit and is required by
+declaration disposition. The focused ABI, validation, and IR suites pass 15
+tests; the targeted backend, call, trait, and Phase 3 regression suites pass
+34 tests.
 
 ## Section 4.4: Phase 4 Integration Tests
 

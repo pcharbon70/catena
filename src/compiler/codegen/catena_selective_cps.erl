@@ -57,7 +57,11 @@ lower_transforms(
     EffectRow = maps:get(effect_row, ModeEntry),
     Mode = maps:get(mode, ModeEntry),
     Evidence = resumption_evidence(TypedDeclaration),
-    Entry = entry_shape(Name, length(hd_patterns(Clauses)), Mode),
+    Entry = catena_control_abi:entry_shape(
+        Name,
+        length(hd_patterns(Clauses)),
+        Mode
+    ),
     Context = #{
         transform => Name,
         mode => Mode,
@@ -76,6 +80,12 @@ lower_transforms(
                 arity => length(hd_patterns(Clauses)),
                 control_mode => Mode,
                 entry => Entry,
+                final_continuation =>
+                    catena_control_abi:final_continuation(
+                        Name,
+                        maps:get(type, Context),
+                        Origin
+                    ),
                 clauses => LoweredClauses,
                 type => Type,
                 effect_row => EffectRow,
@@ -351,7 +361,7 @@ lower_expr(
         {ok, TargetIR, State1} ->
             case lower_expr(Value, Context, State1) of
                 {ok, ValueIR, State2} ->
-                    Evidence = resume_evidence(Target, Context),
+                    Evidence = resume_evidence(Target, Origin, Context),
                     ResumeContext = Context#{
                         type => resume_result_type(
                             maps:get(type, Evidence,
@@ -565,29 +575,43 @@ lower_call(Function, Arguments, Origin, Context, State) ->
         function => Function,
         arguments => Arguments,
         capability => Capability,
+        closure => closure_shape(
+            Target,
+            length(Arguments),
+            CalleeMode,
+            Origin
+        ),
         evaluation => left_to_right
     },
-    {Disposition, Fields} = case {CallerMode, CalleeMode} of
-        {resumable, direct} ->
+    {Disposition, Fields} = case catena_control_abi:bridge(
+        CallerMode,
+        CalleeMode,
+        missing,
+        Target,
+        Origin
+    ) of
+        {ok, none} when CalleeMode =:= resumable ->
+            {requires_resumption_runtime, Fields0};
+        {ok, none} ->
+            {direct, Fields0};
+        {ok, Bridge} ->
             {
                 direct_to_cps_bridge,
                 Fields0#{
-                    bridge => direct_to_cps,
-                    proof => direct_callee
+                    bridge => maps:get(kind, Bridge),
+                    proof => maps:get(proof, Bridge),
+                    bridge_evidence => Bridge
                 }
             };
-        {direct, resumable} ->
+        {error, {resumption_abi_mismatch, Evidence}} ->
             {
                 unresolved_mode_bridge,
                 Fields0#{
                     bridge => resumable_to_direct,
-                    proof => missing
+                    proof => missing,
+                    bridge_evidence => Evidence
                 }
-            };
-        {resumable, resumable} ->
-            {requires_resumption_runtime, Fields0};
-        {direct, direct} ->
-            {direct, Fields0}
+            }
     end,
     make_node(
         Operation,
@@ -656,22 +680,8 @@ metadata(Context, Origin, ContinuationArity, Disposition) ->
         delimiter => maps:get(delimiter, Context, none),
         continuation_arity => ContinuationArity,
         runtime_disposition => Disposition,
-        origin => Origin
-    }.
-
-entry_shape(Name, Arity, direct) ->
-    #{
-        public => {Name, Arity},
-        private => {direct, Name, Arity + 1},
-        context_arity => 1,
-        continuation_arity => 0
-    };
-entry_shape(Name, Arity, resumable) ->
-    #{
-        public => {Name, Arity},
-        private => {cps, Name, Arity + 2},
-        context_arity => 1,
-        continuation_arity => 1
+        origin => Origin,
+        transform => maps:get(transform, Context, undefined)
     }.
 
 call_capability({var, Name, _Origin}, Modes) ->
@@ -698,6 +708,45 @@ call_capability({imported_ref, Entry, _Origin}, _Modes) ->
 call_capability(_Function, _Modes) ->
     {dynamic_callable, resumable, resumable}.
 
+closure_shape({local, {_Name, Arity}} = Target, _AppliedArity, Mode, Origin) ->
+    catena_control_abi:closure_shape(
+        local,
+        Target,
+        Arity,
+        Mode,
+        Origin
+    );
+closure_shape(
+    {imported, _Module, _Name, Arity} = Target,
+    _AppliedArity,
+    Mode,
+    Origin
+) when is_integer(Arity) ->
+    catena_control_abi:closure_shape(
+        imported,
+        Target,
+        Arity,
+        Mode,
+        Origin
+    );
+closure_shape(Target, AppliedArity, Mode, Origin) ->
+    Kind = case Target of
+        {dynamic, Name} ->
+            case catena_trait_resolve:is_trait_method(Name) of
+                true -> trait_dictionary;
+                false -> higher_order
+            end;
+        _ ->
+            higher_order
+    end,
+    catena_control_abi:closure_shape(
+        Kind,
+        Target,
+        AppliedArity,
+        Mode,
+        Origin
+    ).
+
 resumption_evidence(
     {typed_transform, _Name, _Type, _Clauses, Metadata, _Origin}
 ) ->
@@ -716,16 +765,29 @@ binder_evidence(Binder, Context) ->
         #{binder => Binder}
     ).
 
-resume_evidence({var, Binder, _Origin}, Context) ->
+resume_evidence(Target, Origin, Context) ->
     first_evidence(
         fun(Evidence) ->
             maps:get(kind, Evidence, undefined) =:= resume andalso
-                maps:get(binder, Evidence, undefined) =:= Binder
+                maps:get(resume_location, Evidence, undefined) =:= Origin
+        end,
+        maps:get(evidence, Context),
+        resume_target_evidence(Target, Context)
+    ).
+
+resume_target_evidence({var, Binder, _Origin}, Context) ->
+    first_evidence(
+        fun(Evidence) ->
+            maps:get(kind, Evidence, undefined) =:= resume andalso
+                (
+                    maps:get(binder, Evidence, undefined) =:= Binder orelse
+                        maps:get(target, Evidence, undefined) =:= Binder
+                )
         end,
         maps:get(evidence, Context),
         binder_evidence(Binder, Context)
     );
-resume_evidence(_Target, _Context) ->
+resume_target_evidence(_Target, _Context) ->
     #{}.
 
 first_evidence(_Predicate, [], Default) ->

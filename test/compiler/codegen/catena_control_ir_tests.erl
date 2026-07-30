@@ -34,12 +34,14 @@ direct_transform_retains_direct_entry_shape_test() ->
     ?assert(catena_control_ir:is_ir(IR)),
     {ok, Transform} = catena_control_ir:lookup(identity, IR),
     ?assertEqual(direct, maps:get(control_mode, Transform)),
-    ?assertEqual(
+    ?assertMatch(
         #{
-            public => {identity, 1},
-            private => {direct, identity, 2},
-            context_arity => 1,
-            continuation_arity => 0
+            public := {identity, 1},
+            private := {direct, identity, 2},
+            source_arity := 1,
+            context_arity := 1,
+            continuation_arity := 0,
+            control_mode := direct
         },
         maps:get(entry, Transform)
     ).

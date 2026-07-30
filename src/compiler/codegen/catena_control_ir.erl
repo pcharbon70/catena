@@ -177,6 +177,7 @@ valid_transform(#{
     arity := Arity,
     control_mode := Mode,
     entry := Entry,
+    final_continuation := FinalContinuation,
     clauses := Clauses,
     type := _Type,
     effect_row := _Effects,
@@ -187,6 +188,7 @@ valid_transform(#{
         Arity >= 0 andalso
         lists:member(Mode, [direct, resumable]) andalso
         is_map(Entry) andalso
+        is_map(FinalContinuation) andalso
         is_list(Clauses) andalso
         lists:all(fun valid_clause/1, Clauses);
 valid_transform(_) ->
