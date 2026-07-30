@@ -387,7 +387,7 @@ infer({identifier, Name, _Loc}, Env, State) ->
 %
 % The perform expression introduces an effect into the function's effect set.
 % The result type depends on the operation's declared type.
-infer({perform_expr, EffectName, OperationName, Args, _Loc}, Env, State) ->
+infer({perform_expr, EffectName, OperationName, Args, Loc}, Env, State) ->
     %% Infer types of arguments
     case infer_exprs(Args, Env, State) of
         {ArgTypes, State1} ->
@@ -409,11 +409,19 @@ infer({perform_expr, EffectName, OperationName, Args, _Loc}, Env, State) ->
                         State3
                     ) of
                         {ResultType, State4} ->
-                            State5 = catena_infer_state:add_effect(
+                            State5 = catena_infer_state:
+                                add_performed_operation(
+                                    EffectName,
+                                    OperationName,
+                                    ResultType,
+                                    Loc,
+                                    State4
+                                ),
+                            State6 = catena_infer_state:add_effect(
                                 EffectName,
-                                State4
+                                State5
                             ),
-                            {ResultType, State5};
+                            {ResultType, State6};
                         {error, _, _} = Error ->
                             Error
                     end;
@@ -424,11 +432,19 @@ infer({perform_expr, EffectName, OperationName, Args, _Loc}, Env, State) ->
                     %% compatibility path retains the historical fresh result.
                     {ResultType, State2} =
                         catena_infer_state:fresh_var(State1),
-                    State3 = catena_infer_state:add_effect(
+                    State3 = catena_infer_state:
+                        add_performed_operation(
+                            EffectName,
+                            OperationName,
+                            ResultType,
+                            Loc,
+                            State2
+                        ),
+                    State4 = catena_infer_state:add_effect(
                         EffectName,
-                        State2
+                        State3
                     ),
-                    {ResultType, State3}
+                    {ResultType, State4}
             end;
         {error, _, _} = Error ->
             Error
@@ -443,8 +459,19 @@ infer({resume_expr, Target, Value, Location}, Env, State) ->
 % can be derived before handler bodies are checked.
 infer({handle_expr, Body, Handlers, Location}, Env, State) ->
     ScopedState = catena_infer_state:push_effect_scope(State),
+    PerformedBefore = catena_infer_state:get_performed_operations(
+        ScopedState
+    ),
     case infer(Body, Env, ScopedState) of
         {BodyType, BodyState} ->
+            BodyPerformed = newly_performed_operations(
+                PerformedBefore,
+                catena_infer_state:get_performed_operations(BodyState)
+            ),
+            HandlerEnv = add_performed_operation_metadata(
+                BodyPerformed,
+                Env
+            ),
             BodyEffects = catena_infer_state:get_effects(BodyState),
             HandledEffects = [
                 Effect
@@ -466,7 +493,7 @@ infer({handle_expr, Body, Handlers, Location}, Env, State) ->
                 BodyType,
                 ResidualRow,
                 Location,
-                Env,
+                HandlerEnv,
                 HandlerState0
             ) of
                 {ok, HandlerState1} ->
@@ -782,90 +809,151 @@ infer_handler_operations(
                 State2
             ) of
                 {ok, OperationResult, PatternBindings, State3} ->
-                    ResumptionType = catena_types:tresumption(
-                        catena_types:one_shot(),
-                        OperationResult,
-                        DelimiterResult,
-                        ResidualRow
-                    ),
-                    DeclarationOrigin = operation_declaration_origin(
+                    case constrain_operation_result(
                         Effect,
                         Operation,
-                        Env
-                    ),
-                    BinderEvidence = #{
-                        kind => resumption_binder,
-                        binder => Binder,
-                        type => ResumptionType,
-                        mode => one_shot,
-                        effect => Effect,
-                        operation => Operation,
-                        binder_origin => BinderOrigin,
-                        operation_declaration => DeclarationOrigin,
-                        delimiter_location => DelimiterLocation,
-                        case_location => CaseLocation,
-                        residual_effects => ResidualRow
-                    },
-                    CaseEnv0 = catena_type_env:merge(
+                        OperationResult,
                         Env,
-                        PatternBindings
-                    ),
-                    CaseEnv1 = catena_type_env:extend(
-                        CaseEnv0,
-                        Binder,
-                        catena_type_scheme:mono(ResumptionType)
-                    ),
-                    CaseEnv = catena_type_env:put_metadata(
-                        CaseEnv1,
-                        {resumption_authority, Binder},
-                        BinderEvidence
-                    ),
-                    State4 = catena_infer_state:
-                        add_resumption_evidence(
-                            BinderEvidence,
-                            State3
-                        ),
-                    case catena_resumption_flow:
-                        validate_one_shot_case(
-                            Binder,
-                            ResumptionType,
-                            CaseBody,
-                            BinderEvidence
-                        )
-                    of
-                        ok ->
-                            infer_handler_case_body(
-                                Effect,
-                                Rest,
+                        State3
+                    ) of
+                        {
+                            ok,
+                            ConstrainedOperationResult,
+                            State3a
+                        } ->
+                            ResumptionType = catena_types:tresumption(
+                                catena_types:one_shot(),
+                                ConstrainedOperationResult,
                                 DelimiterResult,
-                                ResidualRow,
-                                DelimiterLocation,
+                                ResidualRow
+                            ),
+                            DeclarationOrigin =
+                                operation_declaration_origin(
+                                    Effect,
+                                    Operation,
+                                    Env
+                                ),
+                            BinderEvidence = #{
+                                kind => resumption_binder,
+                                binder => Binder,
+                                type => ResumptionType,
+                                mode => one_shot,
+                                effect => Effect,
+                                operation => Operation,
+                                binder_origin => BinderOrigin,
+                                operation_declaration =>
+                                    DeclarationOrigin,
+                                delimiter_location =>
+                                    DelimiterLocation,
+                                case_location => CaseLocation,
+                                residual_effects => ResidualRow
+                            },
+                            CaseEnv0 = catena_type_env:merge(
                                 Env,
-                                CaseBody,
-                                CaseEnv,
-                                BinderEvidence,
-                                State4
-                            );
-                        {error, {FlowReason, FlowContext}} ->
-                            resumption_inference_error(
-                                FlowReason,
-                                FlowContext,
-                                State4
-                            )
+                                PatternBindings
+                            ),
+                            CaseEnv1 = catena_type_env:extend(
+                                CaseEnv0,
+                                Binder,
+                                catena_type_scheme:mono(
+                                    ResumptionType
+                                )
+                            ),
+                            CaseEnv = catena_type_env:put_metadata(
+                                CaseEnv1,
+                                {resumption_authority, Binder},
+                                BinderEvidence
+                            ),
+                            State4 = catena_infer_state:
+                                add_resumption_evidence(
+                                    BinderEvidence,
+                                    State3a
+                                ),
+                            case catena_resumption_flow:
+                                validate_one_shot_case(
+                                    Binder,
+                                    ResumptionType,
+                                    CaseBody,
+                                    BinderEvidence
+                                )
+                            of
+                                ok ->
+                                    infer_handler_case_body(
+                                        Effect,
+                                        Rest,
+                                        DelimiterResult,
+                                        ResidualRow,
+                                        DelimiterLocation,
+                                        Env,
+                                        CaseBody,
+                                        CaseEnv,
+                                        BinderEvidence,
+                                        State4
+                                    );
+                                {
+                                    error,
+                                    {FlowReason, FlowContext}
+                                } ->
+                                    resumption_inference_error(
+                                        FlowReason,
+                                        FlowContext,
+                                        State4
+                                    )
+                            end;
+                        {error, _, _} = Error ->
+                            Error
                     end;
                 {error, _, _} = Error ->
                     Error
             end;
         none ->
-            resumption_inference_error(
-                unknown_handler_operation_type,
-                #{
-                    effect => Effect,
-                    operation => Operation,
-                    case_location => CaseLocation
-                },
+            case compatibility_operation_type(
+                Effect,
+                Operation,
+                Patterns,
+                Env,
                 State
-            )
+            ) of
+                {ok, OperationType, State1} ->
+                    CompatibilityEnv = catena_type_env:extend(
+                        Env,
+                        Binding,
+                        catena_type_scheme:mono(OperationType)
+                    ),
+                    infer_handler_operations(
+                        Effect,
+                        [
+                            {
+                                operation_case,
+                                Operation,
+                                Patterns,
+                                {
+                                    resumption_binder,
+                                    Binder,
+                                    BinderOrigin
+                                },
+                                CaseBody,
+                                CaseLocation
+                            }
+                            | Rest
+                        ],
+                        DelimiterResult,
+                        ResidualRow,
+                        DelimiterLocation,
+                        CompatibilityEnv,
+                        State1
+                    );
+                none ->
+                    resumption_inference_error(
+                        unknown_handler_operation_type,
+                        #{
+                            effect => Effect,
+                            operation => Operation,
+                            case_location => CaseLocation
+                        },
+                        State
+                    )
+            end
     end;
 infer_handler_operations(
     Effect,
@@ -995,6 +1083,88 @@ infer_operation_patterns(
         State
     ).
 
+constrain_operation_result(Effect, Operation, ResultType, Env, State) ->
+    Key = {performed_operation_results, Effect, Operation},
+    Results = case catena_type_env:lookup_metadata(Env, Key) of
+        {ok, Operations} -> Operations;
+        none -> []
+    end,
+    constrain_operation_results(
+        Results,
+        ResultType,
+        State
+    ).
+
+constrain_operation_results([], ResultType, State) ->
+    Substitution = catena_infer_state:get_subst(State),
+    {
+        ok,
+        catena_type_subst:apply(Substitution, ResultType),
+        State
+    };
+constrain_operation_results(
+    [Operation | Rest],
+    ResultType,
+    State
+) ->
+    PerformedResult = maps:get(result_type, Operation),
+    case catena_infer_unify:unify(
+        ResultType,
+        PerformedResult,
+        State
+    ) of
+        {ok, _Substitution, State1} ->
+            CurrentSubstitution =
+                catena_infer_state:get_subst(State1),
+            constrain_operation_results(
+                Rest,
+                catena_type_subst:apply(
+                    CurrentSubstitution,
+                    ResultType
+                ),
+                State1
+            );
+        {error, _, _} = Error ->
+            Error
+    end.
+
+compatibility_operation_type(
+    Effect,
+    Operation,
+    Patterns,
+    Env,
+    State
+) ->
+    Key = {performed_operation_results, Effect, Operation},
+    case catena_type_env:lookup_metadata(Env, Key) of
+        {ok, [Performed | _]} ->
+            ResultType = maps:get(result_type, Performed),
+            fresh_operation_argument_types(
+                Patterns,
+                ResultType,
+                State
+            );
+        _ ->
+            none
+    end.
+
+fresh_operation_argument_types([], ResultType, State) ->
+    {ok, ResultType, State};
+fresh_operation_argument_types([_Pattern | Rest], ResultType, State) ->
+    {ArgumentType, State1} = catena_infer_state:fresh_var(State),
+    case fresh_operation_argument_types(Rest, ResultType, State1) of
+        {ok, RemainingType, State2} ->
+            {
+                ok,
+                catena_types:tfun(
+                    ArgumentType,
+                    RemainingType,
+                    catena_types:empty_effects()
+                ),
+                State2
+            }
+    end.
+
 operation_declaration_origin(Effect, Operation, Env) ->
     case catena_type_env:lookup_metadata(
         Env,
@@ -1003,6 +1173,33 @@ operation_declaration_origin(Effect, Operation, Env) ->
         {ok, Metadata} -> Metadata;
         none -> undefined
     end.
+
+newly_performed_operations(Before, After) ->
+    NewCount = erlang:max(0, length(After) - length(Before)),
+    lists:sublist(After, NewCount).
+
+add_performed_operation_metadata(Operations, Env) ->
+    lists:foldl(
+        fun(Operation, CurrentEnv) ->
+            Effect = maps:get(effect, Operation),
+            Name = maps:get(operation, Operation),
+            Key = {performed_operation_results, Effect, Name},
+            Existing = case catena_type_env:lookup_metadata(
+                CurrentEnv,
+                Key
+            ) of
+                {ok, Results} -> Results;
+                none -> []
+            end,
+            catena_type_env:put_metadata(
+                CurrentEnv,
+                Key,
+                [Operation | Existing]
+            )
+        end,
+        Env,
+        Operations
+    ).
 
 effect_set_to_row({effect_set, Effects}) ->
     catena_types:teffectrow(Effects).

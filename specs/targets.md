@@ -12,10 +12,10 @@ Based on the current `specs/` set, codebase, and test suite, the current promote
   - 1.5.6 is mostly implemented through effect/Kleisli integration work.
   - 1.5.7 operator desugaring is implemented.
 - Phase 2 work exists in code and summaries for the REPL, prelude, testing framework, and integration tests.
-- Delimited-resumption Phases 1 and 2 provide normative semantics, an
-  executable oracle, `with`/`resume` syntax, canonical AST support, and
-  semantic normalization; first-class typing and selective-CPS execution
-  remain deferred.
+- Delimited-resumption Phases 1 through 3 provide normative semantics, an
+  executable oracle, `with`/`resume` syntax, canonical AST support, semantic
+  normalization, and first-class `Resumption k a b e` typing. Selective-CPS
+  execution remains deferred.
 - Phase 3 parser-native patterns now reach executable Core Erlang through the
   public typed compiler path. Decision-tree and exhaustiveness/redundancy
   surfaces exist and are tested separately rather than being implied as
@@ -63,8 +63,8 @@ Based on the current `specs/` set, codebase, and test suite, the current promote
   boundary.
 - Raise coverage of the new BEAM artifact, source-origin, and diagnostic
   modules to the repository's 90% modified-module target.
-- Implement `Resumption k a b e` kinds, types, and effects in
-  delimited-resumption Phase 3 before enabling explicit backend execution.
+- Implement delimited-resumption Phase 4 control-mode analysis and selective
+  CPS IR before enabling explicit backend execution.
 - Decide whether the next implementation track resumes the proof-of-concept
   module system, advances source-language actor integration, or deepens the
   already-implemented property-testing framework.

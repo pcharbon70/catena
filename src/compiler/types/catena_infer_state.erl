@@ -39,6 +39,8 @@
     add_effect/2,
     add_resumption_evidence/2,
     get_resumption_evidence/1,
+    add_performed_operation/5,
+    get_performed_operations/1,
     % Effect scope tracking (Phase 6 preparation)
     push_effect_scope/1,
     pop_effect_scope/1,
@@ -63,6 +65,7 @@
     constraints :: catena_constraint:constraint_set(), % Trait constraints
     effects :: catena_infer_effect:effect_set(),  % Current effect set (Section 1.5.6)
     resumption_evidence :: [map()],
+    performed_operations :: [map()],
     effect_scope_stack :: [catena_infer_effect:effect_set()], % Effect scope stack (Phase 6)
     expr_depth :: non_neg_integer()               % Current expression nesting depth
 }).
@@ -88,6 +91,7 @@ new() ->
         constraints = catena_constraint:empty_constraint_set(),
         effects = catena_infer_effect:pure(),
         resumption_evidence = [],
+        performed_operations = [],
         effect_scope_stack = [],
         expr_depth = 0
     }.
@@ -103,6 +107,7 @@ new(StartCounter) when is_integer(StartCounter), StartCounter > 0 ->
         constraints = catena_constraint:empty_constraint_set(),
         effects = catena_infer_effect:pure(),
         resumption_evidence = [],
+        performed_operations = [],
         effect_scope_stack = [],
         expr_depth = 0
     }.
@@ -278,6 +283,40 @@ add_resumption_evidence(
 -spec get_resumption_evidence(infer_state()) -> [map()].
 get_resumption_evidence(#infer_state{resumption_evidence = Evidence}) ->
     lists:reverse(Evidence).
+
+%% @doc Record a concrete operation instantiation in traversal order.
+-spec add_performed_operation(
+    atom(),
+    atom(),
+    catena_types:type(),
+    term(),
+    infer_state()
+) -> infer_state().
+add_performed_operation(
+    Effect,
+    Operation,
+    ResultType,
+    Location,
+    #infer_state{performed_operations = Existing} = State
+) ->
+    State#infer_state{
+        performed_operations = [
+            #{
+                effect => Effect,
+                operation => Operation,
+                result_type => ResultType,
+                location => Location
+            }
+            | Existing
+        ]
+    }.
+
+%% @doc Return concrete operation instantiations, newest first.
+-spec get_performed_operations(infer_state()) -> [map()].
+get_performed_operations(
+    #infer_state{performed_operations = Operations}
+) ->
+    Operations.
 
 %%%===================================================================
 %%% Effect Scope Tracking (Phase 6 Preparation)

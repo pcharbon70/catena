@@ -2,10 +2,12 @@
 
 ## Status
 
-Accepted target architecture. Phase 2 implements the lexer, parser, AST,
-pretty-printer, semantic normalization, and structural diagnostics. First-
-class typing, selective CPS, and executable explicit resumptions remain
-unimplemented, so this is not yet a promoted source-to-BEAM feature.
+Accepted target architecture. Phases 2 and 3 implement the lexer, parser, AST,
+pretty-printer, semantic normalization, structural diagnostics, first-class
+resumption kinds and types, handler/resume inference, residual-effect
+checking, and conservative one-shot/mode gates. Selective CPS and executable
+explicit resumptions remain unimplemented, so this is not yet a promoted
+source-to-BEAM feature.
 
 This document makes
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
@@ -168,9 +170,10 @@ The implemented synthetic origin is:
 ```
 
 Semantic results and validated compilation units retain this normalized form.
-Until the Phase 3 and Phase 4 type/CPS boundaries exist, legacy type and
-request/response backend consumers receive a compatibility view only when the
-binder, origin, resume target, and tail shape exactly match compiler-generated
+The Phase 3 typed frontend consumes it directly and retains resumption
+evidence and origins. Until the Phase 4 CPS boundary exists, the
+request/response backend receives a compatibility view only when the binder,
+origin, resume target, and tail shape exactly match compiler-generated
 auto-resume output. Explicit, standalone, or malformed resumptions fail with
 `missing_resumption_lowering`; they are never lowered as ordinary calls or
 marker closures.
@@ -436,8 +439,9 @@ source-to-BEAM evidence covers:
 Shallow and multi-shot behavior receive separate promotion evidence when their
 source opt-ins are accepted and implemented.
 
-Until that evidence exists, component and status documents must continue to
-describe true delimited source-level resumptions as planned.
+Until that evidence exists, component and status documents must distinguish
+the implemented typed frontend from planned executable delimited
+source-level resumptions.
 
 ## Related Material
 

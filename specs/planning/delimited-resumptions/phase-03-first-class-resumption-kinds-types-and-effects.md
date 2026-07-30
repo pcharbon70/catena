@@ -6,7 +6,7 @@ from handled operations and delimiters, types `resume`, and permits
 resumptions to flow through ordinary Catena values without overstating
 one-shot guarantees that Hindley-Milner inference cannot prove.
 
-**Status:** In progress (Sections 3.1-3.3 complete).
+**Status:** Complete.
 
 **Dependencies:** Phase 2 complete.
 
@@ -213,14 +213,14 @@ row in the diagnostic. The focused and surrounding suites pass 219 tests.
 resumption programs while every unsupported execution path remains
 fail-closed before selective CPS exists.
 
-- [ ] **Section 3.4 Complete**
+- [x] **Section 3.4 Complete**
 
 ### Task 3.4.1: Exercise Type And Effect Behavior
 
 **Description:** Run parser-native source through normalization, kind
 validation, inference, row solving, schemes, and typed-module assembly.
 
-- [ ] **Task 3.4.1 Complete**
+- [x] **Task 3.4.1 Complete**
 
 #### Subtask 3.4.1.1: Test Positive Resumption Typing
 
@@ -228,7 +228,7 @@ validation, inference, row solving, schemes, and typed-module assembly.
 results, nested delimiters, open residual rows, storage, return, higher-order
 passing, and resume-result transformation.
 
-- [ ] **Subtask 3.4.1.1 Complete**
+- [x] **Subtask 3.4.1.1 Complete**
 
 #### Subtask 3.4.1.2: Test Negative Resumption Typing
 
@@ -236,14 +236,14 @@ passing, and resume-result transformation.
 delimiter result, effect-row mismatch, forged representation, obvious
 duplicate resume, and unimplemented multi-shot requests.
 
-- [ ] **Subtask 3.4.1.2 Complete**
+- [x] **Subtask 3.4.1.2 Complete**
 
 ### Task 3.4.2: Run Phase Completion Gates
 
 **Description:** Establish a stable typed frontend boundary ready for
 control-mode analysis without advertising executable resumption semantics.
 
-- [ ] **Task 3.4.2 Complete**
+- [x] **Task 3.4.2 Complete**
 
 #### Subtask 3.4.2.1: Validate Typed Artifacts And Regressions
 
@@ -251,11 +251,23 @@ control-mode analysis without advertising executable resumption semantics.
 source origins, and fail-closed dispositions and run existing kind, type,
 effect, handler, stdlib, and backend-negative suites.
 
-- [ ] **Subtask 3.4.2.1 Complete**
+- [x] **Subtask 3.4.2.1 Complete**
 
 #### Subtask 3.4.2.2: Run Repository Gates
 
 **Description:** Run Phase 3 integration tests, `make check-specs`, and the
 complete active EUnit suite and publish the exact phase-ending evidence.
 
-- [ ] **Subtask 3.4.2.2 Complete**
+- [x] **Subtask 3.4.2.2 Complete**
+
+**Implementation evidence:** The Phase 3 source integration suite covers
+polymorphic operation instantiation, nested delimiters, algebraic storage,
+return and higher-order flow, open residual rows, resume-result
+transformation, automatic value-handler execution, retained typed origins,
+fail-closed explicit backend disposition, and every required negative
+diagnostic family. Legacy five-element handler ASTs retain their automatic
+tail-resume behavior through a typed synthetic authority. The focused Phase 3
+integration and surrounding regression suites are green; `make check-specs`
+passes 42 requirements, 11 scenarios, 20 evidence rows, 73 acceptance
+criteria, six ADRs, and 291 links; and the complete active EUnit suite passes
+5,164 tests with zero failures or skips.

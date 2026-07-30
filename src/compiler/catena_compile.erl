@@ -1057,6 +1057,11 @@ type_check_transform(Name, DeclaredType, Clauses, Env) ->
             %% Infer type
             case catena_infer:infer_expr_detailed(Expr, Env) of
                 {ok, InferredType, InferenceDetails} ->
+                    ResumptionEvidence = maps:get(
+                        resumptions,
+                        InferenceDetails,
+                        []
+                    ),
                     State0 = catena_infer_state:new(),
                     {SynthesizedEffects, State1} =
                         catena_effect_synthesis:synthesize(EffectExpr, State0),
@@ -1078,13 +1083,15 @@ type_check_transform(Name, DeclaredType, Clauses, Env) ->
                                 {ok, ValidatedType} ->
                                     {ok,
                                         ValidatedType,
-                                        maps:get(
-                                            resumptions,
-                                            InferenceDetails,
-                                            []
-                                        )};
+                                        ResumptionEvidence};
                                 {error, _} = Error ->
-                                    Error
+                                    specialize_resumption_effect_error(
+                                        Name,
+                                        DeclaredType,
+                                        SynthesizedEffects,
+                                        ResumptionEvidence,
+                                        Error
+                                    )
                             end;
                         {error, Constraints, Message} ->
                             {error, {effect_constraint_error, Name, Constraints, Message}}
@@ -1093,6 +1100,65 @@ type_check_transform(Name, DeclaredType, Clauses, Env) ->
                     {error, {type_error, Name, Errors}}
             end
     end.
+
+specialize_resumption_effect_error(
+    _Name,
+    _DeclaredType,
+    _SynthesizedEffects,
+    [],
+    Error
+) ->
+    Error;
+specialize_resumption_effect_error(
+    Name,
+    DeclaredType,
+    SynthesizedEffects,
+    Evidence,
+    {error, {effect_mismatch, _Name, _Constraints, _Message}} = Error
+) ->
+    DeclaredEffects = extract_declared_effects(DeclaredType),
+    case first_unadmitted_resumption(Evidence, DeclaredEffects) of
+        none ->
+            Error;
+        {ok, ResumeEvidence} ->
+            Context = ResumeEvidence#{
+                transform => Name,
+                declared_effects => DeclaredEffects,
+                inferred_effects => SynthesizedEffects
+            },
+            {error, {type_error, Name, [
+                {resume_effect_mismatch, Context}
+            ]}}
+    end;
+specialize_resumption_effect_error(
+    _Name,
+    _DeclaredType,
+    _SynthesizedEffects,
+    _Evidence,
+    Error
+) ->
+    Error.
+
+first_unadmitted_resumption(Evidence, {effect_set, Declared}) ->
+    case lists:dropwhile(
+        fun(Entry) ->
+            case maps:get(residual_effects, Entry, undefined) of
+                {teffectrow, Known, _Tail} ->
+                    lists:all(
+                        fun(Effect) -> lists:member(Effect, Declared) end,
+                        Known
+                    );
+                _ ->
+                    true
+            end
+        end,
+        Evidence
+    ) of
+        [Entry | _] -> {ok, Entry};
+        [] -> none
+    end;
+first_unadmitted_resumption(_Evidence, _DeclaredEffects) ->
+    none.
 
 typed_transform_declaration(Name, Type, Clauses, [], Location) ->
     {typed_transform, Name, Type, Clauses, Location};
@@ -1328,6 +1394,32 @@ convert_inference_operation_case({
         [convert_pattern(Pattern) || Pattern <- Patterns],
         ResumptionBinder,
         convert_expr(Body),
+        Location
+    };
+convert_inference_operation_case({
+    operation_case,
+    Operation,
+    Patterns,
+    Body,
+    Location
+}) ->
+    Binder = '$catena_compat_resumption',
+    Origin = {
+        synthetic,
+        value_handler_auto_resume,
+        Location
+    },
+    {
+        operation_case,
+        Operation,
+        [convert_pattern(Pattern) || Pattern <- Patterns],
+        {resumption_binder, Binder, Origin},
+        {
+            resume_expr,
+            {var, Binder, Origin},
+            convert_expr(Body),
+            Origin
+        },
         Location
     }.
 

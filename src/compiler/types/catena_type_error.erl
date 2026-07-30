@@ -111,6 +111,7 @@
     {invalid_resume_target, map()} |
     {resume_value_type_mismatch, map()} |
     {resume_delimiter_type_mismatch, map()} |
+    {resume_effect_mismatch, map()} |
     {unknown_handler_operation_type, map()} |
     {handler_operation_arity_mismatch, map()} |
     {invalid_resumption_binder, map()} |
@@ -389,6 +390,12 @@ format_error({resume_delimiter_type_mismatch, Context}) ->
     format_resumption_error(
         "Handler result type mismatch",
         "The operation case must return the enclosing delimiter result.",
+        Context
+    );
+format_error({resume_effect_mismatch, Context}) ->
+    format_resumption_error(
+        "Resumption effect mismatch",
+        "The resumed computation exercises effects not admitted by the current transform.",
         Context
     );
 format_error({unknown_handler_operation_type, Context}) ->

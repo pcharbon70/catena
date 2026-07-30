@@ -46,7 +46,7 @@ handled_transform_becomes_pure_test() ->
     {ok, Env} = catena_compile:build_type_env(Decls),
     {ok, {typed_module, _Name, [TypedDecl], _TypedEnv}} =
         catena_compile:type_check_module({module, demo, [], [], Decls, loc()}, Env),
-    {typed_transform, safe_read, Type, _Clauses, _Loc} = TypedDecl,
+    {typed_transform, safe_read, Type, _Clauses, _Evidence, _Loc} = TypedDecl,
     {ok, Effects} = catena_types:extract_function_effects(Type),
     ?assertEqual({effect_set, []}, Effects).
 
