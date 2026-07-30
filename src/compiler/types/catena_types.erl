@@ -20,7 +20,13 @@
     tfun/3,
     trecord/2,
     ttuple/1,
-    tvariant/1
+    tvariant/1,
+    teffectrow/1,
+    teffectrow/2,
+    resumption_kind_var/1,
+    one_shot/0,
+    multi_shot/0,
+    tresumption/4
 ]).
 
 %% Fresh variable generation (stateless - explicit state threading)
@@ -45,8 +51,17 @@
 -export([
     is_function_type/1,
     is_type_var/1,
+    is_effect_row_type/1,
+    is_resumption_kind/1,
+    is_resumption_type/1,
+    resumption_kind/1,
+    resumption_operation_result/1,
+    resumption_delimiter_result/1,
+    resumption_effect_row/1,
     extract_function_effects/1,
-    type_vars/1
+    type_vars/1,
+    type_equal/2,
+    validate_type/1
 ]).
 
 %%====================================================================
@@ -58,17 +73,28 @@
 -type base_type() :: integer | float | string | atom | boolean | unit.
 
 -type ty() :: {tvar, type_var_id()}                     % Type variable
+            | {tkvar, atom(), type_var_id()}            % Kinded variable
             | {tcon, atom()}                            % Type constructor
             | {tapp, ty(), [ty()]}                      % Type application
             | {tfun, ty(), ty(), effect_set()}          % Function with effects
             | {trecord, [{atom(), ty()}], row_var()}    % Record type
             | {ttuple, [ty()]}                          % Tuple type
-            | {tvariant, [{atom(), [ty()]}]}.           % Variant type
+            | {tvariant, [{atom(), [ty()]}]}            % Variant type
+            | {teffectrow, [atom()], effect_row_tail()} % Residual effect row
+            | {tresumption, ty(), ty(), ty(), ty()}.    % k, op, delimiter, row
 
 -type effect_set() :: {effect_set, [atom()]}.  % Normalized: sorted, no dups
 -type row_var() :: type_var_id() | closed.     % Row variable or closed
+-type effect_row_tail() :: type_var_id() | closed.
 
--export_type([ty/0, type_var_id/0, effect_set/0, row_var/0, base_type/0]).
+-export_type([
+    ty/0,
+    type_var_id/0,
+    effect_set/0,
+    row_var/0,
+    effect_row_tail/0,
+    base_type/0
+]).
 
 %%====================================================================
 %% Type Construction Functions
@@ -325,6 +351,51 @@ tvariant(Constructors) when is_list(Constructors) ->
         false ->
             Duplicates = find_duplicates(ConstructorNames),
             error({duplicate_variant_constructors, Duplicates})
+    end.
+
+%% @doc Construct a closed residual effect row.
+-spec teffectrow([atom()]) -> ty().
+teffectrow(Effects) ->
+    teffectrow(Effects, closed).
+
+%% @doc Construct an open or closed residual effect row.
+-spec teffectrow([atom()], effect_row_tail()) -> ty().
+teffectrow(Effects, Tail)
+        when is_list(Effects),
+             (Tail =:= closed orelse (is_integer(Tail) andalso Tail > 0)) ->
+    case lists:all(fun is_atom/1, Effects) of
+        true -> {teffectrow, lists:usort(Effects), Tail};
+        false -> error({invalid_effect_row, Effects, Tail})
+    end.
+
+%% @doc Construct a variable ranging only over ResumptionKind inhabitants.
+-spec resumption_kind_var(type_var_id()) -> ty().
+resumption_kind_var(Id) when is_integer(Id), Id > 0 ->
+    {tkvar, resumption_kind, Id}.
+
+%% @doc Canonical internal identity for the default resumption mode.
+-spec one_shot() -> ty().
+one_shot() ->
+    {tcon, 'OneShot'}.
+
+%% @doc Canonical internal identity for the deferred multi-shot mode.
+-spec multi_shot() -> ty().
+multi_shot() ->
+    {tcon, 'MultiShot'}.
+
+%% @doc Construct the opaque first-class Resumption k a b e type.
+-spec tresumption(ty(), ty(), ty(), ty()) -> ty().
+tresumption(Kind, OperationResult, DelimiterResult, EffectRow) ->
+    Type = {
+        tresumption,
+        Kind,
+        OperationResult,
+        DelimiterResult,
+        EffectRow
+    },
+    case validate_type(Type) of
+        ok -> Type;
+        {error, Reason} -> error(Reason)
     end.
 
 %%====================================================================
@@ -663,6 +734,59 @@ is_function_type(_) -> false.
 is_type_var({tvar, _}) -> true;
 is_type_var(_) -> false.
 
+%% @doc Check whether a term is the internal residual-effect-row type.
+-spec is_effect_row_type(term()) -> boolean().
+is_effect_row_type({teffectrow, Effects, Tail}) ->
+    is_list(Effects) andalso
+    lists:all(fun is_atom/1, Effects) andalso
+    lists:usort(Effects) =:= Effects andalso
+    (Tail =:= closed orelse (is_integer(Tail) andalso Tail > 0));
+is_effect_row_type(_) ->
+    false.
+
+%% @doc Check whether a type is an accepted concrete ResumptionKind value.
+-spec is_resumption_kind(term()) -> boolean().
+is_resumption_kind({tcon, 'OneShot'}) -> true;
+is_resumption_kind({tcon, 'MultiShot'}) -> true;
+is_resumption_kind({tkvar, resumption_kind, Id})
+        when is_integer(Id), Id > 0 -> true;
+is_resumption_kind(_) -> false.
+
+%% @doc Check whether a term is a structurally valid first-class resumption.
+-spec is_resumption_type(term()) -> boolean().
+is_resumption_type({tresumption, _Kind, _A, _B, _Effects} = Type) ->
+    validate_type(Type) =:= ok;
+is_resumption_type(_) ->
+    false.
+
+%% @doc Return the resumption mode parameter.
+-spec resumption_kind(ty()) -> {ok, ty()} | error.
+resumption_kind({tresumption, Kind, _A, _B, _Effects}) ->
+    {ok, Kind};
+resumption_kind(_) ->
+    error.
+
+%% @doc Return the performed operation's result type.
+-spec resumption_operation_result(ty()) -> {ok, ty()} | error.
+resumption_operation_result({tresumption, _Kind, OperationResult, _B, _Effects}) ->
+    {ok, OperationResult};
+resumption_operation_result(_) ->
+    error.
+
+%% @doc Return the matching delimiter's result type.
+-spec resumption_delimiter_result(ty()) -> {ok, ty()} | error.
+resumption_delimiter_result({tresumption, _Kind, _A, DelimiterResult, _Effects}) ->
+    {ok, DelimiterResult};
+resumption_delimiter_result(_) ->
+    error.
+
+%% @doc Return the residual effects exercised by invoking the resumption.
+-spec resumption_effect_row(ty()) -> {ok, ty()} | error.
+resumption_effect_row({tresumption, _Kind, _A, _B, Effects}) ->
+    {ok, Effects};
+resumption_effect_row(_) ->
+    error.
+
 %% @doc Extract the effect set from a function type.
 %%
 %% If the type is a function type, returns `{ok, Effects}' where `Effects'
@@ -694,6 +818,104 @@ extract_function_effects({tfun, _, _, Effects}) ->
     {ok, Effects};
 extract_function_effects(_) ->
     error.
+
+%% @doc Structural type equality with canonical effect-row comparison.
+-spec type_equal(ty(), ty()) -> boolean().
+type_equal(
+    {teffectrow, Effects1, Tail},
+    {teffectrow, Effects2, Tail}
+) ->
+    lists:usort(Effects1) =:= lists:usort(Effects2);
+type_equal(
+    {tresumption, Kind1, A1, B1, Effects1},
+    {tresumption, Kind2, A2, B2, Effects2}
+) ->
+    type_equal(Kind1, Kind2) andalso
+    type_equal(A1, A2) andalso
+    type_equal(B1, B2) andalso
+    type_equal(Effects1, Effects2);
+type_equal({tapp, Constructor1, Args1}, {tapp, Constructor2, Args2}) ->
+    type_equal(Constructor1, Constructor2) andalso
+    type_lists_equal(Args1, Args2);
+type_equal(
+    {tfun, From1, To1, Effects},
+    {tfun, From2, To2, Effects}
+) ->
+    type_equal(From1, From2) andalso type_equal(To1, To2);
+type_equal({ttuple, Elements1}, {ttuple, Elements2}) ->
+    type_lists_equal(Elements1, Elements2);
+type_equal(Type, Type) ->
+    true;
+type_equal(_, _) ->
+    false.
+
+type_lists_equal(Left, Right) when length(Left) =:= length(Right) ->
+    lists:all(
+        fun({Type1, Type2}) -> type_equal(Type1, Type2) end,
+        lists:zip(Left, Right)
+    );
+type_lists_equal(_, _) ->
+    false.
+
+%% @doc Validate the internal type representation and Resumption invariants.
+-spec validate_type(term()) -> ok | {error, term()}.
+validate_type({tvar, Id}) when is_integer(Id), Id > 0 ->
+    ok;
+validate_type({tkvar, Kind, Id})
+        when is_atom(Kind), is_integer(Id), Id > 0 ->
+    ok;
+validate_type({tcon, Name}) when is_atom(Name) ->
+    ok;
+validate_type({tapp, Constructor, Args}) when is_list(Args) ->
+    validate_children([Constructor | Args]);
+validate_type({tfun, From, To, {effect_set, Effects}})
+        when is_list(Effects) ->
+    case lists:all(fun is_atom/1, Effects) of
+        true -> validate_children([From, To]);
+        false -> {error, {invalid_function_effects, Effects}}
+    end;
+validate_type({trecord, Fields, Tail}) when is_list(Fields) ->
+    case Tail =:= closed orelse (is_integer(Tail) andalso Tail > 0) of
+        false -> {error, {invalid_record_row, Tail}};
+        true -> validate_children([Type || {_Name, Type} <- Fields])
+    end;
+validate_type({ttuple, Elements}) when is_list(Elements) ->
+    validate_children(Elements);
+validate_type({tvariant, Constructors}) when is_list(Constructors) ->
+    validate_children(lists:append([
+        ArgumentTypes
+        || {_Name, ArgumentTypes} <- Constructors,
+           is_list(ArgumentTypes)
+    ]));
+validate_type({teffectrow, _Effects, _Tail} = EffectRow) ->
+    case is_effect_row_type(EffectRow) of
+        true -> ok;
+        false -> {error, {invalid_effect_row_type, EffectRow}}
+    end;
+validate_type(
+    {tresumption, Kind, OperationResult, DelimiterResult, EffectRow}
+) ->
+    case is_resumption_kind(Kind) of
+        false ->
+            {error, {invalid_resumption_kind, Kind}};
+        true ->
+            case is_effect_row_type(EffectRow) of
+                false ->
+                    {error, {invalid_resumption_effect_row, EffectRow}};
+                true ->
+                    validate_children([OperationResult, DelimiterResult])
+            end
+    end;
+validate_type(Other) ->
+    {error, {invalid_type, Other}}.
+
+validate_children([]) ->
+    ok;
+validate_children([Type | Rest]) ->
+    case validate_type(Type) of
+        ok -> validate_children(Rest);
+        {error, _} = Error -> Error
+    end.
 
 %% @doc Collect all type variables appearing in a type.
 %%
@@ -741,6 +963,9 @@ type_vars_acc(_Type, _Acc, Depth) when Depth > 100 ->
     error(catena_type_error:type_depth_exceeded(Depth, MaxDepth));
 
 type_vars_acc({tvar, Id}, Acc, _Depth) ->
+    sets:add_element(Id, Acc);
+
+type_vars_acc({tkvar, _Kind, Id}, Acc, _Depth) ->
     sets:add_element(Id, Acc);
 
 type_vars_acc({tcon, _}, Acc, _Depth) ->
@@ -792,7 +1017,23 @@ type_vars_acc({tvariant, Constructors}, Acc, Depth) ->
         end,
         Acc,
         Constructors
-    ).
+    );
+
+type_vars_acc({teffectrow, _Effects, closed}, Acc, _Depth) ->
+    Acc;
+type_vars_acc({teffectrow, _Effects, Tail}, Acc, _Depth)
+        when is_integer(Tail) ->
+    sets:add_element(Tail, Acc);
+
+type_vars_acc(
+    {tresumption, Kind, OperationResult, DelimiterResult, EffectRow},
+    Acc,
+    Depth
+) ->
+    Acc1 = type_vars_acc(Kind, Acc, Depth + 1),
+    Acc2 = type_vars_acc(OperationResult, Acc1, Depth + 1),
+    Acc3 = type_vars_acc(DelimiterResult, Acc2, Depth + 1),
+    type_vars_acc(EffectRow, Acc3, Depth + 1).
 
 %%====================================================================
 %% Internal Functions

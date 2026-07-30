@@ -21,6 +21,8 @@
 -export([
     %% Kind representation
     star/0,
+    resumption_kind/0,
+    effect_row/0,
     arrow/2,
 
     %% Kind checking
@@ -51,7 +53,11 @@
 %%% Types
 %%%===================================================================
 
--type kind() :: star | {arrow, kind(), kind()}.
+-type kind() ::
+    star |
+    resumption_kind |
+    effect_row |
+    {arrow, kind(), kind()}.
 -type kind_env() :: #{atom() => kind()}.
 
 %%%===================================================================
@@ -64,6 +70,14 @@
 %% Higher-kinded types like Maybe or List have arrow kinds instead.
 -spec star() -> kind().
 star() -> star.
+
+%% @doc The kind inhabited by the accepted resumption modes.
+-spec resumption_kind() -> kind().
+resumption_kind() -> resumption_kind.
+
+%% @doc The kind of effect rows carried by first-class resumptions.
+-spec effect_row() -> kind().
+effect_row() -> effect_row.
 
 %% @doc Arrow kind (type constructor kind)
 %%
@@ -138,7 +152,18 @@ builtin_kinds() ->
         'Maybe' => arrow(star(), star()),
         'List' => arrow(star(), star()),
         'Either' => arrow(star(), arrow(star(), star())),
-        'Ordering' => star()
+        'Ordering' => star(),
+        %% Delimited-resumption kinds and constructors.
+        'ResumptionKind' => star(),
+        'OneShot' => resumption_kind(),
+        'MultiShot' => resumption_kind(),
+        'Resumption' => arrow(
+            resumption_kind(),
+            arrow(
+                star(),
+                arrow(star(), arrow(effect_row(), star()))
+            )
+        )
     }.
 
 %% @doc Create kind from arity
@@ -276,6 +301,8 @@ infer_type_kind({tcon, Name}, Env) ->
         {ok, Kind} -> {ok, Kind};
         {error, not_found} -> {ok, star()}
     end;
+infer_type_kind({tkvar, Kind, _Id}, _Env) ->
+    {ok, Kind};
 infer_type_kind({tapp, Con, Args}, Env) ->
     case infer_type_kind(Con, Env) of
         {ok, Kind} ->
@@ -283,8 +310,49 @@ infer_type_kind({tapp, Con, Args}, Env) ->
         Error ->
             Error
     end;
+infer_type_kind({teffectrow, _Effects, _Tail}, _Env) ->
+    {ok, effect_row()};
+infer_type_kind(
+    {tresumption, Mode, OperationResult, DelimiterResult, Effects},
+    Env
+) ->
+    infer_resumption_kind(
+        Mode,
+        OperationResult,
+        DelimiterResult,
+        Effects,
+        Env
+    );
 infer_type_kind(_, _Env) ->
     {ok, star()}.
+
+infer_resumption_kind(Mode, OperationResult, DelimiterResult, Effects, Env) ->
+    Expected = [
+        {Mode, resumption_kind()},
+        {OperationResult, star()},
+        {DelimiterResult, star()},
+        {Effects, effect_row()}
+    ],
+    validate_kind_arguments(Expected, Env).
+
+validate_kind_arguments([], _Env) ->
+    {ok, star()};
+validate_kind_arguments([{Argument, ExpectedKind} | Rest], Env) ->
+    case infer_type_kind(Argument, Env) of
+        {ok, ActualKind} ->
+            case kinds_compatible(ActualKind, ExpectedKind) of
+                true -> validate_kind_arguments(Rest, Env);
+                false ->
+                    {error, {
+                        kind_mismatch,
+                        ExpectedKind,
+                        ActualKind,
+                        Argument
+                    }}
+            end;
+        {error, _} = Error ->
+            Error
+    end.
 
 %% @doc Apply kind to arguments
 %% Maximum applications to prevent DoS
@@ -403,5 +471,7 @@ kinds_compatible(_, _) -> false.
 %% - format_kind({arrow, star, {arrow, star, star}}) -> "Type -> Type -> Type"
 -spec format_kind(kind()) -> string().
 format_kind(star) -> "Type";
+format_kind(resumption_kind) -> "ResumptionKind";
+format_kind(effect_row) -> "EffectRow";
 format_kind({arrow, K1, K2}) ->
     format_kind(K1) ++ " -> " ++ format_kind(K2).

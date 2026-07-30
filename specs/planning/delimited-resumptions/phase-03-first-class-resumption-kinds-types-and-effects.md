@@ -6,7 +6,7 @@ from handled operations and delimiters, types `resume`, and permits
 resumptions to flow through ordinary Catena values without overstating
 one-shot guarantees that Hindley-Milner inference cannot prove.
 
-**Status:** Planned.
+**Status:** In progress (Section 3.1 complete).
 
 **Dependencies:** Phase 2 complete.
 
@@ -15,14 +15,14 @@ one-shot guarantees that Hindley-Milner inference cannot prove.
 **Description:** Add the kind and type representation needed to distinguish
 resumption mode, operation result, delimiter result, and residual effects.
 
-- [ ] **Section 3.1 Complete**
+- [x] **Section 3.1 Complete**
 
 ### Task 3.1.1: Define Resumption Kinds And Constructors
 
 **Description:** Add canonical internal identities for `ResumptionKind`,
 `OneShot`, `MultiShot`, and `Resumption k a b e`.
 
-- [ ] **Task 3.1.1 Complete**
+- [x] **Task 3.1.1 Complete**
 
 #### Subtask 3.1.1.1: Extend Kind Construction
 
@@ -30,7 +30,7 @@ resumption mode, operation result, delimiter result, and residual effects.
 at that kind, and assign `Resumption` the accepted constructor kind ending in
 `Type`.
 
-- [ ] **Subtask 3.1.1.1 Complete**
+- [x] **Subtask 3.1.1.1 Complete**
 
 #### Subtask 3.1.1.2: Extend Type Representation
 
@@ -38,7 +38,7 @@ at that kind, and assign `Resumption` the accepted constructor kind ending in
 and validation for all four resumption parameters without encoding the value
 as an untyped function.
 
-- [ ] **Subtask 3.1.1.2 Complete**
+- [x] **Subtask 3.1.1.2 Complete**
 
 ### Task 3.1.2: Integrate Resumptions With Type Infrastructure
 
@@ -46,14 +46,14 @@ as an untyped function.
 substitution, free-variable analysis, unification, environments, and
 diagnostic rendering.
 
-- [ ] **Task 3.1.2 Complete**
+- [x] **Task 3.1.2 Complete**
 
 #### Subtask 3.1.2.1: Extend Substitution And Unification
 
 **Description:** Traverse kind, operation-result, delimiter-result, and
 effect-row parameters with occurs checks and kind-safe unification.
 
-- [ ] **Subtask 3.1.2.1 Complete**
+- [x] **Subtask 3.1.2.1 Complete**
 
 #### Subtask 3.1.2.2: Extend Schemes And Pretty Printing
 
@@ -61,7 +61,18 @@ effect-row parameters with occurs checks and kind-safe unification.
 render readable source-oriented types, and preserve row-variable identity in
 errors and typed-module output.
 
-- [ ] **Subtask 3.1.2.2 Complete**
+- [x] **Subtask 3.1.2.2 Complete**
+
+**Implementation evidence:** `catena_kind` now carries the distinct
+`ResumptionKind` and `EffectRow` kinds and assigns the accepted kind to
+`OneShot`, `MultiShot`, and the four-parameter `Resumption` constructor.
+`catena_types` represents the capability as
+`{tresumption, Kind, OperationResult, DelimiterResult, EffectRow}` with
+kinded mode variables, canonical residual rows, validation, predicates,
+accessors, and structural equality. Substitution, occurs checks, row-aware
+unification, generalization, instantiation, and source-oriented rendering
+preserve every parameter and open-row identity. The focused Section 3.1
+EUnit module passes 8 tests.
 
 ## Section 3.2: Handler Binder And Resume Inference
 

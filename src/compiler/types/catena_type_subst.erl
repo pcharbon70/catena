@@ -150,6 +150,39 @@ apply_with_context(Subst, {tvar, VarId}, Depth, Visited) ->
             end
     end;
 
+apply_with_context(Subst, {tkvar, Kind, VarId}, Depth, Visited) ->
+    case lookup(Subst, VarId) of
+        none ->
+            {tkvar, Kind, VarId};
+        {ok, {tvar, NewVarId}} ->
+            {tkvar, Kind, NewVarId};
+        {ok, {tkvar, Kind, VarId}} ->
+            {tkvar, Kind, VarId};
+        {ok, {tkvar, Kind, NewVarId}} ->
+            {tkvar, Kind, NewVarId};
+        {ok, Replacement} ->
+            case kinded_replacement_compatible(Kind, Replacement) of
+                true ->
+                    case sets:is_element(VarId, Visited) of
+                        true -> error({circular_substitution, VarId});
+                        false ->
+                            apply_with_context(
+                                Subst,
+                                Replacement,
+                                Depth + 1,
+                                sets:add_element(VarId, Visited)
+                            )
+                    end;
+                false ->
+                    error({
+                        kind_mismatched_substitution,
+                        Kind,
+                        VarId,
+                        Replacement
+                    })
+            end
+    end;
+
 apply_with_context(_Subst, {tcon, Name}, _Depth, _Visited) ->
     {tcon, Name};  % Constants don't change
 
@@ -196,7 +229,62 @@ apply_with_context(Subst, {tvariant, Constructors}, Depth, Visited) ->
     NewConstructors = [{Name, [apply_with_context(Subst, ArgType, Depth + 1, Visited)
                                || ArgType <- ArgTypes]}
                       || {Name, ArgTypes} <- Constructors],
-    {tvariant, NewConstructors}.
+    {tvariant, NewConstructors};
+
+apply_with_context(_Subst, {teffectrow, Effects, closed}, _Depth, _Visited) ->
+    {teffectrow, Effects, closed};
+apply_with_context(Subst, {teffectrow, Effects, Tail}, Depth, Visited)
+        when is_integer(Tail) ->
+    case lookup(Subst, Tail) of
+        none ->
+            {teffectrow, Effects, Tail};
+        {ok, {tvar, Tail}} ->
+            {teffectrow, Effects, Tail};
+        {ok, {tvar, NewTail}} ->
+            {teffectrow, Effects, NewTail};
+        {ok, {teffectrow, ReplacementEffects, ReplacementTail}} ->
+            case sets:is_element(Tail, Visited) of
+                true ->
+                    error({circular_substitution, Tail});
+                false ->
+                    NewVisited = sets:add_element(Tail, Visited),
+                    apply_with_context(
+                        Subst,
+                        {
+                            teffectrow,
+                            lists:usort(Effects ++ ReplacementEffects),
+                            ReplacementTail
+                        },
+                        Depth + 1,
+                        NewVisited
+                    )
+            end;
+        {ok, InvalidReplacement} ->
+            error({
+                invalid_effect_row_substitution,
+                Tail,
+                InvalidReplacement
+            })
+    end;
+
+apply_with_context(
+    Subst,
+    {tresumption, Kind, OperationResult, DelimiterResult, EffectRow},
+    Depth,
+    Visited
+) ->
+    {
+        tresumption,
+        apply_with_context(Subst, Kind, Depth + 1, Visited),
+        apply_with_context(Subst, OperationResult, Depth + 1, Visited),
+        apply_with_context(Subst, DelimiterResult, Depth + 1, Visited),
+        apply_with_context(Subst, EffectRow, Depth + 1, Visited)
+    }.
+
+kinded_replacement_compatible(resumption_kind, Replacement) ->
+    catena_types:is_resumption_kind(Replacement);
+kinded_replacement_compatible(_Kind, _Replacement) ->
+    false.
 
 -spec apply_effects(subst(), catena_types:effect_set()) -> catena_types:effect_set().
 %% @doc Apply substitution to effect set

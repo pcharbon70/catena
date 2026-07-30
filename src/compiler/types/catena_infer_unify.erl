@@ -128,6 +128,13 @@ unify_types(Type, {tvar, VarId}) ->
             {ok, catena_type_subst:singleton(VarId, Type)}
     end;
 
+% Rule: kinded variable. Unlike an ordinary HM variable this may only bind to
+% a value inhabiting its recorded kind.
+unify_types({tkvar, Kind, VarId}, Type) ->
+    unify_kinded_var(Kind, VarId, Type);
+unify_types(Type, {tkvar, Kind, VarId}) ->
+    unify_kinded_var(Kind, VarId, Type);
+
 % Rule: Type Constructor
 % c ≡ c  (same constructor)
 unify_types({tcon, Con}, {tcon, Con}) ->
@@ -137,6 +144,38 @@ unify_types({tcon, Con}, {tcon, Con}) ->
 % c1 ≡ c2  where c1 ≠ c2
 unify_types({tcon, _} = T1, {tcon, _} = T2) ->
     {error, catena_type_error:unification_error(T1, T2)};
+
+% Rule: First-class resumption.
+% Resumption k a b e unifies each role without treating the capability as a
+% function. The constructor validates the non-Type parameters separately.
+unify_types(
+    {tresumption, Kind1, A1, B1, Effects1} = Resumption1,
+    {tresumption, Kind2, A2, B2, Effects2} = Resumption2
+) ->
+    case {
+        catena_types:validate_type(Resumption1),
+        catena_types:validate_type(Resumption2)
+    } of
+        {ok, ok} ->
+            unify_args(
+                [Kind1, A1, B1, Effects1],
+                [Kind2, A2, B2, Effects2],
+                catena_type_subst:empty()
+            );
+        _ ->
+            {error,
+                catena_type_error:unification_error(
+                    Resumption1,
+                    Resumption2
+                )}
+    end;
+
+% Rule: residual effect rows, including open tails.
+unify_types(
+    {teffectrow, _Effects1, _Tail1} = Row1,
+    {teffectrow, _Effects2, _Tail2} = Row2
+) ->
+    unify_effect_rows(Row1, Row2);
 
 % Rule: Function Type
 % (T1 -> T2) ≡ (T3 -> T4)  requires  T1 ≡ T3 ∧ T2 ≡ T4 ∧ E1 ≡ E2
@@ -321,6 +360,64 @@ unify_types({tvariant, Constructors1}, {tvariant, Constructors2}) ->
 % Mismatch: Different type structures
 unify_types(T1, T2) ->
     {error, catena_type_error:unification_error(T1, T2)}.
+
+unify_effect_rows(Row1, Row2) ->
+    case catena_row_unify:unify_rows(
+        effect_row_to_row_type(Row1),
+        effect_row_to_row_type(Row2)
+    ) of
+        {ok, RowSubstitution} ->
+            {ok, maps:fold(
+                fun({row_var, Id}, Replacement, Acc) ->
+                    catena_type_subst:extend(
+                        Acc,
+                        Id,
+                        row_type_to_effect_row(Replacement)
+                    )
+                end,
+                catena_type_subst:empty(),
+                RowSubstitution
+            )};
+        {error, _Reason} ->
+            {error, catena_type_error:unification_error(Row1, Row2)}
+    end.
+
+effect_row_to_row_type({teffectrow, Effects, closed}) ->
+    catena_row_types:effect_row(Effects);
+effect_row_to_row_type({teffectrow, Effects, Tail}) ->
+    catena_row_types:effect_row(
+        Effects,
+        catena_row_types:row_var({row_var, Tail})
+    ).
+
+row_type_to_effect_row(#{elements := Effects, row_var := undefined}) ->
+    catena_types:teffectrow(Effects);
+row_type_to_effect_row(#{elements := Effects, row_var := RowVar}) ->
+    {row_var, Tail} = catena_row_types:row_var_id(RowVar),
+    catena_types:teffectrow(Effects, Tail).
+
+unify_kinded_var(Kind, VarId, Type) ->
+    case kinded_type_compatible(Kind, Type) of
+        false ->
+            {error, catena_type_error:unification_error(
+                {tkvar, Kind, VarId},
+                Type
+            )};
+        true ->
+            case catena_type_subst:occurs_check(VarId, Type) of
+                true ->
+                    {error, catena_type_error:occurs_check(VarId, Type)};
+                false ->
+                    {ok, catena_type_subst:singleton(VarId, Type)}
+            end
+    end.
+
+kinded_type_compatible(resumption_kind, Type) ->
+    catena_types:is_resumption_kind(Type);
+kinded_type_compatible(Kind, {tkvar, Kind, _Id}) ->
+    true;
+kinded_type_compatible(_Kind, _Type) ->
+    false.
 
 %% @doc Unify lists of arguments pairwise
 -spec unify_args([catena_types:type()], [catena_types:type()], catena_type_subst:subst()) ->
