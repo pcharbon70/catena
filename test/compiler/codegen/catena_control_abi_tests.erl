@@ -30,7 +30,15 @@ closure_shapes_carry_mode_capability_test() ->
     ?assertEqual(2, maps:get(runtime_arity, Direct)),
     ?assertEqual(4, maps:get(runtime_arity, CPS)),
     ?assertEqual(0, maps:get(continuation_arity, Direct)),
-    ?assertEqual(1, maps:get(continuation_arity, CPS)).
+    ?assertEqual(1, maps:get(continuation_arity, CPS)),
+    ?assertEqual(ok, catena_control_abi:validate_closure(Direct)),
+    ?assertEqual(ok, catena_control_abi:validate_closure(CPS)),
+    ?assertMatch(
+        {error, {invalid_control_closure, _}},
+        catena_control_abi:validate_closure(
+            Direct#{runtime_arity => 99}
+        )
+    ).
 
 bridges_are_explicit_and_proof_gated_test() ->
     ?assertEqual(

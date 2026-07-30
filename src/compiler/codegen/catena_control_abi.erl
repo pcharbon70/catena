@@ -9,7 +9,8 @@
     final_continuation/3,
     closure_shape/5,
     bridge/5,
-    validate_entry/1
+    validate_entry/1,
+    validate_closure/1
 ]).
 
 -spec entry_shape(atom(), non_neg_integer(), direct | resumable) -> map().
@@ -125,3 +126,43 @@ validate_entry(#{
     ok;
 validate_entry(Entry) ->
     {error, {invalid_control_entry, Entry}}.
+
+-spec validate_closure(term()) -> ok | {error, term()}.
+validate_closure(#{
+    kind := Kind,
+    identity := _Identity,
+    source_arity := SourceArity,
+    runtime_arity := RuntimeArity,
+    control_mode := direct,
+    context_arity := 1,
+    continuation_arity := 0,
+    origin := Origin
+}) when
+    (Kind =:= local orelse Kind =:= imported orelse
+        Kind =:= trait_dictionary orelse Kind =:= higher_order),
+    is_integer(SourceArity),
+    SourceArity >= 0,
+    RuntimeArity =:= SourceArity + 1,
+    Origin =/= undefined
+->
+    ok;
+validate_closure(#{
+    kind := Kind,
+    identity := _Identity,
+    source_arity := SourceArity,
+    runtime_arity := RuntimeArity,
+    control_mode := resumable,
+    context_arity := 1,
+    continuation_arity := 1,
+    origin := Origin
+}) when
+    (Kind =:= local orelse Kind =:= imported orelse
+        Kind =:= trait_dictionary orelse Kind =:= higher_order),
+    is_integer(SourceArity),
+    SourceArity >= 0,
+    RuntimeArity =:= SourceArity + 2,
+    Origin =/= undefined
+->
+    ok;
+validate_closure(Closure) ->
+    {error, {invalid_control_closure, Closure}}.

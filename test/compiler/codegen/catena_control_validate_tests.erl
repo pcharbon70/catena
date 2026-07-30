@@ -134,7 +134,12 @@ unresolved_bridge_is_rejected_as_abi_mismatch_test() ->
                 fields => Fields#{
                     bridge => resumable_to_direct,
                     proof => missing,
-                    closure => Closure#{control_mode => resumable}
+                    closure => Closure#{
+                        control_mode => resumable,
+                        runtime_arity =>
+                            maps:get(source_arity, Closure) + 2,
+                        continuation_arity => 1
+                    }
                 }
             }
         end

@@ -60,9 +60,12 @@ adds a planned runtime distinction:
   continuation, delimiter, captured context, kind, ownership, and consumption
   authority
 
-That evolution is not implemented by the current request/response runtime.
-The current handler-process lifecycle acceptance criteria remain authoritative
-until the staged delimited-resumption work is implemented and promoted.
+Phase 4 now supplies the validated selective-CPS graph and calling convention
+that this evolution will consume. The ownership registry, deep one-shot
+invocation, and Core integration are not implemented by the current
+request/response runtime. The current handler-process lifecycle acceptance
+criteria remain authoritative until those later phases are implemented and
+promoted.
 
 ## Acceptance Criteria
 

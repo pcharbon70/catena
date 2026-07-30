@@ -27,6 +27,7 @@ lower(Unit) ->
                 Declarations,
                 Modes,
                 TypedByName,
+                catena_compilation_unit:import_resolution(Unit),
                 State0,
                 []
             ) of
@@ -39,7 +40,7 @@ lower(Unit) ->
             {error, {invalid_control_ir, unchecked_compilation_unit}}
     end.
 
-lower_transforms([], _Modes, _Typed, State, Acc) ->
+lower_transforms([], _Modes, _Typed, _Imports, State, Acc) ->
     {ok, lists:reverse(Acc), State};
 lower_transforms(
     [
@@ -48,6 +49,7 @@ lower_transforms(
     ],
     Modes,
     Typed,
+    ImportResolution,
     State,
     Acc
 ) when Clauses =/= [] ->
@@ -71,6 +73,7 @@ lower_transforms(
         delimiter => none,
         continuation => {continuation, Name, 0},
         modes => Modes,
+        import_resolution => ImportResolution,
         evidence => Evidence
     },
     case lower_clauses(Clauses, Context, State, []) of
@@ -95,14 +98,29 @@ lower_transforms(
                 Rest,
                 Modes,
                 Typed,
+                ImportResolution,
                 State1,
                 [Transform | Acc]
             );
         {error, _} = Error ->
             Error
     end;
-lower_transforms([_Declaration | Rest], Modes, Typed, State, Acc) ->
-    lower_transforms(Rest, Modes, Typed, State, Acc).
+lower_transforms(
+    [_Declaration | Rest],
+    Modes,
+    Typed,
+    ImportResolution,
+    State,
+    Acc
+) ->
+    lower_transforms(
+        Rest,
+        Modes,
+        Typed,
+        ImportResolution,
+        State,
+        Acc
+    ).
 
 lower_clauses([], _Context, State, Acc) ->
     {ok, lists:reverse(Acc), State};
@@ -380,8 +398,7 @@ lower_expr(
                             target => TargetIR,
                             value => ValueIR,
                             authority => Evidence,
-                            delimiter =>
-                                maps:get(delimiter, Context)
+                            delimiter => resume_delimiter(Context)
                         },
                         State2
                     );
@@ -409,17 +426,40 @@ lower_expr({lambda, Patterns, Body, Origin}, Context, State) ->
 lower_expr({lam, Parameter, Body}, Context, State) ->
     lower_closure([Parameter], Body, source_location(Body), Context, State);
 lower_expr(Expression, Context, State) ->
-    make_node(
-        direct_expr,
-        metadata(
-            Context,
-            source_location(Expression),
-            0,
-            direct
-        ),
-        #{source => Expression, evaluation => source_order},
-        State
-    ).
+    case contains_nested_control(Expression) of
+        true ->
+            case lower_nested_children(Expression, Context, State) of
+                {ok, Lowered, State1} ->
+                    make_node(
+                        direct_expr,
+                        metadata(
+                            Context,
+                            source_location(Expression),
+                            0,
+                            cps_or_direct(Context)
+                        ),
+                        #{
+                            source => Lowered,
+                            evaluation => source_order
+                        },
+                        State1
+                    );
+                {error, _} = Error ->
+                    Error
+            end;
+        false ->
+            make_node(
+                direct_expr,
+                metadata(
+                    Context,
+                    source_location(Expression),
+                    0,
+                    direct
+                ),
+                #{source => Expression, evaluation => source_order},
+                State
+            )
+    end.
 
 lower_bindings([], Body, _Origin, Context, State) ->
     lower_expr(Body, Context, State);
@@ -562,7 +602,9 @@ lower_call(Function, Arguments, Origin, Context, State) ->
     CallerMode = maps:get(mode, Context),
     {Target, CalleeMode, Capability} = call_capability(
         Root,
-        maps:get(modes, Context)
+        length(Arguments),
+        maps:get(modes, Context),
+        maps:get(import_resolution, Context)
     ),
     Operation = case {CallerMode, CalleeMode} of
         {direct, direct} -> direct_call;
@@ -684,7 +726,12 @@ metadata(Context, Origin, ContinuationArity, Disposition) ->
         transform => maps:get(transform, Context, undefined)
     }.
 
-call_capability({var, Name, _Origin}, Modes) ->
+call_capability(
+    {var, Name, _Origin},
+    Arity,
+    Modes,
+    ImportResolution
+) ->
     case catena_control_mode:lookup(Name, Modes) of
         {ok, Entry} ->
             {
@@ -693,9 +740,31 @@ call_capability({var, Name, _Origin}, Modes) ->
                 maps:get(mode, Entry)
             };
         none ->
-            {{dynamic, Name}, resumable, resumable}
+            case resolved_import(Name, Arity, ImportResolution) of
+                {ok, Imported} ->
+                    Mode = maps:get(
+                        control_mode,
+                        Imported,
+                        resumable
+                    ),
+                    {
+                        {imported,
+                            maps:get(source_module, Imported),
+                            maps:get(name, Imported),
+                            maps:get(arity, Imported)},
+                        Mode,
+                        Mode
+                    };
+                none ->
+                    {{dynamic, Name}, resumable, resumable}
+            end
     end;
-call_capability({imported_ref, Entry, _Origin}, _Modes) ->
+call_capability(
+    {imported_ref, Entry, _Origin},
+    _Arity,
+    _Modes,
+    _ImportResolution
+) ->
     Mode = maps:get(control_mode, Entry, resumable),
     {
         {imported,
@@ -705,8 +774,90 @@ call_capability({imported_ref, Entry, _Origin}, _Modes) ->
         Mode,
         Mode
     };
-call_capability(_Function, _Modes) ->
+call_capability(_Function, _Arity, _Modes, _ImportResolution) ->
     {dynamic_callable, resumable, resumable}.
+
+resolved_import(Name, Arity, Resolution) ->
+    Matches = [
+        Entry
+        || Entry <- catena_import_resolution:entries(Resolution),
+           maps:get(kind, Entry) =:= transform,
+           maps:get(binding, Entry, undefined) =:= Name,
+           maps:get(arity, Entry) =:= Arity
+    ],
+    case Matches of
+        [Entry] -> {ok, Entry};
+        _ -> none
+    end.
+
+resume_delimiter(#{delimiter := none}) ->
+    from_resumption_authority;
+resume_delimiter(Context) ->
+    maps:get(delimiter, Context).
+
+contains_nested_control(Term) when is_tuple(Term), tuple_size(Term) > 0 ->
+    case element(1, Term) of
+        handle_expr -> true;
+        perform_expr -> true;
+        resume_expr -> true;
+        _ -> contains_nested_control(tuple_to_list(Term))
+    end;
+contains_nested_control(Terms) when is_list(Terms) ->
+    lists:any(fun contains_nested_control/1, Terms);
+contains_nested_control(_) ->
+    false.
+
+lower_nested_children(Term, Context, State) when is_tuple(Term) ->
+    case is_lowerable_expression(Term) of
+        true ->
+            lower_expr(Term, Context, State);
+        false ->
+            case lower_nested_terms(
+                tuple_to_list(Term),
+                Context,
+                State,
+                []
+            ) of
+                {ok, Elements, State1} ->
+                    {ok, list_to_tuple(Elements), State1};
+                {error, _} = Error ->
+                    Error
+            end
+    end;
+lower_nested_children(Terms, Context, State) when is_list(Terms) ->
+    lower_nested_terms(Terms, Context, State, []);
+lower_nested_children(Term, _Context, State) ->
+    {ok, Term, State}.
+
+lower_nested_terms([], _Context, State, Acc) ->
+    {ok, lists:reverse(Acc), State};
+lower_nested_terms([Term | Rest], Context, State, Acc) ->
+    case lower_nested_children(Term, Context, State) of
+        {ok, Lowered, State1} ->
+            lower_nested_terms(
+                Rest,
+                Context,
+                State1,
+                [Lowered | Acc]
+            );
+        {error, _} = Error ->
+            Error
+    end.
+
+is_lowerable_expression(Term) ->
+    lists:member(
+        element(1, Term),
+        [
+            let_expr,
+            match_expr,
+            handle_expr,
+            perform_expr,
+            resume_expr,
+            app,
+            lambda,
+            lam
+        ]
+    ).
 
 closure_shape({local, {_Name, Arity}} = Target, _AppliedArity, Mode, Origin) ->
     catena_control_abi:closure_shape(

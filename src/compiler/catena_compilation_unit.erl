@@ -254,24 +254,43 @@ new(
                                 Options
                             ) of
                                 {ok, ControlModes} ->
-                                    Unit1 = Unit0#{
-                                        control_modes => ControlModes,
-                                        control_ir => pending,
-                                        control_validation => pending
-                                    },
-                                    case catena_selective_cps:lower(Unit1) of
-                                        {ok, ControlIR} ->
-                                            Unit2 = Unit1#{
-                                                control_ir => ControlIR
+                                    case catena_module_interface:
+                                        with_control_modes(
+                                            Interface,
+                                            ControlModes
+                                        )
+                                    of
+                                        {ok, ControlInterface} ->
+                                            Unit1 = Unit0#{
+                                                interface =>
+                                                    ControlInterface,
+                                                control_modes =>
+                                                    ControlModes,
+                                                control_ir => pending,
+                                                control_validation => pending
                                             },
-                                            case catena_control_validate:
-                                                validate(Unit2)
+                                            case catena_selective_cps:
+                                                lower(Unit1)
                                             of
-                                                {ok, ValidationReport} ->
-                                                    {ok, Unit2#{
-                                                        control_validation =>
-                                                            ValidationReport
-                                                    }};
+                                                {ok, ControlIR} ->
+                                                    Unit2 = Unit1#{
+                                                        control_ir =>
+                                                            ControlIR
+                                                    },
+                                                    case
+                                                        catena_control_validate:
+                                                            validate(Unit2)
+                                                    of
+                                                        {ok,
+                                                            ValidationReport}
+                                                        ->
+                                                            {ok, Unit2#{
+                                                                control_validation =>
+                                                                    ValidationReport
+                                                            }};
+                                                        {error, _} = Error ->
+                                                            Error
+                                                    end;
                                                 {error, _} = Error ->
                                                     Error
                                             end;
@@ -322,11 +341,11 @@ new(_NormalizedAST, _TypedModule, Metadata) ->
 validated_compatibility_declarations(ValidationState, Declarations) ->
     case validate_evidence(ValidationState) of
         ok ->
-            %% Phase 3 type checking has validated normalized Resumption
-            %% nodes. The unit must retain them for the later control-mode
-            %% pass; the backend compatibility projection still occurs only
-            %% in prepare_for_codegen/1 and remains fail-closed for explicit
-            %% control until selective CPS exists.
+            %% Phase 3 type checking validates normalized Resumption nodes.
+            %% Phase 4 retains them through control-mode analysis and the
+            %% validated selective-CPS graph. The backend compatibility
+            %% projection still occurs only in prepare_for_codegen/1 and
+            %% remains fail-closed until runtime and Core lowering exist.
             {ok, Declarations};
         {error, _} = Error ->
             Error

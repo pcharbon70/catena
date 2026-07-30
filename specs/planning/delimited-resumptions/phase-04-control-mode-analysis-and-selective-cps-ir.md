@@ -5,7 +5,7 @@ explicit in compiler-owned IR. It classifies callables as direct or resumable,
 lowers resumable regions into selective CPS, defines all cross-mode calling
 conventions, and validates the control graph before Core Erlang emission.
 
-**Status:** In progress (Sections 4.1-4.3 complete).
+**Status:** Complete.
 
 **Dependencies:** Phase 3 complete.
 
@@ -209,14 +209,14 @@ tests; the targeted backend, call, trait, and Phase 3 regression suites pass
 validated selective-CPS graph and that malformed or unsupported control paths
 fail before Core Erlang emission.
 
-- [ ] **Section 4.4 Complete**
+- [x] **Section 4.4 Complete**
 
 ### Task 4.4.1: Exercise Classification And CPS Graphs
 
 **Description:** Run typed source through call resolution, control-mode fixed
 point analysis, AST-to-IR lowering, bridge generation, and IR validation.
 
-- [ ] **Task 4.4.1 Complete**
+- [x] **Task 4.4.1 Complete**
 
 #### Subtask 4.4.1.1: Test Positive Mixed-Mode Graphs
 
@@ -224,7 +224,7 @@ point analysis, AST-to-IR lowering, bridge generation, and IR validation.
 handlers, auto-resume, recursion, mutual recursion, imports, higher-order
 closures, traits, and open effect rows with expected modes and IR traces.
 
-- [ ] **Subtask 4.4.1.1 Complete**
+- [x] **Subtask 4.4.1.1 Complete**
 
 #### Subtask 4.4.1.2: Test Negative Control Graphs
 
@@ -232,14 +232,14 @@ closures, traits, and open effect rows with expected modes and IR traces.
 unresolved bridge modes, invalid higher-order capabilities, leaked AST nodes,
 and source-origin preservation in every diagnostic.
 
-- [ ] **Subtask 4.4.1.2 Complete**
+- [x] **Subtask 4.4.1.2 Complete**
 
 ### Task 4.4.2: Run Phase Completion Gates
 
 **Description:** Establish a validated control-IR boundary ready for runtime
 and Core lowering while preserving all direct backend behavior.
 
-- [ ] **Task 4.4.2 Complete**
+- [x] **Task 4.4.2 Complete**
 
 #### Subtask 4.4.2.1: Run Compiler And Backend Regressions
 
@@ -247,11 +247,24 @@ and Core lowering while preserving all direct backend behavior.
 import, trait, effect, pattern, fail-closed backend, and public artifact
 negative suites.
 
-- [ ] **Subtask 4.4.2.1 Complete**
+- [x] **Subtask 4.4.2.1 Complete**
 
 #### Subtask 4.4.2.2: Run Repository Gates
 
 **Description:** Run Phase 4 integration tests, `make check-specs`, and the
 complete active EUnit suite and record the exact phase-ending evidence.
 
-- [ ] **Subtask 4.4.2.2 Complete**
+- [x] **Subtask 4.4.2.2 Complete**
+
+**Implementation evidence:** The eight-test
+`catena_delimited_resumption_phase4_tests` suite drives source through typed
+units, fixed-point classification, deterministic selective-CPS lowering,
+versioned imported-mode publication, ABI validation, and retained validation
+reports. It covers direct/provider paths, explicit and automatic handlers,
+abort, first-class authority delimiters, self-recursion, imports,
+higher-order and trait calls, source-derived open rows, mixed-mode bridges,
+and source-oriented negative graph diagnostics. Existing direct programs and
+automatic value handlers remain executable, while explicit resumptions still
+fail closed before Core success because their Phase 5 runtime and Phase 6
+Core lowering are intentionally absent. `make check-specs` passes, and the
+complete active EUnit suite passes 5,192 tests with zero failures or skips.

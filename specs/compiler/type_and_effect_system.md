@@ -104,11 +104,11 @@ The following remain explicitly deferred and must not be implied as complete by 
 - the final ergonomics and optimization story for the entire effect system
 - the final law-verification story for all abstractions
 - the broader actor/distribution phases that build on top of the effect machinery
-- effect-directed selective CPS lowering and runtime authority required for
-  true executable delimited source-level control; `with`/`resume` syntax,
-  semantic normalization, and `Resumption k a b e` typing are implemented,
-  while current executable orchestration resumptions remain opaque wrappers
-  around a direct-style result marker
+- runtime authority and Core lowering required for true executable delimited
+  source-level control; `with`/`resume` syntax, semantic normalization,
+  `Resumption k a b e` typing, control-mode analysis, and validated selective
+  CPS IR are implemented, while current executable orchestration resumptions
+  remain opaque wrappers around a direct-style result marker
 
 ## Reconciled Note
 

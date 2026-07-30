@@ -76,6 +76,7 @@ validate_ir(IR, Modes, Context) ->
                         Context
                     )
                 end,
+                fun() -> validate_call_shapes(Nodes, Context) end,
                 fun() -> validate_bridges(Nodes, Context) end,
                 fun() -> validate_backend_readiness(Nodes, Context) end
             ],
@@ -315,14 +316,15 @@ validate_node_ownership(
     Delimiters,
     _Continuations
 ) ->
-    case require_delimiter(
-        maps:get(delimiter, Fields, undefined),
-        Delimiters
-    ) of
+    Authority = maps:get(authority, Fields, undefined),
+    case validate_resume_authority(Authority) of
         ok ->
-            validate_resume_authority(
-                maps:get(authority, Fields, undefined)
-            );
+            case maps:get(delimiter, Fields, undefined) of
+                from_resumption_authority ->
+                    ok;
+                Delimiter ->
+                    require_delimiter(Delimiter, Delimiters)
+            end;
         {error, _} = Error ->
             Error
     end;
@@ -369,6 +371,44 @@ validate_node_ownership(
     _Continuations
 ) ->
     ok.
+
+validate_call_shapes([], _Context) ->
+    ok;
+validate_call_shapes(
+    [#{op := Operation, fields := Fields} = Node | Rest],
+    Context
+) when
+    Operation =:= direct_call;
+    Operation =:= cps_call;
+    Operation =:= bridge
+->
+    Closure = maps:get(closure, Fields, #{}),
+    ExpectedMode = case Operation of
+        direct_call -> direct;
+        cps_call -> resumable;
+        bridge -> maps:get(control_mode, Closure, undefined)
+    end,
+    case catena_control_abi:validate_closure(Closure) of
+        ok ->
+            case maps:get(control_mode, Closure) =:= ExpectedMode of
+                true ->
+                    validate_call_shapes(Rest, Context);
+                false ->
+                    abi_error(
+                        {
+                            call_closure_mode_mismatch,
+                            Operation,
+                            ExpectedMode,
+                            maps:get(control_mode, Closure)
+                        },
+                        node_context(Node, Context)
+                    )
+            end;
+        {error, Reason} ->
+            abi_error(Reason, node_context(Node, Context))
+    end;
+validate_call_shapes([_ | Rest], Context) ->
+    validate_call_shapes(Rest, Context).
 
 validate_bridges([], _Context) ->
     ok;
@@ -439,6 +479,8 @@ expected_continuation_arity(#{
     1;
 expected_continuation_arity(#{op := direct_call}) ->
     0;
+expected_continuation_arity(#{op := cps_call}) ->
+    1;
 expected_continuation_arity(#{op := direct_expr}) ->
     0;
 expected_continuation_arity(#{op := abort}) ->
@@ -513,6 +555,10 @@ require_continuation(Continuation, Continuations) ->
 
 validate_resume_authority(#{
     type := {tresumption, {tcon, 'OneShot'}, _, _, _}
+}) ->
+    ok;
+validate_resume_authority(#{
+    type := {tresumption, {tkvar, resumption_kind, _}, _, _, _}
 }) ->
     ok;
 validate_resume_authority(Authority) ->

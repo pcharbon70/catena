@@ -270,6 +270,7 @@ scan_term(
 ) ->
     {Edge, EdgeReason} = classify_application(
         application_root(Function),
+        length(Arguments),
         Location,
         LocalNames,
         Options
@@ -302,29 +303,42 @@ scan_term(_Other, _LocalNames, _Options, Scan) ->
 
 classify_application(
     {var, Name, _Location},
+    Arity,
     Location,
     LocalNames,
-    _Options
+    Options
 ) ->
     case sets:is_element(Name, LocalNames) of
         true ->
             {edge(local, Name, Location, unknown), none};
         false ->
-            case catena_trait_resolve:is_trait_method(Name) of
-                true ->
+            case resolved_import(Name, Arity, Options) of
+                {ok, Entry} ->
+                    Capability = maps:get(
+                        control_mode,
+                        Entry,
+                        resumable
+                    ),
+                    Reason = case Capability of
+                        direct -> none;
+                        resumable -> imported_resumable
+                    end,
                     {
-                        edge(trait_dispatch, Name, Location, resumable),
-                        trait_dispatch
+                        edge(
+                            imported,
+                            imported_identity(Entry),
+                            Location,
+                            Capability
+                        ),
+                        Reason
                     };
-                false ->
-                    {
-                        edge(higher_order, Name, Location, resumable),
-                        higher_order_call
-                    }
+                none ->
+                    classify_dynamic_application(Name, Location)
             end
     end;
 classify_application(
     {imported_ref, Entry, _Location},
+    _Arity,
     Location,
     _LocalNames,
     _Options
@@ -343,11 +357,52 @@ classify_application(
         ),
         Reason
     };
-classify_application(_Function, Location, _LocalNames, _Options) ->
+classify_application(
+    _Function,
+    _Arity,
+    Location,
+    _LocalNames,
+    _Options
+) ->
     {
         edge(higher_order, dynamic_callable, Location, resumable),
         higher_order_call
     }.
+
+classify_dynamic_application(Name, Location) ->
+    case catena_trait_resolve:is_trait_method(Name) of
+        true ->
+            {
+                edge(trait_dispatch, Name, Location, resumable),
+                trait_dispatch
+            };
+        false ->
+            {
+                edge(higher_order, Name, Location, resumable),
+                higher_order_call
+            }
+    end.
+
+resolved_import(Name, Arity, Options) ->
+    Resolution = maps:get(import_resolution, Options, undefined),
+    case is_map(Resolution) andalso
+        catena_import_resolution:is_resolution(Resolution)
+    of
+        true ->
+            Matches = [
+                Entry
+                || Entry <- catena_import_resolution:entries(Resolution),
+                   maps:get(kind, Entry) =:= transform,
+                   maps:get(binding, Entry, undefined) =:= Name,
+                   maps:get(arity, Entry) =:= Arity
+            ],
+            case Matches of
+                [Entry] -> {ok, Entry};
+                _ -> none
+            end;
+        false ->
+            none
+    end.
 
 solve_fixed_point(Entries, Iterations) ->
     Modes = maps:from_list([

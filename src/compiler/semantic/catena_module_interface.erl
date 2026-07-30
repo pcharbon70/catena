@@ -16,10 +16,11 @@
     runtime_module/1,
     exported_symbols/1,
     find_export/3,
-    artifact_dependencies/1
+    artifact_dependencies/1,
+    with_control_modes/2
 ]).
 
--define(INTERFACE_VERSION, 1).
+-define(INTERFACE_VERSION, 2).
 
 -type interface() :: map().
 -export_type([interface/0]).
@@ -124,6 +125,49 @@ find_export(Kind, Name, Interface) ->
 -spec artifact_dependencies(interface()) -> [map()].
 artifact_dependencies(Interface) ->
     maps:get(artifact_dependencies, Interface).
+
+-spec with_control_modes(interface(), catena_control_mode:inventory()) ->
+    {ok, interface()} | {error, term()}.
+with_control_modes(Interface, Modes) ->
+    case {
+        is_interface(Interface),
+        catena_control_mode:is_inventory(Modes)
+    } of
+        {true, true} ->
+            Exports = [
+                attach_control_mode(Export, Modes)
+                || Export <- maps:get(exports, Interface)
+            ],
+            Dictionaries = [
+                attach_dictionary_control_modes(Dictionary)
+                || Dictionary <- maps:get(dictionaries, Interface, [])
+            ],
+            {ok, Interface#{
+                exports := Exports,
+                transforms := by_kind(transform, Exports),
+                dictionaries := Dictionaries
+            }};
+        _ ->
+            {error, {invalid_module_interface_control_modes,
+                Interface, Modes}}
+    end.
+
+attach_control_mode(#{kind := transform, name := Name} = Export, Modes) ->
+    case catena_control_mode:mode(Name, Modes) of
+        {ok, Mode} -> Export#{control_mode => Mode};
+        none -> Export#{control_mode => resumable}
+    end;
+attach_control_mode(#{kind := trait_method} = Export, _Modes) ->
+    Export#{control_mode => resumable};
+attach_control_mode(Export, _Modes) ->
+    Export.
+
+attach_dictionary_control_modes(Dictionary) ->
+    Methods = [
+        Method#{control_mode => resumable}
+        || Method <- maps:get(methods, Dictionary, [])
+    ],
+    Dictionary#{methods := Methods}.
 
 export_policy([]) ->
     all;
