@@ -35,7 +35,11 @@ normalize(AST) ->
         next => 0
     },
     try
-        {Normalized, _FinalState} = normalize_term(AST, State, []),
+        {Normalized, _FinalState} = normalize_term(
+            AST,
+            State,
+            new_scope()
+        ),
         {ok, Normalized}
     catch
         throw:{resumption_semantic_error, Reason} ->
@@ -189,6 +193,110 @@ projection_error(Context) ->
         {missing_resumption_lowering, Context}}).
 
 normalize_term(
+    {transform_clause, Patterns, Guards, Body, Location},
+    State,
+    Scope
+) ->
+    {NormalizedPatterns, State1} = normalize_list(
+        Patterns,
+        State,
+        Scope
+    ),
+    BodyScope = add_value_bindings(
+        lists:append([
+            pattern_bindings(Pattern)
+            || Pattern <- Patterns
+        ]),
+        Scope
+    ),
+    {NormalizedGuards, State2} = normalize_term(
+        Guards,
+        State1,
+        BodyScope
+    ),
+    {NormalizedBody, State3} = normalize_term(
+        Body,
+        State2,
+        BodyScope
+    ),
+    {
+        {
+            transform_clause,
+            NormalizedPatterns,
+            NormalizedGuards,
+            NormalizedBody,
+            Location
+        },
+        State3
+    };
+normalize_term({lambda, Params, Body, Location}, State, Scope) ->
+    {NormalizedParams, State1} = normalize_list(Params, State, Scope),
+    BodyScope = add_value_bindings(
+        lists:append([
+            pattern_bindings(Param)
+            || Param <- Params
+        ]),
+        Scope
+    ),
+    {NormalizedBody, State2} = normalize_term(
+        Body,
+        State1,
+        BodyScope
+    ),
+    {
+        {lambda, NormalizedParams, NormalizedBody, Location},
+        State2
+    };
+normalize_term(
+    {let_expr, [Pattern, Value], Body, Location},
+    State,
+    Scope
+) ->
+    {NormalizedPattern, State1} = normalize_term(Pattern, State, Scope),
+    {NormalizedValue, State2} = normalize_term(Value, State1, Scope),
+    BodyScope = add_value_bindings(pattern_bindings(Pattern), Scope),
+    {NormalizedBody, State3} = normalize_term(
+        Body,
+        State2,
+        BodyScope
+    ),
+    {
+        {
+            let_expr,
+            [NormalizedPattern, NormalizedValue],
+            NormalizedBody,
+            Location
+        },
+        State3
+    };
+normalize_term(
+    {match_clause, Pattern, Guards, Body, Location},
+    State,
+    Scope
+) ->
+    {NormalizedPattern, State1} = normalize_term(Pattern, State, Scope),
+    BodyScope = add_value_bindings(pattern_bindings(Pattern), Scope),
+    {NormalizedGuards, State2} = normalize_term(
+        Guards,
+        State1,
+        BodyScope
+    ),
+    {NormalizedBody, State3} = normalize_term(
+        Body,
+        State2,
+        BodyScope
+    ),
+    {
+        {
+            match_clause,
+            NormalizedPattern,
+            NormalizedGuards,
+            NormalizedBody,
+            Location
+        },
+        State3
+    };
+normalize_term(
     {operation_case, Operation, Params, Body, Location},
     State,
     Scope
@@ -214,10 +322,18 @@ normalize_term(
 ) ->
     validate_explicit_case(Binder, Origin, Params),
     {NormalizedParams, State1} = normalize_list(Params, State, Scope),
+    BodyScope0 = add_value_bindings(
+        lists:append([
+            pattern_bindings(Param)
+            || Param <- Params
+        ]),
+        Scope
+    ),
+    BodyScope = add_resumption_binding(Binder, BodyScope0),
     {NormalizedBody, State2} = normalize_term(
         Body,
         State1,
-        [Binder | Scope]
+        BodyScope
     ),
     {
         {
@@ -263,7 +379,18 @@ normalize_value_case(Operation, Params, Body, Location, State, Scope) ->
     {NormalizedParams, State1} = normalize_list(Params, State, Scope),
     %% The original value expression is normalized outside the synthetic
     %% binder's lexical scope: user source cannot refer to an internal name.
-    {NormalizedBody, State2} = normalize_term(Body, State1, Scope),
+    BodyScope = add_value_bindings(
+        lists:append([
+            pattern_bindings(Param)
+            || Param <- Params
+        ]),
+        Scope
+    ),
+    {NormalizedBody, State2} = normalize_term(
+        Body,
+        State1,
+        BodyScope
+    ),
     {Binder, State3} = fresh_binder(State2),
     Origin = {synthetic, value_handler_auto_resume, source_location(Location)},
     Resumption = {resumption_binder, Binder, Origin},
@@ -340,22 +467,40 @@ validate_origin(Origin, Binder) ->
 
 validate_resume_scope({var, Name, _TargetLocation}, Scope, ResumeLocation)
         when is_atom(Name) ->
-    case lists:member(Name, Scope) of
+    Resumptions = maps:get(resumptions, Scope),
+    Values = maps:get(values, Scope),
+    case lists:member(Name, Resumptions) orelse
+         sets:is_element(Name, Values) of
         true ->
             ok;
         false ->
             semantic_error({resumption_binder_scope, #{
                 target => Name,
-                active_binders => lists:reverse(Scope),
+                active_binders => lists:reverse(Resumptions),
                 location => ResumeLocation
             }})
     end;
-validate_resume_scope(Target, Scope, ResumeLocation) ->
-    semantic_error({resumption_binder_scope, #{
-        target => Target,
-        active_binders => lists:reverse(Scope),
-        location => ResumeLocation
-    }}).
+validate_resume_scope(_Target, _Scope, _ResumeLocation) ->
+    %% Calls, projections, and container lookups are ordinary first-class
+    %% expressions. Phase 3 typing establishes whether they carry resumption
+    %% authority.
+    ok.
+
+new_scope() ->
+    #{resumptions => [], values => sets:new()}.
+
+add_resumption_binding(Name, Scope) ->
+    Scope#{
+        resumptions := [Name | maps:get(resumptions, Scope)]
+    }.
+
+add_value_bindings(Names, Scope) ->
+    Values = lists:foldl(
+        fun sets:add_element/2,
+        maps:get(values, Scope),
+        Names
+    ),
+    Scope#{values := Values}.
 
 pattern_bindings({pat_var, Name, _Location})
         when Name =/= true, Name =/= false ->

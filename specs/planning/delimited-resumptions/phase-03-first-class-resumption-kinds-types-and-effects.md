@@ -6,7 +6,7 @@ from handled operations and delimiters, types `resume`, and permits
 resumptions to flow through ordinary Catena values without overstating
 one-shot guarantees that Hindley-Milner inference cannot prove.
 
-**Status:** In progress (Sections 3.1-3.2 complete).
+**Status:** In progress (Sections 3.1-3.3 complete).
 
 **Dependencies:** Phase 2 complete.
 
@@ -145,7 +145,7 @@ the backend remains fail-closed for explicit control. The focused Section
 program structure while applying conservative diagnostics and deferrals where
 the current type system lacks linearity or multi-shot safety.
 
-- [ ] **Section 3.3 Complete**
+- [x] **Section 3.3 Complete**
 
 ### Task 3.3.1: Support First-Class Resumption Values
 
@@ -153,14 +153,14 @@ the current type system lacks linearity or multi-shot safety.
 parameters and results, closures, algebraic data, tuples, lists, records,
 pattern bindings, and module-local call resolution.
 
-- [ ] **Task 3.3.1 Complete**
+- [x] **Task 3.3.1 Complete**
 
 #### Subtask 3.3.1.1: Type Storage And Higher-Order Passing
 
 **Description:** Infer programs that store, wrap, return, and pass resumptions
 without erasing their kind, result types, residual row, or source origin.
 
-- [ ] **Subtask 3.3.1.1 Complete**
+- [x] **Subtask 3.3.1.1 Complete**
 
 #### Subtask 3.3.1.2: Preserve Opaque Construction Authority
 
@@ -168,14 +168,14 @@ without erasing their kind, result types, residual row, or source origin.
 pattern-match the runtime representation while allowing ordinary binding of
 the opaque value.
 
-- [ ] **Subtask 3.3.1.2 Complete**
+- [x] **Subtask 3.3.1.2 Complete**
 
 ### Task 3.3.2: Enforce Conservative Consumption And Mode Rules
 
 **Description:** Detect statically obvious one-shot misuse and keep unsupported
 multi-shot behavior explicitly rejected until Phase 7.
 
-- [ ] **Task 3.3.2 Complete**
+- [x] **Task 3.3.2 Complete**
 
 #### Subtask 3.3.2.1: Diagnose Obvious Duplicate Resume
 
@@ -183,7 +183,7 @@ multi-shot behavior explicitly rejected until Phase 7.
 normalized control region when provable, while documenting that runtime
 consumption remains authoritative.
 
-- [ ] **Subtask 3.3.2.1 Complete**
+- [x] **Subtask 3.3.2.1 Complete**
 
 #### Subtask 3.3.2.2: Gate Multi-Shot And Unsafe Escape
 
@@ -191,7 +191,21 @@ consumption remains authoritative.
 unsupported residual effect or lifetime pattern with a dedicated deferred
 diagnostic rather than approximating it as one-shot.
 
-- [ ] **Subtask 3.3.2.2 Complete**
+- [x] **Subtask 3.3.2.2 Complete**
+
+**Implementation evidence:** Lexically bound values may now be checked as
+first-class resume targets, so resumptions flow through transform parameters
+and results, local and higher-order calls, closures, tuples, lists, records,
+variants, and ordinary patterns without relying on binder names. Source
+signatures accept the established `Resumption OneShot a b {}` spelling while
+preserving all four internal roles. The compiler reserves `Resumption`,
+`ResumptionKind`, `OneShot`, and `MultiShot` representation vocabulary and
+rejects source construction, deconstruction, and shadowing attempts.
+`catena_resumption_flow` rejects provable direct, aliased, and nested
+one-shot reuse on a single path without conflating exclusive branches or
+unknown higher-order invocation with a linearity proof. Concrete multi-shot
+invocation fails with `unsupported_resumption_mode` and retains its residual
+row in the diagnostic. The focused and surrounding suites pass 219 tests.
 
 ## Section 3.4: Phase 3 Integration Tests
 

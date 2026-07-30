@@ -372,6 +372,18 @@ type_check_supported_ast(
     {module, Name, _Exports, _Imports, Declarations, _Location},
     ImportedEnv
 ) ->
+    case catena_resumption_flow:validate_declarations(Declarations) of
+        ok ->
+            type_check_validated_declarations(
+                Name,
+                Declarations,
+                ImportedEnv
+            );
+        {error, _} = Error ->
+            Error
+    end.
+
+type_check_validated_declarations(Name, Declarations, ImportedEnv) ->
     %% Resolve effect operations before type checking can consume or erase
     %% their declarations.
     case catena_effect_resolution:build(Declarations) of
@@ -833,6 +845,19 @@ convert_type_sig({type_con, Name, _Loc}) ->
     {ok, catena_types:tcon(internal_type_name(Name))};
 convert_type_sig({type_con, Name}) ->
     {ok, catena_types:tcon(internal_type_name(Name))};
+convert_type_sig({
+    type_app,
+    {type_con, 'Resumption', _ConstructorLocation},
+    Args,
+    Location
+}) ->
+    convert_resumption_type_sig(Args, Location);
+convert_type_sig({
+    type_app,
+    {type_con, 'Resumption'},
+    Args
+}) ->
+    convert_resumption_type_sig(Args, undefined);
 convert_type_sig({type_app, Con, Args, _Loc}) ->
     convert_type_sig({type_app, Con, Args});
 convert_type_sig({type_app, Con, Args}) ->
@@ -856,6 +881,61 @@ convert_type_sig({type_record, Fields, _Row, _Loc}) ->
     convert_record_type(Fields, []);
 convert_type_sig(Other) ->
     {error, {unknown_type, Other}}.
+
+convert_resumption_type_sig([Kind, A, B, Effects], _Location) ->
+    case {
+        convert_resumption_kind(Kind),
+        convert_type_sig(A),
+        convert_type_sig(B),
+        convert_resumption_effect_row(Effects)
+    } of
+        {
+            {ok, InternalKind},
+            {ok, OperationResult},
+            {ok, DelimiterResult},
+            {ok, EffectRow}
+        } ->
+            {ok, catena_types:tresumption(
+                InternalKind,
+                OperationResult,
+                DelimiterResult,
+                EffectRow
+            )};
+        {{error, _} = Error, _, _, _} -> Error;
+        {_, {error, _} = Error, _, _} -> Error;
+        {_, _, {error, _} = Error, _} -> Error;
+        {_, _, _, {error, _} = Error} -> Error
+    end;
+convert_resumption_type_sig(Args, Location) ->
+    {error, {invalid_resumption_type_arity, length(Args), Location}}.
+
+convert_resumption_kind({type_con, 'OneShot', _Location}) ->
+    {ok, catena_types:one_shot()};
+convert_resumption_kind({type_con, 'OneShot'}) ->
+    {ok, catena_types:one_shot()};
+convert_resumption_kind({type_con, 'MultiShot', _Location}) ->
+    {ok, catena_types:multi_shot()};
+convert_resumption_kind({type_con, 'MultiShot'}) ->
+    {ok, catena_types:multi_shot()};
+convert_resumption_kind({type_var, Name, _Location}) ->
+    {ok, catena_types:resumption_kind_var(param_to_var(Name))};
+convert_resumption_kind({type_var, Name}) ->
+    {ok, catena_types:resumption_kind_var(param_to_var(Name))};
+convert_resumption_kind(Other) ->
+    {error, {invalid_resumption_kind_type, Other}}.
+
+convert_resumption_effect_row(
+    {type_record, [], undefined, _Location}
+) ->
+    {ok, catena_types:teffectrow([])};
+convert_resumption_effect_row({type_record, [], undefined}) ->
+    {ok, catena_types:teffectrow([])};
+convert_resumption_effect_row({type_var, Name, _Location}) ->
+    {ok, catena_types:teffectrow([], param_to_var(Name))};
+convert_resumption_effect_row({type_var, Name}) ->
+    {ok, catena_types:teffectrow([], param_to_var(Name))};
+convert_resumption_effect_row(Other) ->
+    {error, {invalid_resumption_effect_row_type, Other}}.
 
 convert_type_args([]) ->
     {ok, []};

@@ -114,6 +114,9 @@
     {unknown_handler_operation_type, map()} |
     {handler_operation_arity_mismatch, map()} |
     {invalid_resumption_binder, map()} |
+    {obvious_one_shot_reuse, map()} |
+    {unsupported_resumption_mode, map()} |
+    {invalid_resumption_representation, map()} |
 
     % Record/field errors
     {missing_field, atom(), catena_types:ty()} |
@@ -404,6 +407,24 @@ format_error({invalid_resumption_binder, Context}) ->
     format_resumption_error(
         "Invalid resumption binder",
         "The normalized operation case does not carry typed resumption authority.",
+        Context
+    );
+format_error({obvious_one_shot_reuse, Context}) ->
+    format_resumption_error(
+        "Obvious one-shot resumption reuse",
+        "This control-flow path invokes the same one-shot authority more than once.",
+        Context
+    );
+format_error({unsupported_resumption_mode, Context}) ->
+    format_resumption_error(
+        "Unsupported resumption mode",
+        "Multi-shot resumptions remain deferred until their execution and residual-effect rules are implemented.",
+        Context
+    );
+format_error({invalid_resumption_representation, Context}) ->
+    format_resumption_error(
+        "Invalid resumption representation",
+        "Resumption types and runtime values are opaque compiler-owned capabilities.",
         Context
     );
 

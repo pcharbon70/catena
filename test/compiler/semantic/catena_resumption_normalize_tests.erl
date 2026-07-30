@@ -244,17 +244,25 @@ first_resumption_reports_explicit_and_synthetic_modes_test() ->
         )
     ).
 
-typed_boundary_rejects_explicit_resumptions_test() ->
+typed_boundary_accepts_but_backend_rejects_explicit_resumptions_test() ->
+    Source =
+        "module NormalizedTypedBoundary\n"
+        "effect Choice\n"
+        "operation choose : Int\n"
+        "end\n"
+        "transform run ignored = handle perform Choice.choose() then { "
+        "Choice { choose() with k -> resume(k, 1) } }\n",
+    ?assertMatch(
+        {ok, {typed_module, _, [_, {typed_transform, run, _, _, _, _}], _}},
+        catena_compile:compile_string(Source)
+    ),
     ?assertMatch(
         {error, {missing_resumption_lowering, #{
-            stage := type_inference,
+            stage := backend_compatibility,
             construct := operation_case,
             mode := explicit_control
         }}},
-        catena_compile:compile_string(
-            "transform run = handle 1 then { "
-            "Choice { choose() with k -> resume(k, 1) } }"
-        )
+        catena_compile:compile_string_to_core(Source)
     ).
 
 synthetic_auto_resume_projects_to_legacy_value_handler_test() ->

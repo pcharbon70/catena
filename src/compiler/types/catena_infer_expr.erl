@@ -581,10 +581,6 @@ infer_resume_operands(
                                 FinalDelimiterResult,
                                 FinalEffects
                             } = FinalTarget,
-                            State7 = add_residual_effect_row(
-                                FinalEffects,
-                                State6
-                            ),
                             Evidence = resume_error_context(
                                 Target,
                                 Location,
@@ -599,14 +595,32 @@ infer_resume_operands(
                                         )
                                 }
                             ),
-                            {
-                                FinalDelimiterResult,
-                                catena_infer_state:
-                                    add_resumption_evidence(
-                                        Evidence,
-                                        State7
+                            case catena_resumption_flow:
+                                validate_supported_mode(
+                                    FinalTarget,
+                                    Evidence
+                                )
+                            of
+                                ok ->
+                                    State7 = add_residual_effect_row(
+                                        FinalEffects,
+                                        State6
+                                    ),
+                                    {
+                                        FinalDelimiterResult,
+                                        catena_infer_state:
+                                            add_resumption_evidence(
+                                                Evidence,
+                                                State7
+                                            )
+                                    };
+                                {error, {FlowReason, FlowContext}} ->
+                                    resumption_inference_error(
+                                        FlowReason,
+                                        FlowContext,
+                                        State6
                                     )
-                            };
+                            end;
                         {error, Reason, ErrorState} ->
                             resumption_inference_error(
                                 resume_value_type_mismatch,
@@ -811,37 +825,33 @@ infer_handler_operations(
                             BinderEvidence,
                             State3
                         ),
-                    case infer(CaseBody, CaseEnv, State4) of
-                        {CaseType, State5} ->
-                            case catena_infer_unify:unify(
-                                CaseType,
+                    case catena_resumption_flow:
+                        validate_one_shot_case(
+                            Binder,
+                            ResumptionType,
+                            CaseBody,
+                            BinderEvidence
+                        )
+                    of
+                        ok ->
+                            infer_handler_case_body(
+                                Effect,
+                                Rest,
                                 DelimiterResult,
-                                State5
-                            ) of
-                                {ok, _CaseSubstitution, State6} ->
-                                    infer_handler_operations(
-                                        Effect,
-                                        Rest,
-                                        DelimiterResult,
-                                        ResidualRow,
-                                        DelimiterLocation,
-                                        Env,
-                                        State6
-                                    );
-                                {error, Reason, ErrorState} ->
-                                    resumption_inference_error(
-                                        resume_delimiter_type_mismatch,
-                                        BinderEvidence#{
-                                            expected_type =>
-                                                DelimiterResult,
-                                            actual_type => CaseType,
-                                            unification => Reason
-                                        },
-                                        ErrorState
-                                    )
-                            end;
-                        {error, _, _} = Error ->
-                            Error
+                                ResidualRow,
+                                DelimiterLocation,
+                                Env,
+                                CaseBody,
+                                CaseEnv,
+                                BinderEvidence,
+                                State4
+                            );
+                        {error, {FlowReason, FlowContext}} ->
+                            resumption_inference_error(
+                                FlowReason,
+                                FlowContext,
+                                State4
+                            )
                     end;
                 {error, _, _} = Error ->
                     Error
@@ -871,6 +881,50 @@ infer_handler_operations(
         #{effect => Effect, source_term => Invalid},
         State
     ).
+
+infer_handler_case_body(
+    Effect,
+    Rest,
+    DelimiterResult,
+    ResidualRow,
+    DelimiterLocation,
+    Env,
+    CaseBody,
+    CaseEnv,
+    BinderEvidence,
+    State
+) ->
+    case infer(CaseBody, CaseEnv, State) of
+        {CaseType, State1} ->
+            case catena_infer_unify:unify(
+                CaseType,
+                DelimiterResult,
+                State1
+            ) of
+                {ok, _CaseSubstitution, State2} ->
+                    infer_handler_operations(
+                        Effect,
+                        Rest,
+                        DelimiterResult,
+                        ResidualRow,
+                        DelimiterLocation,
+                        Env,
+                        State2
+                    );
+                {error, Reason, ErrorState} ->
+                    resumption_inference_error(
+                        resume_delimiter_type_mismatch,
+                        BinderEvidence#{
+                            expected_type => DelimiterResult,
+                            actual_type => CaseType,
+                            unification => Reason
+                        },
+                        ErrorState
+                    )
+            end;
+        {error, _, _} = Error ->
+            Error
+    end.
 
 infer_operation_patterns(Patterns, OperationType, Env, State) ->
     infer_operation_patterns(
