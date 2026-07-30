@@ -37,11 +37,13 @@
     artifact_dependencies/1,
     interface/1,
     locations/1,
+    control_modes/1,
     dispositions/1,
-    with_dispositions/2
+    with_dispositions/2,
+    with_control_modes/2
 ]).
 
--define(UNIT_VERSION, 7).
+-define(UNIT_VERSION, 8).
 
 -opaque t() :: #{
     '$catena_compilation_unit' := pos_integer(),
@@ -66,6 +68,7 @@
     artifact_dependencies := [map()],
     interface := catena_module_interface:interface(),
     locations := location_index(),
+    control_modes := catena_control_mode:inventory(),
     dispositions := [map()]
 }.
 
@@ -206,7 +209,7 @@ new(
                                 TraitInventory
                             ) of
                                 {ok, Interface} ->
-                            {ok, #{
+                            Unit0 = #{
                                 '$catena_compilation_unit' => ?UNIT_VERSION,
                                 module_name => Name,
                                 runtime_module =>
@@ -236,7 +239,21 @@ new(
                                 locations => Locations,
                                 dispositions =>
                                     unclassified_dispositions(Declarations)
-                            }};
+                            },
+                            case catena_control_mode:analyze(
+                                Name,
+                                Declarations,
+                                TypedDeclarations,
+                                Callables,
+                                Options
+                            ) of
+                                {ok, ControlModes} ->
+                                    {ok, Unit0#{
+                                        control_modes => ControlModes
+                                    }};
+                                {error, _} = Error ->
+                                    Error
+                            end;
                                 {error, _} = Error ->
                                     Error
                             end;
@@ -309,6 +326,7 @@ is_compilation_unit(#{
     artifact_dependencies := ArtifactDependencies,
     interface := Interface,
     locations := Locations,
+    control_modes := ControlModes,
     dispositions := Dispositions
 }) ->
     is_atom(Name) andalso
@@ -325,6 +343,7 @@ is_compilation_unit(#{
         is_list(ArtifactDependencies) andalso
         catena_module_interface:is_interface(Interface) andalso
         is_map(Locations) andalso
+        catena_control_mode:is_inventory(ControlModes) andalso
         is_list(Dispositions) andalso
         validate_evidence(ValidationState) =:= ok;
 is_compilation_unit(_) ->
@@ -414,6 +433,9 @@ interface(Unit) ->
 -spec locations(t()) -> location_index().
 locations(Unit) -> maps:get(locations, Unit).
 
+-spec control_modes(t()) -> catena_control_mode:inventory().
+control_modes(Unit) -> maps:get(control_modes, Unit).
+
 -spec dispositions(t()) -> [map()].
 dispositions(Unit) -> maps:get(dispositions, Unit).
 
@@ -445,6 +467,19 @@ with_dispositions(Unit, Dispositions) when
                     {disposition_count_mismatch,
                         length(Declarations),
                         DeclarationDispositionCount}}}
+    end.
+
+%% @doc Replace control-mode evidence after a validated re-analysis.
+-spec with_control_modes(t(), catena_control_mode:inventory()) ->
+    {ok, t()} | {error, term()}.
+with_control_modes(Unit, ControlModes) ->
+    Candidate = Unit#{control_modes => ControlModes},
+    case catena_control_mode:is_inventory(ControlModes) andalso
+        is_compilation_unit(Candidate)
+    of
+        true -> {ok, Candidate};
+        false ->
+            {error, {invalid_compilation_unit, invalid_control_modes}}
     end.
 
 validate_evidence(ValidationState) when is_map(ValidationState) ->

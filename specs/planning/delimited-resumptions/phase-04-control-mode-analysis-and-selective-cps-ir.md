@@ -5,7 +5,7 @@ explicit in compiler-owned IR. It classifies callables as direct or resumable,
 lowers resumable regions into selective CPS, defines all cross-mode calling
 conventions, and validates the control graph before Core Erlang emission.
 
-**Status:** Planned.
+**Status:** In progress (Section 4.1 complete).
 
 **Dependencies:** Phase 3 complete.
 
@@ -14,14 +14,14 @@ conventions, and validates the control graph before Core Erlang emission.
 **Description:** Compute one authoritative lowering mode from typed effects,
 handler delimiters, resume use, imports, traits, and the resolved call graph.
 
-- [ ] **Section 4.1 Complete**
+- [x] **Section 4.1 Complete**
 
 ### Task 4.1.1: Classify Local Expressions And Callables
 
 **Description:** Mark each transform and relevant expression region `direct`
 or `resumable` with a source-oriented reason.
 
-- [ ] **Task 4.1.1 Complete**
+- [x] **Task 4.1.1 Complete**
 
 #### Subtask 4.1.1.1: Define Classification Rules
 
@@ -29,7 +29,7 @@ or `resumable` with a source-oriented reason.
 classify resumable handlers, resume expressions, and effects that may reach a
 source handler as resumable.
 
-- [ ] **Subtask 4.1.1.1 Complete**
+- [x] **Subtask 4.1.1.1 Complete**
 
 #### Subtask 4.1.1.2: Treat Open Effects Conservatively
 
@@ -37,14 +37,14 @@ source handler as resumable.
 constraints prove they cannot suspend, and retain that proof or conservative
 reason in the validated unit.
 
-- [ ] **Subtask 4.1.1.2 Complete**
+- [x] **Subtask 4.1.1.2 Complete**
 
 ### Task 4.1.2: Solve Control Modes Across The Call Graph
 
 **Description:** Propagate resumability through local, recursive, imported,
 higher-order, and trait-dispatched edges to a deterministic fixed point.
 
-- [ ] **Task 4.1.2 Complete**
+- [x] **Task 4.1.2 Complete**
 
 #### Subtask 4.1.2.1: Analyze Resolved Direct Edges
 
@@ -52,7 +52,7 @@ higher-order, and trait-dispatched edges to a deterministic fixed point.
 self-recursive, mutually recursive, and versioned imported calls without
 depending on declaration order.
 
-- [ ] **Subtask 4.1.2.1 Complete**
+- [x] **Subtask 4.1.2.1 Complete**
 
 #### Subtask 4.1.2.2: Analyze Dynamic Callable Edges
 
@@ -60,7 +60,17 @@ depending on declaration order.
 types so higher-order or dictionary dispatch never guesses a calling
 convention at Core emission time.
 
-- [ ] **Subtask 4.1.2.2 Complete**
+- [x] **Subtask 4.1.2.2 Complete**
+
+**Implementation evidence:** `catena_control_mode` now classifies every
+implemented transform and control-bearing region with a source-oriented
+reason, retained type and effect-row evidence, and explicit local, imported,
+higher-order, or trait-dispatch edges. Pure and provider-only paths remain
+direct; handlers, resume use, open rows, and unresolved dynamic capabilities
+are resumable. A declaration-order-independent fixed point propagates
+resumability through recursive local graphs. Validated compilation units
+retain the versioned inventory as the sole downstream calling-convention
+authority. The focused Section 4.1 and compilation-unit suites pass 10 tests.
 
 ## Section 4.2: CPS Control IR And Source Origins
 
