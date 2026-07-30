@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 2 frontend implementation boundary for
+Phase 3 typed-frontend implementation boundary for
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md).
 
 This ledger prevents internal helper names, marker callbacks, request/response
@@ -40,6 +40,15 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Resumption normalized AST | implemented frontend | Explicit cases are preserved; value cases receive compiler-authored tail auto-resume |
 | Resumption typing/CPS/runtime | absent | Explicit control fails closed before type inference/backend execution |
 
+## Phase 3 Snapshot
+
+| Measurement | Phase 3 result | Interpretation |
+| --- | ---: | --- |
+| Complete active EUnit suite | 5,164 pass; 0 failures; 0 skips | Kind, type, effect, first-class flow, compatibility, and fail-closed gates are green |
+| Parser conflicts | 38 shift/reduce; 0 reduce/reduce | Unchanged from the audited Phase 2 grammar boundary |
+| Resumption typing | implemented frontend | All four parameters, source origins, residual rows, schemes, and first-class flow are retained |
+| Resumption CPS/runtime | absent | Explicit control remains rejected before backend success; automatic value handlers retain request/response execution |
+
 ## Classification Vocabulary
 
 | Classification | Meaning |
@@ -49,6 +58,7 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Marker-backed | Wraps a function or value that demonstrates an API shape without executing the actual remainder after `perform` |
 | Semantic oracle | Independently executes the normative model for comparison and tests; never linked by generated application code |
 | Frontend implementation | Source parses, preserves intent, normalizes, and validates structurally, but lacks the typing/lowering/runtime evidence required for promotion |
+| Typed frontend implementation | Source reaches kind, type, effect, flow, and typed-artifact validation, but lacks executable continuation lowering/runtime evidence |
 | Planned source implementation | Accepted by the ADR and architecture but absent from the compiler/runtime path |
 | Deferred mode | Has an accepted conceptual meaning but lacks the required syntax, typing, runtime authority, or evidence for promotion |
 
@@ -57,10 +67,10 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Surface | Current implementation | Classification | Promotion target |
 | --- | --- | --- | --- |
 | `perform` syntax and AST | Parsed and typed as the existing effect expression | Request/response | Preserve syntax; classify resumable suspension points |
-| `handle` and operation cases | Parsed value/control cases normalize to one explicit semantic shape | Frontend implementation | Feed classified cases into typed selective CPS |
-| `with k` operation binder | Lexer, grammar, AST, pretty-print, scope, and diagnostics implemented; type absent | Frontend implementation | First-class `Resumption OneShot a b e` binder |
-| `resume(k, value)` | Dedicated parsed/normalized expression with arity and lexical checks; typing/lowering absent | Frontend implementation | Typed control expression with selective-CPS lowering |
-| Value-handler compatibility | Synthetic tail auto-resume is retained in normalized AST and exactly projected for existing consumers | Frontend implementation plus request/response compatibility | Execute the same normalized form through selective CPS |
+| `handle` and operation cases | Parsed value/control cases normalize to one explicit semantic shape and infer delimiter/residual types | Typed frontend implementation | Feed classified cases into selective CPS |
+| `with k` operation binder | Binds an opaque, first-class `Resumption OneShot a b e` with retained source evidence | Typed frontend implementation | Selective-CPS construction of runtime authority |
+| `resume(k, value)` | Checks typed authority and input, returns the delimiter result, and contributes residual effects | Typed frontend implementation | Selective-CPS invocation of the reified remainder |
+| Value-handler compatibility | Synthetic typed tail auto-resume is retained in normalized/typed artifacts and exactly projected for request/response execution | Typed frontend implementation plus request/response compatibility | Execute the same normalized form through selective CPS |
 | Effect context | Explicit context exists in the compiler runtime | Internal helper | Add same-process handler frame and delimiter entries |
 | Core Erlang effect backend | Emits `catena_effect_runtime:perform/4` and `with_handlers/3` calls | Request/response | Direct/resumable mode classification plus explicit bridges |
 | Continuation capture | `catena_resumption` and `catena_perform` use supplied functions or `{resumed, Value}` placeholders | Marker-backed | Compiler-reified remainder to the selected delimiter |
@@ -94,10 +104,10 @@ count. Parser conflicts are checked on every ordinary compilation.
 | `src/compiler/effects/catena_depth_selection.erl`, `catena_handler_depth.erl` | Internal depth policy and selection |
 | `src/compiler/effects/catena_multi_shot.erl`, `catena_state_copy.erl` | Repeated stored-state helper operations without the accepted residual-effect or branch semantics |
 
-### Type and effect infrastructure to be extended
+### Phase 3 type and effect infrastructure
 
-The following implemented families are real prerequisites, but none currently
-type or lower the accepted `Resumption k a b e` source construct:
+The following families now type the accepted `Resumption k a b e` source
+construct, retain its evidence, and reject unsupported lowering:
 
 - `src/compiler/types/catena_types.erl`,
   `catena_infer_expr.erl`, `catena_infer_effect.erl`, and
@@ -110,12 +120,14 @@ type or lower the accepted `Resumption k a b e` source construct:
 - the lexer, parser, AST, semantic normalization, compilation-unit, call
   resolution, erasure, origin, and backend modules named by the phased plan.
 
-Phase 2 adds `catena_resumption_normalize` as the maintained semantic
-normalizer. The typechecker, compilation-unit validators, and declaration
-disposition pass may project only its exact compiler-generated value-handler
-shape to the legacy request/response representation. Backend lowering,
-erasure, expression translation, and effect translation independently reject
-normalized resumption leakage.
+`catena_resumption_normalize` remains the maintained semantic normalizer.
+Phase 3 extends kinds, internal types, substitution, schemes, unification,
+handler and resume inference, effect rows, and conservative first-class flow
+validation. Compilation units retain normalized nodes and typed origin
+evidence. Only the backend disposition path may project the exact
+compiler-generated value-handler shape to the legacy request/response
+representation; explicit control and other resumption leakage remain
+fail-closed.
 
 ### Reference oracle
 
@@ -163,7 +175,8 @@ exclude PIDs, references, timestamps, stack traces, and function identities.
 | Category | Required use |
 | --- | --- |
 | `invalid_resumption_binder` | Malformed, duplicate, or otherwise invalid `with` binder |
-| `resumption_binder_scope` | Binder referenced outside its operation-case scope before first-class escape is typed |
+| `resumption_binder_scope` | An unbound binder name is referenced outside its operation-case scope |
+| `invalid_resumption_representation` | Source attempts to construct, deconstruct, forge, or shadow opaque representation vocabulary |
 | `invalid_resume_target` | Resume target does not have a `Resumption` type |
 | `resume_value_type_mismatch` | Supplied operation result does not unify with the resumption input |
 | `resume_effect_mismatch` | Residual resumed effects are not admitted by the current context |
@@ -207,5 +220,6 @@ rows from planned/deferred to implemented.
 - [Delimited Resumption Architecture](delimited_resumption_architecture.md)
 - [Phase 1 Plan](../planning/delimited-resumptions/phase-01-operational-semantics-feature-ledger-and-reference-oracle.md)
 - [Phase 2 Plan](../planning/delimited-resumptions/phase-02-with-resume-syntax-ast-and-semantic-normalization.md)
+- [Phase 3 Plan](../planning/delimited-resumptions/phase-03-first-class-resumption-kinds-types-and-effects.md)
 - [Effect Runtime](../runtime/effect_runtime.md)
 - [Current Status](../planning/current_status.md)

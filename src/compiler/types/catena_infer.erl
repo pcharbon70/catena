@@ -19,6 +19,7 @@
 -export([
     infer_expr/1,
     infer_expr/2,
+    infer_expr_detailed/2,
     check_program/1,
     infer_expr_with_env/2,
     infer_lambda/3,
@@ -67,6 +68,17 @@ infer_expr(Expr, Env) ->
 %% @doc Internal implementation that does the actual work
 -spec infer_expr_with_env(catena_infer_ast:expr(), catena_type_env:env()) -> result().
 infer_expr_with_env(Expr, Env) ->
+    case infer_expr_detailed(Expr, Env) of
+        {ok, Type, _Details} -> {ok, Type};
+        {error, _} = Error -> Error
+    end.
+
+%% @doc Infer an expression and retain compiler evidence needed by later
+%% validated frontend stages.
+-spec infer_expr_detailed(catena_infer_ast:expr(), catena_type_env:env()) ->
+    {ok, catena_types:type(), map()} |
+    {error, [catena_type_error:type_error()]}.
+infer_expr_detailed(Expr, Env) ->
     % Step 1: Initialize fresh inference state
     State0 = catena_infer_state:new(),
 
@@ -89,7 +101,15 @@ infer_expr_with_env(Expr, Env) ->
                     case solve_constraints(SimplifiedConstraints) of
                         ok ->
                             % All constraints satisfied
-                            {ok, FinalType};
+                            {ok, FinalType, #{
+                                effects => catena_infer_state:get_effects(State1),
+                                resumptions =>
+                                    finalize_resumption_evidence(
+                                        catena_infer_state:
+                                            get_resumption_evidence(State1),
+                                        FinalSubst
+                                    )
+                            }};
                         {error, ConstraintErrors} ->
                             % Constraint solving failed
                             {error, ConstraintErrors}
@@ -104,6 +124,28 @@ infer_expr_with_env(Expr, Env) ->
             Errors = catena_infer_state:get_errors(State1),
             {error, Errors}
     end.
+
+finalize_resumption_evidence(Evidence, Substitution) ->
+    [
+        maps:map(
+            fun
+                (type, Type) ->
+                    catena_type_subst:apply(Substitution, Type);
+                (expected_type, Type) ->
+                    catena_type_subst:apply(Substitution, Type);
+                (actual_type, Type) ->
+                    catena_type_subst:apply(Substitution, Type);
+                (supplied_type, Type) ->
+                    catena_type_subst:apply(Substitution, Type);
+                (residual_effects, Type) ->
+                    catena_type_subst:apply(Substitution, Type);
+                (_Key, Value) ->
+                    Value
+            end,
+            Entry
+        )
+        || Entry <- Evidence
+    ].
 
 %% @doc Type check a complete program
 %%

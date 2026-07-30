@@ -2,7 +2,10 @@
 
 ## Status
 
-Promoted status: implemented for the current compiler core, with trait resolution, higher-kinded type validation, explicit effect tracking, and the repo's implemented algebraic-effects row-polymorphism surfaces in place.
+Promoted status: implemented for the current compiler core, with trait
+resolution, higher-kinded type validation, explicit effect tracking,
+algebraic-effects row polymorphism, and the Phase 3 first-class
+`Resumption k a b e` typed frontend in place.
 
 ## Design Anchors
 
@@ -28,6 +31,12 @@ Promoted status: implemented for the current compiler core, with trait resolutio
   `catena_infer_state` through `catena_effect_infer`; public generalization
   delegates effect-variable quantification to `catena_effect_poly`.
 - Typed handlers, operation signatures, and higher-order effect support are present in the compiler/effects layers and validated by dedicated tests.
+- Handler cases bind opaque `Resumption OneShot a b e` values derived from
+  operation, delimiter, and residual-row types; `resume` checks its target and
+  supplied value, returns the delimiter result, and contributes residual
+  effects.
+- Resumption types participate in kinding, unification, substitution,
+  schemes, first-class value flow, and source-oriented diagnostics.
 - Standard-library validation is already part of the type-system story, not a separate future concern.
 
 ## Acceptance Criteria
@@ -95,11 +104,11 @@ The following remain explicitly deferred and must not be implied as complete by 
 - the final ergonomics and optimization story for the entire effect system
 - the final law-verification story for all abstractions
 - the broader actor/distribution phases that build on top of the effect machinery
-- the accepted but unimplemented `Resumption k a b e` typing and
-  effect-directed selective CPS lowering required for true delimited
-  source-level control; `with`/`resume` syntax and semantic normalization are
-  implemented, while current executable orchestration resumptions remain
-  opaque wrappers around a direct-style result marker
+- effect-directed selective CPS lowering and runtime authority required for
+  true executable delimited source-level control; `with`/`resume` syntax,
+  semantic normalization, and `Resumption k a b e` typing are implemented,
+  while current executable orchestration resumptions remain opaque wrappers
+  around a direct-style result marker
 
 ## Reconciled Note
 

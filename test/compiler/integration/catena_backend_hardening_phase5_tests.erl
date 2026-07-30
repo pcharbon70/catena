@@ -93,7 +93,7 @@ generated_handlers_cleanup_after_handler_failures_test() ->
         "module PhaseFiveHandlerFailure\n"
         "export transform run\n"
         "effect Fault\n"
-        "operation fail : Float\n"
+        "operation fail : Int\n"
         "end\n"
         "effect Process\n"
         "operation self : Int\n"

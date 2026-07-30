@@ -384,11 +384,10 @@ collect_handler_term(
     ) of
         {ok, Handlers1} ->
             HandlerBodies = [
-                OperationBody
+                operation_case_body(OperationCase)
                 || {handler_clause, _Effect, Operations0, _HandlerLocation} <-
                     HandlerClauses,
-                   {operation_case, _Operation, _Params, OperationBody, _OpLocation} <-
-                    Operations0
+                   OperationCase <- Operations0
             ],
             collect_handlers(
                 [Body | HandlerBodies],
@@ -579,6 +578,34 @@ validate_operation_cases(
     end;
 validate_operation_cases(
     Effect,
+    [
+        {
+            operation_case,
+            Operation,
+            Params,
+            {resumption_binder, _Binder, _Origin},
+            _Body,
+            Location
+        } = Case
+        | Rest
+    ],
+    Inventory,
+    Seen,
+    Identities
+) ->
+    validate_operation_case(
+        Effect,
+        Operation,
+        Params,
+        Location,
+        Case,
+        Rest,
+        Inventory,
+        Seen,
+        Identities
+    );
+validate_operation_cases(
+    Effect,
     [Invalid | _Rest],
     _Inventory,
     _Seen,
@@ -589,6 +616,87 @@ validate_operation_cases(
         Invalid,
         #{effect => Effect}
     ).
+
+validate_operation_case(
+    Effect,
+    Operation,
+    Params,
+    Location,
+    Case,
+    Rest,
+    Inventory,
+    Seen,
+    Identities
+) ->
+    case sets:is_element(Operation, Seen) of
+        true ->
+            resolution_error(
+                duplicate_handler_operation,
+                Case,
+                #{
+                    effect => Effect,
+                    operation => Operation,
+                    location => Location
+                }
+            );
+        false ->
+            case lookup_operation(Effect, Operation, Inventory) of
+                error ->
+                    resolution_error(
+                        unknown_handler_operation,
+                        Case,
+                        #{
+                            effect => Effect,
+                            operation => Operation,
+                            location => Location
+                        }
+                    );
+                {ok, OperationInfo} ->
+                    Expected = maps:get(arity, OperationInfo),
+                    Actual = length(Params),
+                    case Expected =:= Actual of
+                        true ->
+                            validate_operation_cases(
+                                Effect,
+                                Rest,
+                                Inventory,
+                                sets:add_element(Operation, Seen),
+                                [
+                                    maps:get(identity, OperationInfo)
+                                    | Identities
+                                ]
+                            );
+                        false ->
+                            resolution_error(
+                                handler_arity_mismatch,
+                                Case,
+                                #{
+                                    effect => Effect,
+                                    operation => Operation,
+                                    expected_arity => Expected,
+                                    actual_arity => Actual,
+                                    declaration_location =>
+                                        maps:get(location, OperationInfo),
+                                    location => Location
+                                }
+                            )
+                    end
+            end
+    end.
+
+operation_case_body({operation_case, _Operation, _Params, Body, _Location}) ->
+    Body;
+operation_case_body({
+    operation_case,
+    _Operation,
+    _Params,
+    _Binder,
+    Body,
+    _Location
+}) ->
+    Body;
+operation_case_body(Invalid) ->
+    Invalid.
 
 resolution_error(Reason, SourceTerm, Extra) ->
     Context = catena_backend_error:context(

@@ -96,6 +96,8 @@ generate_from_expr({handle_expr, Expr, Handlers, _Loc}, State) ->
     generate_from_handle(Expr, Handlers, State);
 generate_from_expr({handle, Expr, Handlers, _Loc}, State) ->
     generate_from_handle(Expr, Handlers, State);
+generate_from_expr({resume_expr, Target, Value, _Loc}, State) ->
+    generate_from_elements([Target, Value], State);
 generate_from_expr({'let', _Name, Value, Body}, State) ->
     merge_generated(generate_from_expr(Value, State), fun(State1) ->
         generate_from_expr(Body, State1)
@@ -235,6 +237,11 @@ generate_from_handler(_Other, State) ->
 
 -spec generate_from_operation_case(term(), state()) -> {constraints(), state()}.
 generate_from_operation_case({operation_case, _Name, _Params, Body, _Loc}, State) ->
+    generate_from_expr(Body, State);
+generate_from_operation_case(
+    {operation_case, _Name, _Params, _Binder, Body, _Loc},
+    State
+) ->
     generate_from_expr(Body, State);
 generate_from_operation_case(_Other, State) ->
     {[], State}.

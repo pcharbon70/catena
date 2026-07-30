@@ -107,6 +107,18 @@
     {effect_annotation_mismatch, atom(), catena_types:effect_set(), catena_types:effect_set()} |  % {FuncName, Declared, Inferred}
     {effect_context_chain, atom(), [{atom(), catena_location:location()}]} |  % {EffectName, [{FuncName, Location}]}
 
+    % First-class resumption inference errors
+    {invalid_resume_target, map()} |
+    {resume_value_type_mismatch, map()} |
+    {resume_delimiter_type_mismatch, map()} |
+    {resume_effect_mismatch, map()} |
+    {unknown_handler_operation_type, map()} |
+    {handler_operation_arity_mismatch, map()} |
+    {invalid_resumption_binder, map()} |
+    {obvious_one_shot_reuse, map()} |
+    {unsupported_resumption_mode, map()} |
+    {invalid_resumption_representation, map()} |
+
     % Record/field errors
     {missing_field, atom(), catena_types:ty()} |
 
@@ -362,6 +374,67 @@ format_error({effect_context_chain, EffectName, Chain}) ->
         [atom_to_list(EffectName), ChainStr]
     ));
 
+format_error({invalid_resume_target, Context}) ->
+    format_resumption_error(
+        "Invalid resume target",
+        "The target must have a Resumption k a b e type.",
+        Context
+    );
+format_error({resume_value_type_mismatch, Context}) ->
+    format_resumption_error(
+        "Resume value type mismatch",
+        "The supplied value must match the handled operation result.",
+        Context
+    );
+format_error({resume_delimiter_type_mismatch, Context}) ->
+    format_resumption_error(
+        "Handler result type mismatch",
+        "The operation case must return the enclosing delimiter result.",
+        Context
+    );
+format_error({resume_effect_mismatch, Context}) ->
+    format_resumption_error(
+        "Resumption effect mismatch",
+        "The resumed computation exercises effects not admitted by the current transform.",
+        Context
+    );
+format_error({unknown_handler_operation_type, Context}) ->
+    format_resumption_error(
+        "Unknown handled operation type",
+        "The operation case has no resolved declaration signature.",
+        Context
+    );
+format_error({handler_operation_arity_mismatch, Context}) ->
+    format_resumption_error(
+        "Handler operation arity mismatch",
+        "The case patterns do not match the declared operation signature.",
+        Context
+    );
+format_error({invalid_resumption_binder, Context}) ->
+    format_resumption_error(
+        "Invalid resumption binder",
+        "The normalized operation case does not carry typed resumption authority.",
+        Context
+    );
+format_error({obvious_one_shot_reuse, Context}) ->
+    format_resumption_error(
+        "Obvious one-shot resumption reuse",
+        "This control-flow path invokes the same one-shot authority more than once.",
+        Context
+    );
+format_error({unsupported_resumption_mode, Context}) ->
+    format_resumption_error(
+        "Unsupported resumption mode",
+        "Multi-shot resumptions remain deferred until their execution and residual-effect rules are implemented.",
+        Context
+    );
+format_error({invalid_resumption_representation, Context}) ->
+    format_resumption_error(
+        "Invalid resumption representation",
+        "Resumption types and runtime values are opaque compiler-owned capabilities.",
+        Context
+    );
+
 %% Record/field errors
 format_error({missing_field, Field, RecordType}) ->
     RecordStr = catena_type_pp:pp_type(RecordType),
@@ -400,6 +473,39 @@ format_error({unknown_operator, Op}) ->
 %% Catch-all for unknown errors
 format_error(Error) ->
     lists:flatten(io_lib:format("Unknown type error: ~p", [Error])).
+
+format_resumption_error(Title, Explanation, Context) ->
+    Expected = format_optional_type(maps:get(expected_type, Context, undefined)),
+    Actual = format_optional_type(maps:get(actual_type, Context, undefined)),
+    OperationOrigin = maps:get(
+        operation_declaration,
+        Context,
+        undefined
+    ),
+    lists:flatten(io_lib:format(
+        "~s: ~s~n"
+        "  Expected: ~s~n"
+        "  Got:      ~s~n"
+        "  Operation declaration: ~p~n"
+        "  Binder origin: ~p~n"
+        "  Delimiter: ~p~n"
+        "  Resume expression: ~p",
+        [
+            Title,
+            Explanation,
+            Expected,
+            Actual,
+            OperationOrigin,
+            maps:get(binder_origin, Context, undefined),
+            maps:get(delimiter_location, Context, undefined),
+            maps:get(resume_location, Context, undefined)
+        ]
+    )).
+
+format_optional_type(undefined) ->
+    "(not available)";
+format_optional_type(Type) ->
+    catena_type_pp:pp_type(Type).
 
 %% Helper function to format effect propagation chain
 %% Limited to MAX_CHAIN_LENGTH entries to prevent resource exhaustion

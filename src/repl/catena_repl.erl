@@ -505,6 +505,11 @@ extract_bindings([], Bindings) ->
     Bindings;
 extract_bindings([{typed_transform, Name, Type, _Clauses, _Loc} | Rest], Bindings) ->
     extract_bindings(Rest, maps:put(Name, {typed, Type}, Bindings));
+extract_bindings(
+    [{typed_transform, Name, Type, _Clauses, _Metadata, _Loc} | Rest],
+    Bindings
+) ->
+    extract_bindings(Rest, maps:put(Name, {typed, Type}, Bindings));
 extract_bindings([_ | Rest], Bindings) ->
     extract_bindings(Rest, Bindings).
 

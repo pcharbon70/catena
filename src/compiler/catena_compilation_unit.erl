@@ -278,10 +278,12 @@ new(_NormalizedAST, _TypedModule, Metadata) ->
 validated_compatibility_declarations(ValidationState, Declarations) ->
     case validate_evidence(ValidationState) of
         ok ->
-            catena_resumption_normalize:project_legacy_value_handlers(
-                Declarations,
-                compilation_unit_validation
-            );
+            %% Phase 3 type checking has validated normalized Resumption
+            %% nodes. The unit must retain them for the later control-mode
+            %% pass; the backend compatibility projection still occurs only
+            %% in prepare_for_codegen/1 and remains fail-closed for explicit
+            %% control until selective CPS exists.
+            {ok, Declarations};
         {error, _} = Error ->
             Error
     end.

@@ -17,15 +17,22 @@
     remove/2,
     merge/2,
     ftv_env/1,
-    from_list/1
+    from_list/1,
+    put_metadata/3,
+    lookup_metadata/2
 ]).
 
 %%====================================================================
 %% Type Definitions
 %%====================================================================
 
-%% Type environment: mapping from variable names to type schemes
--type env() :: #{atom() => catena_type_scheme:scheme()}.
+%% Type environment: source bindings plus compiler-only evidence under a
+%% disjoint tuple key that cannot collide with a source variable.
+-type metadata_key() :: {'$catena_type_metadata', term()}.
+-type env() :: #{
+    atom() => catena_type_scheme:scheme(),
+    metadata_key() => term()
+}.
 
 -export_type([env/0]).
 
@@ -230,6 +237,19 @@ remove(Env, VarName) ->
 merge(Env1, Env2) ->
     maps:merge(Env1, Env2).
 
+%% @doc Retain compiler-only origin/type evidence alongside lexical schemes.
+-spec put_metadata(env(), term(), term()) -> env().
+put_metadata(Env, Key, Value) ->
+    maps:put({'$catena_type_metadata', Key}, Value, Env).
+
+%% @doc Look up compiler-only evidence without exposing it as a source binding.
+-spec lookup_metadata(env(), term()) -> {ok, term()} | none.
+lookup_metadata(Env, Key) ->
+    case maps:find({'$catena_type_metadata', Key}, Env) of
+        {ok, Value} -> {ok, Value};
+        error -> none
+    end.
+
 %%====================================================================
 %% Free Type Variables
 %%====================================================================
@@ -277,7 +297,9 @@ merge(Env1, Env2) ->
 -spec ftv_env(env()) -> sets:set(catena_types:type_var_id()).
 ftv_env(Env) ->
     maps:fold(
-        fun(_VarName, Scheme, Acc) ->
+        fun({'$catena_type_metadata', _Key}, _Metadata, Acc) ->
+            Acc;
+           (_VarName, Scheme, Acc) ->
             SchemeFtv = catena_type_scheme:ftv_scheme(Scheme),
             sets:union(Acc, SchemeFtv)
         end,

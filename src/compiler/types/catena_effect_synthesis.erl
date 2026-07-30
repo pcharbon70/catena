@@ -76,6 +76,8 @@ synthesize({handle_expr, Body, Handlers, _Loc}, Env, State) ->
     synthesize_handle({Body, Handlers}, Env, State);
 synthesize({handle, Body, Handlers, _Loc}, Env, State) ->
     synthesize_handle({Body, Handlers}, Env, State);
+synthesize({resume_expr, Target, Value, _Loc}, Env, State) ->
+    synthesize_args([Target, Value], Env, State);
 synthesize({'let', _Name, Value, Body}, Env, State) ->
     synthesize_let({Value, Body}, Env, State);
 synthesize({let_expr, [{pat_var, _Name, _}, Value], Body, _Loc}, Env, State) ->
@@ -288,6 +290,12 @@ synthesize_handler_operations(Operations, Env, State) ->
 
 -spec synthesize_handler_operation(term(), env(), state()) -> synthesis_result().
 synthesize_handler_operation({operation_case, _Name, _Params, Body, _Loc}, Env, State) ->
+    synthesize(Body, Env, State);
+synthesize_handler_operation(
+    {operation_case, _Name, _Params, _Binder, Body, _Loc},
+    Env,
+    State
+) ->
     synthesize(Body, Env, State);
 synthesize_handler_operation(_Other, _Env, State) ->
     {empty(), State}.

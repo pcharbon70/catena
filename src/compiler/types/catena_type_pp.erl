@@ -77,6 +77,8 @@ pp_type_iolist({tvar, Id}) when is_list(Id) ->
     Id;
 pp_type_iolist({tvar, Id}) when is_integer(Id) ->
     ["α", integer_to_list(Id)];
+pp_type_iolist({tkvar, resumption_kind, Id}) ->
+    ["κ", integer_to_list(Id)];
 
 pp_type_iolist({tcon, Name}) ->
     % Handle special case for maybe_type -> maybe (user-friendly naming)
@@ -145,7 +147,39 @@ pp_type_iolist({ttuple, Elements}) ->
 pp_type_iolist({tvariant, Constructors}) ->
     ConStrs = [pp_variant_constructor_iolist(Name, Args)
               || {Name, Args} <- Constructors],
-    join(ConStrs, " | ").
+    join(ConStrs, " | ");
+
+pp_type_iolist({teffectrow, Effects, Tail}) ->
+    pp_effect_row_iolist(Effects, Tail);
+
+pp_type_iolist(
+    {tresumption, Kind, OperationResult, DelimiterResult, Effects}
+) ->
+    [
+        "Resumption ",
+        pp_type_with_parens_iolist(Kind),
+        " ",
+        pp_type_with_parens_iolist(OperationResult),
+        " ",
+        pp_type_with_parens_iolist(DelimiterResult),
+        " ",
+        pp_type_iolist(Effects)
+    ].
+
+pp_effect_row_iolist([], closed) ->
+    "{}";
+pp_effect_row_iolist(Effects, closed) ->
+    ["{", join([atom_to_list(Effect) || Effect <- Effects], ", "), "}"];
+pp_effect_row_iolist([], Tail) ->
+    ["{| ε", integer_to_list(Tail), "}"];
+pp_effect_row_iolist(Effects, Tail) ->
+    [
+        "{",
+        join([atom_to_list(Effect) || Effect <- Effects], ", "),
+        " | ε",
+        integer_to_list(Tail),
+        "}"
+    ].
 
 %% Internal helpers for iolists
 pp_variant_constructor_iolist(Name, []) ->
@@ -250,9 +284,37 @@ pp_effects_iolist({effect_set, Effects}) ->
 -spec pp_scheme(catena_type_scheme:scheme()) -> string().
 pp_scheme({mono, Type}) ->
     pp_type(Type);
+pp_scheme({mono, Type, Constraints}) ->
+    lists:flatten([
+        pp_constraints_iolist(Constraints),
+        " => ",
+        pp_type_iolist(Type)
+    ]);
 pp_scheme({poly, Vars, Type}) ->
     VarStrs = [format_type_var(V) || V <- Vars],
-    lists:flatten(["∀", join(VarStrs, " "), ". ", pp_type_iolist(Type)]).
+    lists:flatten(["∀", join(VarStrs, " "), ". ", pp_type_iolist(Type)]);
+pp_scheme({poly, Vars, Constraints, Type}) ->
+    VarStrs = [format_type_var(V) || V <- Vars],
+    lists:flatten([
+        "∀",
+        join(VarStrs, " "),
+        ". ",
+        pp_constraints_iolist(Constraints),
+        " => ",
+        pp_type_iolist(Type)
+    ]).
+
+pp_constraints_iolist(Constraints) ->
+    join([pp_constraint_iolist(Constraint) || Constraint <- Constraints], ", ").
+
+pp_constraint_iolist({trait, Trait, Arguments, _Location}) ->
+    [
+        atom_to_list(Trait),
+        " ",
+        join([pp_type_with_parens_iolist(Type) || Type <- Arguments], " ")
+    ];
+pp_constraint_iolist(Constraint) ->
+    io_lib:format("~p", [Constraint]).
 
 %% Helper to format type variables consistently
 format_type_var(V) when is_integer(V) ->

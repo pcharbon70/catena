@@ -31,6 +31,7 @@
 
     % Variables
     {var, atom()} |
+    {var, atom(), term()} |
 
     % Function application
     {app, expr(), expr()} |
@@ -63,7 +64,11 @@
     {variant, atom(), [expr()]} |
 
     % Type annotation
-    {ann, expr(), catena_types:type()}.
+    {ann, expr(), catena_types:type()} |
+
+    % Delimited resumptions
+    {resume_expr, expr(), expr(), term()} |
+    {handle_expr, expr(), [term()], term()}.
 
 %% @doc Pattern AST nodes
 -type pattern() ::
