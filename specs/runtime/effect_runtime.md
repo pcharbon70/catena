@@ -4,8 +4,11 @@
 
 Promoted status: compiler-aligned explicit-context runtime with handler
 processes, nested scope support, configurable operation timeouts, synchronous
-handler cleanup, and builtin `IO` and `Process` handlers. Declared effects now
-execute from Catena source through loaded BEAM at this boundary.
+handler cleanup, and builtin `IO` and `Process` handlers. The runtime also has
+an implemented, non-promoted selective-CPS target with local deep handler
+frames and opaque process-affine one-shot resumptions. Declared direct effects
+execute from Catena source through loaded BEAM; resumable source constructs
+still await Phase 6 Core lowering.
 
 ## Design Anchors
 
@@ -14,10 +17,14 @@ execute from Catena source through loaded BEAM at this boundary.
 - [Current Status](../planning/current_status.md)
 - [Runtime Contract](../contracts/runtime_contract.md)
 - `src/compiler/runtime/catena_effect_runtime.erl`
+- `src/compiler/runtime/catena_resumption_runtime.erl`
 - `src/compiler/effects/catena_effect_system.erl`
 - `src/compiler/types/catena_effect_resolution.erl`
 - `src/compiler/codegen/catena_effect_codegen.erl`
 - `test/compiler/runtime/catena_effect_runtime_tests.erl`
+- `test/compiler/runtime/catena_effect_context_resumption_tests.erl`
+- `test/compiler/runtime/catena_resumption_lifecycle_tests.erl`
+- `test/compiler/integration/catena_delimited_resumption_phase5_tests.erl`
 - `test/integration/catena_effect_integration_tests.erl`
 - `test/compiler/integration/catena_backend_hardening_phase5_tests.erl`
 
@@ -45,11 +52,17 @@ execute from Catena source through loaded BEAM at this boundary.
   tree as a separate Erlang-facing facade. It uses process-local handler scopes
   for direct component execution and does not replace the explicit-context
   generated-code boundary.
+- Selective-CPS fixtures may install same-process `local_resumable` frames,
+  perform through `perform_cps/5`, and invoke real compiler-shaped
+  continuations through opaque deep one-shot runtime handles.
+- Resumption authority uses explicit registry state, frame leases, owner and
+  provider monitors, cooperative deadlines, and source-oriented failures; it
+  does not use the process dictionary or execute continuations on providers.
 
-## Accepted Runtime Evolution
+## Implemented Runtime Evolution
 
 ADR-0006 preserves explicit contexts as the authority for handler lookup and
-adds a planned runtime distinction:
+adds the implemented runtime distinction:
 
 - resumable source handler frames execute on the computation's originating
   BEAM process so a continuation preserves `self`, mailbox ownership, and
@@ -60,12 +73,12 @@ adds a planned runtime distinction:
   continuation, delimiter, captured context, kind, ownership, and consumption
   authority
 
-Phase 4 now supplies the validated selective-CPS graph and calling convention
-that this evolution will consume. The ownership registry, deep one-shot
-invocation, and Core integration are not implemented by the current
-request/response runtime. The current handler-process lifecycle acceptance
-criteria remain authoritative until those later phases are implemented and
-promoted.
+Phase 4 supplies the validated selective-CPS graph and calling convention.
+Phase 5 supplies the ownership registry, deep one-shot invocation, retained
+frame leases, lifecycle cleanup, and stable runtime diagnostics. Phase 6 must
+lower the validated graph into calls to this ABI and prove source-to-loaded
+BEAM execution. The current handler-process lifecycle acceptance criteria
+remain authoritative for the promoted request/response path.
 
 ## Acceptance Criteria
 
@@ -126,6 +139,7 @@ The effect runtime is only promoted as correct when it lines up with the compile
   Erlang actor toolkit is specified separately in
   [Actor Runtime](actor_runtime.md)
 - distributed effect handling
-- true delimited source-level resumptions, which are accepted and planned in
+- Core lowering and loaded-BEAM execution of source-level resumptions, which
+  are accepted and planned in
   [Delimited Resumption Architecture](../compiler/delimited_resumption_architecture.md)
 - the full future runtime story beyond the proof-of-concept

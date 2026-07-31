@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 4 validated compiler-IR boundary for
+Phase 5 executable runtime-ABI boundary for
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md).
 
 This ledger prevents internal helper names, marker callbacks, request/response
@@ -59,6 +59,16 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Selective-CPS IR | implemented compiler boundary | Deterministic delimiters, continuations, resumptions, resume/abort nodes, calls, bridges, origins, and dispositions are retained and validated |
 | Resumption runtime/Core | absent | Explicit control still fails closed before Core success; Phase 5 runtime authority and Phase 6 Core lowering remain required |
 
+## Phase 5 Snapshot
+
+| Measurement | Phase 5 result | Interpretation |
+| --- | ---: | --- |
+| Complete active EUnit suite | 5,233 pass; 0 failures; 0 skips | Opaque authority, deep handler contexts, lifecycle cleanup, runtime diagnostics, and all earlier gates are green |
+| Parser conflicts | 38 shift/reduce; 0 reduce/reduce | Unchanged from the audited Phase 2 grammar boundary |
+| Resumption runtime | implemented runtime ABI | Real compiler-shaped closures execute on their capturing process through opaque deep one-shot handles |
+| Context and lifecycle | implemented runtime ABI | Local resumable/value and process-provider entries, retained leases, owner/provider monitors, timeouts, and cleanup are explicit |
+| Core integration | absent | Validated Phase 4 nodes are not yet emitted as runtime calls; explicit source control continues to fail closed before Core success |
+
 ## Classification Vocabulary
 
 | Classification | Meaning |
@@ -70,6 +80,7 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Frontend implementation | Source parses, preserves intent, normalizes, and validates structurally, but lacks the typing/lowering/runtime evidence required for promotion |
 | Typed frontend implementation | Source reaches kind, type, effect, flow, and typed-artifact validation, but lacks executable continuation lowering/runtime evidence |
 | Compiler IR implementation | Typed source reaches authoritative control classification, selective-CPS lowering, and fail-closed graph validation, but lacks production runtime/Core execution |
+| Runtime ABI implementation | Real compiler-shaped closures execute through the production deep one-shot runtime, but generated Core does not yet construct or invoke them |
 | Planned source implementation | Accepted by the ADR and architecture but absent from the compiler/runtime path |
 | Deferred mode | Has an accepted conceptual meaning but lacks the required syntax, typing, runtime authority, or evidence for promotion |
 
@@ -78,15 +89,15 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Surface | Current implementation | Classification | Promotion target |
 | --- | --- | --- | --- |
 | `perform` syntax and AST | Parsed and typed as the existing effect expression | Request/response | Preserve syntax; classify resumable suspension points |
-| `handle` and operation cases | Parsed and typed cases lower to deterministic delimiter, handler-install, suspension, resume, and abort control nodes | Compiler IR implementation | Execute the validated graph through the deep one-shot runtime |
-| `with k` operation binder | Binds `Resumption OneShot a b e`; lowering constructs a typed resumption linked to its delimiter and continuation identity | Compiler IR implementation | Construct opaque process-affine runtime authority |
-| `resume(k, value)` | Typed authority and residual effects lower to validated resume nodes, including first-class authority-carried delimiters | Compiler IR implementation | Invoke the compiler-reified remainder through the runtime/Core ABI |
-| Value-handler compatibility | Synthetic typed tail auto-resume lowers through the same control IR and remains exactly projected for request/response execution | Compiler IR implementation plus request/response compatibility | Execute the normalized form through the production resumption runtime |
-| Effect context | Explicit context exists in the compiler runtime | Internal helper | Add same-process handler frame and delimiter entries |
+| `handle` and operation cases | Parsed and typed cases lower to deterministic control nodes; the runtime executes equivalent real-closure fixtures with local deep frames | Compiler IR plus runtime ABI implementation | Phase 6 emits the validated graph through the runtime |
+| `with k` operation binder | Binds `Resumption OneShot a b e`; runtime capture constructs opaque process-affine authority for a supplied compiler closure | Compiler IR plus runtime ABI implementation | Phase 6 connects the lowered binder to capture |
+| `resume(k, value)` | Typed authority lowers to validated resume nodes; runtime invocation executes the supplied delimited remainder on its owner | Compiler IR plus runtime ABI implementation | Phase 6 emits the runtime invocation |
+| Value-handler compatibility | Synthetic tail auto-resume is typed/lowered and runtime value cases execute the same exactly-once deep path | Compiler IR, runtime ABI, and request/response compatibility | Phase 6 emits the normalized form |
+| Effect context | Explicit contexts distinguish local resumable frames, local value providers, and process-backed providers with nested lookup | Runtime ABI implementation | Consume these entries from emitted Core |
 | Core Erlang effect backend | Direct code still emits `catena_effect_runtime:perform/4` and `with_handlers/3`; validated CPS nodes are not emitted yet | Request/response plus fail-closed compiler IR | Phase 6 Core emission for the Phase 4 ABI |
-| Continuation capture | Phase 4 reifies compiler-owned continuation identities and remainder structure; production helpers still use supplied functions or `{resumed, Value}` placeholders | Compiler IR implementation plus marker-backed runtime | Executable compiler closure to the selected delimiter |
-| One-shot consumption | ETS-backed wrapper consumption is tested independently | Internal helper | Opaque process-affine runtime authority over a real continuation |
-| Deep/shallow selection | Helper modules model scope/depth behavior, often with process-local context | Internal helper | Deep restoration around a captured remainder; shallow remains deferred |
+| Continuation capture | Phase 4 reifies remainder structure; Phase 5 privately registers supplied binary CPS closures and captured contexts behind opaque handles | Compiler IR plus runtime ABI implementation | Phase 6 supplies emitted compiler closures |
+| One-shot consumption | A private serialized registry atomically enforces `fresh -> running -> consumed` for every exit | Runtime ABI implementation | Consume from emitted `resume` nodes |
+| Deep/shallow selection | Deep restoration is executable through retained contexts; shallow remains rejected | Runtime ABI implementation plus deferred mode | Phase 6 emits deep; Phase 7 owns shallow |
 | Multi-shot | State-copy and resume-count helpers exist | Deferred mode | Residual-effect admissibility and independent branch authority |
 | Operational semantics | Normative written reductions | Semantic specification | Remains authoritative across later phases |
 | `catena_resumption_oracle` | Explicit free-request evaluator with deterministic trace/state | Semantic oracle | Comparison evidence only; never production ABI |
@@ -97,7 +108,8 @@ count. Parser conflicts are checked on every ordinary compilation.
 
 | Modules | Honest boundary |
 | --- | --- |
-| `src/compiler/runtime/catena_effect_runtime.erl` | Explicit-context lookup, provider processes, replies, errors, and timeouts; no continuation capture |
+| `src/compiler/runtime/catena_effect_runtime.erl` | Promoted request/response operations plus non-promoted local resumable frames, `perform_cps/5`, deep context restoration, and provider separation |
+| `src/compiler/runtime/catena_resumption_runtime.erl` | Opaque versioned handles, private closure/context authority, atomic one-shot invocation, retention leases, lifecycle monitors, deadlines, cleanup, and stable failures |
 | `src/compiler/codegen/catena_effect_codegen.erl` | Lowers perform/handle to the request/response runtime |
 | `src/compiler/effects/catena_effects.erl`, `catena_effect_system.erl` | Public/internal orchestration around current direct-style effect execution |
 | `src/compiler/effects/catena_handler.erl`, `catena_handler_stack.erl`, `catena_handler_check.erl` | Handler construction, lookup, execution, and validation helpers |
@@ -153,8 +165,21 @@ The compiler now retains and validates the non-executable control graph:
 - `catena_module_interface` publishes validated imported transform modes.
 
 `catena_compilation_unit` retains the mode inventory, control IR, and passing
-validation report before declaration disposition. This does not replace the
-Phase 5 runtime or Phase 6 Core lowering.
+validation report before declaration disposition. Phase 6 must connect this
+graph to the Phase 5 runtime ABI.
+
+### Phase 5 runtime infrastructure
+
+- `catena_effect_runtime` owns typed explicit-context entries, nested lookup,
+  local resumable/value execution, process-provider separation, and deep
+  `perform_cps/5`;
+- `catena_resumption_runtime` owns opaque handles, private continuation and
+  context state, atomic authorization, process affinity, leases, lifecycle
+  monitors, deadlines, cleanup, and stable failures.
+
+The Phase 5 integration suite executes real compiler-shaped closures through
+these modules. Generated application code does not call this path until
+Phase 6 lowers the validated control graph.
 
 ### Reference oracle
 
@@ -239,8 +264,9 @@ types, lowers, and executes a real delimited continuation.
 
 Only end-to-end evidence through the production source-to-BEAM path may
 promote executable `with`, `resume`, first-class retention, shallow, or
-multi-shot semantics. Phase 4 may accurately claim implemented compiler IR,
-but not executable selective-CPS continuation behavior.
+multi-shot semantics. Phase 5 may accurately claim an executable production
+runtime ABI for real compiler-shaped closures, but not source-to-Core/BEAM
+integration or promoted source behavior.
 
 ## Related Material
 
@@ -250,5 +276,6 @@ but not executable selective-CPS continuation behavior.
 - [Phase 2 Plan](../planning/delimited-resumptions/phase-02-with-resume-syntax-ast-and-semantic-normalization.md)
 - [Phase 3 Plan](../planning/delimited-resumptions/phase-03-first-class-resumption-kinds-types-and-effects.md)
 - [Phase 4 Plan](../planning/delimited-resumptions/phase-04-control-mode-analysis-and-selective-cps-ir.md)
+- [Phase 5 Plan](../planning/delimited-resumptions/phase-05-deep-one-shot-runtime-and-resumption-ownership.md)
 - [Effect Runtime](../runtime/effect_runtime.md)
 - [Current Status](../planning/current_status.md)

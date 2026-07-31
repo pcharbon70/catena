@@ -70,8 +70,8 @@ before declaration projection.
 The boundary is specified in
 [Delimited Resumption Architecture](delimited_resumption_architecture.md).
 It is compiler IR, not runtime promotion evidence. Explicit resumptions remain
-fail-closed at Core emission until the deep one-shot runtime and Core lowering
-phases consume this graph.
+fail-closed at Core emission until Phase 6 lowers this graph into the
+implemented deep one-shot runtime ABI.
 
 ## Acceptance Criteria
 

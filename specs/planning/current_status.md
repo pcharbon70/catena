@@ -13,7 +13,7 @@ It exists because some planning checklists are stale relative to later implement
 | Track | Current promoted status |
 | --- | --- |
 | Proof-of-concept | Implemented through Phases 1 to 3, with Phase 4 partial/minimal and a verified local Phase 5 actor runtime toolkit whose source-language integration remains incomplete. |
-| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary. Delimited-resumption Phases 1 through 4 now provide normative deep one-shot semantics, an executable oracle, `with`/`resume` syntax, first-class `Resumption k a b e` typing, authoritative control modes, and validated selective-CPS IR. Production runtime/Core execution of explicit resumptions remains unimplemented. |
+| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary. Delimited-resumption Phases 1 through 5 now provide normative deep one-shot semantics, an executable oracle, `with`/`resume` syntax, first-class `Resumption k a b e` typing, authoritative control modes, validated selective-CPS IR, and an executable process-affine runtime ABI with lifecycle ownership. Core emission and source-to-loaded-BEAM execution of explicit resumptions remain unimplemented. |
 | Property testing | Phases 1 to 4 are materially implemented in `src/proptest`; Phases 5 and 6 are substantial but partial; explicit Phase 7 helper surfaces are also materially implemented, while automatic language integration remains incomplete. |
 | Law verification | Structural and concrete stdlib laws execute, and known-instance generic checks bridge into the internal proptest framework; automatic derivation and broader workflow ergonomics remain future work. |
 | Language revamp migration | Completed and now historical. |
@@ -134,17 +134,22 @@ Important caveat:
   selective-CPS control IR, public/private entry and closure ABIs, explicit
   bridges, first-class authority delimiters, source origins, and fail-closed
   graph validation retained in every compilation unit
+- Phase 5 is complete with versioned opaque runtime handles, explicit local
+  resumable/value and process-provider context entries, owner-process deep
+  resume, atomic one-shot consumption, retained frame leases, owner/provider
+  lifecycle monitoring, cooperative timeouts, idempotent cleanup, and stable
+  source-oriented runtime failures
 - existing value handlers preserve their executable request/response behavior
   through an exact compiler-generated compatibility projection while their
   normalized and typed AST remains authoritative
-- the oracle is comparison evidence, not a production runtime; the compiler
-  IR does not yet provide runtime authority, Core lowering, or executable
-  explicit `resume`
+- the oracle remains comparison evidence; Phase 5 proves the production
+  runtime ABI with real compiler-shaped closures, but the compiler does not
+  yet emit Phase 4 control IR through that ABI
 
 Next clear steps on this track:
 
-- implement Phase 5 deep one-shot runtime authority, then Phase 6 Core/BEAM
-  lowering for the validated Phase 4 ABI
+- implement Phase 6 Core/BEAM lowering for the validated Phase 4 ABI and
+  completed Phase 5 runtime
 - promote deep one-shot execution before separately accepting source spelling
   and executable evidence for shallow or multi-shot opt-ins
 
@@ -294,9 +299,9 @@ Important caveat:
 ## Current Quality State
 
 The default `rebar3 eunit` entry point discovers, compiles, and executes the
-complete active test tree. Delimited-resumption Phase 4 passed 5,192 tests
-with zero failures or skips on 2026-07-30; Phase 3 passed 5,164, Phase 2
-passed 5,128, and Phase 1 passed 5,061. The preceding backend-hardening
+complete active test tree. Delimited-resumption Phase 5 passed 5,233 tests
+with zero failures or skips on 2026-07-31; Phase 4 passed 5,192, Phase 3
+passed 5,164, Phase 2 passed 5,128, and Phase 1 passed 5,061. The preceding backend-hardening
 Phase 7 gate passed 5,029 tests. Its Phase 6 gate was also green; Phase 5,
 Phase 4, Phase 3, Phase 2, and Phase 1 reported 4,985, 4,954, 4,928, 4,906,
 and 4,873 passing tests, respectively. The earlier 4,838-test baseline remains

@@ -26,7 +26,17 @@
 
     %% Main API
     perform/4,
+    perform_cps/5,
     with_handlers/3,
+    with_value_provider/3,
+    with_resumable_handler/3,
+    resume/2,
+    resume/3,
+    discard/1,
+
+    %% Resumable handler construction
+    control_case/3,
+    value_case/3,
 
     %% Builtin effects
     io_handler/0,
@@ -37,13 +47,47 @@
 %% Type Definitions
 %%====================================================================
 
+-type context_entry() ::
+    #{
+        kind := local_resumable,
+        effect := atom(),
+        cases := [resumable_case()],
+        delimiter := reference(),
+        frame_identity := reference(),
+        depth := deep,
+        owner := pid(),
+        origin := term()
+    }
+    | #{
+        kind := local_value_provider,
+        effect := atom(),
+        operations := [{atom(), function()}],
+        origin := term()
+    }
+    | #{
+        kind := process_provider,
+        effect := atom(),
+        operations := [{atom(), function()}],
+        provider := pid(),
+        origin := term()
+    }.
+
+-type resumable_case() :: #{
+    operation := atom(),
+    arity := non_neg_integer(),
+    mode := control | value,
+    handler := function(),
+    origin := term()
+}.
+
 -type effect_context() :: #{
     handlers := #{atom() => pid()},
+    entries := [context_entry()],
     parent := effect_context() | undefined,
     timeout := pos_integer()
 }.
 
--export_type([effect_context/0]).
+-export_type([effect_context/0, context_entry/0, resumable_case/0]).
 
 %% Effect handler timeout (5 seconds)
 -define(EFFECT_TIMEOUT, 5000).
@@ -64,6 +108,7 @@
 empty_context() ->
     #{
         handlers => #{},
+        entries => [],
         parent => undefined,
         timeout => ?EFFECT_TIMEOUT
     }.
@@ -80,6 +125,7 @@ new_context(Options) when is_map(Options) ->
     true = is_integer(Timeout) andalso Timeout > 0,
     #{
         handlers => #{},
+        entries => [],
         parent => undefined,
         timeout => Timeout
     }.
@@ -97,24 +143,86 @@ new_context(Options) when is_map(Options) ->
 %%   Send: {perform, Effect, Operation, Args, ReplyPid}
 %%   Recv: {effect_result, Value}
 -spec perform(effect_context(), atom(), atom(), list()) -> term().
-perform(Ctx, Effect, Operation, Args) ->
-    case get_handler(Ctx, Effect) of
-        undefined ->
-            %% No handler registered - try builtin effects
-            perform_builtin(Effect, Operation, Args);
-        HandlerPid ->
-            %% Send perform message to handler
-            HandlerPid ! {perform, Effect, Operation, Args, self()},
-            Timeout = maps:get(timeout, Ctx, ?EFFECT_TIMEOUT),
-            %% Wait for result
-            receive
-                {effect_result, Value} ->
-                    Value;
-                {effect_error, Reason} ->
-                    erlang:error({effect_error, Effect, Operation, Reason})
-            after Timeout ->
-                erlang:error({effect_timeout, Effect, Operation})
-            end
+perform(Ctx, Effect, Operation, Args)
+        when is_atom(Effect), is_atom(Operation), is_list(Args) ->
+    case lookup_entry(Ctx, Effect, Operation, length(Args)) of
+        {ok, #{kind := local_value_provider} = Entry, _HandlerCtx} ->
+            invoke_value_provider(Entry, Operation, Args);
+        {ok, #{kind := process_provider} = Entry, _HandlerCtx} ->
+            request_process_provider(Ctx, Entry, Operation, Args);
+        {ok, #{kind := local_resumable}, _HandlerCtx} ->
+            erlang:error({
+                effect_runtime_error,
+                missing_compiler_continuation,
+                Effect,
+                Operation
+            });
+        {error, Reason} ->
+            erlang:error({effect_runtime_error, Reason});
+        none ->
+            perform_builtin(Effect, Operation, Args)
+    end.
+
+%% @doc Suspend a selective-CPS computation at an effect operation.
+%%
+%% Local resumable cases receive an opaque resumption. Value cases
+%% automatically tail-resume. Direct providers compute only the operation
+%% result; the continuation always runs afterward on the capturing process.
+-spec perform_cps(
+    effect_context(),
+    atom(),
+    atom(),
+    list(),
+    fun((term(), effect_context()) -> term())
+) -> term().
+perform_cps(Ctx, Effect, Operation, Args, Continuation)
+        when
+            is_atom(Effect),
+            is_atom(Operation),
+            is_list(Args),
+            is_function(Continuation, 2)
+        ->
+    Origin = {runtime_effect_operation, Effect, Operation},
+    try
+        perform_cps_i(Ctx, Effect, Operation, Args, Continuation)
+    catch
+        Class:Reason:_Stack ->
+            {error, catena_resumption_runtime:normalize_exception(
+                Class,
+                Reason,
+                Origin
+            )}
+    end.
+
+-spec perform_cps_i(
+    effect_context(),
+    atom(),
+    atom(),
+    list(),
+    fun((term(), effect_context()) -> term())
+) -> term().
+perform_cps_i(Ctx, Effect, Operation, Args, Continuation) ->
+    case lookup_entry(Ctx, Effect, Operation, length(Args)) of
+        {ok, #{kind := local_resumable} = Frame, HandlerCtx} ->
+            perform_local_resumable(
+                Ctx,
+                HandlerCtx,
+                Frame,
+                Operation,
+                Args,
+                Continuation
+            );
+        {ok, #{kind := local_value_provider} = Entry, _HandlerCtx} ->
+            Value = invoke_value_provider(Entry, Operation, Args),
+            Continuation(Value, Ctx);
+        {ok, #{kind := process_provider} = Entry, _HandlerCtx} ->
+            Value = request_process_provider(Ctx, Entry, Operation, Args),
+            Continuation(Value, Ctx);
+        {error, Reason} ->
+            erlang:error({effect_runtime_error, Reason});
+        none ->
+            Value = perform_builtin(Effect, Operation, Args),
+            Continuation(Value, Ctx)
     end.
 
 %% @doc Execute body with effect handlers
@@ -125,13 +233,16 @@ perform(Ctx, Effect, Operation, Args) ->
 with_handlers(Ctx, HandlerSpecs, BodyFun) ->
     %% Spawn handler processes and collect their PIDs
     {HandlerPids, NewHandlers} = spawn_handlers(HandlerSpecs),
+    ProcessEntries = process_provider_entries(HandlerSpecs, NewHandlers),
 
     %% Create child context with new handlers merged in
-    ChildCtx = #{
+    ChildCtx0 = #{
         handlers => maps:merge(maps:get(handlers, Ctx), NewHandlers),
+        entries => ProcessEntries,
         parent => Ctx,
         timeout => maps:get(timeout, Ctx, ?EFFECT_TIMEOUT)
     },
+    ChildCtx = inherit_deadline(Ctx, ChildCtx0),
 
     try
         %% Execute body with child context
@@ -141,24 +252,498 @@ with_handlers(Ctx, HandlerSpecs, BodyFun) ->
         cleanup_handlers(HandlerPids)
     end.
 
+%% @doc Execute a body under a same-process, non-resumable value provider.
+-spec with_value_provider(
+    effect_context(),
+    {atom(), [{atom(), function()}]},
+    fun((effect_context()) -> T)
+) -> T.
+with_value_provider(Ctx, {Effect, Operations}, BodyFun)
+        when
+            is_atom(Effect),
+            is_list(Operations),
+            is_function(BodyFun, 1)
+        ->
+    validate_operations(Operations),
+    Entry = #{
+        kind => local_value_provider,
+        effect => Effect,
+        operations => Operations,
+        origin => {runtime_value_provider, Effect}
+    },
+    BodyFun(child_context(Ctx, Entry)).
+
+%% @doc Execute a body under a same-process deep resumable handler frame.
+-spec with_resumable_handler(
+    effect_context(),
+    map(),
+    fun((effect_context()) -> T)
+) -> T.
+with_resumable_handler(Ctx, #{
+    effect := Effect,
+    cases := Cases,
+    origin := Origin
+}, BodyFun)
+        when
+            is_atom(Effect),
+            is_list(Cases),
+            is_function(BodyFun, 1)
+        ->
+    ok = validate_resumable_cases(Cases),
+    Frame = #{
+        kind => local_resumable,
+        effect => Effect,
+        cases => Cases,
+        delimiter => make_ref(),
+        frame_identity => make_ref(),
+        depth => deep,
+        owner => self(),
+        origin => Origin
+    },
+    BodyFun(child_context(Ctx, Frame)).
+
+%% @doc Invoke an opaque resumption and return its delimiter result.
+-spec resume(term(), term()) -> term().
+resume(Resumption, Value) ->
+    case catena_resumption_runtime:resume(Resumption, Value) of
+        {ok, Result} ->
+            Result;
+        {error, Failure} ->
+            {error, Failure}
+    end.
+
+%% @doc Invoke with a same-process runtime deadline.
+-spec resume(term(), term(), timeout()) -> term().
+resume(Resumption, Value, Timeout) ->
+    case catena_resumption_runtime:resume(Resumption, Value, Timeout) of
+        {ok, Result} ->
+            Result;
+        {error, Failure} ->
+            {error, Failure}
+    end.
+
+%% @doc Idempotently abandon a retained resumption.
+-spec discard(term()) -> ok | {error, map()}.
+discard(Resumption) ->
+    catena_resumption_runtime:discard(Resumption).
+
+%% @doc Construct a control case for a resumable source handler frame.
+-spec control_case(
+    atom(),
+    non_neg_integer(),
+    fun(([term()], term(), effect_context()) -> term())
+) -> resumable_case().
+control_case(Operation, Arity, Handler)
+        when
+            is_atom(Operation),
+            is_integer(Arity),
+            Arity >= 0,
+            is_function(Handler, 3)
+        ->
+    #{
+        operation => Operation,
+        arity => Arity,
+        mode => control,
+        handler => Handler,
+        origin => {runtime_control_case, Operation}
+    }.
+
+%% @doc Construct an auto-resuming value case for a source handler frame.
+-spec value_case(
+    atom(),
+    non_neg_integer(),
+    fun(([term()], effect_context()) -> term())
+) -> resumable_case().
+value_case(Operation, Arity, Handler)
+        when
+            is_atom(Operation),
+            is_integer(Arity),
+            Arity >= 0,
+            is_function(Handler, 2)
+        ->
+    #{
+        operation => Operation,
+        arity => Arity,
+        mode => value,
+        handler => Handler,
+        origin => {runtime_value_case, Operation}
+    }.
+
 %%====================================================================
 %% Handler Lookup
 %%====================================================================
 
-%% @doc Get handler for effect, walking parent chain if needed
--spec get_handler(effect_context(), atom()) -> pid() | undefined.
-get_handler(Ctx, Effect) ->
-    Handlers = maps:get(handlers, Ctx),
-    case maps:get(Effect, Handlers, undefined) of
-        undefined ->
-            %% Not in current context, check parent
-            case maps:get(parent, Ctx) of
-                undefined -> undefined;
-                ParentCtx -> get_handler(ParentCtx, Effect)
-            end;
-        HandlerPid ->
-            HandlerPid
+%% @doc Find the innermost entry compatible with effect, operation, and arity.
+-spec lookup_entry(effect_context(), atom(), atom(), non_neg_integer()) ->
+    {ok, context_entry(), effect_context()}
+    | {error, term()}
+    | none.
+lookup_entry(Ctx, Effect, Operation, Arity) ->
+    case lookup_current_entries(
+        maps:get(entries, Ctx, []),
+        Effect,
+        Operation,
+        Arity
+    ) of
+        {ok, Entry} ->
+            {ok, Entry, maps:get(parent, Ctx, Ctx)};
+        {error, _} = Error ->
+            Error;
+        none ->
+            case maps:get(parent, Ctx, undefined) of
+                undefined ->
+                    none;
+                ParentCtx ->
+                    lookup_entry(ParentCtx, Effect, Operation, Arity)
+            end
     end.
+
+-spec lookup_current_entries(
+    [context_entry()],
+    atom(),
+    atom(),
+    non_neg_integer()
+) -> {ok, context_entry()} | {error, term()} | none.
+lookup_current_entries([], _Effect, _Operation, _Arity) ->
+    none;
+lookup_current_entries(
+    [#{effect := Effect} = Entry | Rest],
+    Effect,
+    Operation,
+    Arity
+) ->
+    case entry_operation_match(Entry, Operation, Arity) of
+        match ->
+            {ok, Entry};
+        arity_mismatch ->
+            {error, {
+                operation_arity_mismatch,
+                Effect,
+                Operation,
+                Arity
+            }};
+        no_operation ->
+            lookup_current_entries(Rest, Effect, Operation, Arity)
+    end;
+lookup_current_entries([_Entry | Rest], Effect, Operation, Arity) ->
+    lookup_current_entries(Rest, Effect, Operation, Arity).
+
+-spec entry_operation_match(context_entry(), atom(), non_neg_integer()) ->
+    match | arity_mismatch | no_operation.
+entry_operation_match(#{kind := local_resumable, cases := Cases}, Operation, Arity) ->
+    operation_match(Cases, Operation, Arity);
+entry_operation_match(#{kind := process_provider}, _Operation, _Arity) ->
+    %% Preserve the request/response contract: a selected process provider
+    %% owns unknown-operation and bad-arity diagnostics for its effect.
+    match;
+entry_operation_match(#{operations := Operations}, Operation, Arity) ->
+    operation_match(Operations, Operation, Arity).
+
+-spec operation_match(list(), atom(), non_neg_integer()) ->
+    match | arity_mismatch | no_operation.
+operation_match(Items, Operation, Arity) ->
+    Named = [
+        Item
+        || Item <- Items,
+           operation_name(Item) =:= Operation
+    ],
+    case Named of
+        [] ->
+            no_operation;
+        _ ->
+            case lists:any(
+                fun(Item) -> operation_arity(Item) =:= Arity end,
+                Named
+            ) of
+                true -> match;
+                false -> arity_mismatch
+            end
+    end.
+
+-spec operation_name(map() | {atom(), function()}) -> atom().
+operation_name(#{operation := Operation}) ->
+    Operation;
+operation_name({Operation, _Handler}) ->
+    Operation.
+
+-spec operation_arity(map() | {atom(), function()}) -> non_neg_integer().
+operation_arity(#{arity := Arity}) ->
+    Arity;
+operation_arity({_Operation, Handler}) ->
+    {arity, Arity} = erlang:fun_info(Handler, arity),
+    Arity.
+
+-spec child_context(effect_context(), context_entry()) -> effect_context().
+child_context(Ctx, Entry) ->
+    ChildCtx = #{
+        handlers => maps:get(handlers, Ctx, #{}),
+        entries => [Entry],
+        parent => Ctx,
+        timeout => maps:get(timeout, Ctx, ?EFFECT_TIMEOUT)
+    },
+    inherit_deadline(Ctx, ChildCtx).
+
+%%====================================================================
+%% Same-Process Resumable Execution
+%%====================================================================
+
+-spec perform_local_resumable(
+    effect_context(),
+    effect_context(),
+    context_entry(),
+    atom(),
+    [term()],
+    fun((term(), effect_context()) -> term())
+) -> term().
+perform_local_resumable(
+    CapturedCtx,
+    HandlerCtx,
+    Frame,
+    Operation,
+    Args,
+    Continuation
+) ->
+    Case = select_resumable_case(
+        maps:get(cases, Frame),
+        Operation,
+        length(Args)
+    ),
+    CaptureSpec = #{
+        context => CapturedCtx,
+        delimiter => maps:get(delimiter, Frame),
+        depth => maps:get(depth, Frame),
+        kind => one_shot,
+        origin => maps:get(origin, Case, maps:get(origin, Frame)),
+        metadata => #{
+            effect => maps:get(effect, Frame),
+            operation => Operation,
+            frame_owner => maps:get(owner, Frame)
+        },
+        type_identity => {
+            maps:get(effect, Frame),
+            Operation,
+            length(Args)
+        },
+        providers => required_providers(CapturedCtx),
+        frame_identity => maps:get(frame_identity, Frame)
+    },
+    {ok, Resumption} = catena_resumption_runtime:capture(
+        Continuation,
+        CaptureSpec
+    ),
+    invoke_resumable_case(Case, Args, Resumption, HandlerCtx).
+
+-spec select_resumable_case([resumable_case()], atom(), non_neg_integer()) ->
+    resumable_case().
+select_resumable_case(Cases, Operation, Arity) ->
+    [Case] = [
+        Candidate
+        || Candidate <- Cases,
+           maps:get(operation, Candidate) =:= Operation,
+           maps:get(arity, Candidate) =:= Arity
+    ],
+    Case.
+
+-spec invoke_resumable_case(
+    resumable_case(),
+    [term()],
+    term(),
+    effect_context()
+) -> term().
+invoke_resumable_case(
+    #{mode := control, handler := Handler} = Case,
+    Args,
+    Resumption,
+    HandlerCtx
+) ->
+    Result = safe_handler_call(
+        fun() -> Handler(Args, Resumption, HandlerCtx) end,
+        maps:get(origin, Case)
+    ),
+    finalize_case_result(Result, Resumption);
+invoke_resumable_case(
+    #{mode := value, handler := Handler} = Case,
+    Args,
+    Resumption,
+    HandlerCtx
+) ->
+    Result = safe_handler_call(
+        fun() ->
+            OperationValue = Handler(Args, HandlerCtx),
+            resume(Resumption, OperationValue)
+        end,
+        maps:get(origin, Case)
+    ),
+    finalize_case_result(Result, Resumption).
+
+-spec safe_handler_call(fun(() -> term()), term()) -> term().
+safe_handler_call(Fun, Origin) ->
+    try
+        Fun()
+    catch
+        Class:Reason:_Stack ->
+            {error, catena_resumption_runtime:normalize_exception(
+                Class,
+                Reason,
+                Origin
+            )}
+    end.
+
+-spec finalize_case_result(term(), term()) -> term().
+finalize_case_result(Result, Resumption) ->
+    case contains_handle(Result, Resumption) of
+        true ->
+            Result;
+        false ->
+            case catena_resumption_runtime:discard(Resumption) of
+                ok ->
+                    Result;
+                {error, Failure} ->
+                    {error, Failure}
+            end
+    end.
+
+-spec contains_handle(term(), term()) -> boolean().
+contains_handle(Handle, Handle) ->
+    true;
+contains_handle(Term, Handle) when is_tuple(Term) ->
+    contains_handle(tuple_to_list(Term), Handle);
+contains_handle(Terms, Handle) when is_list(Terms) ->
+    lists:any(fun(Term) -> contains_handle(Term, Handle) end, Terms);
+contains_handle(Term, Handle) when is_map(Term) ->
+    contains_handle(maps:to_list(Term), Handle);
+contains_handle(_Term, _Handle) ->
+    false.
+
+-spec required_providers(effect_context()) -> [pid()].
+required_providers(Ctx) ->
+    Current = [
+        maps:get(provider, Entry)
+        || Entry <- maps:get(entries, Ctx, []),
+           maps:get(kind, Entry) =:= process_provider
+    ],
+    Parent = case maps:get(parent, Ctx, undefined) of
+        undefined -> [];
+        ParentCtx -> required_providers(ParentCtx)
+    end,
+    lists:usort(Current ++ Parent).
+
+%%====================================================================
+%% Value And Process Providers
+%%====================================================================
+
+-spec invoke_value_provider(context_entry(), atom(), [term()]) -> term().
+invoke_value_provider(#{operations := Operations}, Operation, Args) ->
+    {Operation, Handler} = lists:keyfind(Operation, 1, Operations),
+    apply(Handler, Args).
+
+-spec request_process_provider(
+    effect_context(),
+    context_entry(),
+    atom(),
+    [term()]
+) -> term().
+request_process_provider(Ctx, Entry, Operation, Args) ->
+    HandlerPid = maps:get(provider, Entry),
+    Effect = maps:get(effect, Entry),
+    HandlerPid ! {perform, Effect, Operation, Args, self()},
+    Timeout = effective_timeout(Ctx),
+    receive
+        {effect_result, Value} ->
+            Value;
+        {effect_error, Reason} ->
+            erlang:error({effect_error, Effect, Operation, Reason})
+    after Timeout ->
+        erlang:error({effect_timeout, Effect, Operation})
+    end.
+
+-spec inherit_deadline(effect_context(), effect_context()) -> effect_context().
+inherit_deadline(Ctx, ChildCtx) ->
+    case maps:find(runtime_deadline, Ctx) of
+        {ok, Deadline} ->
+            ChildCtx#{runtime_deadline => Deadline};
+        error ->
+            ChildCtx
+    end.
+
+-spec effective_timeout(effect_context()) -> non_neg_integer().
+effective_timeout(Ctx) ->
+    Configured = maps:get(timeout, Ctx, ?EFFECT_TIMEOUT),
+    case maps:find(runtime_deadline, Ctx) of
+        {ok, Deadline} ->
+            Remaining = Deadline - erlang:monotonic_time(millisecond),
+            erlang:max(0, erlang:min(Configured, Remaining));
+        error ->
+            Configured
+    end.
+
+-spec process_provider_entries(
+    [{atom(), [{atom(), function()}]}],
+    #{atom() => pid()}
+) -> [context_entry()].
+process_provider_entries(HandlerSpecs, PidMap) ->
+    [
+        #{
+            kind => process_provider,
+            effect => Effect,
+            operations => Operations,
+            provider => maps:get(Effect, PidMap),
+            origin => {runtime_process_provider, Effect}
+        }
+        || {Effect, Operations} <- HandlerSpecs
+    ].
+
+-spec validate_operations([{atom(), function()}]) -> ok.
+validate_operations(Operations) ->
+    true = lists:all(
+        fun
+            ({Operation, Handler}) ->
+                is_atom(Operation) andalso is_function(Handler);
+            (_) ->
+                false
+        end,
+        Operations
+    ),
+    ok.
+
+-spec validate_resumable_cases([resumable_case()]) -> ok.
+validate_resumable_cases(Cases) ->
+    true = Cases =/= [],
+    true = lists:all(fun valid_resumable_case/1, Cases),
+    Identities = [
+        {maps:get(operation, Case), maps:get(arity, Case)}
+        || Case <- Cases
+    ],
+    true = length(Identities) =:= length(lists:usort(Identities)),
+    ok.
+
+-spec valid_resumable_case(term()) -> boolean().
+valid_resumable_case(#{
+    operation := Operation,
+    arity := Arity,
+    mode := control,
+    handler := Handler,
+    origin := Origin
+}) ->
+    is_atom(Operation) andalso
+        is_integer(Arity) andalso
+        Arity >= 0 andalso
+        is_function(Handler, 3) andalso
+        Origin =/= undefined;
+valid_resumable_case(#{
+    operation := Operation,
+    arity := Arity,
+    mode := value,
+    handler := Handler,
+    origin := Origin
+}) ->
+    is_atom(Operation) andalso
+        is_integer(Arity) andalso
+        Arity >= 0 andalso
+        is_function(Handler, 2) andalso
+        Origin =/= undefined;
+valid_resumable_case(_) ->
+    false.
 
 %%====================================================================
 %% Handler Spawning (1.3.5.1)
