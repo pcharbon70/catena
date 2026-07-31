@@ -64,12 +64,20 @@ analyze(Module, Declarations, TypedDeclarations, Callables, Options)
             || Callable <- catena_call_resolution:callables(Callables),
                maps:get(kind, Callable) =:= transform
         ]),
+        LocalConstructors = sets:from_list([
+            maps:get(name, Callable)
+            || Callable <- catena_call_resolution:callables(Callables),
+               maps:get(kind, Callable) =:= constructor
+        ]),
+        AnalysisOptions = Options#{
+            local_constructors => LocalConstructors
+        },
         Initial = [
             analyze_transform(
                 Declaration,
                 maps:get(element(2, Declaration), TypedByName, undefined),
                 LocalNames,
-                Options
+                AnalysisOptions
             )
             || Declaration <- Declarations,
                is_transform_definition(Declaration)
@@ -263,19 +271,23 @@ scan_term(
         add_region(Mode, Reason, Location, Scan1)
     );
 scan_term(
-    {app, Function, Arguments, Location},
+    {app, _Function, _Arguments, _Location} = Application,
     LocalNames,
     Options,
     Scan
 ) ->
+    {Function, Arguments, Location} = application_spine(Application),
     {Edge, EdgeReason} = classify_application(
-        application_root(Function),
+        Function,
         length(Arguments),
         Location,
         LocalNames,
         Options
     ),
-    Scan1 = add_edge(Edge, Scan),
+    Scan1 = case Edge of
+        none -> Scan;
+        _ -> add_edge(Edge, Scan)
+    end,
     Scan2 = case EdgeReason of
         none -> Scan1;
         Reason -> add_reason(Reason, Scan1)
@@ -312,30 +324,29 @@ classify_application(
         true ->
             {edge(local, Name, Location, unknown), none};
         false ->
-            case resolved_import(Name, Arity, Options) of
-                {ok, Entry} ->
-                    Capability = maps:get(
-                        control_mode,
-                        Entry,
-                        resumable
-                    ),
-                    Reason = case Capability of
-                        direct -> none;
-                        resumable -> imported_resumable
-                    end,
-                    {
-                        edge(
-                            imported,
-                            imported_identity(Entry),
-                            Location,
-                            Capability
-                        ),
-                        Reason
-                    };
-                none ->
-                    classify_dynamic_application(Name, Location)
+            case sets:is_element(
+                Name,
+                maps:get(local_constructors, Options, sets:new())
+            ) of
+                true ->
+                    {none, none};
+                false ->
+                    classify_nonlocal_application(
+                        Name,
+                        Arity,
+                        Location,
+                        Options
+                    )
             end
     end;
+classify_application(
+    {imported_ref, #{kind := constructor}, _RefLocation},
+    _Arity,
+    _CallLocation,
+    _LocalNames,
+    _Options
+) ->
+    {none, none};
 classify_application(
     {imported_ref, Entry, _Location},
     _Arity,
@@ -369,6 +380,53 @@ classify_application(
         higher_order_call
     }.
 
+classify_nonlocal_application(Name, Arity, Location, Options) ->
+    case resolved_import(Name, Arity, Options) of
+        {ok, #{kind := constructor}} ->
+            {none, none};
+        {ok, Entry} ->
+            Capability = maps:get(
+                control_mode,
+                Entry,
+                resumable
+            ),
+            Reason = case Capability of
+                direct -> none;
+                resumable -> imported_resumable
+            end,
+            {
+                edge(
+                    imported,
+                    imported_identity(Entry),
+                    Location,
+                    Capability
+                ),
+                Reason
+            };
+        none ->
+            case imported_constructor_binding(Name, Options) of
+                true -> {none, none};
+                false -> classify_dynamic_application(Name, Location)
+            end
+    end.
+
+imported_constructor_binding(Name, Options) ->
+    Resolution = maps:get(import_resolution, Options, undefined),
+    case is_map(Resolution) andalso
+        catena_import_resolution:is_resolution(Resolution)
+    of
+        true ->
+            lists:any(
+                fun(Entry) ->
+                    maps:get(kind, Entry) =:= constructor andalso
+                        maps:get(binding, Entry, undefined) =:= Name
+                end,
+                catena_import_resolution:entries(Resolution)
+            );
+        false ->
+            false
+    end.
+
 classify_dynamic_application(Name, Location) ->
     case catena_trait_resolve:is_trait_method(Name) of
         true ->
@@ -392,7 +450,10 @@ resolved_import(Name, Arity, Options) ->
             Matches = [
                 Entry
                 || Entry <- catena_import_resolution:entries(Resolution),
-                   maps:get(kind, Entry) =:= transform,
+                   lists:member(
+                       maps:get(kind, Entry),
+                       [transform, constructor]
+                   ),
                    maps:get(binding, Entry, undefined) =:= Name,
                    maps:get(arity, Entry) =:= Arity
             ],
@@ -478,10 +539,17 @@ edge(Kind, Target, Location, Capability) ->
         capability => Capability
     }.
 
-application_root({app, Function, _Arguments, _Location}) ->
-    application_root(Function);
-application_root(Function) ->
-    Function.
+application_spine({app, Function, Arguments, Location}) ->
+    case Function of
+        {app, _, [], _} ->
+            {Function, Arguments, Location};
+        {app, _, _, _} ->
+            {Root, EarlierArguments, _EarlierLocation} =
+                application_spine(Function),
+            {Root, EarlierArguments ++ Arguments, Location};
+        _ ->
+            {Function, Arguments, Location}
+    end.
 
 imported_identity(Entry) ->
     {

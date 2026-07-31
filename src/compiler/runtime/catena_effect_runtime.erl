@@ -37,6 +37,8 @@
     %% Resumable handler construction
     control_case/3,
     value_case/3,
+    control_closure/2,
+    apply_control/4,
 
     %% Builtin effects
     io_handler/0,
@@ -95,6 +97,8 @@
 %% Default maximum allowed processes to prevent DoS
 %% Note: Erlang default limit is 262144, max is ~134 million
 -define(DEFAULT_MAX_PROCESS_COUNT, 50000).
+
+-define(CONTROL_CLOSURE_VERSION, 1).
 
 %% Default maximum file size for readFile (10 MB)
 -define(DEFAULT_MAX_FILE_SIZE, 10485760).
@@ -368,6 +372,68 @@ value_case(Operation, Arity, Handler)
         handler => Handler,
         origin => {runtime_value_case, Operation}
     }.
+
+%% @doc Wrap a generated first-class callable with its control convention.
+-spec control_closure(
+    direct | resumable,
+    fun(([term()], effect_context(), fun((term(), effect_context()) -> term())) ->
+        term())
+) -> tuple().
+control_closure(Mode, Callable)
+        when
+            (Mode =:= direct orelse Mode =:= resumable),
+            is_function(Callable, 3)
+        ->
+    {catena_control_closure, ?CONTROL_CLOSURE_VERSION, Mode, Callable}.
+
+%% @doc Invoke a generated control closure or a source-arity BEAM function.
+%%
+%% Generated closures share one list/context/continuation convention. Plain
+%% BEAM functions remain accepted at public interoperability boundaries and
+%% are lifted through the supplied continuation as direct callables.
+-spec apply_control(
+    term(),
+    [term()],
+    effect_context(),
+    fun((term(), effect_context()) -> term())
+) -> term().
+apply_control(
+    {catena_control_closure, ?CONTROL_CLOSURE_VERSION, Mode, Callable},
+    Arguments,
+    Context,
+    Continuation
+) when
+    (Mode =:= direct orelse Mode =:= resumable),
+    is_function(Callable, 3),
+    is_list(Arguments),
+    is_function(Continuation, 2)
+->
+    Callable(Arguments, Context, Continuation);
+apply_control(Callable, Arguments, Context, Continuation)
+        when
+            is_function(Callable),
+            is_list(Arguments),
+            is_function(Continuation, 2)
+        ->
+    {arity, Arity} = erlang:fun_info(Callable, arity),
+    case Arity =:= length(Arguments) of
+        true ->
+            Continuation(erlang:apply(Callable, Arguments), Context);
+        false ->
+            erlang:error({effect_runtime_error, {
+                control_closure_arity_mismatch,
+                Arity,
+                length(Arguments)
+            }})
+    end;
+apply_control(_Callable, Arguments, _Context, _Continuation) ->
+    erlang:error({effect_runtime_error, {
+        invalid_control_closure,
+        length_or_unknown(Arguments)
+    }}).
+
+length_or_unknown(Arguments) when is_list(Arguments) -> length(Arguments);
+length_or_unknown(_Arguments) -> unknown.
 
 %%====================================================================
 %% Handler Lookup

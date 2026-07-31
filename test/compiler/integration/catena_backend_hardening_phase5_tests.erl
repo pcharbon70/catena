@@ -57,7 +57,7 @@ declared_performed_and_nested_effect_programs_execute_test() ->
         end
     ).
 
-generated_handlers_cleanup_after_normal_results_test() ->
+generated_value_handlers_execute_on_the_capturing_process_test() ->
     Source =
         "module PhaseFiveNormalCleanup\n"
         "export transform run\n"
@@ -83,12 +83,13 @@ generated_handlers_cleanup_after_normal_results_test() ->
         fun() ->
             ?assertEqual(42, 'PhaseFiveNormalCleanup':run(self())),
             HandlerPid = receive_handler_pid(),
-            ?assertNot(is_process_alive(HandlerPid)),
+            ?assertEqual(self(), HandlerPid),
+            ?assert(is_process_alive(HandlerPid)),
             ?assertNot(catena_effect_system:is_initialized())
         end
     ).
 
-generated_handlers_cleanup_after_handler_failures_test() ->
+generated_handler_failures_are_structured_on_the_capturing_process_test() ->
     Source =
         "module PhaseFiveHandlerFailure\n"
         "export transform run\n"
@@ -112,17 +113,20 @@ generated_handlers_cleanup_after_handler_failures_test() ->
         Source,
         'PhaseFiveHandlerFailure',
         fun() ->
-            ?assertError(
-                {effect_error, 'Fault', fail, {error, badarith}},
+            ?assertMatch(
+                {error, #{
+                    category := handler_failure,
+                    details := #{class := error, reason := badarith}
+                }},
                 'PhaseFiveHandlerFailure':run(self())
             ),
             HandlerPid = receive_handler_pid(),
-            ?assertNot(is_process_alive(HandlerPid)),
+            ?assertEqual(self(), HandlerPid),
             ?assertNot(catena_effect_system:is_initialized())
         end
     ).
 
-generated_handlers_cleanup_after_unhandled_operations_test() ->
+generated_unhandled_operations_are_structured_test() ->
     Source =
         "module PhaseFiveUnhandled\n"
         "export transform run\n"
@@ -152,17 +156,20 @@ generated_handlers_cleanup_after_unhandled_operations_test() ->
         Source,
         'PhaseFiveUnhandled',
         fun() ->
-            ?assertError(
-                {no_handler_for_effect, 'Missing', read},
+            ?assertMatch(
+                {error, #{
+                    category := unhandled_effect,
+                    details := #{effect := 'Missing', operation := read}
+                }},
                 'PhaseFiveUnhandled':run(self())
             ),
             HandlerPid = receive_handler_pid(),
-            ?assertNot(is_process_alive(HandlerPid)),
+            ?assertEqual(self(), HandlerPid),
             ?assertNot(catena_effect_system:is_initialized())
         end
     ).
 
-generated_handlers_cleanup_after_timeouts_test() ->
+generated_local_handlers_do_not_use_process_provider_timeouts_test() ->
     Source =
         "module PhaseFiveTimeout\n"
         "export transform run\n"
@@ -173,16 +180,13 @@ generated_handlers_cleanup_after_timeouts_test() ->
         "operation self : Int\n"
         "operation send : Int -> Int -> Int\n"
         "end\n"
-        "transform spin : Int -> Int\n"
-        "transform spin value = spin value\n"
-        "type SpinBoundary = SpinBoundary\n"
         "transform run observer = "
             "handle perform Slow.wait() then {\n"
         "  Slow {\n"
         "    wait -> "
             "let ignored = perform Process.send("
             "observer, perform Process.self()) "
-            "in spin ignored\n"
+            "in 42\n"
         "  }\n"
         "}\n",
     with_executable_module(
@@ -190,13 +194,10 @@ generated_handlers_cleanup_after_timeouts_test() ->
         'PhaseFiveTimeout',
         fun() ->
             ok = catena_effect_system:init([{effect_timeout, 25}]),
-            ?assertError(
-                {effect_timeout, 'Slow', wait},
-                'PhaseFiveTimeout':run(self())
-            ),
+            ?assertEqual(42, 'PhaseFiveTimeout':run(self())),
             HandlerPid = receive_handler_pid(),
-            ?assertNot(is_process_alive(HandlerPid)),
-            ?assertNot(catena_effect_system:is_initialized())
+            ?assertEqual(self(), HandlerPid),
+            ?assert(catena_effect_system:is_initialized())
         end
     ).
 

@@ -4,10 +4,28 @@
 %%%-------------------------------------------------------------------
 -module(catena_trait_runtime).
 
--export([invoke/3, select_dictionary/2, matches/2]).
+-export([invoke/3, invoke_control/5, select_dictionary/2, matches/2]).
 
 -spec invoke([map()], atom(), [term()]) -> term().
 invoke(Candidates, Method, Arguments) ->
+    Context = catena_effect_runtime:empty_context(),
+    Continuation = fun(Value, _FinalContext) -> Value end,
+    invoke_control(
+        Candidates,
+        Method,
+        Arguments,
+        Context,
+        Continuation
+    ).
+
+-spec invoke_control(
+    [map()],
+    atom(),
+    [term()],
+    catena_effect_runtime:effect_context(),
+    fun((term(), catena_effect_runtime:effect_context()) -> term())
+) -> term().
+invoke_control(Candidates, Method, Arguments, Context, Continuation) ->
     Dictionary = select_dictionary(Candidates, Arguments),
     Module = maps:get(runtime_module, Dictionary),
     Function = maps:get(dictionary_function, Dictionary),
@@ -15,7 +33,12 @@ invoke(Candidates, Method, Arguments) ->
     Head = maps:get(head, Dictionary),
     Methods = erlang:apply(Module, Function, [Trait, Head]),
     MethodFunction = maps:get(Method, Methods),
-    erlang:apply(MethodFunction, Arguments).
+    catena_effect_runtime:apply_control(
+        MethodFunction,
+        Arguments,
+        Context,
+        Continuation
+    ).
 
 -spec select_dictionary([map()], [term()]) -> map().
 select_dictionary([Only], _Arguments) ->

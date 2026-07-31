@@ -6,7 +6,7 @@ identity, patterns, imports, traits, recursion, effects, runtime dependencies,
 and diagnostics while proving that loaded BEAM executes the real delimited
 continuation.
 
-**Status:** In progress (Section 6.1 complete).
+**Status:** In progress (Sections 6.1–6.2 complete).
 
 **Dependencies:** Phase 5 complete.
 
@@ -82,14 +82,14 @@ resume plus transformed delimiter-result programs as loaded BEAM.
 **Description:** Preserve resumption semantics across all callable and
 expression surfaces already promoted by the fail-closed backend.
 
-- [ ] **Section 6.2 Complete**
+- [x] **Section 6.2 Complete**
 
 ### Task 6.2.1: Integrate Local And Higher-Order Calls
 
 **Description:** Carry continuations and contexts correctly through ordinary,
 forward, recursive, mutually recursive, closure, and constructor-rich code.
 
-- [ ] **Task 6.2.1 Complete**
+- [x] **Task 6.2.1 Complete**
 
 #### Subtask 6.2.1.1: Lower Recursive And Mixed-Mode Graphs
 
@@ -97,7 +97,7 @@ forward, recursive, mutually recursive, closure, and constructor-rich code.
 resolved modes, bounded stack behavior, and valid tail calls where semantics
 permit.
 
-- [ ] **Subtask 6.2.1.1 Complete**
+- [x] **Subtask 6.2.1.1 Complete**
 
 #### Subtask 6.2.1.2: Lower Higher-Order And Data Paths
 
@@ -105,14 +105,14 @@ permit.
 preserve patterns, ADTs, tuples, lists, records, guards, and clause
 fallthrough inside CPS regions.
 
-- [ ] **Subtask 6.2.1.2 Complete**
+- [x] **Subtask 6.2.1.2 Complete**
 
 ### Task 6.2.2: Integrate Imports, Traits, And Effect Polymorphism
 
 **Description:** Make versioned module interfaces and runtime dictionaries
 carry enough control-mode metadata for cross-module and dynamic dispatch.
 
-- [ ] **Task 6.2.2 Complete**
+- [x] **Task 6.2.2 Complete**
 
 #### Subtask 6.2.2.1: Lower Imported Resumable Calls
 
@@ -120,7 +120,7 @@ carry enough control-mode metadata for cross-module and dynamic dispatch.
 and aliased calls, imported closures, and artifact validation with stable
 direct/CPS ABI metadata.
 
-- [ ] **Subtask 6.2.2.1 Complete**
+- [x] **Subtask 6.2.2.1 Complete**
 
 #### Subtask 6.2.2.2: Lower Trait And Open-Row Calls
 
@@ -128,7 +128,23 @@ direct/CPS ABI metadata.
 calls, operator/do targets, and conservatively resumable effect-polymorphic
 functions.
 
-- [ ] **Subtask 6.2.2.2 Complete**
+- [x] **Subtask 6.2.2.2 Complete**
+
+**Implementation evidence:** Application-spine lowering and the resolved
+control-mode inventory now drive ordinary, forward, recursive, mutually
+recursive, constructor, imported, and dynamic call emission without
+recomputing conventions in Core. Direct closures remain ordinary source-arity
+BEAM functions for legacy interoperability; resumable closures use the
+versioned runtime control-closure representation and `apply_control/4`.
+Exported resumable transforms expose private CPS linkage while preserving
+their source-visible interface arity. Trait dictionaries are lowered through
+the selective-CPS expression path, and `catena_trait_runtime:invoke_control/5`
+threads the selected method through the caller's context and continuation.
+The three focused `catena_delimited_resumption_phase6_call_graph_tests`
+execute 2,000-step mutual recursion plus guarded ADT/list/record paths, a
+resumable higher-order lambda through a trait dictionary, and an imported
+resumable transform used both by name and as a first-class closure. Existing
+backend import, trait, recursion, conformance, and origin suites remain green.
 
 ## Section 6.3: Artifacts, Runtime Versions, And Diagnostics
 

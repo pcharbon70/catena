@@ -9,7 +9,12 @@ validated_ir_emits_source_and_private_entry_arities_test() ->
     {ok, Unit} = catena_compile:compile_string_to_unit(mixed_source()),
     {ok, Core} = catena_control_codegen:generate(Unit),
     ?assertEqual(
-        [{identity, 1}, {run, 1}],
+        [
+            {'$catena_cps$run', 3},
+            {'$catena_direct$identity', 2},
+            {identity, 1},
+            {run, 1}
+        ],
         lists:sort(export_identities(Core))
     ),
     Definitions = definition_identities(Core),
@@ -22,14 +27,27 @@ validated_ir_emits_source_and_private_entry_arities_test() ->
         module_attribute(catena_control_abi_version, Core)
     ).
 
-public_wrapper_keeps_private_control_parameters_off_beam_api_test() ->
+public_contract_hides_beam_linkage_entries_test() ->
     with_artifact(mixed_source(), fun(Artifact) ->
         Beam = maps:get(beam, Artifact),
         {ok, {_, [{exports, Exports}]}} =
             beam_lib:chunks(Beam, [exports]),
         ?assertEqual(
-            [{identity, 1}, {run, 1}],
+            [
+                {'$catena_cps$run', 3},
+                {'$catena_direct$identity', 2},
+                {identity, 1},
+                {run, 1}
+            ],
             lists:sort(Exports)
+        ),
+        Interface = maps:get(interface, Artifact),
+        ?assertEqual(
+            [{identity, 1}, {run, 1}],
+            lists:sort([
+                {maps:get(name, Entry), maps:get(arity, Entry)}
+                || Entry <- maps:get(exports, Interface)
+            ])
         )
     end).
 

@@ -43,16 +43,32 @@ generate(Unit) ->
                 catena_compilation_unit:import_resolution(Unit),
             trait_inventory =>
                 catena_compilation_unit:trait_inventory(Unit),
+            control_modes => catena_compilation_unit:control_modes(Unit),
             effectful_transforms =>
                 catena_compilation_unit:effectful_transforms(Unit)
         }),
-        {Definitions0, _State1} = lists:mapfoldl(
+        {Definitions0, State1} = lists:mapfoldl(
             fun compile_transform/2,
             State0,
             catena_control_ir:transforms(IR)
         ),
-        Definitions = lists:append(Definitions0),
-        Exports = public_exports(Unit, IR),
+        {DictionaryDefinitions, _State2, DictionaryExports} =
+            catena_trait_dictionary:compile_dictionaries(
+                catena_compilation_unit:trait_inventory(Unit),
+                fun(Dictionary, Name, Method, DictionaryState) ->
+                    compile_dictionary_method(
+                        Unit,
+                        Dictionary,
+                        Name,
+                        Method,
+                        DictionaryState
+                    )
+                end,
+                State1
+            ),
+        Definitions = lists:append(Definitions0) ++ DictionaryDefinitions,
+        Exports = public_exports(Unit, IR) ++
+            private_exports(Unit, IR) ++ DictionaryExports,
         Attributes = catena_codegen_module:generate_attributes(
             CodegenOptions#{
                 runtime_dependencies =>
@@ -140,17 +156,24 @@ compile_transform(Transform, State0) ->
         resumable -> SourceVars ++ [ContextVar, ContinuationVar]
     end,
     PrivateIdentity = {PrivateName, length(PrivateParams)},
+    PrivateConstruct = case
+        Mode =:= resumable orelse
+            catena_codegen_utils:is_effectful_transform(Name, State0)
+    of
+        true -> effect_runtime_entry;
+        false -> selective_cps_private_entry
+    end,
     PrivateDefinition = {
         catena_core_origin:synthetic(
             cerl:c_fname(PrivateName, length(PrivateParams)),
-            selective_cps_private_entry,
+            PrivateConstruct,
             maps:get(origin, Transform),
             State0,
             #{transform => Name, generated_identity => PrivateIdentity}
         ),
         catena_core_origin:synthetic(
             cerl:c_fun(PrivateParams, PrivateBody),
-            selective_cps_private_entry,
+            PrivateConstruct,
             maps:get(origin, Transform),
             State0,
             #{transform => Name, generated_identity => PrivateIdentity}
@@ -320,15 +343,130 @@ compile_node(Node, Context, Continuation, State) ->
 
 compile_direct_expr(Node, Context, Continuation, State0) ->
     Source = maps:get(source, maps:get(fields, Node)),
+    {Template, Embedded, State1} = extract_embedded_control(Source, State0),
+    Bindings = [cerl:var_name(Variable) || {Variable, _} <- Embedded],
+    catena_codegen_utils:with_bindings(
+        Bindings,
+        fun(ScopedState) ->
+            compile_embedded_control(
+                Embedded,
+                Template,
+                Context,
+                Continuation,
+                ScopedState
+            )
+        end,
+        State1
+    ).
+
+compile_embedded_control([], Source, Context, Continuation, State0) ->
+    {Value, State1} = compile_direct_value(Source, Context, State0),
+    {continue(Value, Context, Continuation), State1};
+compile_embedded_control(
+    [{ValueVar, Node} | Rest],
+    Source,
+    Context,
+    Continuation,
+    State0
+) ->
+    {RestoredContext, State1} = catena_codegen_utils:fresh_var(State0),
+    {RestCore, State2} = compile_embedded_control(
+        Rest,
+        Source,
+        RestoredContext,
+        Continuation,
+        State1
+    ),
+    EmbeddedContinuation = cerl:c_fun(
+        [ValueVar, RestoredContext],
+        RestCore
+    ),
+    compile_node(Node, Context, EmbeddedContinuation, State2).
+
+compile_direct_value({var, true, _Loc} = Source, Context, State0) ->
+    translate_direct_value(Source, Context, State0);
+compile_direct_value({var, false, _Loc} = Source, Context, State0) ->
+    translate_direct_value(Source, Context, State0);
+compile_direct_value({var, Name, _Loc} = Source, Context, State0) ->
+    case catena_codegen_utils:is_bound(Name, State0) of
+        true ->
+            translate_direct_value(Source, Context, State0);
+        false ->
+            case catena_codegen_utils:resolve_value(Name, Source, State0) of
+                {ok, Callable} ->
+                    compile_callable_value(Callable, Context, State0);
+                {error, CallableDiagnostic} ->
+                    case catena_codegen_utils:resolve_trait_value(
+                        Name,
+                        Source,
+                        State0
+                    ) of
+                        {ok, Arity, Candidates} ->
+                            compile_trait_callable_value(
+                                Name,
+                                Arity,
+                                Candidates,
+                                State0
+                            );
+                        {error, _} ->
+                            throw(CallableDiagnostic)
+                    end
+            end
+    end;
+compile_direct_value(Source, Context, State) ->
+    translate_direct_value(Source, Context, State).
+
+translate_direct_value(Source, Context, State0) ->
     Lowered = catena_codegen_lower:lower_expr(Source),
-    {Value, State1} = catena_codegen_utils:with_runtime_context(
+    catena_codegen_utils:with_runtime_context(
         Context,
         fun(ScopedState) ->
             catena_codegen_expr:translate_expr(Lowered, ScopedState)
         end,
         State0
+    ).
+
+extract_embedded_control(Term, State0) when is_map(Term) ->
+    case catena_control_ir:is_node(Term) of
+        true ->
+            {Variable, State1} = catena_codegen_utils:fresh_var(State0),
+            Origin = maps:get(origin, maps:get(metadata, Term)),
+            {
+                {var, cerl:var_name(Variable), Origin},
+                [{Variable, Term}],
+                State1
+            };
+        false ->
+            {Term, [], State0}
+    end;
+extract_embedded_control(Term, State0) when is_tuple(Term) ->
+    {Parts, State1} = lists:mapfoldl(
+        fun extract_embedded_part/2,
+        State0,
+        tuple_to_list(Term)
     ),
-    {continue(Value, Context, Continuation), State1}.
+    {
+        list_to_tuple([Part || {Part, _Nodes} <- Parts]),
+        lists:append([Nodes || {_Part, Nodes} <- Parts]),
+        State1
+    };
+extract_embedded_control(Term, State0) when is_list(Term) ->
+    {Parts, State1} = lists:mapfoldl(
+        fun extract_embedded_part/2,
+        State0,
+        Term
+    ),
+    {
+        [Part || {Part, _Nodes} <- Parts],
+        lists:append([Nodes || {_Part, Nodes} <- Parts]),
+        State1
+    };
+extract_embedded_control(Term, State) ->
+    {Term, [], State}.
+
+extract_embedded_part(Term, State0) ->
+    {Template, Nodes, State1} = extract_embedded_control(Term, State0),
+    {{Template, Nodes}, State1}.
 
 compile_bind(Node, Context, Continuation, State0) ->
     Fields = maps:get(fields, Node),
@@ -671,40 +809,294 @@ compile_imported_call(_Operation, Module, Name, Arguments, Context,
         Continuation, State) ->
     Value = runtime_call(
         Module,
-        private_name(direct, Name),
-        Arguments ++ [Context]
+        Name,
+        Arguments
     ),
     {continue(Value, Context, Continuation), State}.
 
 compile_dynamic_call(Fields, Arguments, Context, Continuation, State0) ->
     Function = maps:get(function, Fields),
-    Lowered = catena_codegen_lower:lower_expr(Function),
-    {CoreFunction, State1} = catena_codegen_utils:with_runtime_context(
+    case compile_constructor_application(
+        Function,
+        Arguments,
         Context,
-        fun(ScopedState) ->
-            catena_codegen_expr:translate_expr(Lowered, ScopedState)
-        end,
+        Continuation,
         State0
+    ) of
+        {ok, Result} ->
+            Result;
+        not_constructor ->
+            {CoreFunction, State1} = compile_direct_value(
+                Function,
+                Context,
+                State0
+            ),
+            {RuntimeContinuation, State2} = ensure_continuation(
+                Continuation,
+                State1
+            ),
+            {
+                runtime_call(
+                    catena_effect_runtime,
+                    apply_control,
+                    [
+                        CoreFunction,
+                        core_list(Arguments),
+                        Context,
+                        RuntimeContinuation
+                    ]
+                ),
+                State2
+            }
+    end.
+
+compile_constructor_application(
+    {var, Name, _Loc} = Source,
+    Arguments,
+    Context,
+    Continuation,
+    State
+) ->
+    case catena_codegen_utils:is_bound(Name, State) of
+        true ->
+            not_constructor;
+        false ->
+            case catena_codegen_utils:resolve_constructor(
+                Name,
+                length(Arguments),
+                Source,
+                State
+            ) of
+                {ok, _Callable} ->
+                    Value = cerl:c_tuple([cerl:c_atom(Name) | Arguments]),
+                    {ok, {continue(Value, Context, Continuation), State}};
+                {error, Diagnostic} ->
+                    case catena_codegen_utils:resolve_value(
+                        Name,
+                        Source,
+                        State
+                    ) of
+                        {ok, #{kind := constructor}} -> throw(Diagnostic);
+                        _ -> not_constructor
+                    end
+            end
+    end;
+compile_constructor_application(
+    _Function,
+    _Arguments,
+    _Context,
+    _Continuation,
+    _State
+) ->
+    not_constructor.
+
+compile_callable_value(
+    #{kind := constructor, name := Name, arity := 0},
+    _Context,
+    State
+) ->
+    {cerl:c_tuple([cerl:c_atom(Name)]), State};
+compile_callable_value(
+    #{kind := constructor, name := Name, arity := Arity},
+    _Context,
+    State0
+) ->
+    {Arguments, State1} = catena_codegen_utils:fresh_vars(Arity, State0),
+    {
+        cerl:c_fun(
+            Arguments,
+            cerl:c_tuple([cerl:c_atom(Name) | Arguments])
+        ),
+        State1
+    };
+compile_callable_value(
+    #{kind := transform, name := Name, arity := Arity} = Callable,
+    Context,
+    State0
+) ->
+    Mode = callable_control_mode(Callable, State0),
+    {Arguments, State1} = catena_codegen_utils:fresh_vars(Arity, State0),
+    case Mode of
+        direct ->
+            Value = case maps:get(imported, Callable, false) of
+                true ->
+                    runtime_call(
+                        callable_module(Callable),
+                        Name,
+                        Arguments
+                    );
+                false ->
+                    cerl:c_apply(
+                        cerl:c_fname(private_name(direct, Name), Arity + 1),
+                        Arguments ++ [Context]
+                    )
+            end,
+            {cerl:c_fun(Arguments, Value), State1};
+        resumable ->
+            control_closure(
+                resumable,
+                Arguments,
+                fun(ClosureContext, Continuation) ->
+                    compile_callable_target(
+                        Callable,
+                        Name,
+                        resumable,
+                        Arguments,
+                        ClosureContext,
+                        Continuation
+                    )
+                end,
+                State1
+            )
+    end.
+
+compile_trait_callable_value(Name, Arity, Candidates, State0) ->
+    {Arguments, State1} = catena_codegen_utils:fresh_vars(Arity, State0),
+    control_closure(
+        resumable,
+        Arguments,
+        fun(Context, Continuation) ->
+            runtime_call(
+                catena_trait_runtime,
+                invoke_control,
+                [
+                    cerl:abstract(Candidates),
+                    cerl:c_atom(Name),
+                    core_list(Arguments),
+                    Context,
+                    Continuation
+                ]
+            )
+        end,
+        State1
+    ).
+
+control_closure(Mode, Arguments, BodyBuilder, State0) ->
+    {ArgumentList, State1} = catena_codegen_utils:fresh_var(State0),
+    {Context, State2} = catena_codegen_utils:fresh_var(State1),
+    {Continuation, State3} = catena_codegen_utils:fresh_var(State2),
+    Body = BodyBuilder(Context, Continuation),
+    Callable = cerl:c_fun(
+        [ArgumentList, Context, Continuation],
+        cerl:c_case(
+            ArgumentList,
+            [cerl:c_clause([core_list(Arguments)], Body)]
+        )
     ),
-    Value = cerl:c_apply(CoreFunction, Arguments),
-    {continue(Value, Context, Continuation), State1}.
+    {
+        runtime_call(
+            catena_effect_runtime,
+            control_closure,
+            [cerl:c_atom(Mode), Callable]
+        ),
+        State3
+    }.
+
+compile_callable_target(
+    Callable,
+    Name,
+    direct,
+    Arguments,
+    Context,
+    Continuation
+) ->
+    Value = case maps:get(imported, Callable, false) of
+        true -> runtime_call(callable_module(Callable), Name, Arguments);
+        false ->
+            cerl:c_apply(
+                cerl:c_fname(private_name(direct, Name),
+                    length(Arguments) + 1),
+                Arguments ++ [Context]
+            )
+    end,
+    cerl:c_apply(Continuation, [Value, Context]);
+compile_callable_target(
+    Callable,
+    Name,
+    resumable,
+    Arguments,
+    Context,
+    Continuation
+) ->
+    case maps:get(imported, Callable, false) of
+        true ->
+            runtime_call(
+                callable_module(Callable),
+                private_name(cps, Name),
+                Arguments ++ [Context, Continuation]
+            );
+        false ->
+            cerl:c_apply(
+                cerl:c_fname(private_name(cps, Name),
+                    length(Arguments) + 2),
+                Arguments ++ [Context, Continuation]
+            )
+    end.
+
+callable_control_mode(Callable, State) ->
+    case maps:get(control_mode, Callable, unknown) of
+        unknown ->
+            case catena_codegen_utils:control_mode(
+                maps:get(name, Callable),
+                State
+            ) of
+                unknown -> resumable;
+                Mode -> Mode
+            end;
+        Mode -> Mode
+    end.
+
+callable_module(Callable) ->
+    case maps:find(runtime_module, Callable) of
+        {ok, RuntimeModule} -> RuntimeModule;
+        error ->
+            case maps:find(source_module, Callable) of
+                {ok, SourceModule} -> SourceModule;
+                error -> maps:get(module, Callable)
+            end
+    end.
 
 compile_closure(Node, Context, Continuation, State0) ->
     Fields = maps:get(fields, Node),
     Patterns = maps:get(parameters, Fields),
-    {Parameters, State1} = lists:mapfoldl(
+    {CorePatterns, State1} = lists:mapfoldl(
         fun catena_codegen_pattern:compile_pattern/2,
         State0,
         Patterns
     ),
-    case lists:all(fun is_core_variable/1, Parameters) of
-        true -> ok;
-        false -> control_codegen_error(
-            unsupported_closure_pattern,
-            Node,
-            #{patterns => Patterns}
-        )
-    end,
+    case maps:get(capability, Fields) of
+        direct ->
+            compile_direct_closure(
+                Fields,
+                Patterns,
+                CorePatterns,
+                Context,
+                Continuation,
+                State1
+            );
+        resumable ->
+            compile_resumable_closure(
+                Fields,
+                Patterns,
+                CorePatterns,
+                Context,
+                Continuation,
+                State1
+            )
+    end.
+
+compile_direct_closure(
+    Fields,
+    Patterns,
+    CorePatterns,
+    Context,
+    Continuation,
+    State0
+) ->
+    {Arguments, State1} = catena_codegen_utils:fresh_vars(
+        length(Patterns),
+        State0
+    ),
     {Body, State2} = catena_codegen_utils:with_bindings(
         lists:append([pattern_bindings(Pattern) || Pattern <- Patterns]),
         fun(ScopedState) ->
@@ -717,8 +1109,96 @@ compile_closure(Node, Context, Continuation, State0) ->
         end,
         State1
     ),
-    Closure = cerl:c_fun(Parameters, Body),
+    Closure = cerl:c_fun(
+        Arguments,
+        cerl:c_case(
+            core_list(Arguments),
+            [cerl:c_clause([core_list(CorePatterns)], Body)]
+        )
+    ),
     {continue(Closure, Context, Continuation), State2}.
+
+compile_resumable_closure(
+    Fields,
+    Patterns,
+    CorePatterns,
+    Context,
+    Continuation,
+    State0
+) ->
+    {ArgumentList, State1} = catena_codegen_utils:fresh_var(State0),
+    {ClosureContext, State2} = catena_codegen_utils:fresh_var(State1),
+    {ClosureContinuation, State3} = catena_codegen_utils:fresh_var(State2),
+    {Body, State4} = catena_codegen_utils:with_bindings(
+        lists:append([pattern_bindings(Pattern) || Pattern <- Patterns]),
+        fun(ScopedState) ->
+            compile_node(
+                maps:get(body, Fields),
+                ClosureContext,
+                ClosureContinuation,
+                ScopedState
+            )
+        end,
+        State3
+    ),
+    Callable = cerl:c_fun(
+        [ArgumentList, ClosureContext, ClosureContinuation],
+        cerl:c_case(
+            ArgumentList,
+            [cerl:c_clause([core_list(CorePatterns)], Body)]
+        )
+    ),
+    Closure = runtime_call(
+        catena_effect_runtime,
+        control_closure,
+        [cerl:c_atom(resumable), Callable]
+    ),
+    {continue(Closure, Context, Continuation), State4}.
+
+compile_dictionary_method(
+    Unit,
+    Dictionary,
+    Name,
+    Method,
+    State0
+) ->
+    Identity = dictionary_method_identity(Dictionary, Name),
+    case catena_selective_cps:lower_dictionary_closure(
+        Unit,
+        Identity,
+        maps:get(lambda, Method)
+    ) of
+        {ok, ClosureNode} ->
+            compile_closure(
+                ClosureNode,
+                runtime_call(catena_effect_runtime, empty_context, []),
+                none,
+                State0
+            );
+        {error, Reason} ->
+            control_codegen_error(
+                invalid_dictionary_control_lowering,
+                #{
+                    op => closure,
+                    metadata => #{
+                        origin => maps:get(location, Method, undefined),
+                        transform => Identity
+                    }
+                },
+                #{
+                    trait => maps:get(trait, Dictionary),
+                    method => Name,
+                    reason => Reason
+                }
+            )
+    end.
+
+dictionary_method_identity(Dictionary, Name) ->
+    list_to_atom(
+        "$catena_dictionary$" ++
+            atom_to_list(maps:get(trait, Dictionary)) ++
+            "$" ++ atom_to_list(Name)
+    ).
 
 compile_values([], Context, Acc, Finish, State) ->
     Finish(lists:reverse(Acc), Context, State);
@@ -784,24 +1264,41 @@ core_map(Pairs) ->
     ]).
 
 public_exports(Unit, IR) ->
+    [
+        cerl:c_fname(maps:get(name, Transform), maps:get(arity, Transform))
+        || Transform <- exported_transforms(Unit, IR)
+    ].
+
+private_exports(Unit, IR) ->
+    [
+        cerl:c_fname(
+            private_name(private_mode(Transform), maps:get(name, Transform)),
+            private_arity(Transform)
+        )
+        || Transform <- exported_transforms(Unit, IR)
+    ].
+
+exported_transforms(Unit, IR) ->
     Transforms = catena_control_ir:transforms(IR),
     Requested = catena_compilation_unit:exports(Unit),
     ExportedNames = [
         Name
         || {export_transform, Name} <- Requested
     ],
-    Selected = case Requested of
+    case Requested of
         [] -> Transforms;
         _ -> [
             Transform
             || Transform <- Transforms,
                lists:member(maps:get(name, Transform), ExportedNames)
         ]
-    end,
-    [
-        cerl:c_fname(maps:get(name, Transform), maps:get(arity, Transform))
-        || Transform <- Selected
-    ].
+    end.
+
+private_mode(#{control_mode := direct}) -> direct;
+private_mode(#{control_mode := resumable}) -> cps.
+
+private_arity(#{arity := Arity, control_mode := direct}) -> Arity + 1;
+private_arity(#{arity := Arity, control_mode := resumable}) -> Arity + 2.
 
 pattern_bindings({pat_var, Name, _}) -> [Name];
 pattern_bindings({pat_typed_var, Name, _, _}) -> [Name];
@@ -822,8 +1319,6 @@ pattern_bindings({pat_record, Fields, _}) ->
         || {_Field, Pattern} <- Fields
     ]);
 pattern_bindings(_) -> [].
-
-is_core_variable(Node) -> cerl:type(Node) =:= var.
 
 generated_name(Prefix, Index) ->
     list_to_atom("$catena_" ++ Prefix ++ "_" ++ integer_to_list(Index)).

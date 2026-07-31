@@ -74,13 +74,14 @@ inventory(Unit, CoreModule) ->
     Symbols = catena_compilation_unit:symbols(Unit),
     Module = catena_compilation_unit:module_name(Unit),
     Generated = [
-        generated_origin(
-            cerl:var_name(NameNode),
+        definition_origin(
+            NameNode,
+            Definition,
             Module,
             Symbols,
             Unit
         )
-        || {NameNode, _Definition} <- cerl:module_defs(CoreModule)
+        || {NameNode, Definition} <- cerl:module_defs(CoreModule)
     ],
     #{
         module => Module,
@@ -196,6 +197,45 @@ decode_origin({
         location => Location,
         file => File
     }.
+
+definition_origin(NameNode, Definition, Module, Symbols, Unit) ->
+    Identity = cerl:var_name(NameNode),
+    case Identity of
+        {Name, Arity} ->
+            case source_transform(Name, Arity, Symbols) of
+                {ok, _Symbol} ->
+                    generated_origin(Identity, Module, Symbols, Unit);
+                error ->
+                    annotated_definition_origin(
+                        NameNode,
+                        Definition,
+                        Identity,
+                        Module,
+                        Symbols,
+                        Unit
+                    )
+            end
+    end.
+
+annotated_definition_origin(
+    NameNode,
+    Definition,
+    Identity,
+    Module,
+    Symbols,
+    Unit
+) ->
+    case annotation(NameNode) of
+        {ok, Origin} ->
+            Origin#{module => Module, generated_identity => Identity};
+        error ->
+            case annotation(Definition) of
+                {ok, Origin} ->
+                    Origin#{module => Module, generated_identity => Identity};
+                error ->
+                    generated_origin(Identity, Module, Symbols, Unit)
+            end
+    end.
 
 generated_origin({Name, Arity} = Identity, Module, Symbols, Unit) ->
     case source_transform(Name, Arity, Symbols) of
