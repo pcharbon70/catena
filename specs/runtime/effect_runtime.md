@@ -6,8 +6,8 @@ Promoted status: compiler-aligned explicit-context runtime with handler
 processes, nested scope support, configurable operation timeouts, synchronous
 handler cleanup, and builtin `IO` and `Process` handlers. Selective-CPS source
 constructs execute through local deep or shallow handler frames and opaque
-process-affine one-shot resumptions from Catena source through loaded BEAM.
-Multi-shot runtime authority remains deferred to Phase 7 Section 7.3.
+process-affine one-shot or bounded multi-shot resumptions from Catena source
+through loaded BEAM.
 
 ## Design Anchors
 
@@ -57,6 +57,9 @@ Multi-shot runtime authority remains deferred to Phase 7 Section 7.3.
 - Resumption authority uses explicit registry state, frame leases, owner and
   provider monitors, cooperative deadlines, and source-oriented failures; it
   does not use the process dictionary or execute continuations on providers.
+- Admissible multi-shot authority executes one branch at a time on the owner,
+  assigns distinct branch identities, survives individual branch failures,
+  and exposes only sanitized branch counters and budgets.
 
 ## Implemented Runtime Evolution
 
@@ -78,6 +81,10 @@ frame leases, lifecycle cleanup, and stable runtime diagnostics. Phase 6
 lowers the validated graph into calls to this ABI and proves source-to-loaded
 BEAM execution. Phase 7 Section 7.2 adds shallow parent-context restoration,
 depth-aware handler specifications, and versioned artifact mode contracts.
+Section 7.3 advances the effect and resumption runtimes to ABI 3 with repeated
+branch authorization, capture-time state admissibility checks, and positive
+budgets for invocation count, retained words, reductions, cooperative
+timeout, and nested branch depth.
 The current handler-process lifecycle acceptance criteria remain
 authoritative for the promoted request/response path.
 
@@ -140,6 +147,9 @@ The effect runtime is only promoted as correct when it lines up with the compile
   Erlang actor toolkit is specified separately in
   [Actor Runtime](actor_runtime.md)
 - distributed effect handling
-- multi-shot branch authority, state policy, and resource budgets, which are
-  owned by Phase 7 Section 7.3
+- multi-shot execution over open or non-empty residual rows, process
+  providers, local value-provider state, or arbitrary BEAM capabilities
+- transparent cloning of PIDs, ports, mailboxes, provider state, mutable
+  external resources, or the outside world
+- preemptive interruption of long-running same-process continuations
 - the full future runtime story beyond the proof-of-concept

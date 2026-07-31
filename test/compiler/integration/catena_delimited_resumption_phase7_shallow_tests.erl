@@ -89,7 +89,10 @@ source_to_loaded_beam_preserves_depth_and_contract() ->
     Contract = maps:get(runtime_contract, Artifact),
     ?assertEqual(3, maps:get(artifact_format_version, Contract)),
     ?assertEqual(2, maps:get(control_abi_version, Contract)),
-    ?assertEqual(2, maps:get(resumption_runtime_version, Contract)),
+    ?assertEqual(
+        catena_resumption_runtime:version(),
+        maps:get(resumption_runtime_version, Contract)
+    ),
     ?assertEqual(
         [
             #{depth => deep, kind => one_shot},

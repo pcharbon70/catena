@@ -13,7 +13,7 @@ It exists because some planning checklists are stale relative to later implement
 | Track | Current promoted status |
 | --- | --- |
 | Proof-of-concept | Implemented through Phases 1 to 3, with Phase 4 partial/minimal and a verified local Phase 5 actor runtime toolkit whose source-language integration remains incomplete. |
-| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary. Delimited-resumption Phases 1 through 6 and Phase 7 Sections 7.1-7.2 provide normative deep one-shot semantics, explicit shallow/multi-shot syntax and static modes, first-class `Resumption k a b e` typing, authoritative selective-CPS IR, process-affine runtime authority, executable deep/shallow one-shot context restoration, versioned artifact validation, and source-to-loaded-BEAM execution. Multi-shot branch authority remains deferred. |
+| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary. Delimited-resumption Phases 1 through 6 and Phase 7 Sections 7.1-7.3 provide normative deep one-shot semantics, explicit shallow/multi-shot syntax and static modes, first-class `Resumption k a b e` typing, authoritative selective-CPS IR, process-affine runtime authority, executable deep/shallow context restoration, bounded isolated multi-shot branch authority, versioned artifact validation, and source-to-loaded-BEAM execution. The complete Phase 7 integration gate remains pending. |
 | Property testing | Phases 1 to 4 are materially implemented in `src/proptest`; Phases 5 and 6 are substantial but partial; explicit Phase 7 helper surfaces are also materially implemented, while automatic language integration remains incomplete. |
 | Law verification | Structural and concrete stdlib laws execute, and known-instance generic checks bridge into the internal proptest framework; automatic derivation and broader workflow ergonomics remain future work. |
 | Language revamp migration | Completed and now historical. |
@@ -149,16 +149,17 @@ Important caveat:
   normalized and typed AST remains authoritative
 - the oracle remains comparison evidence; generated Phase 6 Core consumes the
   validated Phase 4 control IR through the Phase 5 production runtime ABI
-- Phase 7 Sections 7.1 and 7.2 are complete with explicit handler-mode
+- Phase 7 Sections 7.1 through 7.3 are complete with explicit handler-mode
   modifiers, conservative multi-shot static admissibility, shallow residual
-  effects, depth-aware parent-context restoration, control ABI 2, runtime ABI
-  2, artifact format 3, and loaded-BEAM shallow propagation evidence
+  effects, depth-aware parent-context restoration, bounded isolated
+  multi-shot branches, state-admissibility checks, resource budgets, control
+  ABI 2, runtime ABI 3, artifact format 3, and loaded-BEAM shallow and repeated
+  branch evidence
 
 Next clear steps on this track:
 
-- implement Phase 7 Section 7.3 multi-shot branch authority, failure policy,
-  state semantics, and resource budgets, then execute the Section 7.4 phase
-  integration gates
+- execute the Phase 7 Section 7.4 mixed-mode integration and phase-ending
+  repository gates
 - continue Phase 8 tooling, optimization, conformance, and promotion work
 
 ## Property-Testing Track

@@ -89,6 +89,17 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Control/artifact contract | implemented versioned boundary | Control ABI 2, runtime ABI 2, artifact format 3, interface 3, and explicit handler modes fail closed on disagreement |
 | Multi-shot | deferred | Static admissibility exists; repeated branch authority and budgets remain owned by Section 7.3 |
 
+## Phase 7 Section 7.3 Snapshot
+
+| Measurement | Section 7.3 result | Interpretation |
+| --- | ---: | --- |
+| Complete active EUnit suite | 5,272 pass; 0 failures; 0 skips | Multi-shot runtime, loaded-BEAM behavior, and all earlier gates are green |
+| Focused multi-shot integration | 9 pass; 0 failures; 0 skips | Branch identity, failure isolation, nested one-shot state, ownership, budgets, capture policy, cleanup, artifacts, and loaded-BEAM execution are green |
+| Multi-shot | implemented executable boundary | A closed empty residual row may authorize repeated, isolated same-process branches from the same compiler-reified continuation |
+| State policy | conservative fail-closed boundary | Process providers, local value-provider state, and direct lexical PIDs, ports, and references are rejected; no external-world cloning is claimed |
+| Resource policy | implemented versioned boundary | Runtime ABI 3 bounds invocations, retained words, reductions, cooperative timeout, and nested branch depth |
+| Phase integration | pending | Section 7.4 still owns mixed-mode scenarios and the complete phase-ending repository gate |
+
 ## Classification Vocabulary
 
 | Classification | Meaning |
@@ -119,7 +130,7 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Continuation capture | Generated binary CPS closures and captured contexts are registered behind opaque handles | Executable source implementation | Never claim ordinary Erlang stack capture |
 | One-shot consumption | A private serialized registry atomically enforces `fresh -> running -> consumed` for every exit | Executable source implementation | Preserve deterministic failure behavior |
 | Deep/shallow selection | Deep restoration reinstalls the selected frame; shallow restoration resumes from its parent context | Executable source implementation | Phase 8 owns promotion tooling |
-| Multi-shot | State-copy and resume-count helpers exist | Deferred mode | Residual-effect admissibility and independent branch authority |
+| Multi-shot | Closed empty residual rows lower to runtime ABI 3, whose opaque handles execute repeated isolated, bounded same-process branches | Executable source implementation | Phase 7 Section 7.4 owns complete mixed-mode promotion evidence |
 | Operational semantics | Normative written reductions | Semantic specification | Remains authoritative across later phases |
 | `catena_resumption_oracle` | Explicit free-request evaluator with deterministic trace/state | Semantic oracle | Comparison evidence only; never production ABI |
 
@@ -130,7 +141,7 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Modules | Honest boundary |
 | --- | --- |
 | `src/compiler/runtime/catena_effect_runtime.erl` | Promoted request/response operations plus local resumable frames, `perform_cps/5`, deep/shallow context selection, and provider separation |
-| `src/compiler/runtime/catena_resumption_runtime.erl` | Opaque versioned handles, private captured/parent context authority, atomic one-shot invocation, retention leases, lifecycle monitors, deadlines, cleanup, and stable failures |
+| `src/compiler/runtime/catena_resumption_runtime.erl` | Opaque versioned handles, private captured/parent context authority, atomic one-shot or isolated multi-shot invocation, state-admissibility checks, resource budgets, retention leases, lifecycle monitors, deadlines, cleanup, and stable failures |
 | `src/compiler/codegen/catena_effect_codegen.erl` | Lowers perform/handle to the request/response runtime |
 | `src/compiler/effects/catena_effects.erl`, `catena_effect_system.erl` | Public/internal orchestration around current direct-style effect execution |
 | `src/compiler/effects/catena_handler.erl`, `catena_handler_stack.erl`, `catena_handler_check.erl` | Handler construction, lookup, execution, and validation helpers |
@@ -196,7 +207,8 @@ to the Phase 5 runtime ABI.
   local resumable/value execution, process-provider separation, and deep
   `perform_cps/5,6`;
 - `catena_resumption_runtime` owns opaque handles, private continuation and
-  context state, atomic authorization, process affinity, leases, lifecycle
+  context state, atomic one-shot and multi-shot branch authorization, process
+  affinity, admissibility checks, resource budgets, leases, lifecycle
   monitors, deadlines, cleanup, and stable failures.
 
 The Phase 5 integration suite executes real compiler-shaped closures through
@@ -265,7 +277,7 @@ exclude PIDs, references, timestamps, stack traces, and function identities.
 | `resume_value_type_mismatch` | Supplied operation result does not unify with the resumption input |
 | `resume_effect_mismatch` | Residual resumed effects are not admitted by the current context |
 | `obvious_one_shot_reuse` | Static analysis proves duplicate invocation on a one-shot path |
-| `unsupported_resumption_mode` | Source or runtime requests a mode that is not implemented at that boundary; multi-shot remains the active deferred case |
+| `unsupported_resumption_mode` | Source or runtime requests a mode that is not implemented at that boundary |
 | `missing_resumption_lowering` | A resumable validated node reaches a backend without a classified lowering |
 | `resumption_abi_mismatch` | Direct/resumable bridge or runtime ABI does not match validated metadata |
 
@@ -281,6 +293,8 @@ exclude PIDs, references, timestamps, stack traces, and function identities.
 | `unsupported_semantic_mode` | Runtime/oracle cannot execute the requested depth or kind |
 | `resumption_reentrant` | Invocation observed the same one-shot authority in `running` state |
 | `resumption_already_consumed` | Invocation observed the authority in `consumed` state |
+| `inadmissible_multishot_context` | Multi-shot capture contains provider state or direct capabilities without accepted branch semantics |
+| `resumption_budget_exceeded` | Multi-shot capture or invocation exceeds a retained-memory, invocation, reduction, timeout, or branch-depth limit |
 | `resumption_value_type_mismatch` | A dynamic boundary receives an incompatible operation result |
 | `unhandled_effect` | A request reaches the top of the explicit context |
 | `handler_failure` | Production handler/provider execution fails before a valid result |

@@ -11,7 +11,10 @@ resumable_artifact_declares_and_loads_exact_contract_test() ->
     ?assertEqual(3, maps:get(format_version, Artifact)),
     Contract = maps:get(runtime_contract, Artifact),
     ?assertEqual(2, maps:get(control_abi_version, Contract)),
-    ?assertEqual(2, maps:get(resumption_runtime_version, Contract)),
+    ?assertEqual(
+        catena_resumption_runtime:version(),
+        maps:get(resumption_runtime_version, Contract)
+    ),
     ?assertEqual(
         [#{depth => deep, kind => one_shot}],
         maps:get(handler_modes, Contract)
@@ -31,7 +34,10 @@ resumable_artifact_declares_and_loads_exact_contract_test() ->
     )),
     Attributes = core_attributes(maps:get(core, Artifact)),
     ?assertEqual(2, maps:get(catena_control_abi_version, Attributes)),
-    ?assertEqual(2, maps:get(catena_resumption_runtime_version, Attributes)),
+    ?assertEqual(
+        catena_resumption_runtime:version(),
+        maps:get(catena_resumption_runtime_version, Attributes)
+    ),
     ?assertEqual(
         catena_resumption_runtime:features(),
         maps:get(catena_handler_frame_features, Attributes)

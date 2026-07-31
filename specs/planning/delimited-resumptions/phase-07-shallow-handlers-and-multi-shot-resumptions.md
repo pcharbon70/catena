@@ -6,7 +6,7 @@ their source spellings, types, context restoration, branch-state policy,
 resource limits, and executable semantics without weakening the one-shot
 default or pretending to clone arbitrary external BEAM resources.
 
-**Status:** In progress; Sections 7.1 and 7.2 complete.
+**Status:** In progress; Sections 7.1 through 7.3 complete.
 
 **Dependencies:** Phase 6 complete and deep one-shot behavior promoted at its
 phase boundary.
@@ -168,14 +168,14 @@ and 301 checked local links.
 once with explicit branch semantics, bounded resources, and no claim that
 external world state has been duplicated.
 
-- [ ] **Section 7.3 Complete**
+- [x] **Section 7.3 Complete**
 
 ### Task 7.3.1: Implement Multi-Shot Invocation Authority
 
 **Description:** Extend the runtime state machine to authorize repeated
 invocations while isolating per-branch control metadata.
 
-- [ ] **Task 7.3.1 Complete**
+- [x] **Task 7.3.1 Complete**
 
 #### Subtask 7.3.1.1: Create Branch Execution State
 
@@ -183,7 +183,7 @@ invocations while isolating per-branch control metadata.
 environment, isolate delimiter execution state, and keep process ownership
 checks on every invocation.
 
-- [ ] **Subtask 7.3.1.1 Complete**
+- [x] **Subtask 7.3.1.1 Complete**
 
 #### Subtask 7.3.1.2: Define Failure And Partial-Branch Behavior
 
@@ -191,14 +191,14 @@ checks on every invocation.
 how exceptions and aborts are reported, and how nested one-shot resumptions
 inside a multi-shot branch are consumed.
 
-- [ ] **Subtask 7.3.1.2 Complete**
+- [x] **Subtask 7.3.1.2 Complete**
 
 ### Task 7.3.2: Enforce Effect-State And Resource Policy
 
 **Description:** Make the static admissibility decision and runtime resource
 policy agree for stateful, external, concurrent, and open effects.
 
-- [ ] **Task 7.3.2 Complete**
+- [x] **Task 7.3.2 Complete**
 
 #### Subtask 7.3.2.1: Implement Branch State Semantics
 
@@ -206,7 +206,7 @@ policy agree for stateful, external, concurrent, and open effects.
 and each supported handler-state category, and reject PIDs, ports, mailboxes,
 provider state, or capabilities that lack accepted branch semantics.
 
-- [ ] **Subtask 7.3.2.1 Complete**
+- [x] **Subtask 7.3.2.1 Complete**
 
 #### Subtask 7.3.2.2: Add Branch Resource Budgets
 
@@ -214,7 +214,40 @@ provider state, or capabilities that lack accepted branch semantics.
 reductions, timeout, and nested branching and report deterministic budget
 failures with source origin.
 
-- [ ] **Subtask 7.3.2.2 Complete**
+- [x] **Subtask 7.3.2.2 Complete**
+
+### Section 7.3 Evidence
+
+Runtime ABI 3 authorizes an admissible `multi_shot` handle repeatedly while
+keeping one invocation active at a time. Each invocation receives a
+monotonically increasing branch identity and depth in its restored explicit
+context. Completion returns the authority to `fresh`; an exception records a
+failed branch without poisoning later branches. One-shot resumptions captured
+inside separate multi-shot branches remain separate authorities and retain
+ordinary exactly-once consumption.
+
+Multi-shot capture remains conservative. The type checker admits only a
+closed, empty residual effect row. The runtime additionally rejects process
+providers, local value-provider state, and direct PID, port, or reference
+capabilities in a continuation's lexical environment. Immutable lexical
+values and local resumable definitions are structurally shared; Catena does
+not claim to clone mailboxes, provider state, mutable external resources, or
+the outside world.
+
+Every multi-shot capture has positive limits for invocation count, retained
+continuation words, per-branch reductions, cooperative timeout, and nested
+branch depth. Defaults are 64 invocations, 262,144 retained words, 1,000,000
+reductions, 5,000 milliseconds, and depth 16. Capture-time and invocation-time
+violations report `resumption_budget_exceeded` with the source origin,
+resource, limit, and observed value. `branch_stats/1` exposes only sanitized
+counters and budgets; it never reveals the continuation or captured context.
+
+The nine focused `catena_delimited_resumption_phase7_multishot_tests` cover
+branch identities, independent failure, nested one-shot authority, ownership,
+all five resource limits, unsafe state rejection, discard cleanup, artifact
+contracts, and a Catena program that invokes one captured remainder twice and
+executes as loaded BEAM with result `82`. The complete active EUnit suite
+passes 5,272 tests with zero failures or skips.
 
 ## Section 7.4: Phase 7 Integration Tests
 

@@ -11,12 +11,13 @@ calling conventions, fail-closed graph validation, opaque process-affine
 runtime authority, deep same-process handler frames, one-shot consumption,
 retention leases, lifecycle monitoring, structured runtime failures,
 selective-CPS Core lowering, versioned artifacts, and loaded-BEAM execution.
-Phase 7 Sections 7.1 and 7.2 accept and implement explicit `handle shallow` and
-`handle multi_shot` mode modifiers through parsing, normalization, typing,
-control inventories, and versioned interfaces. Shallow one-shot handlers now
-execute through depth-aware context restoration from generated Core and
-loaded BEAM. Multi-shot runtime authority and final phase integration remain
-owned by Phase 7 Sections 7.3 and 7.4; dedicated promotion and tooling work
+Phase 7 Sections 7.1 through 7.3 accept and implement explicit
+`handle shallow` and `handle multi_shot` mode modifiers through parsing,
+normalization, typing, control inventories, versioned interfaces, and the
+production runtime. Shallow handlers execute through depth-aware context
+restoration. Admissible multi-shot resumptions execute repeated isolated,
+bounded branches from compiler-reified continuations. Final phase integration
+remains owned by Phase 7 Section 7.4; dedicated promotion and tooling work
 remains in Phase 8.
 
 This document makes
@@ -399,7 +400,10 @@ Only the runtime can dereference `OpaqueHandle`. The private state contains:
   parent_context => effect_context(),
   delimiter => reference(),
   depth => deep | shallow,
-  origin => term()}.
+  origin => term(),
+  budget => map(),
+  invocation_count => non_neg_integer(),
+  current_branch => map()}.
 ```
 
 This is a semantic inventory, not permission to expose a constructible map.
@@ -416,6 +420,13 @@ This is a semantic inventory, not permission to expose a constructible map.
 5. invokes the continuation on the owner process;
 6. marks a one-shot resumption consumed even if execution raises;
 7. returns the delimiter result or a structured runtime failure.
+
+For `multi_shot`, authorization assigns a monotonically increasing branch
+identity, restores the immutable captured continuation and selected deep or
+shallow context for that branch, and returns the authority to `fresh` after
+either success or failure. The same handle cannot be entered re-entrantly,
+and every invocation repeats process-ownership and resource checks. Explicit
+discard consumes the authority and releases its lease.
 
 The consumption authority may use a monitored helper process or another
 explicit runtime object. It must not rely on a forgeable source term or
@@ -444,15 +455,26 @@ preserving unrelated surrounding frames.
 Multi-shot support changes authorization and repeated invocation, not the
 source meaning of the captured continuation.
 
-Multi-shot must not claim to copy external world state. Before promotion it
-needs:
+Multi-shot does not copy external world state. Its initial executable boundary
+is deliberately narrow:
 
-- a source opt-in spelling;
-- a residual-effect admissibility rule;
-- specified sharing behavior for stateful handlers;
-- deterministic behavior for exceptions and partial branch completion;
-- resource limits and diagnostics;
-- executable nondeterminism/backtracking evidence.
+- the source must opt in with `multi_shot`;
+- the residual effect row must be closed and empty;
+- immutable lexical values and local resumable definitions are structurally
+  shared by the persistent BEAM terms captured by the compiler-reified
+  continuation;
+- process providers, local value-provider state, and direct lexical PID,
+  port, or reference capabilities are rejected at runtime capture;
+- one branch's exception is reported for that invocation and does not poison
+  later branches; one-shot resumptions captured separately inside branches
+  remain independently one-shot;
+- positive budgets bound invocation count, retained words, reductions,
+  cooperative timeout, and nested branch depth.
+
+Reduction and elapsed-time checks occur on the owner process after the
+continuation returns, while provider waits observe the propagated cooperative
+deadline. This preserves `self()` and mailbox identity; it is not preemptive
+stack capture or cancellation.
 
 ## Diagnostics
 
@@ -471,6 +493,8 @@ Diagnostics require Catena source locations for:
 - cross-process resume;
 - expired handler or delimiter;
 - inadmissible multi-shot effects;
+- inadmissible multi-shot runtime context;
+- exhausted multi-shot resource budget;
 - invalid or stale runtime representation.
 
 Synthetic CPS frames and auto-resume expressions retain an origin chain back
@@ -498,10 +522,11 @@ source-to-BEAM evidence covers:
 Shallow and multi-shot behavior receive separate promotion evidence when each
 source opt-in is accepted and implemented.
 
-Phase 6 supplies this executable evidence for the deep one-shot boundary, and
+Phase 6 supplies this executable evidence for the deep one-shot boundary,
 Phase 7 Section 7.2 supplies the depth-distinguishing runtime/Core/artifact
-evidence for shallow one-shot handling. Component and status documents must
-continue to distinguish these from deferred multi-shot semantics and Phase 8
+evidence for shallow one-shot handling, and Section 7.3 supplies bounded
+multi-shot runtime and source-to-loaded-BEAM evidence. Section 7.4 still owns
+the complete mixed-mode phase integration gate, and Phase 8 owns dedicated
 promotion/tooling work.
 
 ## Related Material
