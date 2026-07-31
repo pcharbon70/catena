@@ -5,12 +5,12 @@
 
 live_repository_passes_governance_test() ->
     {ok, Report} = catena_specs_governance:validate(repo_root()),
-    ?assertEqual(42, maps:get(requirements, Report)),
+    ?assertEqual(48, maps:get(requirements, Report)),
     ?assertEqual(5, maps:get(requirement_families, Report)),
-    ?assertEqual(11, maps:get(scenarios, Report)),
-    ?assertEqual(20, maps:get(evidence_rows, Report)),
-    ?assertEqual(20, maps:get(evidence_modules, Report)),
-    ?assertEqual(11, maps:get(component_specs, Report)),
+    ?assertEqual(12, maps:get(scenarios, Report)),
+    ?assertEqual(23, maps:get(evidence_rows, Report)),
+    ?assertEqual(23, maps:get(evidence_modules, Report)),
+    ?assertEqual(12, maps:get(component_specs, Report)),
     ?assertEqual(7, maps:get(adrs, Report)),
     ?assert(maps:get(acceptance_criteria, Report) > 50),
     ?assert(maps:get(local_links, Report) > 50).

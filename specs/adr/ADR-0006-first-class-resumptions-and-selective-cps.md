@@ -360,21 +360,19 @@ making advanced control explicit.
 ## Implementation Status
 
 Not implemented at acceptance time. The staged implementation has since
-completed Phases 1 through 5: normative semantics and an oracle,
-`with`/`resume` syntax and normalization, the first-class
-`Resumption k a b e` typed frontend, authoritative control-mode analysis,
-selective-CPS control IR, stable calling conventions, and fail-closed graph
-validation are present. The production runtime now also provides opaque
-versioned handles, process-affine deep one-shot execution, explicit local
-handler frames, retention leases, owner/provider monitoring, and structured
-lifecycle failures for real compiler-shaped continuation closures.
+completed Phases 1 through 7 and Phase 8 Sections 8.1 through 8.3: normative
+semantics and an oracle, `with`/`resume` syntax, first-class
+`Resumption k a b e` typing, authoritative selective-CPS IR, explicit-context
+runtime authority, source-to-loaded-BEAM deep/shallow and bounded admissible
+multi-shot execution, safe REPL/tooling views, proof-gated optimization, and
+dedicated `SCN-012` conformance are present.
 
-The current generated-code path still uses explicit request/response handler
-contexts, and the Erlang-facing `catena_resumption` capture still wraps a
-direct-style result marker. Neither is evidence of true language-level
-delimited continuation capture. Phase 5 proves the runtime target
-independently of generated application code; Phase 6 Core lowering and
-source-to-loaded-BEAM explicit resumptions remain future work.
+Generated application code executes compiler-reified continuations through
+the production resumption ABI. The separate Erlang-facing
+`catena_resumption` helper still wraps direct callback state and is not
+evidence that ordinary Erlang execution can transparently capture a live
+stack segment. The final Phase 8 repository promotion gate records aggregate
+suite, coverage, Dialyzer, and benchmark evidence.
 
 Promotion requires the staged work in
 [Delimited Resumptions Implementation Plan](../planning/delimited-resumptions/README.md)

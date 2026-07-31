@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted architecture with Phase 7 executable mixed-mode Core/BEAM
-integration. Phases 2 through 7 implement the lexer, parser,
+Promoted architecture with Phase 8 tooling, optimization, and dedicated
+conformance. Phases 2 through 8 implement the lexer, parser,
 AST, pretty-printer, semantic normalization, structural diagnostics,
 first-class resumption kinds and types, handler/resume inference,
 residual-effect checking, control-mode analysis, selective-CPS control IR,
@@ -17,14 +17,17 @@ normalization, typing, control inventories, versioned interfaces, and the
 production runtime. Shallow handlers execute through depth-aware context
 restoration. Admissible multi-shot resumptions execute repeated isolated,
 bounded branches from compiler-reified continuations. Mixed-mode and
-fail-closed integration evidence is complete; dedicated promotion and tooling
-work remains in Phase 8.
+fail-closed integration evidence is complete. Compiler-backed REPL sessions,
+safe introspection, bounded structured traces, source-frame reconstruction,
+proof-gated control optimization, performance baselines, and dedicated
+`SCN-012` conformance now cover the public boundary.
 
 This document makes
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
 concrete enough to guide parser, type-system, lowering, runtime, diagnostics,
-and conformance work while keeping the remaining Phase 8 work explicitly
-incomplete.
+and conformance work. Phase 8's completed repository-wide promotion gate is
+the authority for its recorded aggregate test and quality evidence, including
+the explicitly non-green coverage and Dialyzer baselines.
 
 The normative deep one-shot reduction rules are defined in
 [Delimited Resumption Operational Semantics](delimited_resumption_operational_semantics.md).
@@ -529,7 +532,78 @@ multi-shot runtime and source-to-loaded-BEAM evidence, and Section 7.4 supplies
 the complete mixed-mode and negative phase gate. Generated resumable BEAM
 carries the exact handler-mode inventory; artifact validation compares that
 inventory with the runtime contract before loading. Phase 8 owns dedicated
-promotion/tooling work.
+promotion/tooling work. Sections 8.1 through 8.3 supply that tooling,
+optimization, documentation, and `SCN-012` evidence; the phase-ending gate
+records aggregate promotion evidence separately.
+
+## Tooling And Optimization Boundary
+
+Compiler-backed sessions accumulate declarations, recompile one bounded
+module, validate and load its artifact, and execute on the session owner.
+Typed runtime bindings remain owner-affine. Safe inspection exposes the public
+resumption type identity, kind, depth, state, owner relationship, lifetime,
+and source capture location without exposing the continuation, explicit
+context, PID, reference, private handle, or another authority-bearing term.
+
+Optional process-owned traces are bounded and filterable. They record
+capture, handler selection, resume, abort, branch, consumption, timeout, and
+cleanup with monotonically increasing event and resumption identifiers.
+`catena_control_diagnostics` collapses generated wrappers, continuations,
+bridges, and temporaries into transform, perform, handler, binder, resume, and
+delimiter frames.
+
+The default control optimizer removes the backend-no-op `return` wrapper and
+collapses only bridges carrying `direct_callee` proof. It can be disabled with
+`#{codegen_opts => #{optimize_control => false}}` for equivalence tests.
+Unknown calls, open rows, unresolved capabilities, control effects, origins,
+and handler modes remain conservative. Runtime optimization caches immutable
+nearest-parent lookup metadata and avoids allocating a one-shot authority for
+an immediate value-case tail resume; explicit control and multi-shot paths
+retain full registry authorization.
+
+Effects are tracked in function types and compiled through explicit runtime
+contexts. Catena has extensive handler, row-polymorphism, resumption, and
+higher-order-effect internals, although ordinary Erlang execution cannot
+transparently capture true delimited continuations from the stack.
+
+## Acceptance Criteria
+
+### AC-DRES-001 First-Class Source And Type Surface
+
+`with` must bind an opaque `Resumption k a b e`, and `resume(k, value)` must
+type-check its operation input, delimiter result, and residual effect row
+before lowering.
+
+### AC-DRES-002 Executable Delimited Remainder
+
+Loaded BEAM must execute the compiler-reified remainder from `perform` to its
+owning delimiter. Marker results, ordinary Erlang stack-capture claims, and
+silent direct-style fallback do not conform.
+
+### AC-DRES-003 Mode And Authority Integrity
+
+Deep one-shot is the default. Shallow restoration and admissible bounded
+multi-shot branching must be explicit, process-affine, versioned, and checked
+against the artifact handler-mode inventory before load.
+
+### AC-DRES-004 Safe Tooling
+
+REPL inspection, structured control events, and reconstructed source frames
+must remain non-authoritative and redact closures, contexts, private handles,
+PIDs, ports, and references.
+
+### AC-DRES-005 Proof-Gated Optimization
+
+Control optimization must preserve loaded-BEAM results and failures against
+an independently selectable unoptimized pipeline. Open or unresolved
+capabilities remain conservative.
+
+### AC-DRES-006 Executable Promotion Evidence
+
+`SCN-012` must select maintained positive and negative conformance, tooling,
+and performance modules. Cross-process transfer, serialization,
+distribution, preemptive cancellation, and cloning of external effect state
+remain deferred.
 
 ## Related Material
 
@@ -539,5 +613,6 @@ promotion/tooling work.
 - [Type And Effect System](type_and_effect_system.md)
 - [Operational Semantics](delimited_resumption_operational_semantics.md)
 - [Feature Ledger](delimited_resumption_feature_ledger.md)
+- [User Guide](delimited_resumption_user_guide.md)
 - [Effect Runtime](../runtime/effect_runtime.md)
 - [Implementation Plan](../planning/delimited-resumptions/README.md)

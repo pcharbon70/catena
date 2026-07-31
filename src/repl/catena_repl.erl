@@ -12,7 +12,17 @@
     start/1,
     stop/0,
     eval/2,
-    get_env/1
+    get_env/1,
+    bind_runtime_value/4,
+    new_session/0,
+    new_session/1,
+    session_define/2,
+    session_eval/2,
+    session_bind/4,
+    session_resume/2,
+    session_resume/3,
+    session_inspect/2,
+    close_session/1
 ]).
 
 %% Internal exports for testing
@@ -93,6 +103,29 @@ eval(Input, State) ->
 -spec get_env(#repl_state{}) -> map().
 get_env(#repl_state{env = Env}) ->
     Env.
+
+%% @doc Bind an already-evaluated runtime value for safe REPL inspection.
+-spec bind_runtime_value(atom(), term(), term(), #repl_state{}) -> #repl_state{}.
+bind_runtime_value(Name, Value, Type, State) when is_atom(Name) ->
+    RuntimeBindings = maps:put(
+        Name,
+        {runtime_value, Value, Type},
+        State#repl_state.runtime_bindings
+    ),
+    State#repl_state{runtime_bindings = RuntimeBindings}.
+
+%% Compiler-backed session APIs for definitions, handlers, and resumptions.
+new_session() -> catena_repl_session:new().
+new_session(Options) -> catena_repl_session:new(Options).
+session_define(Source, Session) -> catena_repl_session:define(Source, Session).
+session_eval(Source, Session) -> catena_repl_session:evaluate(Source, Session).
+session_bind(Name, Value, Type, Session) ->
+    catena_repl_session:bind(Name, Value, Type, Session).
+session_resume(Value, Session) -> catena_repl_session:resume(Value, Session).
+session_resume(Name, Value, Session) ->
+    catena_repl_session:resume(Name, Value, Session).
+session_inspect(Name, Session) -> catena_repl_session:inspect(Name, Session).
+close_session(Session) -> catena_repl_session:close(Session).
 
 %%====================================================================
 %% Main Loop
@@ -196,6 +229,9 @@ handle_command(Input, State) ->
         "clear" -> cmd_clear(State);
         "prelude" -> cmd_prelude(State);
         "p" -> cmd_prelude(State);
+        "resumption" -> cmd_resumption(Args, State);
+        "r" -> cmd_resumption(Args, State);
+        "trace" -> cmd_trace(Args, State);
         _ -> {error, {unknown_command, Cmd}, State}
     end.
 
@@ -262,12 +298,72 @@ cmd_prelude(State) ->
     Bindings = maps:to_list(State#repl_state.runtime_bindings),
     {ok, {prelude, Bindings}, State}.
 
+%% :resumption - display a first-class runtime value without its authority.
+cmd_resumption("", State) ->
+    {error, {missing_argument, ":resumption requires a binding name"}, State};
+cmd_resumption(Name, State) ->
+    case find_runtime_binding(Name, State#repl_state.runtime_bindings) of
+        {ok, {runtime_value, Value, _Type}} ->
+            case catena_repl_session:describe_value(Value) of
+                #{kind := resumption, description := Description} ->
+                    {ok, {resumption, Description}, State};
+                #{kind := resumption, failure := Failure} ->
+                    {error, {resumption_failure, Failure}, State};
+                _ ->
+                    {error, {not_a_resumption, Name}, State}
+            end;
+        {ok, _Other} ->
+            {error, {not_a_resumption, Name}, State};
+        error ->
+            {error, {unknown_binding, Name}, State}
+    end.
+
+find_runtime_binding(Name, Bindings) ->
+    Matches = [
+        Value
+        || {Key, Value} <- maps:to_list(Bindings),
+           atom_to_list(Key) =:= Name
+    ],
+    case Matches of
+        [Value] -> {ok, Value};
+        [] -> error
+    end.
+
+%% :trace - opt-in, bounded control-event collection for this REPL process.
+cmd_trace("on", State) ->
+    ok = catena_resumption_runtime:configure_trace(#{enabled => true}),
+    {ok, {trace_configured, on}, State};
+cmd_trace("off", State) ->
+    ok = catena_resumption_runtime:configure_trace(false),
+    {ok, {trace_configured, off}, State};
+cmd_trace("clear", State) ->
+    ok = catena_resumption_runtime:clear_trace(),
+    {ok, trace_cleared, State};
+cmd_trace("show", State) ->
+    {ok, Events} = catena_resumption_runtime:trace(),
+    {ok, {control_trace, Events}, State};
+cmd_trace("", State) ->
+    cmd_trace("show", State);
+cmd_trace(Args, State) ->
+    case string:to_integer(Args) of
+        {Limit, ""} when Limit > 0 ->
+            ok = catena_resumption_runtime:configure_trace(#{
+                enabled => true,
+                max_events => Limit
+            }),
+            {ok, {trace_configured, #{max_events => Limit}}, State};
+        _ ->
+            {error, {invalid_trace_command, Args}, State}
+    end.
+
 help_text() ->
     {help, [
         {":type <expr>", "Show the type of an expression"},
         {":load <file>", "Load a Catena source file"},
         {":browse", "Show all current bindings"},
         {":prelude", "Show available prelude functions"},
+        {":resumption <name>", "Safely inspect a resumption binding"},
+        {":trace on|off|show|clear", "Configure bounded control tracing"},
         {":clear", "Clear all bindings"},
         {":quit", "Exit the REPL"},
         {":help", "Show this help message"}
@@ -580,6 +676,14 @@ print_result({prelude, Bindings}) ->
         end, Names)
     end, Categories),
     io:format("~n");
+print_result({resumption, Description}) ->
+    io:format("Resumption ~p~n", [Description]);
+print_result({trace_configured, Configuration}) ->
+    io:format("Control trace: ~p~n", [Configuration]);
+print_result(trace_cleared) ->
+    io:format("Control trace cleared~n");
+print_result({control_trace, Events}) ->
+    lists:foreach(fun(Event) -> io:format("  ~p~n", [Event]) end, Events);
 print_result({help, Commands}) ->
     io:format("~nAvailable commands:~n"),
     lists:foreach(fun({Cmd, Desc}) ->

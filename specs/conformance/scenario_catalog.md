@@ -17,6 +17,7 @@ specs. Their machine-readable EUnit evidence lives in
 | `SCN-009` | Build And Test The Repo | Generated-source hooks, module checks, focused workflows, governance checks, and the complete active suite remain reviewable through canonical commands. |
 | `SCN-010` | Verify Trait Laws | Structural and concrete Catena laws plus known-instance generic law checks execute through the maintained stdlib/property-testing bridge. |
 | `SCN-011` | Execute BEAM Backend Conformance | Each promoted backend feature compiles from Catena source through validated Core Erlang to a loadable BEAM binary with the expected result, while unsupported or unresolved semantics fail before artifact emission. |
+| `SCN-012` | Execute Delimited Resumption Conformance | Deep one-shot, shallow one-shot, and admissible bounded multi-shot source execute through optimized and unoptimized loaded BEAM; ownership, lifetime, artifact-mode, tooling-redaction, and resource failures remain explicit and fail closed. |
 
 ## Executable Evidence
 
@@ -27,6 +28,11 @@ boundary crosses subsystems.
 `SCN-011` is intentionally consolidated in
 `catena_backend_conformance_tests`, which is the maintained positive and
 negative source-to-BEAM feature matrix.
+
+`SCN-012` is consolidated in
+`catena_delimited_resumption_conformance_tests`, with the focused Phase 8
+tooling and performance modules registered alongside it so interactive,
+diagnostic, optimization, and threshold claims remain executable.
 
 The focused conformance command executes the unique module set from the
 manifest. It complements rather than replaces the complete active-suite gate:

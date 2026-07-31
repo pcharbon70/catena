@@ -16,7 +16,8 @@
     delimiters := non_neg_integer(),
     continuations := non_neg_integer(),
     bridges := non_neg_integer(),
-    status := passed
+    status := passed,
+    optimization => map()
 }.
 
 -export_type([report/0]).

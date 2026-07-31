@@ -13,3 +13,5 @@ This contract defines the `REQ-RT-*` family for Catena's runtime surfaces.
 - `REQ-RT-007`: The public process façade MUST preserve BEAM asynchronous send and signal-ownership semantics while normalizing its lifecycle mutation results.
 - `REQ-RT-008`: Actor, GenServer-style, supervisor, registry, pub/sub, and broadcaster components MUST be promoted only as the local Erlang runtime surfaces exercised by their focused tests; their presence MUST NOT imply source-language actor compilation or distributed operation.
 - `REQ-RT-009`: The REPL's automatic Process handler MUST execute every operation declared by the standard Process effect: `spawn`, `send`, and `self`.
+- `REQ-RT-010`: Resumption authority MUST remain opaque, process-affine, versioned, and lifecycle-managed; one-shot consumption and bounded multi-shot branches MUST be serialized without exposing captured continuations or explicit contexts.
+- `REQ-RT-011`: Compiler-backed REPL sessions MUST compile, validate, load, and execute accumulated handler and resumption source through the canonical source-to-BEAM pipeline while preserving typed runtime bindings and owner-process execution.

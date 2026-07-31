@@ -74,7 +74,7 @@ accepted:
 - [x] [Phase 5: Deep One-Shot Runtime And Resumption Ownership](phase-05-deep-one-shot-runtime-and-resumption-ownership.md)
 - [x] [Phase 6: Core Erlang, BEAM, And Call-Graph Integration](phase-06-core-erlang-beam-and-call-graph-integration.md)
 - [x] [Phase 7: Shallow Handlers And Multi-Shot Resumptions](phase-07-shallow-handlers-and-multi-shot-resumptions.md)
-- [ ] [Phase 8: Tooling, Optimization, Conformance, And Promotion](phase-08-tooling-optimization-conformance-and-promotion.md)
+- [x] [Phase 8: Tooling, Optimization, Conformance, And Promotion](phase-08-tooling-optimization-conformance-and-promotion.md)
 
 ## Dependency Graph
 
@@ -94,18 +94,19 @@ conformance and status work depends on all behavior it advertises.
 
 ## Requirement And Scenario Traceability
 
-The roadmap initially refines accepted architecture without claiming new
-promoted requirements. Contract and scenario additions occur in Phase 8 after
-executable evidence exists.
+The roadmap refines accepted architecture and now promotes the Phase 8
+boundary through dedicated compiler, runtime, observability, testing, and
+tooling requirements plus `SCN-012` executable evidence.
 
 | Roadmap area | Current requirements | Current scenarios |
 | --- | --- | --- |
 | Syntax and normalization | `REQ-COMP-001`, `REQ-COMP-002` | `SCN-001` |
-| Resumption typing and effects | `REQ-COMP-003`, `REQ-COMP-004` | `SCN-002` |
-| Validated CPS/backend authority | `REQ-COMP-008`, `REQ-COMP-010`, `REQ-COMP-011` | `SCN-003`, `SCN-011` |
-| Explicit runtime contexts and lifecycle | `REQ-RT-001`, `REQ-RT-002`, `REQ-RT-003` | `SCN-004` |
-| Source-oriented diagnostics | `REQ-COMP-013`, `REQ-OBS-*` | `SCN-001`, `SCN-009`, `SCN-011` |
-| Executable promotion evidence | `REQ-TEST-*` | `SCN-009`, `SCN-011` |
+| Resumption typing and effects | `REQ-COMP-003`, `REQ-COMP-004`, `REQ-COMP-014` | `SCN-002`, `SCN-012` |
+| Validated CPS/backend authority | `REQ-COMP-008`, `REQ-COMP-010`, `REQ-COMP-011`, `REQ-COMP-015` | `SCN-003`, `SCN-011`, `SCN-012` |
+| Explicit runtime contexts and lifecycle | `REQ-RT-001`, `REQ-RT-002`, `REQ-RT-003`, `REQ-RT-010` | `SCN-004`, `SCN-012` |
+| Compiler-backed interactive sessions | `REQ-RT-011` | `SCN-005`, `SCN-012` |
+| Source-oriented diagnostics | `REQ-COMP-013`, `REQ-OBS-007` | `SCN-001`, `SCN-009`, `SCN-011`, `SCN-012` |
+| Executable promotion evidence | `REQ-TEST-009` | `SCN-009`, `SCN-011`, `SCN-012` |
 
 ## Roadmap Completion Gate
 
@@ -127,10 +128,16 @@ executable evidence exists.
 - [x] Source-origin diagnostics cover compile-time and runtime control
       failures
 - [x] Public source-to-BEAM APIs return only OTP-accepted artifacts
-- [ ] Dedicated conformance evidence covers positive and negative resumption
+- [x] Dedicated conformance evidence covers positive and negative resumption
       semantics
 - [ ] Modified modules meet the repository coverage target
 - [x] `make check-specs`, `make conformance`, and the complete active suite
       pass
 - [x] Current-status and component specs distinguish implemented, partial,
       and deferred resumption behavior accurately
+
+The Phase 8 gate executed coverage rather than treating it as implicitly
+green. Focused modified-module coverage remains below 90% for seven of eight
+modules, so the coverage item stays unchecked as explicit quality debt. This
+does not broaden the semantics promoted by the green source-to-BEAM,
+conformance, and complete-suite gates.

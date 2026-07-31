@@ -1,5 +1,13 @@
 # Phase 9: Deep vs Shallow Handlers
 
+> **Reconciled status:** This older helper-module plan is superseded for the
+> public language boundary by
+> [ADR-0007](../../adr/ADR-0007-explicit-handler-and-resumption-mode-modifiers.md)
+> and [delimited-resumption Phase 7](../delimited-resumptions/phase-07-shallow-handlers-and-multi-shot-resumptions.md).
+> Deep and explicit shallow source handlers now type, lower, validate, and
+> execute through loaded BEAM; unchecked items below describe the earlier
+> component plan rather than deferred public semantics.
+
 **Description:** This phase implements both deep and shallow handler semantics, enabling precise control over which operations are handled at which scope levels.
 
 ---

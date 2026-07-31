@@ -13,7 +13,7 @@ It exists because some planning checklists are stale relative to later implement
 | Track | Current promoted status |
 | --- | --- |
 | Proof-of-concept | Implemented through Phases 1 to 3, with Phase 4 partial/minimal and a verified local Phase 5 actor runtime toolkit whose source-language integration remains incomplete. |
-| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary. Delimited-resumption Phases 1 through 7 provide normative deep one-shot semantics, explicit shallow/multi-shot syntax and static modes, first-class `Resumption k a b e` typing, authoritative selective-CPS IR, process-affine runtime authority, executable deep/shallow context restoration, bounded isolated multi-shot branch authority, exact compiled handler-mode artifact validation, and source-to-loaded-BEAM execution. Phase 8 tooling, optimization, dedicated conformance, and final public promotion remain planned. |
+| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary. The eight-phase delimited-resumption roadmap is complete: normative semantics, first-class `Resumption k a b e`, `with`/`resume`, deep/shallow and one-shot/bounded admissible multi-shot execution, selective CPS, process-affine authority, exact artifact modes, loaded BEAM, compiler-backed REPL sessions, redacted tracing, proof-gated optimization, benchmarks, public guidance, and dedicated `SCN-012` conformance are promoted. Coverage and Dialyzer remain explicit repository quality debt. |
 | Property testing | Phases 1 to 4 are materially implemented in `src/proptest`; Phases 5 and 6 are substantial but partial; explicit Phase 7 helper surfaces are also materially implemented, while automatic language integration remains incomplete. |
 | Law verification | Structural and concrete stdlib laws execute, and known-instance generic checks bridge into the internal proptest framework; automatic derivation and broader workflow ergonomics remain future work. |
 | Language revamp migration | Completed and now historical. |
@@ -155,10 +155,17 @@ Important caveat:
   multi-shot branches, state-admissibility checks, resource budgets, control
   ABI 2, runtime ABI 3, artifact format 3, exact compiled handler-mode
   validation, and mixed-mode loaded-BEAM evidence
+- Phase 8 is complete with canonical compiler-backed
+  REPL sessions, safe first-class resumption inspection, bounded structured
+  tracing, source-frame reconstruction, seven-path compiler/runtime
+  benchmarks, conservative control-graph optimization, safe runtime fast
+  paths, normative contract traceability, user guidance, and manifest-selected
+  `SCN-012` conformance
 
 Next clear steps on this track:
 
-- continue Phase 8 tooling, optimization, conformance, and promotion work
+- raise modified-module coverage toward 90% and remediate the repository-wide
+  Dialyzer warning inventory without broadening promoted control semantics
 
 ## Property-Testing Track
 
@@ -306,7 +313,8 @@ Important caveat:
 ## Current Quality State
 
 The default `rebar3 eunit` entry point discovers, compiles, and executes the
-complete active test tree. Delimited-resumption Phase 7 passed 5,280 tests
+complete active test tree. Delimited-resumption Phase 8 passed 5,294 tests
+with zero failures or skips on 2026-07-31; Phase 7 passed 5,280 tests
 with zero failures or skips on 2026-07-31; Phase 6 passed 5,252 tests with
 zero failures or skips on 2026-07-31; Phase 5 passed 5,233 tests
 with zero failures or skips on 2026-07-31; Phase 4 passed 5,192, Phase 3
@@ -321,11 +329,12 @@ Promoted interpretation:
 
 - `make compile` and `rebar3 compile` compile the active source tree
 - `make test` and `rebar3 eunit` expose the complete active EUnit result
-- `make check-specs` validates 42 concrete requirements in five families, 11
-  scenarios, 20 executable evidence rows across 20 modules, 73 component
-  acceptance criteria, seven ADRs, promoted paths, and local Markdown links
+- `make check-specs` validates 48 concrete requirements in five families, 12
+  scenarios, 23 executable evidence rows across 23 modules, 84 component
+  acceptance criteria, seven ADRs, promoted paths, and 318 local Markdown
+  links
 - `make conformance` runs the unique EUnit modules named by the executable
-  scenario manifest; the Phase 7 delimited-resumption gate passed all 418
+  scenario manifest; the Phase 8 delimited-resumption gate passed all 432
   focused tests
 - `make verify` combines specs governance, manifest-selected conformance, and
   the complete active suite and is the read-only CI contract for pull requests
@@ -340,10 +349,11 @@ Promoted interpretation:
 - the two deterministic law failures and observed collection-generator flake
   from Phase 5 are resolved in the
   [Phase 6 test baseline](spec-source-reconciliation/phase-06-test-baseline.md)
-- the Phase 7 coverage run passed the complete suite and reports 27%
-  repository-wide coverage; focused Phase 1 coverage reports 93% for the new
-  `catena_resumption_oracle`
-- `rebar3 dialyzer` remains non-green with 822 repository-wide warnings
+- the Phase 8 coverage run passed the complete suite and reports 11%
+  repository-wide coverage; focused Phase 8 coverage is 16% aggregate, with
+  only `catena_control_optimize` at the 90% modified-module target
+- `rebar3 dialyzer` remains non-green with 984 repository-wide warnings,
+  compared with the previously recorded 822-warning baseline
 - historical PropEr suites remain preserved under `test_legacy/proper/` as migration targets rather than active default tests
 
 The component status summaries above describe implementation inventory and

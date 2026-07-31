@@ -12,8 +12,14 @@
 
 mixed_source_classifies_and_lowers_deterministically_test() ->
     Source = mixed_source(),
-    {ok, First} = catena_compile:compile_string_to_unit(Source),
-    {ok, Second} = catena_compile:compile_string_to_unit(Source),
+    {ok, First} = catena_compile:compile_string_to_unit(
+        Source,
+        unoptimized_options()
+    ),
+    {ok, Second} = catena_compile:compile_string_to_unit(
+        Source,
+        unoptimized_options()
+    ),
     Modes = catena_compilation_unit:control_modes(First),
     ?assertEqual({ok, direct}, catena_control_mode:mode(identity, Modes)),
     ?assertEqual({ok, direct}, catena_control_mode:mode(provider, Modes)),
@@ -234,7 +240,10 @@ first_class_resumption_uses_its_authority_delimiter_test() ->
     ).
 
 malformed_graphs_fail_with_source_oriented_diagnostics_test() ->
-    {ok, Unit} = catena_compile:compile_string_to_unit(mixed_source()),
+    {ok, Unit} = catena_compile:compile_string_to_unit(
+        mixed_source(),
+        unoptimized_options()
+    ),
     IR = catena_compilation_unit:control_ir(Unit),
     Cases = [
         {
@@ -353,6 +362,9 @@ explicit_source() ->
 
 operations(IR) ->
     [maps:get(op, Node) || Node <- catena_control_ir:nodes(IR)].
+
+unoptimized_options() ->
+    #{codegen_opts => #{optimize_control => false}}.
 
 nodes_for(Name, IR) ->
     {ok, Transform} = catena_control_ir:lookup(Name, IR),

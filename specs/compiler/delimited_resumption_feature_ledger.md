@@ -2,13 +2,14 @@
 
 ## Status
 
-Phase 7 executable mixed-mode Core/BEAM boundary for
+Phase 8 promoted tooling, optimization, and conformance boundary for
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md).
 
 This ledger prevents internal helper names, marker callbacks, request/response
 runtime behavior, and the reference oracle from being mistaken for promoted
-Catena source-language delimited control. Phase 8 must update a row only
-when its implementation and required evidence are both present.
+Catena source-language delimited control. The final Phase 8 repository gate
+records aggregate suite, coverage, analysis, and benchmark evidence after the
+dedicated `SCN-012` boundary is established.
 
 ## Baseline Snapshot
 
@@ -110,6 +111,24 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Artifact mode integrity | implemented fail-closed boundary | The handler-mode inventory embedded in loaded BEAM must exactly match the runtime contract |
 | Specs governance | passed | 42 requirements, 11 scenarios, 20 evidence rows, 73 acceptance criteria, seven ADRs, and 301 local links validate |
 
+## Phase 8 Promotion Snapshot
+
+| Measurement | Phase 8 result | Interpretation |
+| --- | ---: | --- |
+| REPL and diagnostics | implemented public tooling boundary | Compiler-backed sessions evaluate and bind resumptions on their owner, while redacted descriptions and bounded control traces reconstruct source frames |
+| Control optimization | implemented proof-gated boundary | Return wrappers and proven direct-to-CPS bridges may be removed; unknown, higher-order, and open-effect paths remain conservative |
+| Runtime optimization | implemented semantics-preserving boundary | Immutable parent lookup metadata may be cached and non-escaping one-shot value handlers may tail auto-resume without allocating first-class authority |
+| Performance evidence | implemented threshold boundary | Seven compiler and seven runtime scenario classes publish compiler, artifact, latency, throughput, scheduler, retention, and branch-resource metrics |
+| Dedicated conformance | registered as `SCN-012` | Positive and negative loaded-BEAM, runtime-authority, tooling-redaction, and optimization-equivalence behavior has stable manifest-selected evidence |
+| Complete active EUnit suite | 5,294 pass; 0 failures; 0 skips | All Phase 8 and earlier repository behavior is green |
+| Manifest conformance | 432 pass; 0 failures; 0 skips | All 12 stable scenarios, including dedicated `SCN-012`, are green |
+| Specs governance | passed | 48 requirements, 12 scenarios, 23 evidence modules, 84 acceptance criteria, seven ADRs, and 318 local links validate |
+| Deterministic resumption repeat | 3 runs x 4 pass | The canonical `SCN-012` module remains stable across repeated runs |
+| Performance thresholds | passed at 25 iterations | Compiler/artifact/source-map maxima are 52,736 microseconds, 2,860 bytes, and 3,677 bytes; runtime latency maximum is 15.92 microseconds |
+| Artifact/runtime versions | format 3; control ABI 2; runtime ABI 3 | Exact handler-mode and feature inventories continue to fail closed before load |
+| Coverage | 11% repository; 16% focused Phase 8 | Only `catena_control_optimize` reaches the 90% modified-module target; the remaining gap is recorded quality debt |
+| Dialyzer | non-green at 984 warnings | The previously recorded 822-warning repository baseline has not reached an enforced-zero gate |
+
 ## Classification Vocabulary
 
 | Classification | Meaning |
@@ -132,15 +151,15 @@ count. Parser conflicts are checked on every ordinary compilation.
 | --- | --- | --- | --- |
 | `perform` syntax and AST | Parsed and typed as the existing effect expression | Request/response | Preserve syntax; classify resumable suspension points |
 | `handle` and operation cases | Parsed and typed cases emit deterministic Core handler frames and execute through selected deep or shallow contexts | Executable source implementation | Preserve the deep default and explicit shallow selection |
-| `with k` operation binder | Emitted capture constructs opaque process-affine authority for the compiler-reified remainder | Executable source implementation | Preserve through later optimization and tooling |
-| `resume(k, value)` | Emitted runtime invocation executes the delimited source remainder on its owner and returns the delimiter result | Executable source implementation | Preserve through later optimization and tooling |
+| `with k` operation binder | Emitted capture constructs opaque process-affine authority for the compiler-reified remainder | Executable source implementation | Promoted with `SCN-012` and safe REPL inspection |
+| `resume(k, value)` | Emitted runtime invocation executes the delimited source remainder on its owner and returns the delimiter result | Executable source implementation | Promoted with optimized/unoptimized equivalence |
 | Value-handler compatibility | Synthetic tail auto-resume emits and executes the same exactly-once deep path | Executable source implementation plus request/response compatibility | Preserve both specified paths |
 | Effect context | Generated wrappers create one context; emitted entries distinguish local resumable/value and process providers with nested lookup | Executable source implementation | Preserve explicit authority |
-| Core Erlang effect backend | `catena_control_codegen` emits validated direct/CPS entries, performs, handlers, resumptions, bridges, closures, imports, and dictionaries | Executable source implementation | Phase 8 owns optimization and promotion tooling |
+| Core Erlang effect backend | `catena_control_codegen` emits validated direct/CPS entries, performs, handlers, resumptions, bridges, closures, imports, and dictionaries | Executable source implementation | Proof-gated optimization is enabled by default and retained in validation evidence |
 | Continuation capture | Generated binary CPS closures and captured contexts are registered behind opaque handles | Executable source implementation | Never claim ordinary Erlang stack capture |
 | One-shot consumption | A private serialized registry atomically enforces `fresh -> running -> consumed` for every exit | Executable source implementation | Preserve deterministic failure behavior |
-| Deep/shallow selection | Deep restoration reinstalls the selected frame; shallow restoration resumes from its parent context | Executable source implementation | Phase 8 owns promotion tooling |
-| Multi-shot | Closed empty residual rows lower to runtime ABI 3, whose opaque handles execute repeated isolated, bounded same-process branches | Executable source implementation | Phase 8 owns dedicated conformance and public promotion tooling |
+| Deep/shallow selection | Deep restoration reinstalls the selected frame; shallow restoration resumes from its parent context | Executable source implementation | Promoted with source tracing and `SCN-012` |
+| Multi-shot | Closed empty residual rows lower to runtime ABI 3, whose opaque handles execute repeated isolated, bounded same-process branches | Executable source implementation | Promoted only at the closed, empty-row, state-admissible, bounded boundary |
 | Operational semantics | Normative written reductions | Semantic specification | Remains authoritative across later phases |
 | `catena_resumption_oracle` | Explicit free-request evaluator with deterministic trace/state | Semantic oracle | Comparison evidence only; never production ABI |
 
@@ -229,11 +248,24 @@ these modules. Phase 6 generated application code now calls this path.
 - `catena_control_codegen` emits source-arity wrappers, private direct/CPS
   entries, control closures, runtime performs, handlers, resume/abort flow,
   imports, dictionaries, and explicit bridges;
-- `catena_beam_artifact` format 2 validates and loads only matching BEAM,
+- `catena_beam_artifact` format 3 validates and loads only matching BEAM,
   runtime, handler-feature, interface, and dependency contracts;
 - `catena_runtime_contract` performs exact runtime version and feature checks;
 - `catena_core_origin` publishes generated definitions and source-to-synthetic
   control chains without retaining private callable terms.
+
+### Phase 8 tooling, optimization, and conformance infrastructure
+
+- `catena_control_optimize` removes only control nodes whose directness and
+  bridge obligations are proven by the retained graph;
+- `catena_repl_session` owns compilation units, artifacts, loaded modules,
+  runtime bindings, resumption invocation, and deterministic cleanup;
+- `catena_control_diagnostics` maps retained artifact origins and structured
+  runtime events back to source-oriented control frames;
+- `catena_resumption_benchmark` measures all promoted compiler/runtime path
+  classes and enforces explicit regression thresholds;
+- `catena_delimited_resumption_conformance_tests` is the stable `SCN-012`
+  source-to-loaded-BEAM and fail-closed authority scenario.
 
 ### Reference oracle
 
@@ -320,18 +352,20 @@ types, lowers, and executes a real delimited continuation.
 
 Only end-to-end evidence through the production source-to-BEAM path may
 promote executable `with`, `resume`, first-class retention, shallow, or
-multi-shot semantics. Phase 5 may accurately claim an executable production
-runtime ABI for real compiler-shaped closures, but not source-to-Core/BEAM
-integration or promoted source behavior.
+multi-shot semantics. `SCN-012` is that maintained promotion evidence. It does
+not broaden multi-shot admissibility, make resumptions serializable or
+cross-process, or claim transparent capture of ordinary Erlang stacks.
 
 ## Related Material
 
 - [Delimited Resumption Operational Semantics](delimited_resumption_operational_semantics.md)
 - [Delimited Resumption Architecture](delimited_resumption_architecture.md)
+- [Delimited Resumption User Guide](delimited_resumption_user_guide.md)
 - [Phase 1 Plan](../planning/delimited-resumptions/phase-01-operational-semantics-feature-ledger-and-reference-oracle.md)
 - [Phase 2 Plan](../planning/delimited-resumptions/phase-02-with-resume-syntax-ast-and-semantic-normalization.md)
 - [Phase 3 Plan](../planning/delimited-resumptions/phase-03-first-class-resumption-kinds-types-and-effects.md)
 - [Phase 4 Plan](../planning/delimited-resumptions/phase-04-control-mode-analysis-and-selective-cps-ir.md)
 - [Phase 5 Plan](../planning/delimited-resumptions/phase-05-deep-one-shot-runtime-and-resumption-ownership.md)
+- [Phase 8 Plan](../planning/delimited-resumptions/phase-08-tooling-optimization-conformance-and-promotion.md)
 - [Effect Runtime](../runtime/effect_runtime.md)
 - [Current Status](../planning/current_status.md)
