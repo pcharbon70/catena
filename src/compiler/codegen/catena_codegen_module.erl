@@ -865,7 +865,11 @@ runtime_dependencies(EffectfulTransforms)
     [];
 runtime_dependencies(_EffectfulTransforms) ->
     [
-        #{module => catena_effect_runtime, version => 1},
+        #{
+            module => catena_effect_runtime,
+            version => catena_effect_runtime:version(),
+            features => catena_effect_runtime:features()
+        },
         #{module => catena_effect_system, version => 1}
     ].
 

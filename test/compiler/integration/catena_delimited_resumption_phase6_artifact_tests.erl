@@ -7,11 +7,15 @@
 
 resumable_artifact_declares_and_loads_exact_contract_test() ->
     {ok, Artifact} = catena_compile:compile_string_to_beam(resumable_source()),
-    ?assertEqual(2, catena_beam_artifact:format_version()),
-    ?assertEqual(2, maps:get(format_version, Artifact)),
+    ?assertEqual(3, catena_beam_artifact:format_version()),
+    ?assertEqual(3, maps:get(format_version, Artifact)),
     Contract = maps:get(runtime_contract, Artifact),
-    ?assertEqual(1, maps:get(control_abi_version, Contract)),
-    ?assertEqual(1, maps:get(resumption_runtime_version, Contract)),
+    ?assertEqual(2, maps:get(control_abi_version, Contract)),
+    ?assertEqual(2, maps:get(resumption_runtime_version, Contract)),
+    ?assertEqual(
+        [#{depth => deep, kind => one_shot}],
+        maps:get(handler_modes, Contract)
+    ),
     ?assertEqual(
         catena_resumption_runtime:features(),
         maps:get(required_handler_frame_features, Contract)
@@ -26,8 +30,8 @@ resumable_artifact_declares_and_loads_exact_contract_test() ->
         maps:get(runtime_dependencies, Artifact)
     )),
     Attributes = core_attributes(maps:get(core, Artifact)),
-    ?assertEqual(1, maps:get(catena_control_abi_version, Attributes)),
-    ?assertEqual(1, maps:get(catena_resumption_runtime_version, Attributes)),
+    ?assertEqual(2, maps:get(catena_control_abi_version, Attributes)),
+    ?assertEqual(2, maps:get(catena_resumption_runtime_version, Attributes)),
     ?assertEqual(
         catena_resumption_runtime:features(),
         maps:get(catena_handler_frame_features, Attributes)
@@ -63,7 +67,7 @@ stale_and_feature_incompatible_runtimes_fail_before_load_test() ->
         maps:get(reason, catena_backend_error:details(StaleDiagnostic))
     ),
     MissingFeature = Availability#{catena_resumption_runtime := #{
-        version => 1,
+        version => catena_resumption_runtime:version(),
         features => [deep_handlers]
     }},
     {error, FeatureDiagnostic} = catena_beam_artifact:validate(
@@ -123,7 +127,7 @@ module_dependencies_are_bound_to_interface_checksums_test() ->
         || Item <- maps:get(artifact_dependencies, Consumer),
            maps:get(kind, Item, runtime) =:= catena_module
     ],
-    ?assertEqual(2, maps:get(interface_version, Dependency)),
+    ?assertEqual(3, maps:get(interface_version, Dependency)),
     ?assertEqual(
         catena_module_interface:checksum(maps:get(interface, Provider)),
         maps:get(interface_checksum, Dependency)

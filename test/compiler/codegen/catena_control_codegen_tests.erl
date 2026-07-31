@@ -23,7 +23,7 @@ validated_ir_emits_source_and_private_entry_arities_test() ->
     ?assert(lists:member({run, 1, 1}, Definitions)),
     ?assert(lists:member({'$catena_cps$run', 3, 3}, Definitions)),
     ?assertEqual(
-        1,
+        2,
         module_attribute(catena_control_abi_version, Core)
     ).
 
@@ -83,7 +83,7 @@ public_wrapper_establishes_one_initial_runtime_context_test() ->
     )).
 
 private_name_and_control_abi_are_stable_test() ->
-    ?assertEqual(1, catena_control_codegen:control_abi_version()),
+    ?assertEqual(2, catena_control_codegen:control_abi_version()),
     ?assertEqual(
         '$catena_direct$map',
         catena_control_codegen:private_name(direct, map)

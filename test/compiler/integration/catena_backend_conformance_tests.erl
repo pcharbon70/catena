@@ -117,7 +117,11 @@ effect_runtime_matrix_test() ->
         ?assertEqual(42, 'BackendEffectConformance':run(0)),
         ?assertEqual(
             control_dependencies([
-                #{module => catena_effect_runtime, version => 1},
+                #{
+                    module => catena_effect_runtime,
+                    version => catena_effect_runtime:version(),
+                    features => catena_effect_runtime:features()
+                },
                 #{module => catena_effect_system, version => 1}
             ]),
             maps:get(runtime_dependencies, Artifact)
@@ -157,10 +161,14 @@ trait_dictionary_matrix_test() ->
 
 control_dependencies(Additional) ->
     lists:usort(Additional ++ [
-        #{module => catena_effect_runtime, version => 1},
+        #{
+            module => catena_effect_runtime,
+            version => catena_effect_runtime:version(),
+            features => catena_effect_runtime:features()
+        },
         #{
             module => catena_resumption_runtime,
-            version => 1,
+            version => catena_resumption_runtime:version(),
             features => catena_resumption_runtime:features()
         }
     ]).

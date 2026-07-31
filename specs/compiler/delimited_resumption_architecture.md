@@ -11,11 +11,13 @@ calling conventions, fail-closed graph validation, opaque process-affine
 runtime authority, deep same-process handler frames, one-shot consumption,
 retention leases, lifecycle monitoring, structured runtime failures,
 selective-CPS Core lowering, versioned artifacts, and loaded-BEAM execution.
-Phase 7 Section 7.1 accepts and implements explicit `handle shallow` and
+Phase 7 Sections 7.1 and 7.2 accept and implement explicit `handle shallow` and
 `handle multi_shot` mode modifiers through parsing, normalization, typing,
-control inventories, and versioned interfaces. Their executable runtime
-semantics remain owned by Phase 7 Sections 7.2 through 7.4; dedicated
-promotion and tooling work remains in Phase 8.
+control inventories, and versioned interfaces. Shallow one-shot handlers now
+execute through depth-aware context restoration from generated Core and
+loaded BEAM. Multi-shot runtime authority and final phase integration remain
+owned by Phase 7 Sections 7.3 and 7.4; dedicated promotion and tooling work
+remains in Phase 8.
 
 This document makes
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
@@ -394,6 +396,7 @@ Only the runtime can dereference `OpaqueHandle`. The private state contains:
   state => fresh | running | consumed,
   continuation => fun(),
   context => effect_context(),
+  parent_context => effect_context(),
   delimiter => reference(),
   depth => deep | shallow,
   origin => term()}.
@@ -429,13 +432,15 @@ the BEAM, but invoking it from another process is.
 
 ## Deep, Shallow, One-Shot, And Multi-Shot
 
-The first executable promotion target is deep plus one-shot:
+The default executable mode remains deep plus one-shot:
 
 - the handler frame is active during resumed execution;
 - a resumption begins at most once;
 - existing value cases tail-resume exactly once.
 
-Shallow support changes context restoration, not continuation capture.
+Implemented shallow support changes context restoration, not continuation
+capture: it restores the selected frame's captured parent context while
+preserving unrelated surrounding frames.
 Multi-shot support changes authorization and repeated invocation, not the
 source meaning of the captured continuation.
 
@@ -490,12 +495,14 @@ source-to-BEAM evidence covers:
 11. Core validation and loaded-BEAM execution;
 12. no placeholder continuation or silent direct-style fallback.
 
-Shallow and multi-shot behavior receive separate promotion evidence when their
-source opt-ins are accepted and implemented.
+Shallow and multi-shot behavior receive separate promotion evidence when each
+source opt-in is accepted and implemented.
 
-Phase 6 supplies this executable evidence for the deep one-shot boundary.
-Component and status documents must continue to distinguish it from deferred
-shallow/multi-shot semantics and Phase 8 promotion/tooling work.
+Phase 6 supplies this executable evidence for the deep one-shot boundary, and
+Phase 7 Section 7.2 supplies the depth-distinguishing runtime/Core/artifact
+evidence for shallow one-shot handling. Component and status documents must
+continue to distinguish these from deferred multi-shot semantics and Phase 8
+promotion/tooling work.
 
 ## Related Material
 

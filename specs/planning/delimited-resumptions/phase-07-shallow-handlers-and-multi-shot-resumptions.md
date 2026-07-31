@@ -6,7 +6,7 @@ their source spellings, types, context restoration, branch-state policy,
 resource limits, and executable semantics without weakening the one-shot
 default or pretending to clone arbitrary external BEAM resources.
 
-**Status:** In progress; Section 7.1 complete.
+**Status:** In progress; Sections 7.1 and 7.2 complete.
 
 **Dependencies:** Phase 6 complete and deep one-shot behavior promoted at its
 phase boundary.
@@ -89,14 +89,14 @@ interface metadata.
 handler frame before resumed execution while preserving parent contexts and
 all process-affinity guarantees.
 
-- [ ] **Section 7.2 Complete**
+- [x] **Section 7.2 Complete**
 
 ### Task 7.2.1: Implement Shallow Context Restoration
 
 **Description:** Select the context outside the current handler frame when a
 shallow resumption runs.
 
-- [ ] **Task 7.2.1 Complete**
+- [x] **Task 7.2.1 Complete**
 
 #### Subtask 7.2.1.1: Remove The Current Frame On Resume
 
@@ -104,7 +104,7 @@ shallow resumption runs.
 and outer frames, and make a repeated operation propagate to the next eligible
 handler.
 
-- [ ] **Subtask 7.2.1.1 Complete**
+- [x] **Subtask 7.2.1.1 Complete**
 
 #### Subtask 7.2.1.2: Preserve Delimiter And Result Semantics
 
@@ -112,28 +112,55 @@ handler.
 preserve one-shot consumption, and handle nested shallow/deep combinations
 without orphaning frames.
 
-- [ ] **Subtask 7.2.1.2 Complete**
+- [x] **Subtask 7.2.1.2 Complete**
 
 ### Task 7.2.2: Integrate Shallow Modes With CPS And Core
 
 **Description:** Carry depth metadata through control IR, calling conventions,
 runtime dependencies, and source-oriented diagnostics.
 
-- [ ] **Task 7.2.2 Complete**
+- [x] **Task 7.2.2 Complete**
 
 #### Subtask 7.2.2.1: Lower Depth-Aware Control Nodes
 
 **Description:** Emit explicit deep or shallow context selection and reject
 any control node whose depth is missing, ambiguous, or unsupported.
 
-- [ ] **Subtask 7.2.2.1 Complete**
+- [x] **Subtask 7.2.2.1 Complete**
 
 #### Subtask 7.2.2.2: Preserve Depth Across Calls And Artifacts
 
 **Description:** Retain depth through closures, imports, dictionaries,
 resumption storage, versioned interfaces, and artifact compatibility checks.
 
-- [ ] **Subtask 7.2.2.2 Complete**
+- [x] **Subtask 7.2.2.2 Complete**
+
+### Section 7.2 Evidence
+
+The explicit-context runtime records both the context containing the selected
+handler and that frame's parent. A deep one-shot resumption restores the
+former; a shallow one-shot resumption restores the latter. This removes only
+the selected shallow frame, preserves unrelated parent frames and the
+delimiter result, and retains the existing owner-process, lifecycle, timeout,
+retention, and one-shot-consumption rules.
+
+Selective-CPS Core lowering now places `depth` and `resumption_kind` in every
+generated handler specification. Control validation rejects missing modes and
+mode disagreement among delimiter, installation, and resumption nodes.
+Control ABI version 2, resumption/effect runtime version 2, artifact format 3,
+module interface version 3, exact runtime feature dependencies, and artifact
+`handler_modes` retain the selection across compilation and loading.
+
+`catena_delimited_resumption_phase7_shallow_tests` distinguishes shallow
+`inner -> outer` behavior from deep `inner -> inner` rehandling, preserves an
+unrelated intervening frame and process identity, proves retained shallow
+one-shot consumption, and compiles, validates, loads, and executes a nested
+shallow Catena program with result `11`. Focused runtime, validation, Core,
+artifact, dependency, conformance, and public API regressions pass with the
+unchanged 38 shift/reduce and zero reduce/reduce parser baseline. The complete
+active EUnit suite passes 5,263 tests with zero failures or skips, and specs
+governance passes with 42 requirements, 73 acceptance criteria, seven ADRs,
+and 301 checked local links.
 
 ## Section 7.3: Multi-Shot Runtime, Branching, And Resources
 

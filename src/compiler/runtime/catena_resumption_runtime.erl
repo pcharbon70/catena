@@ -43,7 +43,7 @@
 ]).
 
 -define(SERVER, catena_resumption_runtime_registry).
--define(VERSION, 1).
+-define(VERSION, 2).
 
 -opaque handle() ::
     {catena_resumption, ?VERSION, reference()}.
@@ -51,8 +51,9 @@
 -type capture_spec() :: #{
     context := map(),
     delimiter := reference(),
-    depth := deep,
-    kind := one_shot,
+    depth := deep | shallow,
+    kind := one_shot | multi_shot,
+    parent_context => map(),
     origin := term(),
     metadata => map(),
     type_identity => term(),
@@ -68,13 +69,14 @@
 
 -type entry() :: #{
     owner := pid(),
-    kind := one_shot,
+    kind := one_shot | multi_shot,
     state := fresh | running | consumed,
     continuation => fun((term(), map()) -> term()),
     context => map(),
+    parent_context => map(),
     delimiter := reference(),
     delimiter_status := live | expired,
-    depth := deep,
+    depth := deep | shallow,
     origin := term(),
     metadata := map(),
     type_identity := term(),
@@ -106,6 +108,8 @@ version() ->
 features() ->
     [
         deep_handlers,
+        shallow_handlers,
+        depth_aware_context_restoration,
         explicit_contexts,
         one_shot_resumptions,
         retained_resumptions,
@@ -126,13 +130,18 @@ capture(Continuation, Spec) ->
             Ref = make_ref(),
             Entry = #{
                 owner => self(),
-                kind => one_shot,
+                kind => maps:get(kind, Spec),
                 state => fresh,
                 continuation => Continuation,
                 context => maps:get(context, Spec),
+                parent_context => maps:get(
+                    parent_context,
+                    Spec,
+                    maps:get(context, Spec)
+                ),
                 delimiter => maps:get(delimiter, Spec),
                 delimiter_status => live,
-                depth => deep,
+                depth => maps:get(depth, Spec),
                 origin => maps:get(origin, Spec),
                 metadata => maps:get(metadata, Spec, #{}),
                 type_identity => maps:get(type_identity, Spec, dynamic),
@@ -158,7 +167,7 @@ capture(Continuation, Spec) ->
             Error
     end.
 
-%% @doc Invoke a deep one-shot resumption on its capturing process.
+%% @doc Invoke a depth-aware one-shot resumption on its capturing process.
 -spec resume(term(), term()) ->
     {ok, term()} | {error, control_failure()}.
 resume(Handle, Value) ->
@@ -548,7 +557,8 @@ authorize_live_entry(#{kind := Kind}, Origin) when Kind =/= one_shot ->
     {error, failure(unsupported_semantic_mode, Origin, #{
         kind => Kind
     })};
-authorize_live_entry(#{depth := Depth}, Origin) when Depth =/= deep ->
+authorize_live_entry(#{depth := Depth}, Origin)
+        when Depth =/= deep, Depth =/= shallow ->
     {error, failure(unsupported_semantic_mode, Origin, #{
         depth => Depth
     })};
@@ -564,7 +574,7 @@ authorize_live_entry(#{state := fresh} = Entry, _Origin) ->
 invocation_data(Entry) ->
     #{
         continuation => maps:get(continuation, Entry),
-        context => maps:get(context, Entry),
+        context => restored_context(Entry),
         delimiter => maps:get(delimiter, Entry),
         depth => maps:get(depth, Entry),
         kind => maps:get(kind, Entry),
@@ -572,6 +582,12 @@ invocation_data(Entry) ->
         metadata => maps:get(metadata, Entry),
         type_identity => maps:get(type_identity, Entry)
     }.
+
+-spec restored_context(entry()) -> map().
+restored_context(#{depth := deep} = Entry) ->
+    maps:get(context, Entry);
+restored_context(#{depth := shallow} = Entry) ->
+    maps:get(parent_context, Entry).
 
 -spec validate_capture(term(), term()) ->
     ok | {error, control_failure()}.
@@ -601,9 +617,11 @@ validate_capture_fields(Spec) ->
     Kind = maps:get(kind, Spec),
     Origin = maps:get(origin, Spec),
     Metadata = maps:get(metadata, Spec, #{}),
+    ParentContext = maps:get(parent_context, Spec, Context),
     Providers = maps:get(providers, Spec, []),
     case {
         is_map(Context),
+        is_map(ParentContext),
         is_reference(Delimiter),
         Depth,
         Kind,
@@ -612,25 +630,29 @@ validate_capture_fields(Spec) ->
         is_list(Providers) andalso
             lists:all(fun is_pid/1, Providers)
     } of
-        {false, _, _, _, _, _, _} ->
+        {false, _, _, _, _, _, _, _} ->
             invalid_capture_field(context);
-        {_, false, _, _, _, _, _} ->
+        {_, false, _, _, _, _, _, _} ->
+            invalid_capture_field(parent_context);
+        {_, _, false, _, _, _, _, _} ->
             invalid_capture_field(delimiter);
-        {_, _, deep, one_shot, true, true, true} ->
+        {_, _, true, Depth, one_shot, true, true, true}
+                when Depth =:= deep; Depth =:= shallow ->
             ok;
-        {_, _, UnsupportedDepth, one_shot, true, true, true} ->
+        {_, _, true, UnsupportedDepth, one_shot, true, true, true} ->
             {error, failure(unsupported_semantic_mode, Origin, #{
                 depth => UnsupportedDepth
             })};
-        {_, _, deep, UnsupportedKind, true, true, true} ->
+        {_, _, true, Depth, UnsupportedKind, true, true, true}
+                when Depth =:= deep; Depth =:= shallow ->
             {error, failure(unsupported_semantic_mode, Origin, #{
                 kind => UnsupportedKind
             })};
-        {_, _, _, _, false, _, _} ->
+        {_, _, _, _, _, false, _, _} ->
             invalid_capture_field(origin);
-        {_, _, _, _, _, false, _} ->
+        {_, _, _, _, _, _, false, _} ->
             invalid_capture_field(metadata);
-        {_, _, _, _, _, _, false} ->
+        {_, _, _, _, _, _, _, false} ->
             invalid_capture_field(providers)
     end.
 
@@ -696,6 +718,7 @@ release_entry(Entry) ->
         [
             continuation,
             context,
+            parent_context,
             run_token,
             owner_monitor,
             provider_monitors,

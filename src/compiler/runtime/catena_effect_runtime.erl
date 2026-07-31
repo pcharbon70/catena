@@ -62,7 +62,8 @@
         cases := [resumable_case()],
         delimiter := reference(),
         frame_identity := reference(),
-        depth := deep,
+        depth := deep | shallow,
+        resumption_kind := one_shot | multi_shot,
         owner := pid(),
         origin := term()
     }
@@ -105,7 +106,7 @@
 -define(DEFAULT_MAX_PROCESS_COUNT, 50000).
 
 -define(CONTROL_CLOSURE_VERSION, 1).
--define(RUNTIME_VERSION, 1).
+-define(RUNTIME_VERSION, 2).
 
 %% Default maximum file size for readFile (10 MB)
 -define(DEFAULT_MAX_FILE_SIZE, 10485760).
@@ -119,7 +120,13 @@ version() -> ?RUNTIME_VERSION.
 
 -spec features() -> [atom()].
 features() ->
-    [explicit_contexts, local_resumable_handlers, versioned_control_closures].
+    [
+        explicit_contexts,
+        local_resumable_handlers,
+        shallow_handlers,
+        depth_aware_context_restoration,
+        versioned_control_closures
+    ].
 
 %% @doc Create an empty effect context
 -spec empty_context() -> effect_context().
@@ -316,7 +323,7 @@ with_value_provider(Ctx, {Effect, Operations}, BodyFun)
     },
     BodyFun(child_context(Ctx, Entry)).
 
-%% @doc Execute a body under a same-process deep resumable handler frame.
+%% @doc Execute a body under a same-process resumable handler frame.
 -spec with_resumable_handler(
     effect_context(),
     map(),
@@ -326,24 +333,47 @@ with_resumable_handler(Ctx, #{
     effect := Effect,
     cases := Cases,
     origin := Origin
-}, BodyFun)
+} = Spec, BodyFun)
         when
             is_atom(Effect),
             is_list(Cases),
             is_function(BodyFun, 1)
         ->
     ok = validate_resumable_cases(Cases),
+    Depth = maps:get(depth, Spec, deep),
+    ResumptionKind = maps:get(
+        resumption_kind,
+        Spec,
+        one_shot
+    ),
+    ok = validate_handler_mode(Depth, ResumptionKind),
     Frame = #{
         kind => local_resumable,
         effect => Effect,
         cases => Cases,
         delimiter => make_ref(),
         frame_identity => make_ref(),
-        depth => deep,
+        depth => Depth,
+        resumption_kind => ResumptionKind,
         owner => self(),
         origin => Origin
     },
     BodyFun(child_context(Ctx, Frame)).
+
+-spec validate_handler_mode(term(), term()) -> ok.
+validate_handler_mode(Depth, ResumptionKind)
+        when
+            (Depth =:= deep orelse Depth =:= shallow),
+            (ResumptionKind =:= one_shot orelse
+                ResumptionKind =:= multi_shot)
+        ->
+    ok;
+validate_handler_mode(Depth, ResumptionKind) ->
+    erlang:error({effect_runtime_error, {
+        unsupported_handler_mode,
+        Depth,
+        ResumptionKind
+    }}).
 
 %% @doc Invoke an opaque resumption and return its delimiter result.
 -spec resume(term(), term()) -> term().
@@ -691,9 +721,10 @@ perform_local_resumable(
     ),
     CaptureSpec = #{
         context => CapturedCtx,
+        parent_context => HandlerCtx,
         delimiter => maps:get(delimiter, Frame),
         depth => maps:get(depth, Frame),
-        kind => one_shot,
+        kind => maps:get(resumption_kind, Frame),
         origin => #{
             perform => PerformOrigin,
             handler_case => maps:get(origin, Case, undefined),

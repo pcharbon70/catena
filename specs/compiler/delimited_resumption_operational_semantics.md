@@ -488,7 +488,7 @@ categories to these outcomes.
 
 ## Semantic Mode Boundary
 
-The only Phase 1 executable and initial source-promotion mode is:
+The Phase 1 executable and initial source-promotion mode was:
 
 ```text
 depth = Deep
@@ -511,8 +511,10 @@ and lexical environment with independent branch execution. It does not clone
 mailboxes, PIDs, ports, mutable external resources, provider state, or the
 outside world.
 
-Neither mode has source syntax or production runtime authority in Phase 1.
-Promotion of either requires:
+Phase 7 Sections 7.1 and 7.2 now supply source syntax, static semantics, and
+production runtime authority for shallow one-shot handlers. Multi-shot
+authority remains deferred. Promotion of either originally required, and
+multi-shot still requires:
 
 - an accepted surface spelling and normalized representation;
 - type and effect rules for selecting the mode;
@@ -522,8 +524,10 @@ Promotion of either requires:
   residual-effect admissibility rule and branch-sharing policy;
 - resource bounds and executable integration evidence.
 
-A Phase 1 request for shallow or multi-shot behavior fails explicitly as an
-unsupported semantic mode. It must never fall back to deep one-shot behavior.
+Before its Phase 7 implementation, a request for shallow or multi-shot
+behavior failed explicitly as an unsupported semantic mode. Unsupported
+multi-shot runtime behavior must still never fall back to deep one-shot
+behavior.
 
 ## Representative Derivation
 

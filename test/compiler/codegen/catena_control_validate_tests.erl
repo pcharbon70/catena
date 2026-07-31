@@ -93,6 +93,42 @@ authority_and_kind_mismatches_are_rejected_test() ->
         validate(WrongKind, Unit)
     ).
 
+missing_and_inconsistent_handler_modes_are_rejected_test() ->
+    {ok, Unit} = explicit_unit(),
+    MissingDepth = mutate_first_node(
+        catena_compilation_unit:control_ir(Unit),
+        delimiter,
+        fun(Node) ->
+            Fields = maps:get(fields, Node),
+            Node#{fields => maps:remove(depth, Fields)}
+        end
+    ),
+    ?assertMatch(
+        {error, {backend_error, invalid_control_ir, #{
+            reason := {invalid_handler_mode,
+                delimiter, undefined, one_shot}
+        }}},
+        validate(MissingDepth, Unit)
+    ),
+    InconsistentInstall = mutate_first_node(
+        catena_compilation_unit:control_ir(Unit),
+        install_handler,
+        fun(Node) ->
+            Fields = maps:get(fields, Node),
+            Node#{fields => Fields#{depth => shallow}}
+        end
+    ),
+    ?assertMatch(
+        {error, {backend_error, invalid_control_ir, #{
+            reason := {handler_mode_mismatch,
+                install_handler,
+                _,
+                #{depth := deep, kind := one_shot},
+                #{depth := shallow, kind := one_shot}}
+        }}},
+        validate(InconsistentInstall, Unit)
+    ).
+
 duplicate_continuation_identities_are_rejected_test() ->
     {ok, Unit} = catena_compile:compile_string_to_unit(
         "module DuplicateContinuations\n"

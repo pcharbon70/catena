@@ -11,7 +11,7 @@ live_repository_passes_governance_test() ->
     ?assertEqual(20, maps:get(evidence_rows, Report)),
     ?assertEqual(20, maps:get(evidence_modules, Report)),
     ?assertEqual(11, maps:get(component_specs, Report)),
-    ?assertEqual(6, maps:get(adrs, Report)),
+    ?assertEqual(7, maps:get(adrs, Report)),
     ?assert(maps:get(acceptance_criteria, Report) > 50),
     ?assert(maps:get(local_links, Report) > 50).
 

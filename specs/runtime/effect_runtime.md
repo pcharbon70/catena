@@ -4,11 +4,10 @@
 
 Promoted status: compiler-aligned explicit-context runtime with handler
 processes, nested scope support, configurable operation timeouts, synchronous
-handler cleanup, and builtin `IO` and `Process` handlers. The runtime also has
-an implemented, non-promoted selective-CPS target with local deep handler
-frames and opaque process-affine one-shot resumptions. Declared direct effects
-execute from Catena source through loaded BEAM; resumable source constructs
-still await Phase 6 Core lowering.
+handler cleanup, and builtin `IO` and `Process` handlers. Selective-CPS source
+constructs execute through local deep or shallow handler frames and opaque
+process-affine one-shot resumptions from Catena source through loaded BEAM.
+Multi-shot runtime authority remains deferred to Phase 7 Section 7.3.
 
 ## Design Anchors
 
@@ -39,9 +38,9 @@ still await Phase 6 Core lowering.
 - Effect declarations and handler clauses are validated against stable
   operation identities before Core Erlang emission. Handler patterns use the
   ordinary lossless pattern compiler.
-- Effectful artifacts declare version 1 dependencies on
-  `catena_effect_runtime` and `catena_effect_system`; artifact preparation
-  rejects targets that cannot supply those contracts.
+- Effectful artifacts declare the exact version and features of
+  `catena_effect_runtime` plus the version 1 `catena_effect_system` contract;
+  artifact preparation rejects targets that cannot supply those contracts.
 - The runtime timeout defaults to 5,000 milliseconds and may be configured
   through `catena_effect_system` for an execution boundary.
 - Builtin effect support exists today for `IO` and `Process`.
@@ -52,9 +51,9 @@ still await Phase 6 Core lowering.
   tree as a separate Erlang-facing facade. It uses process-local handler scopes
   for direct component execution and does not replace the explicit-context
   generated-code boundary.
-- Selective-CPS fixtures may install same-process `local_resumable` frames,
+- Selective-CPS code may install same-process `local_resumable` frames,
   perform through `perform_cps/5`, and invoke real compiler-shaped
-  continuations through opaque deep one-shot runtime handles.
+  continuations through opaque depth-aware one-shot runtime handles.
 - Resumption authority uses explicit registry state, frame leases, owner and
   provider monitors, cooperative deadlines, and source-oriented failures; it
   does not use the process dictionary or execute continuations on providers.
@@ -75,10 +74,12 @@ adds the implemented runtime distinction:
 
 Phase 4 supplies the validated selective-CPS graph and calling convention.
 Phase 5 supplies the ownership registry, deep one-shot invocation, retained
-frame leases, lifecycle cleanup, and stable runtime diagnostics. Phase 6 must
-lower the validated graph into calls to this ABI and prove source-to-loaded
-BEAM execution. The current handler-process lifecycle acceptance criteria
-remain authoritative for the promoted request/response path.
+frame leases, lifecycle cleanup, and stable runtime diagnostics. Phase 6
+lowers the validated graph into calls to this ABI and proves source-to-loaded
+BEAM execution. Phase 7 Section 7.2 adds shallow parent-context restoration,
+depth-aware handler specifications, and versioned artifact mode contracts.
+The current handler-process lifecycle acceptance criteria remain
+authoritative for the promoted request/response path.
 
 ## Acceptance Criteria
 
@@ -139,7 +140,6 @@ The effect runtime is only promoted as correct when it lines up with the compile
   Erlang actor toolkit is specified separately in
   [Actor Runtime](actor_runtime.md)
 - distributed effect handling
-- Core lowering and loaded-BEAM execution of source-level resumptions, which
-  are accepted and planned in
-  [Delimited Resumption Architecture](../compiler/delimited_resumption_architecture.md)
+- multi-shot branch authority, state policy, and resource budgets, which are
+  owned by Phase 7 Section 7.3
 - the full future runtime story beyond the proof-of-concept

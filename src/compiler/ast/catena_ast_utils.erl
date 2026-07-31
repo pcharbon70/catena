@@ -145,6 +145,14 @@ map_expr(Fun, Expr, Depth) ->
             NewBody = map_expr(Fun, Body, NextDepth),
             NewHandlers = [map_handler(Fun, H, NextDepth) || H <- Handlers],
             {handle_expr, Mode, NewBody, NewHandlers, Loc};
+        {try_with_expr, Body, Handlers, Loc} ->
+            NewBody = map_expr(Fun, Body, NextDepth),
+            NewHandlers = [map_handler(Fun, H, NextDepth) || H <- Handlers],
+            {try_with_expr, NewBody, NewHandlers, Loc};
+        {try_with_expr, Mode, Body, Handlers, Loc} ->
+            NewBody = map_expr(Fun, Body, NextDepth),
+            NewHandlers = [map_handler(Fun, H, NextDepth) || H <- Handlers],
+            {try_with_expr, Mode, NewBody, NewHandlers, Loc};
         _ ->
             %% Leaf nodes (literals, variables)
             Expr
@@ -242,6 +250,12 @@ fold_expr(Fun, Acc, Expr, Depth) ->
         {handle_expr, _Mode, Body, Handlers, _Loc} ->
             Acc2 = fold_expr(Fun, Acc, Body, NextDepth),
             lists:foldl(fun(H, A) -> fold_handler(Fun, A, H, NextDepth) end, Acc2, Handlers);
+        {try_with_expr, Body, Handlers, _Loc} ->
+            Acc2 = fold_expr(Fun, Acc, Body, NextDepth),
+            lists:foldl(fun(H, A) -> fold_handler(Fun, A, H, NextDepth) end, Acc2, Handlers);
+        {try_with_expr, _Mode, Body, Handlers, _Loc} ->
+            Acc2 = fold_expr(Fun, Acc, Body, NextDepth),
+            lists:foldl(fun(H, A) -> fold_handler(Fun, A, H, NextDepth) end, Acc2, Handlers);
         _ ->
             %% Leaf nodes
             Acc
@@ -320,6 +334,12 @@ walk_expr(Fun, Expr, Depth) ->
             walk_expr(Fun, Body, NextDepth),
             [walk_handler(Fun, H, NextDepth) || H <- Handlers];
         {handle_expr, _Mode, Body, Handlers, _Loc} ->
+            walk_expr(Fun, Body, NextDepth),
+            [walk_handler(Fun, H, NextDepth) || H <- Handlers];
+        {try_with_expr, Body, Handlers, _Loc} ->
+            walk_expr(Fun, Body, NextDepth),
+            [walk_handler(Fun, H, NextDepth) || H <- Handlers];
+        {try_with_expr, _Mode, Body, Handlers, _Loc} ->
             walk_expr(Fun, Body, NextDepth),
             [walk_handler(Fun, H, NextDepth) || H <- Handlers];
         _ ->

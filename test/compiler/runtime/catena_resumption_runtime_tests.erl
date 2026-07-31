@@ -27,10 +27,9 @@ opaque_handle_hides_private_state() ->
     SecretContext = #{secret => context},
     SecretContinuation = fun(Value, _Context) -> Value end,
     {ok, Handle} = capture(SecretContinuation, SecretContext),
-    ?assertMatch(
-        {catena_resumption, 1, Opaque} when is_reference(Opaque),
-        Handle
-    ),
+    {catena_resumption, Version, Opaque} = Handle,
+    ?assertEqual(catena_resumption_runtime:version(), Version),
+    ?assert(is_reference(Opaque)),
     ?assert(catena_resumption_runtime:is_resumption(Handle)),
     ?assertNot(
         lists:member(SecretContext, tuple_to_list(Handle))
@@ -170,13 +169,6 @@ unsupported_modes_are_rejected() ->
         catena_resumption_runtime:capture(
             Continuation,
             (capture_spec(#{}))#{kind := multi_shot}
-        )
-    ),
-    ?assertMatch(
-        {error, #{category := unsupported_semantic_mode}},
-        catena_resumption_runtime:capture(
-            Continuation,
-            (capture_spec(#{}))#{depth := shallow}
         )
     ).
 
