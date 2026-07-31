@@ -31,6 +31,8 @@
     with_value_provider/3,
     with_resumable_handler/3,
     resume/2,
+    resume/3,
+    discard/1,
 
     %% Resumable handler construction
     control_case/3,
@@ -51,6 +53,7 @@
         effect := atom(),
         cases := [resumable_case()],
         delimiter := reference(),
+        frame_identity := reference(),
         depth := deep,
         owner := pid(),
         origin := term()
@@ -179,6 +182,26 @@ perform_cps(Ctx, Effect, Operation, Args, Continuation)
             is_list(Args),
             is_function(Continuation, 2)
         ->
+    Origin = {runtime_effect_operation, Effect, Operation},
+    try
+        perform_cps_i(Ctx, Effect, Operation, Args, Continuation)
+    catch
+        Class:Reason:_Stack ->
+            {error, catena_resumption_runtime:normalize_exception(
+                Class,
+                Reason,
+                Origin
+            )}
+    end.
+
+-spec perform_cps_i(
+    effect_context(),
+    atom(),
+    atom(),
+    list(),
+    fun((term(), effect_context()) -> term())
+) -> term().
+perform_cps_i(Ctx, Effect, Operation, Args, Continuation) ->
     case lookup_entry(Ctx, Effect, Operation, length(Args)) of
         {ok, #{kind := local_resumable} = Frame, HandlerCtx} ->
             perform_local_resumable(
@@ -213,12 +236,13 @@ with_handlers(Ctx, HandlerSpecs, BodyFun) ->
     ProcessEntries = process_provider_entries(HandlerSpecs, NewHandlers),
 
     %% Create child context with new handlers merged in
-    ChildCtx = #{
+    ChildCtx0 = #{
         handlers => maps:merge(maps:get(handlers, Ctx), NewHandlers),
         entries => ProcessEntries,
         parent => Ctx,
         timeout => maps:get(timeout, Ctx, ?EFFECT_TIMEOUT)
     },
+    ChildCtx = inherit_deadline(Ctx, ChildCtx0),
 
     try
         %% Execute body with child context
@@ -271,6 +295,7 @@ with_resumable_handler(Ctx, #{
         effect => Effect,
         cases => Cases,
         delimiter => make_ref(),
+        frame_identity => make_ref(),
         depth => deep,
         owner => self(),
         origin => Origin
@@ -286,6 +311,21 @@ resume(Resumption, Value) ->
         {error, Failure} ->
             {error, Failure}
     end.
+
+%% @doc Invoke with a same-process runtime deadline.
+-spec resume(term(), term(), timeout()) -> term().
+resume(Resumption, Value, Timeout) ->
+    case catena_resumption_runtime:resume(Resumption, Value, Timeout) of
+        {ok, Result} ->
+            Result;
+        {error, Failure} ->
+            {error, Failure}
+    end.
+
+%% @doc Idempotently abandon a retained resumption.
+-spec discard(term()) -> ok | {error, map()}.
+discard(Resumption) ->
+    catena_resumption_runtime:discard(Resumption).
 
 %% @doc Construct a control case for a resumable source handler frame.
 -spec control_case(
@@ -435,12 +475,13 @@ operation_arity({_Operation, Handler}) ->
 
 -spec child_context(effect_context(), context_entry()) -> effect_context().
 child_context(Ctx, Entry) ->
-    #{
+    ChildCtx = #{
         handlers => maps:get(handlers, Ctx, #{}),
         entries => [Entry],
         parent => Ctx,
         timeout => maps:get(timeout, Ctx, ?EFFECT_TIMEOUT)
-    }.
+    },
+    inherit_deadline(Ctx, ChildCtx).
 
 %%====================================================================
 %% Same-Process Resumable Execution
@@ -482,7 +523,9 @@ perform_local_resumable(
             maps:get(effect, Frame),
             Operation,
             length(Args)
-        }
+        },
+        providers => required_providers(CapturedCtx),
+        frame_identity => maps:get(frame_identity, Frame)
     },
     {ok, Resumption} = catena_resumption_runtime:capture(
         Continuation,
@@ -508,20 +551,82 @@ select_resumable_case(Cases, Operation, Arity) ->
     effect_context()
 ) -> term().
 invoke_resumable_case(
-    #{mode := control, handler := Handler},
+    #{mode := control, handler := Handler} = Case,
     Args,
     Resumption,
     HandlerCtx
 ) ->
-    Handler(Args, Resumption, HandlerCtx);
+    Result = safe_handler_call(
+        fun() -> Handler(Args, Resumption, HandlerCtx) end,
+        maps:get(origin, Case)
+    ),
+    finalize_case_result(Result, Resumption);
 invoke_resumable_case(
-    #{mode := value, handler := Handler},
+    #{mode := value, handler := Handler} = Case,
     Args,
     Resumption,
     HandlerCtx
 ) ->
-    OperationValue = Handler(Args, HandlerCtx),
-    resume(Resumption, OperationValue).
+    Result = safe_handler_call(
+        fun() ->
+            OperationValue = Handler(Args, HandlerCtx),
+            resume(Resumption, OperationValue)
+        end,
+        maps:get(origin, Case)
+    ),
+    finalize_case_result(Result, Resumption).
+
+-spec safe_handler_call(fun(() -> term()), term()) -> term().
+safe_handler_call(Fun, Origin) ->
+    try
+        Fun()
+    catch
+        Class:Reason:_Stack ->
+            {error, catena_resumption_runtime:normalize_exception(
+                Class,
+                Reason,
+                Origin
+            )}
+    end.
+
+-spec finalize_case_result(term(), term()) -> term().
+finalize_case_result(Result, Resumption) ->
+    case contains_handle(Result, Resumption) of
+        true ->
+            Result;
+        false ->
+            case catena_resumption_runtime:discard(Resumption) of
+                ok ->
+                    Result;
+                {error, Failure} ->
+                    {error, Failure}
+            end
+    end.
+
+-spec contains_handle(term(), term()) -> boolean().
+contains_handle(Handle, Handle) ->
+    true;
+contains_handle(Term, Handle) when is_tuple(Term) ->
+    contains_handle(tuple_to_list(Term), Handle);
+contains_handle(Terms, Handle) when is_list(Terms) ->
+    lists:any(fun(Term) -> contains_handle(Term, Handle) end, Terms);
+contains_handle(Term, Handle) when is_map(Term) ->
+    contains_handle(maps:to_list(Term), Handle);
+contains_handle(_Term, _Handle) ->
+    false.
+
+-spec required_providers(effect_context()) -> [pid()].
+required_providers(Ctx) ->
+    Current = [
+        maps:get(provider, Entry)
+        || Entry <- maps:get(entries, Ctx, []),
+           maps:get(kind, Entry) =:= process_provider
+    ],
+    Parent = case maps:get(parent, Ctx, undefined) of
+        undefined -> [];
+        ParentCtx -> required_providers(ParentCtx)
+    end,
+    lists:usort(Current ++ Parent).
 
 %%====================================================================
 %% Value And Process Providers
@@ -542,7 +647,7 @@ request_process_provider(Ctx, Entry, Operation, Args) ->
     HandlerPid = maps:get(provider, Entry),
     Effect = maps:get(effect, Entry),
     HandlerPid ! {perform, Effect, Operation, Args, self()},
-    Timeout = maps:get(timeout, Ctx, ?EFFECT_TIMEOUT),
+    Timeout = effective_timeout(Ctx),
     receive
         {effect_result, Value} ->
             Value;
@@ -550,6 +655,26 @@ request_process_provider(Ctx, Entry, Operation, Args) ->
             erlang:error({effect_error, Effect, Operation, Reason})
     after Timeout ->
         erlang:error({effect_timeout, Effect, Operation})
+    end.
+
+-spec inherit_deadline(effect_context(), effect_context()) -> effect_context().
+inherit_deadline(Ctx, ChildCtx) ->
+    case maps:find(runtime_deadline, Ctx) of
+        {ok, Deadline} ->
+            ChildCtx#{runtime_deadline => Deadline};
+        error ->
+            ChildCtx
+    end.
+
+-spec effective_timeout(effect_context()) -> non_neg_integer().
+effective_timeout(Ctx) ->
+    Configured = maps:get(timeout, Ctx, ?EFFECT_TIMEOUT),
+    case maps:find(runtime_deadline, Ctx) of
+        {ok, Deadline} ->
+            Remaining = Deadline - erlang:monotonic_time(millisecond),
+            erlang:max(0, erlang:min(Configured, Remaining));
+        error ->
+            Configured
     end.
 
 -spec process_provider_entries(

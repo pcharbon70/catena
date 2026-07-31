@@ -147,7 +147,7 @@ and provider-process separation.
 their immediate operation case without prematurely destroying handler
 authority or leaking it after owner death.
 
-- [ ] **Section 5.3 Complete**
+- [x] **Section 5.3 Complete**
 
 ### Task 5.3.1: Implement Resumption Lifetime Management
 
@@ -155,7 +155,7 @@ authority or leaking it after owner death.
 resumption remains valid and release runtime authority when it is consumed or
 its owner exits.
 
-- [ ] **Task 5.3.1 Complete**
+- [x] **Task 5.3.1 Complete**
 
 #### Subtask 5.3.1.1: Track Runtime Leases
 
@@ -163,21 +163,21 @@ its owner exits.
 avoid process-dictionary authority, and make cleanup idempotent across nested
 and returned resumptions.
 
-- [ ] **Subtask 5.3.1.1 Complete**
+- [x] **Subtask 5.3.1.1 Complete**
 
 #### Subtask 5.3.1.2: Monitor Owner And Provider Lifecycles
 
 **Description:** Release retained state on owner death and specify failures
 when a required provider, delimiter, or handler frame expires before resume.
 
-- [ ] **Subtask 5.3.1.2 Complete**
+- [x] **Subtask 5.3.1.2 Complete**
 
 ### Task 5.3.2: Normalize Runtime Control Failures
 
 **Description:** Return stable source-oriented failures without exposing
 private handles, raw messages, or internal continuation closure terms.
 
-- [ ] **Task 5.3.2 Complete**
+- [x] **Task 5.3.2 Complete**
 
 #### Subtask 5.3.2.1: Implement Ownership And Consumption Errors
 
@@ -185,7 +185,7 @@ private handles, raw messages, or internal continuation closure terms.
 handle, stale version, wrong kind, and consumed state with deterministic
 payloads.
 
-- [ ] **Subtask 5.3.2.1 Complete**
+- [x] **Subtask 5.3.2.1 Complete**
 
 #### Subtask 5.3.2.2: Implement Lifetime And Context Errors
 
@@ -193,7 +193,23 @@ payloads.
 providers, timeout, handler failure, owner death, and cleanup failure while
 preserving source origins.
 
-- [ ] **Subtask 5.3.2.2 Complete**
+- [x] **Subtask 5.3.2.2 Complete**
+
+**Implementation evidence:** Each registered resumption now owns an explicit
+frame/delimiter lease plus runtime monitors for its capturing owner and every
+required process-backed provider in the retained context. Returning a handle
+keeps the lease active; normal or exceptional resume, timeout, abandonment,
+explicit delimiter expiry, provider death, or owner death releases private
+continuation/context authority and monitor resources idempotently. Control
+cases that neither resume nor return their authority are discarded
+automatically. Cooperative deadlines remain in the owner process and bound
+provider waits without moving the continuation to another process. Stable
+failure maps cover invalid and stale handles, wrong/dead owners, re-entry,
+consumption, expired delimiters, unavailable providers, timeouts, handler
+exceptions, and cleanup during execution while retaining source origin and
+excluding PIDs, references, closures, contexts, raw messages, and stacks. The
+focused lifecycle suite passes 10 tests; the combined runtime/context suites
+pass 67 tests.
 
 ## Section 5.4: Phase 5 Integration Tests
 
