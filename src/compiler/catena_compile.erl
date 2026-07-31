@@ -321,9 +321,9 @@ file_options(Path, Opts) ->
     }.
 
 analyze_string(Source) ->
-    case catena_lexer:string(Source) of
+    case catena_generated_frontend:scan(Source) of
         {ok, Tokens, _EndLoc} ->
-            case catena_parser:parse(Tokens) of
+            case catena_generated_frontend:parse(Tokens) of
                 {ok, AST} ->
                     case catena_semantic:analyze(AST) of
                         {ok, AnalyzedAST} ->

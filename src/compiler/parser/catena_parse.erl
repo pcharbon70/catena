@@ -104,8 +104,8 @@
 %%
 %% @see parse_file/1
 %% @see format_error/1
-%% @see catena_lexer:tokenize/1
-%% @see catena_parser:parse/1
+%% @see catena_generated_frontend:tokenize/1
+%% @see catena_generated_frontend:parse/1
 %%
 %% @example
 %% ```
@@ -128,7 +128,7 @@ parse(String) ->
     MaxParseTime = get_max_parse_time(),
 
     %% Step 1: Tokenize
-    case catena_lexer:tokenize(String) of
+    case catena_generated_frontend:tokenize(String) of
         {ok, Tokens} ->
             %% Check token count limit
             TokenCount = length(Tokens),
@@ -161,7 +161,7 @@ parse(String) ->
 %% @doc Parse with timeout protection
 -spec parse_with_timeout(list(), pos_integer(), integer()) -> {ok, term()} | {error, term()}.
 parse_with_timeout(Tokens, MaxTime, StartTime) ->
-    case catena_parser:parse(Tokens) of
+    case catena_generated_frontend:parse(Tokens) of
         {ok, AST} ->
             ElapsedTime = erlang:monotonic_time(millisecond) - StartTime,
             case ElapsedTime > MaxTime of
@@ -788,7 +788,7 @@ format_lex_error(catena_lexer, {invalid_unicode, Pos, Char, Msg}) ->
     io_lib:format("invalid unicode at position ~p (codepoint ~p): ~s", [Pos, Char, Msg]);
 format_lex_error(catena_lexer, Reason) ->
     try
-        catena_lexer:format_error(Reason)
+        catena_generated_frontend:format_lexer_error(Reason)
     catch
         _:_ -> io_lib:format("~p", [Reason])
     end;

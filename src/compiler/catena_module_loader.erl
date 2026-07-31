@@ -96,9 +96,9 @@ find_in_paths(RelativePath, [Path | Rest]) ->
 
 %% @private Parse source code into AST
 parse_source(Source, FilePath) ->
-    case catena_lexer:string(Source) of
+    case catena_generated_frontend:scan(Source) of
         {ok, Tokens, _EndLine} ->
-            case catena_parser:parse(Tokens) of
+            case catena_generated_frontend:parse(Tokens) of
                 {ok, AST} ->
                     {ok, AST};
                 {error, {Line, _Module, Message}} ->

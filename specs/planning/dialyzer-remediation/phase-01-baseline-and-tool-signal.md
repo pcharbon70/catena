@@ -5,7 +5,7 @@ with the current merged source, makes the resulting baseline reproducible, and
 separates tool/configuration noise from source-contract defects so later
 phases work against stable, comparable evidence.
 
-**Status:** In progress; Section 1.1 complete.
+**Status:** Complete.
 
 **Dependencies:** Spec-source reconciliation Phase 7 complete.
 
@@ -118,35 +118,35 @@ inventory implementation:
 **Description:** Remove findings caused by incomplete PLT/application metadata
 or excluded generated modules while keeping the configured analysis strict.
 
-- [ ] **Section 1.2 Complete**
+- [x] **Section 1.2 Complete**
 
 ### Task 1.2.1: Reconcile PLT Application Coverage
 
 **Description:** Make deliberate PLT decisions for EUnit and other OTP
 applications referenced by analyzed source modules.
 
-- [ ] **Task 1.2.1 Complete**
+- [x] **Task 1.2.1 Complete**
 
 #### Subtask 1.2.1.1: Resolve EUnit Unknown Calls
 
 **Description:** Eliminate the eight `eunit:test/1` unknown-function findings
 through correct application metadata rather than call suppression.
 
-- [ ] **Subtask 1.2.1.1 Complete**
+- [x] **Subtask 1.2.1.1 Complete**
 
 #### Subtask 1.2.1.2: Verify PLT Rebuild Reproducibility
 
 **Description:** Confirm a clean PLT build and a cached repeat produce the same
 warning inventory.
 
-- [ ] **Subtask 1.2.1.2 Complete**
+- [x] **Subtask 1.2.1.2 Complete**
 
 ### Task 1.2.2: Define The Generated Frontend Boundary
 
 **Description:** Preserve generated lexer/parser exclusions while giving
 maintained callers truthful callable contracts.
 
-- [ ] **Task 1.2.2 Complete**
+- [x] **Task 1.2.2 Complete**
 
 #### Subtask 1.2.2.1: Audit Generated Call Sites
 
@@ -154,14 +154,54 @@ maintained callers truthful callable contracts.
 whether maintained wrappers, analysis stubs, or generated-module analysis best
 represents the boundary.
 
-- [ ] **Subtask 1.2.2.1 Complete**
+- [x] **Subtask 1.2.2.1 Complete**
 
 #### Subtask 1.2.2.2: Remove Generated Unknown Findings
 
 **Description:** Eliminate lexer/parser unknown-function warnings without
 editing generated `.erl` outputs or disabling the `unknown` warning category.
 
-- [ ] **Subtask 1.2.2.2 Complete**
+- [x] **Subtask 1.2.2.2 Complete**
+
+### Section 1.2 Evidence
+
+Evidence captured on 2026-07-31:
+
+- `eunit` is an explicit `plt_extra_apps` entry. All eight former
+  `eunit:test/1` unknown-function findings are absent without suppression.
+- Generated `catena_lexer` and `catena_parser` modules remain excluded from
+  analysis and generated `.erl` files remain untouched.
+- The maintained `catena_generated_frontend` boundary gives scanning,
+  tokenization, parsing, and lexer-error formatting explicit contracts. All 18
+  maintained direct generated-module calls now use that boundary: four in
+  compiler root modules, five in compiler parser modules, four in semantic
+  compilation, and five in the REPL.
+- `rebar3 eunit --module=catena_generated_frontend_tests` passes all four
+  boundary-equivalence tests with 100% coverage of the wrapper module.
+- A clean temporary base/project PLT analysis and an immediate cached repeat
+  produced byte-identical inventories.
+- The 26 tool-induced missing-metadata findings are gone. The explicit
+  generated-frontend contracts expose two existing caller specification
+  mismatches that were previously hidden by unknown return types, so the net
+  phase delta is 24 warnings rather than suppressing those real findings.
+- `unmatched_returns`, `error_handling`, `underspecs`, and `unknown` remain
+  enabled exactly as before.
+- The phase integration gate passes specs governance, all 432 conformance
+  tests, and all 5,305 complete-suite tests.
+
+| Warning family | Section 1.1 input | Phase 1 ending | Delta |
+| --- | ---: | ---: | ---: |
+| Type/specification contracts | 480 | 482 | +2 |
+| Unreachable patterns, variables, and guards | 181 | 181 | 0 |
+| Missing function/type/callback metadata | 120 | 94 | -26 |
+| No-return and control-flow findings | 102 | 102 | 0 |
+| Call-contract mismatches | 75 | 75 | 0 |
+| Ignored return values | 20 | 20 | 0 |
+| Record-field mismatches | 6 | 6 | 0 |
+| **Total** | **984** | **960** | **-24** |
+
+The exact Phase 2 input is therefore **960 warnings across 138 source
+modules**.
 
 **Acceptance Criteria:**
 

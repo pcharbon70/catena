@@ -70,8 +70,11 @@ areas, so every completed section must publish a fresh inventory.
 The historical Phase 7 snapshot predates the completed eight-phase
 delimited-resumption implementation. On 2026-07-31, Section 1.1 established a
 new maintained baseline from the merged Phase 8 source: 984 warnings across
-139 source modules. The reproducible command and exact classification are
-recorded in the [Phase 1 evidence](phase-01-baseline-and-tool-signal.md).
+139 source modules. Section 1.2 removed all 26 tool-induced EUnit and generated
+frontend unknowns, exposed two real caller-specification findings, and ended
+Phase 1 at 960 warnings across 138 modules. The reproducible command and exact
+classification are recorded in the
+[Phase 1 evidence](phase-01-baseline-and-tool-signal.md).
 
 ## Remediation Principles
 
@@ -87,7 +90,7 @@ recorded in the [Phase 1 evidence](phase-01-baseline-and-tool-signal.md).
 
 ## Phases
 
-- [ ] [Phase 1: Baseline and Tool Signal](phase-01-baseline-and-tool-signal.md) (Section 1.1 complete)
+- [x] [Phase 1: Baseline and Tool Signal](phase-01-baseline-and-tool-signal.md)
 - [ ] [Phase 2: Shared Type and Record Contracts](phase-02-shared-type-and-record-contracts.md)
 - [ ] [Phase 3: Compiler Frontend and Type Inference](phase-03-compiler-frontend-and-type-inference.md)
 - [ ] [Phase 4: Effect System and Compiler Runtime](phase-04-effect-system-and-compiler-runtime.md)

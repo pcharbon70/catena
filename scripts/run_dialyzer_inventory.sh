@@ -9,7 +9,7 @@ EMPTY_ARTIFACT=$(mktemp)
 trap 'rm -f "$MARKER" "$LOG_FILE" "$EMPTY_ARTIFACT"' EXIT HUP INT TERM
 
 STATUS=0
-(cd "$REPO_ROOT" && "${REBAR3:-rebar3}" dialyzer) >"$LOG_FILE" 2>&1 || STATUS=$?
+(cd "$REPO_ROOT" && "${REBAR3:-rebar3}" dialyzer "$@") >"$LOG_FILE" 2>&1 || STATUS=$?
 
 if [ "$STATUS" -gt 1 ]; then
     cat "$LOG_FILE" >&2
