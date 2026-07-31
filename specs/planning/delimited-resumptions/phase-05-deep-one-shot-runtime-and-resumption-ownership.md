@@ -6,7 +6,7 @@ one-shot state, same-process resumable handler frames, deep context
 restoration, retention-aware cleanup, and structured control failures without
 executing source continuations on handler-provider processes.
 
-**Status:** Planned.
+**Status:** In Progress.
 
 **Dependencies:** Phase 4 complete.
 
@@ -16,14 +16,14 @@ executing source continuations on handler-provider processes.
 forged by Catena source and that atomically enforces ownership, liveness, and
 one-shot consumption.
 
-- [ ] **Section 5.1 Complete**
+- [x] **Section 5.1 Complete**
 
 ### Task 5.1.1: Define The Versioned Runtime Contract
 
 **Description:** Specify and implement the opaque public handle and private
 state for a captured continuation.
 
-- [ ] **Task 5.1.1 Complete**
+- [x] **Task 5.1.1 Complete**
 
 #### Subtask 5.1.1.1: Define Public And Private Shapes
 
@@ -31,7 +31,7 @@ state for a captured continuation.
 retaining continuation closure, captured context, delimiter, depth, kind,
 owner PID, state authority, source origin, and runtime metadata.
 
-- [ ] **Subtask 5.1.1.1 Complete**
+- [x] **Subtask 5.1.1.1 Complete**
 
 #### Subtask 5.1.1.2: Validate Construction Authority
 
@@ -39,21 +39,21 @@ owner PID, state authority, source origin, and runtime metadata.
 reject malformed or stale handles, and prevent source-visible inspection from
 revealing closure or context internals.
 
-- [ ] **Subtask 5.1.1.2 Complete**
+- [x] **Subtask 5.1.1.2 Complete**
 
 ### Task 5.1.2: Implement One-Shot State Transitions
 
 **Description:** Make `fresh -> running -> consumed` atomic and authoritative
 across every normal, exceptional, timeout, and re-entrant path.
 
-- [ ] **Task 5.1.2 Complete**
+- [x] **Task 5.1.2 Complete**
 
 #### Subtask 5.1.2.1: Authorize First Invocation
 
 **Description:** Check owner, kind, version, delimiter liveness, and current
 state before granting the capturing process permission to invoke the closure.
 
-- [ ] **Subtask 5.1.2.1 Complete**
+- [x] **Subtask 5.1.2.1 Complete**
 
 #### Subtask 5.1.2.2: Consume On Every Exit
 
@@ -61,7 +61,18 @@ state before granting the capturing process permission to invoke the closure.
 runtime failure, or timeout and reject second and re-entrant invocations
 deterministically.
 
-- [ ] **Subtask 5.1.2.2 Complete**
+- [x] **Subtask 5.1.2.2 Complete**
+
+**Implementation evidence:** `catena_resumption_runtime` exposes only a
+versioned opaque reference capability while retaining continuation, explicit
+context, delimiter, depth, kind, owner, type identity, origin, metadata, and
+state authority in a private runtime registry. The registry atomically
+authorizes `fresh -> running`, rejects cross-process, re-entrant, consumed,
+malformed, unregistered, stale-version, and unsupported-mode invocations, and
+removes executable state during the unconditional `running -> consumed`
+transition after normal or exceptional completion. Continuations execute on
+the capturing process and the inspection surface reveals only the one-shot
+state. The focused runtime suite passes 9 tests.
 
 ## Section 5.2: Explicit Handler Frames And Same-Process Resume
 
