@@ -184,11 +184,17 @@ operation_arity_is_validated() ->
         1,
         fun([Value], _Ctx) -> Value end
     ),
-    ?assertError(
-        {
-            effect_runtime_error,
-            {operation_arity_mismatch, 'State', put, 0}
-        },
+    ?assertMatch(
+        {error, #{
+            category := handler_failure,
+            origin := {runtime_effect_operation, 'State', put},
+            details := #{
+                reason := operation_arity_mismatch,
+                effect := 'State',
+                operation := put,
+                actual_arity := 0
+            }
+        }},
         catena_effect_runtime:with_resumable_handler(
             catena_effect_runtime:empty_context(),
             handler('State', [Case]),
