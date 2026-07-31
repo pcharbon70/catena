@@ -65,6 +65,14 @@ These counts describe the initial artifact, not fixed warning quotas. Shared
 type exports and callback contracts can remove downstream warnings in several
 areas, so every completed section must publish a fresh inventory.
 
+### Current Phase 1 Input
+
+The historical Phase 7 snapshot predates the completed eight-phase
+delimited-resumption implementation. On 2026-07-31, Section 1.1 established a
+new maintained baseline from the merged Phase 8 source: 984 warnings across
+139 source modules. The reproducible command and exact classification are
+recorded in the [Phase 1 evidence](phase-01-baseline-and-tool-signal.md).
+
 ## Remediation Principles
 
 1. Fix implementation behavior when Dialyzer exposes a genuine impossible or
@@ -79,7 +87,7 @@ areas, so every completed section must publish a fresh inventory.
 
 ## Phases
 
-- [ ] [Phase 1: Baseline and Tool Signal](phase-01-baseline-and-tool-signal.md)
+- [ ] [Phase 1: Baseline and Tool Signal](phase-01-baseline-and-tool-signal.md) (Section 1.1 complete)
 - [ ] [Phase 2: Shared Type and Record Contracts](phase-02-shared-type-and-record-contracts.md)
 - [ ] [Phase 3: Compiler Frontend and Type Inference](phase-03-compiler-frontend-and-type-inference.md)
 - [ ] [Phase 4: Effect System and Compiler Runtime](phase-04-effect-system-and-compiler-runtime.md)
