@@ -48,6 +48,7 @@
 
 %% System initialization and lifecycle
 -export([
+    version/0,
     new/0,
     new/1,
     init/0,
@@ -219,6 +220,9 @@
 %%====================================================================
 %% System Initialization and Lifecycle
 %%====================================================================
+
+-spec version() -> pos_integer().
+version() -> 1.
 
 %% @doc Create a new system configuration with defaults.
 -spec new() -> system_config().

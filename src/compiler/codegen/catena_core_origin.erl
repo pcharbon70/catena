@@ -74,20 +74,80 @@ inventory(Unit, CoreModule) ->
     Symbols = catena_compilation_unit:symbols(Unit),
     Module = catena_compilation_unit:module_name(Unit),
     Generated = [
-        generated_origin(
-            cerl:var_name(NameNode),
+        definition_origin(
+            NameNode,
+            Definition,
             Module,
             Symbols,
             Unit
         )
-        || {NameNode, _Definition} <- cerl:module_defs(CoreModule)
+        || {NameNode, Definition} <- cerl:module_defs(CoreModule)
     ],
     #{
         module => Module,
         source_identity => catena_compilation_unit:source_identity(Unit),
         source_locations => catena_compilation_unit:locations(Unit),
-        generated => Generated
+        generated => Generated,
+        control => control_origins(Unit)
     }.
+
+control_origins(Unit) ->
+    IR = catena_compilation_unit:control_ir(Unit),
+    lists:append([
+        [
+            control_node_origin(Transform, Node)
+            || Node <- transform_nodes(Transform)
+        ]
+        || Transform <- catena_control_ir:transforms(IR)
+    ]).
+
+transform_nodes(Transform) ->
+    lists:append([
+        collect_control_nodes(maps:get(body, Clause))
+        || Clause <- maps:get(clauses, Transform)
+    ]).
+
+collect_control_nodes(Node) when is_map(Node) ->
+    Current = case catena_control_ir:is_node(Node) of
+        true -> [Node];
+        false -> []
+    end,
+    Current ++ lists:append([
+        collect_control_nodes(Value)
+        || Value <- maps:values(Node)
+    ]);
+collect_control_nodes(Terms) when is_list(Terms) ->
+    lists:append([collect_control_nodes(Term) || Term <- Terms]);
+collect_control_nodes(Term) when is_tuple(Term) ->
+    collect_control_nodes(tuple_to_list(Term));
+collect_control_nodes(_Term) ->
+    [].
+
+control_node_origin(Transform, Node) ->
+    Metadata = maps:get(metadata, Node),
+    Operation = maps:get(op, Node),
+    #{
+        transform => maps:get(name, Transform),
+        operation => Operation,
+        source_origin => maps:get(origin, Metadata),
+        control_mode => maps:get(control_mode, Metadata),
+        delimiter => maps:get(delimiter, Metadata),
+        runtime_disposition => maps:get(runtime_disposition, Metadata),
+        synthetic_chain => synthetic_origin_chain(Operation)
+    }.
+
+synthetic_origin_chain(perform) ->
+    [perform, generated_continuation, runtime_capture];
+synthetic_origin_chain(install_handler) ->
+    [handler, handler_case, delimiter_frame];
+synthetic_origin_chain(resume) ->
+    [resume, runtime_resumption_invoke];
+synthetic_origin_chain(bridge) ->
+    [call, control_bridge];
+synthetic_origin_chain(closure) ->
+    [callable, control_closure];
+synthetic_origin_chain(Operation) ->
+    [Operation].
 
 %% @doc Return the Catena origin annotation from a Core node.
 -spec annotation(cerl:cerl()) -> {ok, origin()} | error.
@@ -196,6 +256,45 @@ decode_origin({
         location => Location,
         file => File
     }.
+
+definition_origin(NameNode, Definition, Module, Symbols, Unit) ->
+    Identity = cerl:var_name(NameNode),
+    case Identity of
+        {Name, Arity} ->
+            case source_transform(Name, Arity, Symbols) of
+                {ok, _Symbol} ->
+                    generated_origin(Identity, Module, Symbols, Unit);
+                error ->
+                    annotated_definition_origin(
+                        NameNode,
+                        Definition,
+                        Identity,
+                        Module,
+                        Symbols,
+                        Unit
+                    )
+            end
+    end.
+
+annotated_definition_origin(
+    NameNode,
+    Definition,
+    Identity,
+    Module,
+    Symbols,
+    Unit
+) ->
+    case annotation(NameNode) of
+        {ok, Origin} ->
+            Origin#{module => Module, generated_identity => Identity};
+        error ->
+            case annotation(Definition) of
+                {ok, Origin} ->
+                    Origin#{module => Module, generated_identity => Identity};
+                error ->
+                    generated_origin(Identity, Module, Symbols, Unit)
+            end
+    end.
 
 generated_origin({Name, Arity} = Identity, Module, Symbols, Unit) ->
     case source_transform(Name, Arity, Symbols) of

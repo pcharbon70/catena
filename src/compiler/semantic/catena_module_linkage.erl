@@ -7,7 +7,8 @@
 -export([
     plan/1,
     dependency_graph/1,
-    artifact_dependencies/2
+    artifact_dependencies/2,
+    artifact_dependencies/3
 ]).
 
 -spec plan(#{atom() => term()}) -> {ok, map()} | {error, term()}.
@@ -75,15 +76,35 @@ dependency_graph(Modules) ->
 
 -spec artifact_dependencies([term()], [map()]) -> [map()].
 artifact_dependencies(Imports, RuntimeDependencies) ->
+    artifact_dependencies(Imports, RuntimeDependencies, #{}).
+
+-spec artifact_dependencies([term()], [map()], #{atom() => map()}) -> [map()].
+artifact_dependencies(Imports, RuntimeDependencies, Interfaces) ->
     ModuleDependencies = [
-        #{
-            kind => catena_module,
-            source_module => Module,
-            runtime_module => Module
-        }
+        module_dependency(Module, Interfaces)
         || {import, Module, _, _, _, _} <- Imports
     ],
     lists:usort(ModuleDependencies ++ RuntimeDependencies).
+
+module_dependency(Module, Interfaces) ->
+    case maps:find(Module, Interfaces) of
+        {ok, Interface} ->
+            #{
+                kind => catena_module,
+                source_module => Module,
+                runtime_module =>
+                    catena_module_interface:runtime_module(Interface),
+                interface_version => catena_module_interface:version(),
+                interface_checksum =>
+                    catena_module_interface:checksum(Interface)
+            };
+        error ->
+            #{
+                kind => catena_module,
+                source_module => Module,
+                runtime_module => Module
+            }
+    end.
 
 module_imports({module, _Name, _Exports, Imports, _Decls, _Loc})
   when is_list(Imports) ->

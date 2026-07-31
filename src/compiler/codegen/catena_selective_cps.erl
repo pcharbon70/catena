@@ -10,7 +10,7 @@
 %%%-------------------------------------------------------------------
 -module(catena_selective_cps).
 
--export([lower/1]).
+-export([lower/1, lower_dictionary_closure/3]).
 
 -spec lower(catena_compilation_unit:t()) ->
     {ok, catena_control_ir:ir()} | {error, term()}.
@@ -28,6 +28,7 @@ lower(Unit) ->
                 Modes,
                 TypedByName,
                 catena_compilation_unit:import_resolution(Unit),
+                catena_compilation_unit:callables(Unit),
                 State0,
                 []
             ) of
@@ -40,7 +41,53 @@ lower(Unit) ->
             {error, {invalid_control_ir, unchecked_compilation_unit}}
     end.
 
-lower_transforms([], _Modes, _Typed, _Imports, State, Acc) ->
+%% @doc Lower an instance method through the same expression and callable
+%% inventory as source transforms. Dictionary entries are conservatively
+%% resumable because their concrete caller and higher-order arguments are
+%% selected dynamically at runtime.
+-spec lower_dictionary_closure(
+    catena_compilation_unit:t(),
+    atom(),
+    term()
+) -> {ok, catena_control_ir:node()} | {error, term()}.
+lower_dictionary_closure(
+    Unit,
+    Identity,
+    {lambda, Patterns, Body, Origin}
+) ->
+    Context = #{
+        transform => Identity,
+        mode => resumable,
+        type => unknown,
+        callable_type => unknown,
+        effect_row => {teffectrow, [], open},
+        delimiter => none,
+        continuation => {continuation, Identity, 0},
+        modes => catena_compilation_unit:control_modes(Unit),
+        import_resolution =>
+            catena_compilation_unit:import_resolution(Unit),
+        callables => catena_compilation_unit:callables(Unit),
+        evidence => []
+    },
+    State0 = #{next_delimiter => 1, next_continuation => 1},
+    case lower_closure(Patterns, Body, Origin, Context, State0) of
+        {ok, Node, _State} ->
+            Fields = maps:get(fields, Node),
+            Metadata = maps:get(metadata, Node),
+            {ok, Node#{
+                fields => Fields#{capability => resumable},
+                metadata => Metadata#{
+                    continuation_arity => 1,
+                    runtime_disposition => requires_resumption_runtime
+                }
+            }};
+        {error, _} = Error ->
+            Error
+    end;
+lower_dictionary_closure(_Unit, _Identity, Lambda) ->
+    {error, {invalid_dictionary_control_closure, Lambda}}.
+
+lower_transforms([], _Modes, _Typed, _Imports, _Callables, State, Acc) ->
     {ok, lists:reverse(Acc), State};
 lower_transforms(
     [
@@ -50,6 +97,7 @@ lower_transforms(
     Modes,
     Typed,
     ImportResolution,
+    Callables,
     State,
     Acc
 ) when Clauses =/= [] ->
@@ -74,6 +122,7 @@ lower_transforms(
         continuation => {continuation, Name, 0},
         modes => Modes,
         import_resolution => ImportResolution,
+        callables => Callables,
         evidence => Evidence
     },
     case lower_clauses(Clauses, Context, State, []) of
@@ -99,6 +148,7 @@ lower_transforms(
                 Modes,
                 Typed,
                 ImportResolution,
+                Callables,
                 State1,
                 [Transform | Acc]
             );
@@ -110,6 +160,7 @@ lower_transforms(
     Modes,
     Typed,
     ImportResolution,
+    Callables,
     State,
     Acc
 ) ->
@@ -118,6 +169,7 @@ lower_transforms(
         Modes,
         Typed,
         ImportResolution,
+        Callables,
         State,
         Acc
     ).
@@ -408,7 +460,25 @@ lower_expr(
         {error, _} = Error ->
             Error
     end;
-lower_expr({app, Function, Arguments, Origin}, Context, State) ->
+lower_expr(
+    {binary_op, pipe_right, Left, {app, Function, Arguments, _}, Origin},
+    Context,
+    State
+) ->
+    lower_expr(
+        {app, Function, [Left | Arguments], Origin},
+        Context,
+        State
+    );
+lower_expr(
+    {binary_op, pipe_right, Left, Function, Origin},
+    Context,
+    State
+) ->
+    lower_expr({app, Function, [Left], Origin}, Context, State);
+lower_expr({app, _Function, _Arguments, _Origin} = Application, Context,
+        State) ->
+    {Function, Arguments, Origin} = application_spine(Application),
     case lower_exprs(Arguments, Context, State, []) of
         {ok, ArgumentIR, State1} ->
             lower_call(
@@ -426,7 +496,10 @@ lower_expr({lambda, Patterns, Body, Origin}, Context, State) ->
 lower_expr({lam, Parameter, Body}, Context, State) ->
     lower_closure([Parameter], Body, source_location(Body), Context, State);
 lower_expr(Expression, Context, State) ->
-    case contains_nested_control(Expression) of
+    case contains_nested_control(Expression) orelse
+        (maps:get(mode, Context) =:= resumable andalso
+            contains_application(Expression))
+    of
         true ->
             case lower_nested_children(Expression, Context, State) of
                 {ok, Lowered, State1} ->
@@ -603,8 +676,7 @@ lower_call(Function, Arguments, Origin, Context, State) ->
     {Target, CalleeMode, Capability} = call_capability(
         Root,
         length(Arguments),
-        maps:get(modes, Context),
-        maps:get(import_resolution, Context)
+        Context
     ),
     Operation = case {CallerMode, CalleeMode} of
         {direct, direct} -> direct_call;
@@ -670,24 +742,57 @@ lower_call(Function, Arguments, Origin, Context, State) ->
 lower_closure(Patterns, Body, Origin, Context, State) ->
     case lower_expr(Body, Context, State) of
         {ok, BodyIR, State1} ->
+            Capability = closure_capability(BodyIR),
             make_node(
                 closure,
                 metadata(
                     Context,
                     Origin,
-                    continuation_arity(Context),
-                    cps_or_direct(Context)
+                    case Capability of direct -> 0; resumable -> 1 end,
+                    case Capability of
+                        direct -> direct;
+                        resumable -> requires_resumption_runtime
+                    end
                 ),
                 #{
                     parameters => Patterns,
                     body => BodyIR,
-                    capability => maps:get(mode, Context)
+                    capability => Capability
                 },
                 State1
             );
         {error, _} = Error ->
             Error
     end.
+
+closure_capability(Node) ->
+    case closure_requires_cps(Node) of
+        true -> resumable;
+        false -> direct
+    end.
+
+closure_requires_cps(#{op := Operation, fields := Fields}) ->
+    Local = case Operation of
+        delimiter -> true;
+        install_handler -> true;
+        resume -> true;
+        abort -> true;
+        cps_call -> true;
+        perform -> maps:get(suspension, Fields, false);
+        bridge -> maps:get(capability, Fields, direct) =:= resumable;
+        closure -> maps:get(capability, Fields, direct) =:= resumable;
+        _ -> false
+    end,
+    Local orelse lists:any(
+        fun closure_requires_cps/1,
+        maps:values(Fields)
+    );
+closure_requires_cps(Terms) when is_list(Terms) ->
+    lists:any(fun closure_requires_cps/1, Terms);
+closure_requires_cps(Term) when is_tuple(Term) ->
+    closure_requires_cps(tuple_to_list(Term));
+closure_requires_cps(_Term) ->
+    false.
 
 lower_exprs([], _Context, State, Acc) ->
     {ok, lists:reverse(Acc), State};
@@ -729,9 +834,10 @@ metadata(Context, Origin, ContinuationArity, Disposition) ->
 call_capability(
     {var, Name, _Origin},
     Arity,
-    Modes,
-    ImportResolution
+    Context
 ) ->
+    Modes = maps:get(modes, Context),
+    ImportResolution = maps:get(import_resolution, Context),
     case catena_control_mode:lookup(Name, Modes) of
         {ok, Entry} ->
             {
@@ -740,7 +846,62 @@ call_capability(
                 maps:get(mode, Entry)
             };
         none ->
-            case resolved_import(Name, Arity, ImportResolution) of
+            case local_constructor(
+                Name,
+                Arity,
+                maps:get(callables, Context)
+            ) of
+                true ->
+                    {{dynamic, Name}, direct, direct};
+                false ->
+                    imported_or_dynamic_capability(
+                        Name,
+                        Arity,
+                        ImportResolution
+                    )
+            end
+    end;
+call_capability(
+    {imported_ref, #{kind := constructor} = Entry, _Origin},
+    _Arity,
+    _Context
+) ->
+    {
+        {imported_constructor,
+            maps:get(source_module, Entry, undefined),
+            maps:get(name, Entry, undefined),
+            maps:get(arity, Entry, undefined)},
+        direct,
+        direct
+    };
+call_capability(
+    {imported_ref, Entry, _Origin},
+    _Arity,
+    _Context
+) ->
+    Mode = maps:get(control_mode, Entry, resumable),
+    {
+        {imported,
+            maps:get(source_module, Entry, undefined),
+            maps:get(name, Entry, undefined),
+            maps:get(arity, Entry, undefined)},
+        Mode,
+        Mode
+    };
+call_capability(_Function, _Arity, _Context) ->
+    {dynamic_callable, resumable, resumable}.
+
+imported_or_dynamic_capability(Name, Arity, ImportResolution) ->
+    case resolved_import(Name, Arity, ImportResolution) of
+        {ok, #{kind := constructor} = Imported} ->
+            {
+                {imported_constructor,
+                    maps:get(source_module, Imported),
+                    maps:get(name, Imported),
+                    maps:get(arity, Imported)},
+                direct,
+                direct
+            };
                 {ok, Imported} ->
                     Mode = maps:get(
                         control_mode,
@@ -756,32 +917,40 @@ call_capability(
                         Mode
                     };
                 none ->
-                    {{dynamic, Name}, resumable, resumable}
-            end
-    end;
-call_capability(
-    {imported_ref, Entry, _Origin},
-    _Arity,
-    _Modes,
-    _ImportResolution
-) ->
-    Mode = maps:get(control_mode, Entry, resumable),
-    {
-        {imported,
-            maps:get(source_module, Entry, undefined),
-            maps:get(name, Entry, undefined),
-            maps:get(arity, Entry, undefined)},
-        Mode,
-        Mode
-    };
-call_capability(_Function, _Arity, _Modes, _ImportResolution) ->
-    {dynamic_callable, resumable, resumable}.
+                    case imported_constructor_binding(
+                        Name,
+                        ImportResolution
+                    ) of
+                        true -> {{dynamic, Name}, direct, direct};
+                        false -> {{dynamic, Name}, resumable, resumable}
+                    end
+    end.
+
+local_constructor(Name, _Arity, Callables) ->
+    lists:any(
+        fun(Callable) ->
+            maps:get(kind, Callable) =:= constructor
+        end,
+        catena_call_resolution:lookup(Name, Callables)
+    ).
+
+imported_constructor_binding(Name, Resolution) ->
+    lists:any(
+        fun(Entry) ->
+            maps:get(kind, Entry) =:= constructor andalso
+                maps:get(binding, Entry, undefined) =:= Name
+        end,
+        catena_import_resolution:entries(Resolution)
+    ).
 
 resolved_import(Name, Arity, Resolution) ->
     Matches = [
         Entry
         || Entry <- catena_import_resolution:entries(Resolution),
-           maps:get(kind, Entry) =:= transform,
+           lists:member(
+               maps:get(kind, Entry),
+               [transform, constructor]
+           ),
            maps:get(binding, Entry, undefined) =:= Name,
            maps:get(arity, Entry) =:= Arity
     ],
@@ -805,6 +974,16 @@ contains_nested_control(Term) when is_tuple(Term), tuple_size(Term) > 0 ->
 contains_nested_control(Terms) when is_list(Terms) ->
     lists:any(fun contains_nested_control/1, Terms);
 contains_nested_control(_) ->
+    false.
+
+contains_application(Term) when is_tuple(Term), tuple_size(Term) > 0 ->
+    case element(1, Term) of
+        app -> true;
+        _ -> contains_application(tuple_to_list(Term))
+    end;
+contains_application(Terms) when is_list(Terms) ->
+    lists:any(fun contains_application/1, Terms);
+contains_application(_) ->
     false.
 
 lower_nested_children(Term, Context, State) when is_tuple(Term) ->
@@ -844,6 +1023,8 @@ lower_nested_terms([Term | Rest], Context, State, Acc) ->
             Error
     end.
 
+is_lowerable_expression({binary_op, pipe_right, _, _, _}) ->
+    true;
 is_lowerable_expression(Term) ->
     lists:member(
         element(1, Term),
@@ -994,6 +1175,18 @@ application_root({app, Function, _Arguments, _Origin}) ->
     application_root(Function);
 application_root(Function) ->
     Function.
+
+application_spine({app, Function, Arguments, Origin}) ->
+    case Function of
+        {app, _, [], _} ->
+            {Function, Arguments, Origin};
+        {app, _, _, _} ->
+            {Root, EarlierArguments, _EarlierOrigin} =
+                application_spine(Function),
+            {Root, EarlierArguments ++ Arguments, Origin};
+        _ ->
+            {Function, Arguments, Origin}
+    end.
 
 fresh_delimiter(Transform, #{next_delimiter := Next} = State) ->
     {

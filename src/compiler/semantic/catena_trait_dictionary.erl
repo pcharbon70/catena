@@ -21,6 +21,7 @@
     runtime_required/1,
     runtime_dependency/0,
     compile_dictionaries/2,
+    compile_dictionaries/3,
     dictionary_export/0
 ]).
 
@@ -244,12 +245,33 @@ dictionary_export() ->
     {[{cerl:cerl(), cerl:cerl()}], catena_codegen_utils:codegen_state(),
         [cerl:cerl()]}.
 compile_dictionaries(Inventory, State) ->
+    compile_dictionaries(
+        Inventory,
+        fun compile_direct_dictionary_method/4,
+        State
+    ).
+
+-spec compile_dictionaries(
+    inventory(),
+    fun((map(), atom(), map(), catena_codegen_utils:codegen_state()) ->
+        {cerl:cerl(), catena_codegen_utils:codegen_state()}),
+    catena_codegen_utils:codegen_state()
+) ->
+    {[{cerl:cerl(), cerl:cerl()}], catena_codegen_utils:codegen_state(),
+        [cerl:cerl()]}.
+compile_dictionaries(Inventory, MethodCompiler, State) ->
     case maps:get(local_dictionaries, Inventory) of
         [] ->
             {[], State, []};
         LocalDictionaries ->
             {Clauses, State1} = lists:mapfoldl(
-                fun compile_dictionary_clause/2,
+                fun(Dictionary, CurrentState) ->
+                    compile_dictionary_clause(
+                        Dictionary,
+                        MethodCompiler,
+                        CurrentState
+                    )
+                end,
                 State,
                 LocalDictionaries
             ),
@@ -958,17 +980,15 @@ runtime_candidate(#{dictionary := Dictionary}) ->
         Dictionary
     ).
 
-compile_dictionary_clause(Dictionary, State) ->
+compile_dictionary_clause(Dictionary, MethodCompiler, State) ->
     {Pairs, State1} = maps:fold(
         fun(Name, Method, {Acc, CurrentState}) ->
-            Lambda0 = maps:get(lambda, Method),
-            Lambda1 = catena_codegen_lower:lower_expr(Lambda0),
-            Lambda = catena_codegen_erase:erase_expr(Lambda1),
-            {CoreLambda, NextState} =
-                catena_codegen_expr:translate_expr(
-                    Lambda,
-                    CurrentState
-                ),
+            {CoreLambda, NextState} = MethodCompiler(
+                Dictionary,
+                Name,
+                Method,
+                CurrentState
+            ),
             {
                 [cerl:c_map_pair(cerl:c_atom(Name), CoreLambda) | Acc],
                 NextState
@@ -987,6 +1007,17 @@ compile_dictionary_clause(Dictionary, State) ->
         cerl:abstract(maps:get(head, Dictionary))
     ]),
     {cerl:c_clause([Pattern], Body), State1}.
+
+compile_direct_dictionary_method(
+    _Dictionary,
+    _Name,
+    Method,
+    State
+) ->
+    Lambda0 = maps:get(lambda, Method),
+    Lambda1 = catena_codegen_lower:lower_expr(Lambda0),
+    Lambda = catena_codegen_erase:erase_expr(Lambda1),
+    catena_codegen_expr:translate_expr(Lambda, State).
 
 optional_list(undefined) -> [];
 optional_list(List) when is_list(List) -> List.

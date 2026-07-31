@@ -146,11 +146,7 @@ invalid_scope_and_explicit_typed_boundary_progression_test() ->
         catena_compile:compile_string(Source)
     ),
     ?assertMatch(
-        {error, {missing_resumption_lowering, #{
-            stage := backend_compatibility,
-            construct := operation_case,
-            mode := explicit_control
-        }}},
+        {ok, _},
         catena_compile:compile_string_to_core(Source)
     ).
 

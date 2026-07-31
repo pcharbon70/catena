@@ -23,6 +23,7 @@
     missing_transform_implementation/2,
     invalid_declaration_disposition/2,
     runtime_dependency_unavailable/3,
+    artifact_validation_failed/2,
     core_validation_failed/3,
     beam_compilation_failed/3,
     is_diagnostic/1,
@@ -43,6 +44,7 @@
     missing_transform_implementation |
     invalid_declaration_disposition |
     runtime_dependency_unavailable |
+    artifact_validation_failed |
     core_validation_failed |
     beam_compilation_failed.
 
@@ -64,6 +66,7 @@ categories() ->
         missing_transform_implementation,
         invalid_declaration_disposition,
         runtime_dependency_unavailable,
+        artifact_validation_failed,
         core_validation_failed,
         beam_compilation_failed
     ].
@@ -184,6 +187,16 @@ runtime_dependency_unavailable(Module, Version, Context) ->
             source_identity => {Module, Version},
             dependency_module => Module,
             required_version => Version
+        }
+    ).
+
+-spec artifact_validation_failed(term(), map()) -> diagnostic().
+artifact_validation_failed(Reason, Context) ->
+    new(
+        artifact_validation_failed,
+        Context#{
+            construct => beam_artifact,
+            reason => sanitize_artifact_reason(Reason)
         }
     ).
 
@@ -320,6 +333,11 @@ category_message(runtime_dependency_unavailable, Details) ->
             maps:get(required_version, Details, undefined)
         ]
     );
+category_message(artifact_validation_failed, Details) ->
+    io_lib:format(
+        "rejected an incompatible BEAM artifact: ~p",
+        [maps:get(reason, Details, undefined)]
+    );
 category_message(core_validation_failed, _Details) ->
     "generated Core Erlang that OTP rejected";
 category_message(beam_compilation_failed, _Details) ->
@@ -356,3 +374,18 @@ format_location(Line) when is_integer(Line) ->
     io_lib:format(" at line ~p", [Line]);
 format_location(_) ->
     "".
+
+sanitize_artifact_reason(Reason) when
+    is_atom(Reason);
+    is_binary(Reason);
+    is_integer(Reason)
+->
+    Reason;
+sanitize_artifact_reason(Reason) when is_tuple(Reason) ->
+    list_to_tuple([sanitize_artifact_reason(Item) || Item <- tuple_to_list(Reason)]);
+sanitize_artifact_reason(Reason) when is_list(Reason) ->
+    [sanitize_artifact_reason(Item) || Item <- Reason];
+sanitize_artifact_reason(Reason) when is_map(Reason) ->
+    maps:map(fun(_Key, Value) -> sanitize_artifact_reason(Value) end, Reason);
+sanitize_artifact_reason(_Reason) ->
+    private_runtime_term.

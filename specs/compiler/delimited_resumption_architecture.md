@@ -2,20 +2,23 @@
 
 ## Status
 
-Accepted target architecture. Phases 2 through 5 implement the lexer, parser,
+Accepted architecture with Phase 6 executable Core/BEAM integration. Phases 2
+through 6 implement the lexer, parser,
 AST, pretty-printer, semantic normalization, structural diagnostics,
 first-class resumption kinds and types, handler/resume inference,
 residual-effect checking, control-mode analysis, selective-CPS control IR,
 calling conventions, fail-closed graph validation, opaque process-affine
 runtime authority, deep same-process handler frames, one-shot consumption,
-retention leases, lifecycle monitoring, and structured runtime failures. Core
-lowering for explicit resumptions remains unimplemented, so this is not yet a
-promoted source-to-BEAM feature.
+retention leases, lifecycle monitoring, structured runtime failures,
+selective-CPS Core lowering, versioned artifacts, and loaded-BEAM execution.
+Shallow and multi-shot source modes remain deferred to Phase 7; dedicated
+promotion and tooling work remains in Phase 8.
 
 This document makes
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
 concrete enough to guide parser, type-system, lowering, runtime, diagnostics,
-and conformance work without representing that work as complete.
+and conformance work while keeping the remaining Phase 7 and Phase 8 work
+explicitly incomplete.
 
 The normative deep one-shot reduction rules are defined in
 [Delimited Resumption Operational Semantics](delimited_resumption_operational_semantics.md).
@@ -175,13 +178,11 @@ The implemented synthetic origin is:
 Semantic results and validated compilation units retain this normalized form.
 The Phase 3 typed frontend consumes it directly and retains resumption
 evidence and origins. Phase 4 classifies and lowers that authority into
-validated control IR. Phase 5 supplies its executable runtime target. Until
-Phase 6 Core lowering connects them, the request/response backend receives a
-compatibility view only when
-the binder, origin, resume target, and tail shape exactly match
-compiler-generated auto-resume output. Explicit or malformed resumptions fail
-with `missing_resumption_lowering`; they are never emitted as ordinary calls
-or marker closures.
+validated control IR. Phase 5 supplies its executable runtime target, and
+Phase 6 emits that graph through versioned direct/CPS entries. The legacy
+request/response projection remains only for exact compiler-generated
+compatibility shapes; explicit and automatic resumptions use the selective-CPS
+path and are never emitted as ordinary marker closures.
 
 AST traversal, pretty-printing, erasure, origin mapping, and diagnostic
 utilities must preserve these nodes. Pretty-printing must retain whether the
@@ -302,8 +303,9 @@ The compiler-owned boundary is implemented by `catena_control_ir` and
 `catena_selective_cps`. It retains deterministic delimiter and continuation
 identities, types, effect rows, control modes, continuation arities, runtime
 dispositions, and origins. `catena_control_validate` rejects malformed graphs
-before declaration projection or ordinary Core emission. This is compiler IR
-evidence, not yet an executable runtime continuation.
+before declaration projection or Core emission. `catena_control_codegen`
+consumes only that validated graph and emits executable runtime
+continuations.
 
 ## Calling Convention
 
@@ -463,9 +465,9 @@ source-to-BEAM evidence covers:
 Shallow and multi-shot behavior receive separate promotion evidence when their
 source opt-ins are accepted and implemented.
 
-Until that evidence exists, component and status documents must distinguish
-the implemented typed frontend, compiler control IR, and executable runtime
-ABI from planned source-to-Core/BEAM integration.
+Phase 6 supplies this executable evidence for the deep one-shot boundary.
+Component and status documents must continue to distinguish it from deferred
+shallow/multi-shot semantics and Phase 8 promotion/tooling work.
 
 ## Related Material
 

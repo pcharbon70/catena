@@ -6,7 +6,7 @@ identity, patterns, imports, traits, recursion, effects, runtime dependencies,
 and diagnostics while proving that loaded BEAM executes the real delimited
 continuation.
 
-**Status:** Planned.
+**Status:** Complete.
 
 **Dependencies:** Phase 5 complete.
 
@@ -16,7 +16,7 @@ continuation.
 OTP-accepted Core Erlang with explicit private calling conventions and stable
 public wrappers.
 
-- [ ] **Section 6.1 Complete**
+- [x] **Section 6.1 Complete**
 
 ### Task 6.1.1: Lower CPS Control Nodes
 
@@ -24,7 +24,7 @@ public wrappers.
 handler-frame installation, suspension, resumption construction, resume,
 abort, and direct/CPS bridges.
 
-- [ ] **Task 6.1.1 Complete**
+- [x] **Task 6.1.1 Complete**
 
 #### Subtask 6.1.1.1: Emit Continuations And Delimiters
 
@@ -32,7 +32,7 @@ abort, and direct/CPS bridges.
 versioned delimiter/runtime calls, tail positions, and synthetic source
 origins.
 
-- [ ] **Subtask 6.1.1.1 Complete**
+- [x] **Subtask 6.1.1.1 Complete**
 
 #### Subtask 6.1.1.2: Emit Perform And Resume Control
 
@@ -40,14 +40,14 @@ origins.
 construct opaque resumptions, invoke `resume` through runtime validation, and
 preserve handler result flow.
 
-- [ ] **Subtask 6.1.1.2 Complete**
+- [x] **Subtask 6.1.1.2 Complete**
 
 ### Task 6.1.2: Preserve Public Source Arity
 
 **Description:** Keep exported Catena transform arity stable while selecting
 direct or CPS private entries behind generated wrappers.
 
-- [ ] **Task 6.1.2 Complete**
+- [x] **Task 6.1.2 Complete**
 
 #### Subtask 6.1.2.1: Generate Initial Runtime Boundaries
 
@@ -55,7 +55,7 @@ direct or CPS private entries behind generated wrappers.
 once at public execution boundaries and reuse both through internal effectful
 calls.
 
-- [ ] **Subtask 6.1.2.1 Complete**
+- [x] **Subtask 6.1.2.1 Complete**
 
 #### Subtask 6.1.2.2: Preserve Function Values And Metadata
 
@@ -63,21 +63,33 @@ calls.
 export/interface arity, and hide private CPS parameters from source-visible
 module contracts.
 
-- [ ] **Subtask 6.1.2.2 Complete**
+- [x] **Subtask 6.1.2.2 Complete**
+
+**Implementation evidence:** `catena_control_codegen` consumes only validated
+compilation units and selective-CPS IR. It emits source-arity public wrappers,
+mode-specific private direct/CPS entries, explicit two-argument runtime
+continuations, deep handler delimiters, runtime suspension/resumption calls,
+abort flow, and direct/CPS bridges with synthetic origin annotations. Public
+wrappers establish one initial effect context and final continuation; internal
+entries reuse them. The module records control ABI version 1 while keeping
+private context and continuation parameters out of the source-visible export
+surface. The six focused `catena_control_codegen_tests` compile the emitted
+Core through OTP, inspect entry arities and metadata, and execute explicit
+resume plus transformed delimiter-result programs as loaded BEAM.
 
 ## Section 6.2: Complete Call-Graph And Language Integration
 
 **Description:** Preserve resumption semantics across all callable and
 expression surfaces already promoted by the fail-closed backend.
 
-- [ ] **Section 6.2 Complete**
+- [x] **Section 6.2 Complete**
 
 ### Task 6.2.1: Integrate Local And Higher-Order Calls
 
 **Description:** Carry continuations and contexts correctly through ordinary,
 forward, recursive, mutually recursive, closure, and constructor-rich code.
 
-- [ ] **Task 6.2.1 Complete**
+- [x] **Task 6.2.1 Complete**
 
 #### Subtask 6.2.1.1: Lower Recursive And Mixed-Mode Graphs
 
@@ -85,7 +97,7 @@ forward, recursive, mutually recursive, closure, and constructor-rich code.
 resolved modes, bounded stack behavior, and valid tail calls where semantics
 permit.
 
-- [ ] **Subtask 6.2.1.1 Complete**
+- [x] **Subtask 6.2.1.1 Complete**
 
 #### Subtask 6.2.1.2: Lower Higher-Order And Data Paths
 
@@ -93,14 +105,14 @@ permit.
 preserve patterns, ADTs, tuples, lists, records, guards, and clause
 fallthrough inside CPS regions.
 
-- [ ] **Subtask 6.2.1.2 Complete**
+- [x] **Subtask 6.2.1.2 Complete**
 
 ### Task 6.2.2: Integrate Imports, Traits, And Effect Polymorphism
 
 **Description:** Make versioned module interfaces and runtime dictionaries
 carry enough control-mode metadata for cross-module and dynamic dispatch.
 
-- [ ] **Task 6.2.2 Complete**
+- [x] **Task 6.2.2 Complete**
 
 #### Subtask 6.2.2.1: Lower Imported Resumable Calls
 
@@ -108,7 +120,7 @@ carry enough control-mode metadata for cross-module and dynamic dispatch.
 and aliased calls, imported closures, and artifact validation with stable
 direct/CPS ABI metadata.
 
-- [ ] **Subtask 6.2.2.1 Complete**
+- [x] **Subtask 6.2.2.1 Complete**
 
 #### Subtask 6.2.2.2: Lower Trait And Open-Row Calls
 
@@ -116,21 +128,37 @@ direct/CPS ABI metadata.
 calls, operator/do targets, and conservatively resumable effect-polymorphic
 functions.
 
-- [ ] **Subtask 6.2.2.2 Complete**
+- [x] **Subtask 6.2.2.2 Complete**
+
+**Implementation evidence:** Application-spine lowering and the resolved
+control-mode inventory now drive ordinary, forward, recursive, mutually
+recursive, constructor, imported, and dynamic call emission without
+recomputing conventions in Core. Direct closures remain ordinary source-arity
+BEAM functions for legacy interoperability; resumable closures use the
+versioned runtime control-closure representation and `apply_control/4`.
+Exported resumable transforms expose private CPS linkage while preserving
+their source-visible interface arity. Trait dictionaries are lowered through
+the selective-CPS expression path, and `catena_trait_runtime:invoke_control/5`
+threads the selected method through the caller's context and continuation.
+The three focused `catena_delimited_resumption_phase6_call_graph_tests`
+execute 2,000-step mutual recursion plus guarded ADT/list/record paths, a
+resumable higher-order lambda through a trait dictionary, and an imported
+resumable transform used both by name and as a first-class closure. Existing
+backend import, trait, recursion, conformance, and origin suites remain green.
 
 ## Section 6.3: Artifacts, Runtime Versions, And Diagnostics
 
 **Description:** Make resumption dependencies and source origins part of the
 validated public artifact rather than hidden assumptions in generated Core.
 
-- [ ] **Section 6.3 Complete**
+- [x] **Section 6.3 Complete**
 
 ### Task 6.3.1: Version Artifact And Runtime Dependencies
 
 **Description:** Declare the exact runtime capabilities required by resumable
 artifacts and reject incompatible load targets before execution.
 
-- [ ] **Task 6.3.1 Complete**
+- [x] **Task 6.3.1 Complete**
 
 #### Subtask 6.3.1.1: Extend Artifact Metadata
 
@@ -138,21 +166,21 @@ artifacts and reject incompatible load targets before execution.
 required handler-frame features, source/runtime module identities, and
 dependency checksums where applicable.
 
-- [ ] **Subtask 6.3.1.1 Complete**
+- [x] **Subtask 6.3.1.1 Complete**
 
 #### Subtask 6.3.1.2: Validate Load Compatibility
 
 **Description:** Reject missing, stale, or incompatible runtime contracts and
 normalize Core/OTP dependency diagnostics into Catena artifact failures.
 
-- [ ] **Subtask 6.3.1.2 Complete**
+- [x] **Subtask 6.3.1.2 Complete**
 
 ### Task 6.3.2: Preserve Source-Oriented Control Diagnostics
 
 **Description:** Relate every generated CPS or runtime failure to its Catena
 perform, handler case, binder, resume, call, and delimiter origin.
 
-- [ ] **Task 6.3.2 Complete**
+- [x] **Task 6.3.2 Complete**
 
 #### Subtask 6.3.2.1: Track Synthetic Origin Chains
 
@@ -160,7 +188,7 @@ perform, handler case, binder, resume, call, and delimiter origin.
 wrappers, bridges, imported entries, dictionary calls, and Core temporary
 variables.
 
-- [ ] **Subtask 6.3.2.1 Complete**
+- [x] **Subtask 6.3.2.1 Complete**
 
 #### Subtask 6.3.2.2: Normalize Backend And Runtime Failures
 
@@ -168,7 +196,27 @@ variables.
 compile, artifact version, ownership, consumption, and delimiter failures
 without exposing internal closure terms.
 
-- [ ] **Subtask 6.3.2.2 Complete**
+- [x] **Subtask 6.3.2.2 Complete**
+
+**Implementation evidence:** Artifact format 2 records source/runtime module
+identities, control ABI version 1, resumption-runtime version 1, exact deep
+one-shot handler capabilities, interface SHA-256 checksums, and the runtime
+dependencies required by conservatively resumable call graphs. The public
+`catena_beam_artifact:validate/1,2` and `load/1,2` boundaries reject malformed
+or stale artifact envelopes, mismatched BEAM identities, missing or
+incompatible runtime versions/features, altered interfaces, and stale module
+dependencies before code loading. Generated Core carries matching control,
+resumption, and handler-feature attributes.
+
+Control IR origins are published as source-to-synthetic chains for performs,
+generated continuations, captures, handler frames, resumptions, bridges, and
+closures. Generated runtime calls preserve perform, handler-case, delimiter,
+and closure origins, while normalized runtime and artifact failures sanitize
+private callable terms. The five focused
+`catena_delimited_resumption_phase6_artifact_tests` exercise successful
+validated loading, stale version/feature rejection, artifact and identity
+failure, dependency checksums, origin inventories, and closure-free runtime
+diagnostics. The complete active EUnit suite passes all 5,248 tests.
 
 ## Section 6.4: Phase 6 Integration Tests
 
@@ -176,14 +224,14 @@ without exposing internal closure terms.
 handlers execute real resumptions across the complete promoted call and data
 surface while invalid semantics fail closed.
 
-- [ ] **Section 6.4 Complete**
+- [x] **Section 6.4 Complete**
 
 ### Task 6.4.1: Execute Positive Source-To-BEAM Programs
 
 **Description:** Compile Catena source to validated units, selective-CPS IR,
 Core Erlang, and loaded BEAM and assert observable continuation behavior.
 
-- [ ] **Task 6.4.1 Complete**
+- [x] **Task 6.4.1 Complete**
 
 #### Subtask 6.4.1.1: Test Core Resumption Semantics
 
@@ -191,7 +239,7 @@ Core Erlang, and loaded BEAM and assert observable continuation behavior.
 delimiter results, nested deep handlers, multiple performs, retained
 same-process resumptions, and builtin-provider interaction.
 
-- [ ] **Subtask 6.4.1.1 Complete**
+- [x] **Subtask 6.4.1.1 Complete**
 
 #### Subtask 6.4.1.2: Test Complete Call And Data Surfaces
 
@@ -199,14 +247,14 @@ same-process resumptions, and builtin-provider interaction.
 trait-dispatched, open-row, patterned, ADT, list, tuple, and record programs
 that suspend and resume across those boundaries.
 
-- [ ] **Subtask 6.4.1.2 Complete**
+- [x] **Subtask 6.4.1.2 Complete**
 
 ### Task 6.4.2: Execute Negative And Phase-Gate Programs
 
 **Description:** Demonstrate fail-closed compilation, artifact validation, and
 structured runtime failures for every unsupported or invalid control path.
 
-- [ ] **Task 6.4.2 Complete**
+- [x] **Task 6.4.2 Complete**
 
 #### Subtask 6.4.2.1: Test Negative Artifacts And Runtime Behavior
 
@@ -214,7 +262,7 @@ structured runtime failures for every unsupported or invalid control path.
 invalid Core, stale runtimes, double resume, wrong owner, expired delimiters,
 and deferred shallow/multi-shot source behavior.
 
-- [ ] **Subtask 6.4.2.1 Complete**
+- [x] **Subtask 6.4.2.1 Complete**
 
 #### Subtask 6.4.2.2: Run Repository Gates
 
@@ -222,4 +270,26 @@ and deferred shallow/multi-shot source behavior.
 runtime suites, `make check-specs`, `make conformance`, and the complete active
 EUnit suite and publish the exact phase-ending evidence.
 
-- [ ] **Subtask 6.4.2.2 Complete**
+- [x] **Subtask 6.4.2.2 Complete**
+
+**Implementation evidence:** The four
+`catena_delimited_resumption_phase6_integration_tests` compile through the
+public artifact API, validate and load artifact format 2, and execute explicit
+resume with transformed delimiter results, automatic tail resume, deliberate
+abort, sequential performs, nested deep delimiters, first-class resumption
+flow through a helper transform, and builtin `Process.self` continuation on
+the originating process. Together with the three loaded-BEAM call-graph tests
+and five artifact tests, this covers recursive, imported, higher-order,
+trait-dispatched, patterned, ADT, list, tuple, record, guard, runtime-contract,
+and origin paths.
+
+The focused negative gate ran 66 tests across the Phase 6 integration,
+call-graph, artifact, control-validation, ABI, Phase 3 typing, Phase 5 runtime,
+authority, lifecycle, and public artifact API suites. It covers invalid Core
+and ABIs, unresolved bridges, leaked AST/IR, stale artifacts and runtimes,
+one-shot double/re-entrant use, wrong owners, expired delimiters, and rejected
+shallow/multi-shot modes. `make check-specs`
+passed 42 requirements, 11 scenarios, 20 evidence rows, 73 acceptance
+criteria, six ADRs, and 293 local links. `make conformance` passed all 418
+tests, and the complete active EUnit gate passed all 5,252 tests with zero
+failures or skips.

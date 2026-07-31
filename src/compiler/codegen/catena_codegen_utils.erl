@@ -34,6 +34,7 @@
     resolve_value/3,
     resolve_trait_method/4,
     resolve_trait_value/3,
+    control_mode/2,
     callable_inventory/1,
     import_resolution/1,
     origin_context/1,
@@ -73,6 +74,7 @@
     callables :: catena_call_resolution:inventory() | undefined,
     imports :: catena_import_resolution:resolution() | undefined,
     traits :: catena_trait_dictionary:inventory() | undefined,
+    control_modes :: catena_control_mode:inventory() | undefined,
     runtime_context :: cerl:cerl() | undefined,
     effectful_transforms = #{} :: #{atom() => non_neg_integer()}
 }).
@@ -97,12 +99,26 @@ new_state(Context) when is_map(Context) ->
         callables = maps:get(callables, Context, undefined),
         imports = maps:get(import_resolution, Context, undefined),
         traits = maps:get(trait_inventory, Context, undefined),
+        control_modes = maps:get(control_modes, Context, undefined),
         effectful_transforms = maps:get(
             effectful_transforms,
             Context,
             #{}
         )
     }.
+
+%% @doc Return the analyzed calling convention for a local transform.
+-spec control_mode(atom(), codegen_state()) -> direct | resumable | unknown.
+control_mode(Name, #codegen_state{control_modes = Modes}) ->
+    case Modes of
+        undefined ->
+            unknown;
+        _ ->
+            case catena_control_mode:mode(Name, Modes) of
+                {ok, Mode} -> Mode;
+                none -> unknown
+            end
+    end.
 
 %% @doc Execute function with new scope, then restore
 -spec with_scope(fun((codegen_state()) -> {Result, codegen_state()}), codegen_state()) ->

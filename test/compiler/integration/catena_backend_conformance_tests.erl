@@ -27,7 +27,10 @@ pure_higher_order_operator_and_collection_matrix_test() ->
             {42, 42, 42, 4.0, true, [1, 2, 3, 4], 42},
             'BackendPureConformance':run()
         ),
-        ?assertEqual([], maps:get(runtime_dependencies, Artifact))
+        ?assertEqual(
+            control_dependencies([]),
+            maps:get(runtime_dependencies, Artifact)
+        )
     end).
 
 recursive_pattern_and_data_representation_matrix_test() ->
@@ -87,7 +90,14 @@ imported_and_higher_order_call_matrix_test() ->
                 kind := catena_module,
                 source_module := 'BackendProvider'
             }],
-            maps:get(artifact_dependencies, ConsumerArtifact)
+            [
+                Dependency
+                || Dependency <- maps:get(
+                    artifact_dependencies,
+                    ConsumerArtifact
+                ),
+                   maps:get(kind, Dependency, runtime) =:= catena_module
+            ]
         )
     end).
 
@@ -106,10 +116,10 @@ effect_runtime_matrix_test() ->
     with_public_module(Source, fun(Artifact) ->
         ?assertEqual(42, 'BackendEffectConformance':run(0)),
         ?assertEqual(
-            [
+            control_dependencies([
                 #{module => catena_effect_runtime, version => 1},
                 #{module => catena_effect_system, version => 1}
-            ],
+            ]),
             maps:get(runtime_dependencies, Artifact)
         ),
         ?assertNot(catena_effect_system:is_initialized())
@@ -138,10 +148,22 @@ trait_dictionary_matrix_test() ->
         Interface = maps:get(interface, Artifact),
         ?assertEqual(1, length(maps:get(dictionaries, Interface))),
         ?assertEqual(
-            [#{module => catena_trait_runtime, version => 1}],
+            control_dependencies([
+                #{module => catena_trait_runtime, version => 1}
+            ]),
             maps:get(runtime_dependencies, Artifact)
         )
     end).
+
+control_dependencies(Additional) ->
+    lists:usort(Additional ++ [
+        #{module => catena_effect_runtime, version => 1},
+        #{
+            module => catena_resumption_runtime,
+            version => 1,
+            features => catena_resumption_runtime:features()
+        }
+    ]).
 
 artifact_and_diagnostic_contract_matrix_test() ->
     Source =

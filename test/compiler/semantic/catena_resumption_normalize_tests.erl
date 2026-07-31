@@ -244,7 +244,7 @@ first_resumption_reports_explicit_and_synthetic_modes_test() ->
         )
     ).
 
-typed_boundary_accepts_but_backend_rejects_explicit_resumptions_test() ->
+typed_boundary_and_control_backend_accept_explicit_resumptions_test() ->
     Source =
         "module NormalizedTypedBoundary\n"
         "effect Choice\n"
@@ -256,14 +256,7 @@ typed_boundary_accepts_but_backend_rejects_explicit_resumptions_test() ->
         {ok, {typed_module, _, [_, {typed_transform, run, _, _, _, _}], _}},
         catena_compile:compile_string(Source)
     ),
-    ?assertMatch(
-        {error, {missing_resumption_lowering, #{
-            stage := backend_compatibility,
-            construct := operation_case,
-            mode := explicit_control
-        }}},
-        catena_compile:compile_string_to_core(Source)
-    ).
+    ?assertMatch({ok, _}, catena_compile:compile_string_to_core(Source)).
 
 synthetic_auto_resume_projects_to_legacy_value_handler_test() ->
     Loc = loc(1),

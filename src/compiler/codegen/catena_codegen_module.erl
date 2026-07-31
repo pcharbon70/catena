@@ -53,6 +53,17 @@
 generate_validated_module(Unit) ->
     case catena_compilation_unit:is_compilation_unit(Unit) of
         true ->
+            case has_resumable_control(Unit) of
+                true ->
+                    catena_control_codegen:generate(Unit);
+                false ->
+                    generate_legacy_validated_module(Unit)
+            end;
+        false ->
+            {error, {invalid_compilation_unit, unchecked_backend_input}}
+    end.
+
+generate_legacy_validated_module(Unit) ->
             case catena_declaration_disposition:prepare_for_codegen(Unit) of
                 {ok, BackendAST} ->
                     CompilerOpts = catena_compilation_unit:options(Unit),
@@ -69,10 +80,17 @@ generate_validated_module(Unit) ->
                     );
                 {error, _} = Error ->
                     Error
-            end;
-        false ->
-            {error, {invalid_compilation_unit, unchecked_backend_input}}
-    end.
+            end.
+
+has_resumable_control(Unit) ->
+    lists:any(
+        fun(Transform) ->
+            maps:get(control_mode, Transform) =:= resumable
+        end,
+        catena_control_ir:transforms(
+            catena_compilation_unit:control_ir(Unit)
+        )
+    ).
 
 %% @doc Generate a Core Erlang module directly from backend-shaped Catena AST.
 %%
@@ -377,8 +395,43 @@ generate_attributes(Opts) ->
                 ]
         end,
 
+    ControlAbiAttr = case maps:get(control_abi_version, Opts, undefined) of
+        undefined -> [];
+        ControlAbiVersion -> [
+            {
+                cerl:c_atom(catena_control_abi_version),
+                cerl:abstract(ControlAbiVersion)
+            }
+        ]
+    end,
+
+    ResumptionRuntimeAttr = case maps:get(
+        resumption_runtime_version,
+        Opts,
+        undefined
+    ) of
+        undefined -> [];
+        ResumptionVersion -> [{
+            cerl:c_atom(catena_resumption_runtime_version),
+            cerl:abstract(ResumptionVersion)
+        }]
+    end,
+
+    HandlerFeaturesAttr = case maps:get(
+        handler_frame_features,
+        Opts,
+        []
+    ) of
+        [] -> [];
+        HandlerFeatures -> [{
+            cerl:c_atom(catena_handler_frame_features),
+            cerl:abstract(HandlerFeatures)
+        }]
+    end,
+
     BaseAttrs ++ VersionAttr ++ AuthorAttr ++ RuntimeDependencyAttr ++
-        ArtifactDependencyAttr.
+        ArtifactDependencyAttr ++ ControlAbiAttr ++ ResumptionRuntimeAttr ++
+        HandlerFeaturesAttr.
 
 %%====================================================================
 %% Function Compilation (1.3.4.2)
@@ -822,58 +875,23 @@ validate_runtime_dependencies(Dependencies, Opts, ModuleName) ->
         Opts,
         auto
     ),
-    lists:foreach(
-        fun(Dependency) ->
-            RuntimeModule = maps:get(module, Dependency),
-            Version = maps:get(version, Dependency),
-            case dependency_available(
-                RuntimeModule,
-                Version,
-                Available
-            ) of
-                true ->
-                    ok;
-                false ->
-                    Context = catena_backend_error:context(
-                        artifact_preparation,
-                        runtime_dependency,
-                        maps:get(location, Opts, undefined),
-                        #{
-                            module => ModuleName,
-                            available_runtime_modules => Available
-                        }
-                    ),
-                    throw(
-                        catena_backend_error:
-                            runtime_dependency_unavailable(
-                                RuntimeModule,
-                                Version,
-                                Context
-                            )
-                    )
-            end
-        end,
-        Dependencies
+    Context = catena_backend_error:context(
+        artifact_preparation,
+        runtime_dependency,
+        maps:get(location, Opts, undefined),
+        #{
+            module => ModuleName,
+            available_runtime_modules => Available
+        }
     ),
-    ok.
-
-dependency_available(_Module, _Version, all) ->
-    true;
-dependency_available(Module, _Version, auto) ->
-    code:which(Module) =/= non_existing;
-dependency_available(Module, _Version, Available)
-  when is_list(Available) ->
-    lists:member(Module, Available);
-dependency_available(Module, Version, Available)
-  when is_map(Available) ->
-    case maps:get(Module, Available, unavailable) of
-        AvailableVersion when is_integer(AvailableVersion) ->
-            AvailableVersion >= Version;
-        _ ->
-            false
-    end;
-dependency_available(_Module, _Version, _Available) ->
-    false.
+    case catena_runtime_contract:validate(
+        Dependencies,
+        Available,
+        Context
+    ) of
+        ok -> ok;
+        {error, Diagnostic} -> throw(Diagnostic)
+    end.
 
 %%====================================================================
 %% Type Definitions

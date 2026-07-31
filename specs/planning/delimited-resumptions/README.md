@@ -72,7 +72,7 @@ accepted:
 - [x] [Phase 3: First-Class `Resumption` Kinds, Types, And Effects](phase-03-first-class-resumption-kinds-types-and-effects.md)
 - [x] [Phase 4: Control-Mode Analysis And Selective CPS IR](phase-04-control-mode-analysis-and-selective-cps-ir.md)
 - [x] [Phase 5: Deep One-Shot Runtime And Resumption Ownership](phase-05-deep-one-shot-runtime-and-resumption-ownership.md)
-- [ ] [Phase 6: Core Erlang, BEAM, And Call-Graph Integration](phase-06-core-erlang-beam-and-call-graph-integration.md)
+- [x] [Phase 6: Core Erlang, BEAM, And Call-Graph Integration](phase-06-core-erlang-beam-and-call-graph-integration.md)
 - [ ] [Phase 7: Shallow Handlers And Multi-Shot Resumptions](phase-07-shallow-handlers-and-multi-shot-resumptions.md)
 - [ ] [Phase 8: Tooling, Optimization, Conformance, And Promotion](phase-08-tooling-optimization-conformance-and-promotion.md)
 
@@ -110,7 +110,7 @@ executable evidence exists.
 ## Roadmap Completion Gate
 
 - [x] `with` binds a typed first-class resumption in source operation cases
-- [ ] `resume(k, value)` executes the real delimited remainder of the source
+- [x] `resume(k, value)` executes the real delimited remainder of the source
       computation
 - [x] Existing value handlers preserve their observable behavior through
       tail auto-resume
@@ -120,17 +120,17 @@ executable evidence exists.
       explicit and validated
 - [x] Deep one-shot resumptions are opaque, process-affine, and
       deterministically consumed
-- [ ] Local, recursive, imported, higher-order, trait-dispatched, and
+- [x] Local, recursive, imported, higher-order, trait-dispatched, and
       effect-polymorphic call graphs execute correctly
 - [x] Shallow and multi-shot behavior remains rejected until its Phase 7
       surface and safety gates pass
-- [ ] Source-origin diagnostics cover compile-time and runtime control
+- [x] Source-origin diagnostics cover compile-time and runtime control
       failures
-- [ ] Public source-to-BEAM APIs return only OTP-accepted artifacts
+- [x] Public source-to-BEAM APIs return only OTP-accepted artifacts
 - [ ] Dedicated conformance evidence covers positive and negative resumption
       semantics
 - [ ] Modified modules meet the repository coverage target
-- [ ] `make check-specs`, `make conformance`, and the complete active suite
+- [x] `make check-specs`, `make conformance`, and the complete active suite
       pass
-- [ ] Current-status and component specs distinguish implemented, partial,
+- [x] Current-status and component specs distinguish implemented, partial,
       and deferred resumption behavior accurately

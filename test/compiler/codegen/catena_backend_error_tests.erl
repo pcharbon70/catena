@@ -15,6 +15,7 @@ stable_categories_test() ->
             missing_transform_implementation,
             invalid_declaration_disposition,
             runtime_dependency_unavailable,
+            artifact_validation_failed,
             core_validation_failed,
             beam_compilation_failed
         ],

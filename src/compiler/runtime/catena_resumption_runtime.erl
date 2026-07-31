@@ -23,6 +23,7 @@
     control_failure/3,
     normalize_exception/3,
     version/0,
+    features/0,
     reset_for_test/0
 ]).
 
@@ -99,6 +100,17 @@
 -spec version() -> pos_integer().
 version() ->
     ?VERSION.
+
+%% @doc Handler-frame capabilities implemented by this runtime ABI.
+-spec features() -> [atom()].
+features() ->
+    [
+        deep_handlers,
+        explicit_contexts,
+        one_shot_resumptions,
+        retained_resumptions,
+        same_process_resume
+    ].
 
 %% @doc Register a compiler-reified continuation.
 %%

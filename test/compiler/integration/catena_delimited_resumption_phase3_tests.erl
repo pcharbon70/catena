@@ -172,7 +172,7 @@ automatic_value_handler_remains_executable_test() ->
         ?assertEqual(42, 'PhaseThreeAutomaticCompatibility':run(0))
     end).
 
-typed_unit_retains_origins_and_backend_fails_closed_test() ->
+typed_unit_retains_origins_and_reaches_control_backend_test() ->
     Source = explicit_state_source("resume(k, value)"),
     {ok, Unit} = catena_compile:compile_string_to_unit(Source),
     ?assertMatch(
@@ -204,13 +204,7 @@ typed_unit_retains_origins_and_backend_fails_closed_test() ->
         end,
         [Binder, Resume]
     ),
-    ?assertMatch(
-        {error, {missing_resumption_lowering, #{
-            stage := backend_compatibility,
-            mode := explicit_control
-        }}},
-        catena_compile:compile_string_to_core(Source)
-    ).
+    ?assertMatch({ok, _}, catena_compile:compile_string_to_core(Source)).
 
 negative_type_and_effect_diagnostics_are_stable_test() ->
     InvalidTarget =
