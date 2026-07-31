@@ -19,8 +19,12 @@
     expire_delimiter/1,
     is_resumption/1,
     status/1,
+    describe/1,
     lease_status/1,
     branch_stats/1,
+    configure_trace/1,
+    trace/0,
+    clear_trace/0,
     default_budget/0,
     control_failure/3,
     normalize_exception/3,
@@ -108,7 +112,9 @@
 }.
 
 -type registry_state() :: #{
-    entries := #{reference() => entry()}
+    entries := #{reference() => entry()},
+    traces := #{pid() => map()},
+    next_resumption_id := pos_integer()
 }.
 
 %%====================================================================
@@ -199,7 +205,7 @@ capture(Continuation, Spec) ->
                     )
                 }
             },
-            ok = gen_server:call(?SERVER, {capture, Ref, Entry}),
+            {ok, _PublicId} = gen_server:call(?SERVER, {capture, Ref, Entry}),
             {ok, {catena_resumption, ?VERSION, Ref}};
         {error, _} = Error ->
             Error
@@ -281,6 +287,20 @@ status(Handle) ->
             Error
     end.
 
+%% @doc Describe a registered resumption using public, non-authoritative data.
+%%
+%% No continuation, explicit context, PID, reference, private handle, or
+%% forgeable runtime authority is returned by this API.
+-spec describe(term()) -> {ok, map()} | {error, control_failure()}.
+describe(Handle) ->
+    case decode_handle(Handle) of
+        {ok, Ref} ->
+            ok = ensure_started(),
+            gen_server:call(?SERVER, {describe, Ref, self()});
+        {error, _} = Error ->
+            Error
+    end.
+
 %% @doc Return only whether the private retention lease is active.
 -spec lease_status(term()) ->
     {ok, active | released} | {error, control_failure()}.
@@ -295,6 +315,38 @@ branch_stats(Handle) ->
     with_registered_handle(Handle, fun(Ref) ->
         gen_server:call(?SERVER, {branch_stats, Ref})
     end).
+
+%% @doc Configure process-owned, bounded control tracing.
+%%
+%% `false` disables tracing. A map enables tracing and accepts `max_events`
+%% and an optional `events` allow-list. Trace state belongs to the calling
+%% process and never grants resumption authority.
+-spec configure_trace(false | map()) -> ok | {error, term()}.
+configure_trace(false) ->
+    ok = ensure_started(),
+    gen_server:call(?SERVER, {configure_trace, self(), false});
+configure_trace(Options) when is_map(Options) ->
+    case normalize_trace_options(Options) of
+        {ok, Config} ->
+            ok = ensure_started(),
+            gen_server:call(?SERVER, {configure_trace, self(), Config});
+        {error, _} = Error ->
+            Error
+    end;
+configure_trace(Options) ->
+    {error, {invalid_trace_options, Options}}.
+
+%% @doc Return this process's redacted trace in evaluation order.
+-spec trace() -> {ok, [map()]}.
+trace() ->
+    ok = ensure_started(),
+    gen_server:call(?SERVER, {trace, self()}).
+
+%% @doc Clear this process's retained trace without changing its configuration.
+-spec clear_trace() -> ok.
+clear_trace() ->
+    ok = ensure_started(),
+    gen_server:call(?SERVER, {clear_trace, self()}).
 
 %% @doc Construct a stable runtime control failure.
 -spec control_failure(atom(), term(), map()) -> control_failure().
@@ -397,7 +449,7 @@ invoke(Ref, Token, Value, Invocation = #{
     ),
     CompletionReason = case Outcome of
         {ok, _} -> normal;
-        {error, _} -> exceptional
+        {error, Failure} -> {exceptional, Failure}
     end,
     case gen_server:call(?SERVER, {complete, Ref, Token, CompletionReason}) of
         ok ->
@@ -481,12 +533,24 @@ process_reductions() ->
 
 -spec init(list()) -> {ok, registry_state()}.
 init([]) ->
-    {ok, #{entries => #{}}}.
+    {ok, #{entries => #{}, traces => #{}, next_resumption_id => 1}}.
 
 handle_call({capture, Ref, Entry}, _From, State) ->
     Entries0 = maps:get(entries, State),
-    Entry1 = install_lifetime_monitors(Entry),
-    {reply, ok, State#{entries := Entries0#{Ref => Entry1}}};
+    PublicId = maps:get(next_resumption_id, State),
+    Entry1 = install_lifetime_monitors(Entry#{public_id => PublicId}),
+    State1 = State#{
+        entries := Entries0#{Ref => Entry1},
+        next_resumption_id := PublicId + 1
+    },
+    State2 = append_entry_event(Entry1, capture, #{}, State1),
+    State3 = append_entry_event(
+        Entry1,
+        handler_selection,
+        handler_selection_details(Entry1),
+        State2
+    ),
+    {reply, {ok, PublicId}, State3};
 handle_call({authorize, Ref, Caller}, _From, State) ->
     Entries0 = maps:get(entries, State),
     case maps:find(Ref, Entries0) of
@@ -497,7 +561,20 @@ handle_call({authorize, Ref, Caller}, _From, State) ->
                 {ok, Token, Entry1} ->
                     Invocation = invocation_data(Entry1),
                     Entries1 = Entries0#{Ref := Entry1},
-                    {reply, {ok, Token, Invocation}, State#{entries := Entries1}};
+                    State1 = State#{entries := Entries1},
+                    State2 = append_entry_event(Entry1, resume, #{}, State1),
+                    State3 = case maps:get(kind, Entry1) of
+                        multi_shot ->
+                            append_entry_event(Entry1, branch, #{
+                                phase => start,
+                                branch => public_branch(
+                                    maps:get(current_branch, Entry1)
+                                )
+                            }, State2);
+                        one_shot ->
+                            State2
+                    end,
+                    {reply, {ok, Token, Invocation}, State3};
                 {error, #{category := Category}} = Error
                         when
                             Category =:= expired_resumption_owner;
@@ -518,20 +595,36 @@ handle_call({complete, Ref, Token, Reason}, _From, State) ->
             run_token := Token,
             kind := one_shot
         } = Entry} ->
+            PublicReason = public_completion_reason(Reason),
             Entry1 = release_entry(
                 Entry#{
                     state := consumed,
-                    consumed_reason => Reason
+                    consumed_reason => PublicReason
                 }
             ),
-            {reply, ok, State#{entries := Entries0#{Ref := Entry1}}};
+            State1 = State#{entries := Entries0#{Ref := Entry1}},
+            State2 = append_timeout_event(Entry1, Reason, State1),
+            State3 = append_entry_event(Entry1, consumption, #{
+                reason => PublicReason
+            }, State2),
+            State4 = append_entry_event(Entry1, cleanup, #{
+                reason => PublicReason
+            }, State3),
+            {reply, ok, State4};
         {ok, #{
             state := running,
             run_token := Token,
             kind := multi_shot
         } = Entry} ->
-            Entry1 = complete_multishot_branch(Entry, Reason),
-            {reply, ok, State#{entries := Entries0#{Ref := Entry1}}};
+            PublicReason = public_completion_reason(Reason),
+            Entry1 = complete_multishot_branch(Entry, PublicReason),
+            State1 = State#{entries := Entries0#{Ref := Entry1}},
+            State2 = append_timeout_event(Entry1, Reason, State1),
+            State3 = append_entry_event(Entry1, branch, #{
+                phase => complete,
+                branch => public_branch(maps:get(last_branch, Entry1))
+            }, State2),
+            {reply, ok, State3};
         {ok, Entry} ->
             Error = failure(
                 invalid_resumption,
@@ -556,7 +649,17 @@ handle_call({discard, Ref}, _From, State) ->
                     consumed_reason => abandoned
                 }
             ),
-            {reply, ok, State#{entries := Entries0#{Ref := Entry1}}};
+            State1 = State#{entries := Entries0#{Ref := Entry1}},
+            State2 = append_entry_event(Entry1, abort, #{
+                reason => abandoned
+            }, State1),
+            State3 = append_entry_event(Entry1, consumption, #{
+                reason => abandoned
+            }, State2),
+            State4 = append_entry_event(Entry1, cleanup, #{
+                reason => abandoned
+            }, State3),
+            {reply, ok, State4};
         {ok, #{state := running} = Entry} ->
             Error = failure(handler_failure, maps:get(origin, Entry), #{
                 reason => cleanup_while_running
@@ -577,7 +680,14 @@ handle_call({expire_delimiter, Ref}, _From, State) ->
                     expired => delimiter
                 }
             ),
-            {reply, ok, State#{entries := Entries0#{Ref := Entry1}}};
+            State1 = State#{entries := Entries0#{Ref := Entry1}},
+            State2 = append_entry_event(Entry1, abort, #{
+                reason => expired_delimiter
+            }, State1),
+            State3 = append_entry_event(Entry1, cleanup, #{
+                reason => expired_delimiter
+            }, State2),
+            {reply, ok, State3};
         error ->
             {reply, invalid_registered_handle(), State}
     end;
@@ -585,6 +695,13 @@ handle_call({status, Ref}, _From, State) ->
     case maps:find(Ref, maps:get(entries, State)) of
         {ok, Entry} ->
             {reply, {ok, maps:get(state, Entry)}, State};
+        error ->
+            {reply, invalid_registered_handle(), State}
+    end;
+handle_call({describe, Ref, Caller}, _From, State) ->
+    case maps:find(Ref, maps:get(entries, State)) of
+        {ok, Entry} ->
+            {reply, {ok, public_description(Entry, Caller)}, State};
         error ->
             {reply, invalid_registered_handle(), State}
     end;
@@ -603,9 +720,39 @@ handle_call({branch_stats, Ref}, _From, State) ->
         error ->
             {reply, invalid_registered_handle(), State}
     end;
+handle_call({configure_trace, Owner, false}, _From, State) ->
+    Traces0 = maps:get(traces, State),
+    case maps:find(Owner, Traces0) of
+        {ok, Trace0} ->
+            Trace1 = Trace0#{enabled := false},
+            {reply, ok, State#{traces := Traces0#{Owner := Trace1}}};
+        error ->
+            {reply, ok, State}
+    end;
+handle_call({configure_trace, Owner, Config}, _From, State) ->
+    Traces0 = maps:get(traces, State),
+    Previous = maps:get(Owner, Traces0, #{}),
+    Trace = Config#{
+        next_sequence => maps:get(next_sequence, Previous, 1),
+        events_rev => maps:get(events_rev, Previous, []),
+        dropped => maps:get(dropped, Previous, 0)
+    },
+    {reply, ok, State#{traces := Traces0#{Owner => Trace}}};
+handle_call({trace, Owner}, _From, State) ->
+    Trace = maps:get(Owner, maps:get(traces, State), #{}),
+    {reply, {ok, lists:reverse(maps:get(events_rev, Trace, []))}, State};
+handle_call({clear_trace, Owner}, _From, State) ->
+    Traces0 = maps:get(traces, State),
+    case maps:find(Owner, Traces0) of
+        {ok, Trace0} ->
+            Trace1 = Trace0#{events_rev := [], dropped := 0},
+            {reply, ok, State#{traces := Traces0#{Owner := Trace1}}};
+        error ->
+            {reply, ok, State}
+    end;
 handle_call(reset, _From, State) ->
     release_all_entries(maps:values(maps:get(entries, State))),
-    {reply, ok, #{entries => #{}}};
+    {reply, ok, #{entries => #{}, traces => #{}, next_resumption_id => 1}};
 handle_call(_Request, _From, State) ->
     {reply, {error, unsupported_request}, State}.
 
@@ -781,6 +928,207 @@ public_branch_stats(Entry) ->
         current_branch => maps:get(current_branch, Entry, none),
         last_branch => maps:get(last_branch, Entry, none)
     }.
+
+%%====================================================================
+%% Public diagnostics and bounded tracing
+%%====================================================================
+
+public_description(Entry, Caller) ->
+    Lease = maps:get(lease, Entry, #{status => released}),
+    #{
+        id => maps:get(public_id, Entry),
+        type => public_term(maps:get(type_identity, Entry, dynamic)),
+        kind => maps:get(kind, Entry),
+        owner_relationship => case maps:get(owner, Entry) of
+            Caller -> current_process;
+            _Other -> foreign_process
+        end,
+        state => maps:get(state, Entry),
+        depth => maps:get(depth, Entry),
+        capture_location => public_origin(maps:get(origin, Entry)),
+        lifetime => maps:get(expired, Entry, maps:get(status, Lease))
+    }.
+
+normalize_trace_options(Options) ->
+    Enabled = maps:get(enabled, Options, true),
+    MaxEvents = maps:get(max_events, Options, 256),
+    Events = maps:get(events, Options, all),
+    case {
+        is_boolean(Enabled),
+        is_integer(MaxEvents) andalso MaxEvents > 0,
+        valid_trace_filter(Events)
+    } of
+        {true, true, true} ->
+            {ok, #{
+                enabled => Enabled,
+                max_events => MaxEvents,
+                events => Events
+            }};
+        _ ->
+            {error, {invalid_trace_options, public_term(Options)}}
+    end.
+
+valid_trace_filter(all) ->
+    true;
+valid_trace_filter(Events) when is_list(Events) ->
+    Allowed = trace_event_kinds(),
+    lists:all(fun(Event) -> lists:member(Event, Allowed) end, Events);
+valid_trace_filter(_Events) ->
+    false.
+
+trace_event_kinds() ->
+    [
+        capture,
+        handler_selection,
+        resume,
+        abort,
+        branch,
+        consumption,
+        timeout,
+        cleanup
+    ].
+
+append_entry_event(Entry, Kind, Details, State) ->
+    Owner = maps:get(owner, Entry),
+    Traces0 = maps:get(traces, State),
+    case maps:find(Owner, Traces0) of
+        {ok, #{enabled := true} = Trace0} ->
+            case trace_kind_enabled(Kind, Trace0) of
+                true ->
+                    Sequence = maps:get(next_sequence, Trace0),
+                    Event = #{
+                        sequence => Sequence,
+                        event => Kind,
+                        resumption_id => maps:get(public_id, Entry),
+                        kind => maps:get(kind, Entry),
+                        depth => maps:get(depth, Entry),
+                        source => public_origin(maps:get(origin, Entry)),
+                        details => public_term(Details)
+                    },
+                    Limit = maps:get(max_events, Trace0),
+                    Events0 = maps:get(events_rev, Trace0),
+                    Events1 = lists:sublist([Event | Events0], Limit),
+                    Dropped = maps:get(dropped, Trace0) +
+                        case length(Events0) >= Limit of
+                            true -> 1;
+                            false -> 0
+                        end,
+                    Trace1 = Trace0#{
+                        next_sequence := Sequence + 1,
+                        events_rev := Events1,
+                        dropped := Dropped
+                    },
+                    State#{traces := Traces0#{Owner := Trace1}};
+                false ->
+                    State
+            end;
+        _ ->
+            State
+    end.
+
+trace_kind_enabled(Kind, Trace) ->
+    case maps:get(events, Trace) of
+        all -> true;
+        Events -> lists:member(Kind, Events)
+    end.
+
+handler_selection_details(Entry) ->
+    Metadata = maps:get(metadata, Entry, #{}),
+    maps:with([effect, operation], Metadata).
+
+append_timeout_event(Entry, Reason, State) ->
+    case timeout_details(Reason) of
+        none ->
+            State;
+        Details ->
+            append_entry_event(Entry, timeout, Details, State)
+    end.
+
+timeout_details({exceptional, #{details := #{reason := timeout} = Details}}) ->
+    maps:with([reason, effect, operation], Details);
+timeout_details({exceptional, #{details := #{resource := timeout} = Details}}) ->
+    maps:with([resource, limit, observed], Details);
+timeout_details(_Reason) ->
+    none.
+
+public_completion_reason(normal) ->
+    normal;
+public_completion_reason({exceptional, _Failure}) ->
+    exceptional;
+public_completion_reason(exceptional) ->
+    exceptional.
+
+public_branch(none) ->
+    none;
+public_branch(Branch) when is_map(Branch) ->
+    maps:with([id, depth, status], Branch).
+
+public_origin(Origin) when is_map(Origin) ->
+    maps:from_list([
+        {Key, public_origin_value(Key, Value)}
+        || {Key, Value} <- maps:to_list(Origin),
+           public_origin_key(Key)
+    ]);
+public_origin({location, Line, Column})
+        when is_integer(Line), is_integer(Column) ->
+    #{line => Line, column => Column};
+public_origin({Line, Column}) when is_integer(Line), is_integer(Column) ->
+    #{line => Line, column => Column};
+public_origin(Origin) when is_atom(Origin); is_binary(Origin); is_list(Origin) ->
+    public_term(Origin);
+public_origin(_Origin) ->
+    unknown.
+
+public_origin_key(Key) ->
+    lists:member(Key, [
+        source,
+        location,
+        file,
+        module,
+        transform,
+        construct,
+        perform,
+        handler_case,
+        delimiter,
+        effect,
+        operation
+    ]).
+
+public_origin_value(Key, Value)
+        when Key =:= source; Key =:= location; Key =:= perform;
+             Key =:= handler_case; Key =:= delimiter ->
+    public_origin(Value);
+public_origin_value(_Key, Value) ->
+    public_term(Value).
+
+public_term({catena_resumption, _Version, _Authority}) ->
+    resumption;
+public_term(Term) when
+    is_atom(Term);
+    is_binary(Term);
+    is_integer(Term);
+    is_float(Term)
+->
+    Term;
+public_term(Term) when is_list(Term) ->
+    [public_term(Item) || Item <- Term];
+public_term(Term) when is_tuple(Term) ->
+    list_to_tuple([public_term(Item) || Item <- tuple_to_list(Term)]);
+public_term(Term) when is_map(Term) ->
+    maps:from_list([
+        {public_term(Key), public_term(Value)}
+        || {Key, Value} <- maps:to_list(Term)
+    ]);
+public_term(Term) when is_function(Term) ->
+    closure;
+public_term(Term) when is_pid(Term) ->
+    process;
+public_term(Term) when is_reference(Term) ->
+    opaque_reference;
+public_term(Term) when is_port(Term) ->
+    port;
+public_term(_Term) ->
+    opaque.
 
 -spec restored_context(entry()) -> map().
 restored_context(#{depth := deep} = Entry) ->

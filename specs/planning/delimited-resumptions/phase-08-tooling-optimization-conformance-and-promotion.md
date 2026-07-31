@@ -18,14 +18,14 @@ but final status must remain mode-specific.
 interactive and diagnostic workflows without exposing private runtime
 representation.
 
-- [ ] **Section 8.1 Complete**
+- [x] **Section 8.1 Complete**
 
 ### Task 8.1.1: Integrate Resumptions With The REPL
 
 **Description:** Compile and execute handler definitions, resumption values,
 and resume expressions through the canonical session pipeline.
 
-- [ ] **Task 8.1.1 Complete**
+- [x] **Task 8.1.1 Complete**
 
 #### Subtask 8.1.1.1: Support Interactive Definition And Evaluation
 
@@ -33,7 +33,7 @@ and resume expressions through the canonical session pipeline.
 `handle`/`with` input, session module recompilation, runtime ownership, and
 explicit failure display.
 
-- [ ] **Subtask 8.1.1.1 Complete**
+- [x] **Subtask 8.1.1.1 Complete**
 
 #### Subtask 8.1.1.2: Add Safe Resumption Introspection
 
@@ -41,14 +41,14 @@ explicit failure display.
 and source capture location without printing closures, contexts, private
 handles, or forgeable terms.
 
-- [ ] **Subtask 8.1.1.2 Complete**
+- [x] **Subtask 8.1.1.2 Complete**
 
 ### Task 8.1.2: Reconstruct Source Control Traces
 
 **Description:** Turn synthetic CPS frames and runtime events into readable
 Catena diagnostics, stack views, and optional traces.
 
-- [ ] **Task 8.1.2 Complete**
+- [x] **Task 8.1.2 Complete**
 
 #### Subtask 8.1.2.1: Map CPS Frames To Source
 
@@ -56,7 +56,7 @@ Catena diagnostics, stack views, and optional traces.
 temporaries into source transform, perform, handler, binder, resume, and
 delimiter frames.
 
-- [ ] **Subtask 8.1.2.1 Complete**
+- [x] **Subtask 8.1.2.1 Complete**
 
 #### Subtask 8.1.2.2: Add Structured Control Tracing
 
@@ -64,7 +64,7 @@ delimiter frames.
 consumption, timeout, and cleanup with redaction, stable identifiers, and
 configurable overhead.
 
-- [ ] **Subtask 8.1.2.2 Complete**
+- [x] **Subtask 8.1.2.2 Complete**
 
 ## Section 8.2: Performance Measurement And Semantics-Preserving Optimization
 
