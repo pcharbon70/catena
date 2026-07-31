@@ -29,7 +29,7 @@ parse_file(Filename) ->
                     % Split content into lines and cache for source context
                     % This prevents re-reading the file for each error
                     SourceLines = prepare_source_lines(Content),
-                    case catena_lexer:tokenize(Content) of
+                    case catena_generated_frontend:tokenize(Content) of
                         {ok, Tokens} ->
                             parse_tokens_with_file(Tokens, Filename, SourceLines);
                         {error, {Line, _Module, ErrorDesc}} ->
@@ -95,7 +95,7 @@ parse_tokens_with_file(Tokens, File, SourceLines) ->
 -spec parse_with_recovery([term()], string() | undefined, [string()] | undefined, [#error{}]) ->
     {ok, term(), [#error{}]} | {error, [#error{}]}.
 parse_with_recovery(Tokens, File, SourceLines, AccErrors) ->
-    case catena_parser:parse(Tokens) of
+    case catena_generated_frontend:parse(Tokens) of
         {ok, AST} ->
             % Check for error_decl nodes in the AST
             ASTErrors = extract_errors_from_ast(AST, File, SourceLines),

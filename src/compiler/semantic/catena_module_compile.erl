@@ -128,9 +128,9 @@ source_characters(Source) when is_list(Source) ->
     Source.
 
 analyze_source(Source) ->
-    case catena_lexer:string(Source) of
+    case catena_generated_frontend:scan(Source) of
         {ok, Tokens, _EndLocation} ->
-            case catena_parser:parse(Tokens) of
+            case catena_generated_frontend:parse(Tokens) of
                 {ok, AST} ->
                     catena_semantic:analyze(AST);
                 {error, _} = Error ->
@@ -385,9 +385,9 @@ parse_single_file(File, _Options) ->
     case file:read_file(File) of
         {ok, Binary} ->
             Source = binary_to_list(Binary),
-            case catena_lexer:string(Source) of
+            case catena_generated_frontend:scan(Source) of
                 {ok, Tokens, _} ->
-                    case catena_parser:parse(Tokens) of
+                    case catena_generated_frontend:parse(Tokens) of
                         {ok, AST} ->
                             {ok, AST};
                         {error, ParseError} ->

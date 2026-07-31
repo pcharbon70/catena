@@ -19,6 +19,7 @@ It exists because some planning checklists are stale relative to later implement
 | Language revamp migration | Completed and now historical. |
 | Flow | The pure Flow core is materially implemented in stdlib/compiler/test surfaces; later phases remain planned. |
 | Backend hardening | Complete through Phase 7: the fail-closed backend includes validated compilation units, exhaustive lowering/disposition, resolved calls/imports/traits/effects, public versioned BEAM artifacts, source-oriented diagnostics, and enforced executable conformance. |
+| Static analysis | Dialyzer remediation Phase 1 is complete: the repository has a deterministic maintained inventory, correct EUnit PLT coverage, and an explicit maintained boundary over excluded generated frontend modules. The current Phase 2 input is 960 warnings across 138 source modules. |
 | Standalone category-theory library plan | Historical only; integrated into the PoC planning lineage rather than active as a separate track. |
 
 ## Proof-Of-Concept Track

@@ -201,7 +201,7 @@ is_complete(Input) ->
 %% @doc Parse input into tokens.
 -spec parse_input(string()) -> {ok, [term()]} | {error, term()}.
 parse_input(Input) ->
-    catena_lexer:string(Input ++ "\n").
+    catena_generated_frontend:scan(Input ++ "\n").
 
 count_char(String, Char) ->
     length([C || C <- String, C =:= Char]).
@@ -394,9 +394,9 @@ eval_expression(Input, State) ->
 compile_input(Input, State) ->
     %% Try to parse as a module (handles transform declarations)
     Source = Input ++ "\n",
-    case catena_lexer:string(Source) of
+    case catena_generated_frontend:scan(Source) of
         {ok, Tokens, _} ->
-            case catena_parser:parse(Tokens) of
+            case catena_generated_frontend:parse(Tokens) of
                 {ok, {module, _, _, _, Decls, _}} ->
                     compile_decls(Decls, State);
                 {error, _ParseError} ->
@@ -431,9 +431,9 @@ compile_decls(_Decls, _State) ->
 compile_as_expr(Input, State) ->
     %% Wrap input in a dummy transform to parse as expression
     Wrapped = "transform replexpr = " ++ Input ++ "\n",
-    case catena_lexer:string(Wrapped) of
+    case catena_generated_frontend:scan(Wrapped) of
         {ok, Tokens, _} ->
-            case catena_parser:parse(Tokens) of
+            case catena_generated_frontend:parse(Tokens) of
                 {ok, {module, _, _, _, [{transform_decl, _, _, [{transform_clause, [], _, Body, _}], _}], _}} ->
                     case compile_expr_ast(Body, State) of
                         {ok, AST, Type} ->
