@@ -79,14 +79,14 @@ state. The focused runtime suite passes 9 tests.
 **Description:** Extend explicit effect contexts to distinguish local
 resumable source handlers from process-backed builtin or external providers.
 
-- [ ] **Section 5.2 Complete**
+- [x] **Section 5.2 Complete**
 
 ### Task 5.2.1: Add Resumable Handler Frames To Contexts
 
 **Description:** Represent source handler cases and delimiters as explicit
 same-process context entries with deterministic nested lookup.
 
-- [ ] **Task 5.2.1 Complete**
+- [x] **Task 5.2.1 Complete**
 
 #### Subtask 5.2.1.1: Define Context Entry Kinds
 
@@ -94,7 +94,7 @@ same-process context entries with deterministic nested lookup.
 frames, and process-backed providers without changing effect identity or
 parent-context lookup semantics.
 
-- [ ] **Subtask 5.2.1.1 Complete**
+- [x] **Subtask 5.2.1.1 Complete**
 
 #### Subtask 5.2.1.2: Preserve Nested Lookup And Shadowing
 
@@ -102,14 +102,14 @@ parent-context lookup semantics.
 fallback, validate operation identity and arity, and preserve deterministic
 shadowing.
 
-- [ ] **Subtask 5.2.1.2 Complete**
+- [x] **Subtask 5.2.1.2 Complete**
 
 ### Task 5.2.2: Execute Deep Resumptions On The Owner Process
 
 **Description:** Invoke the compiler-provided continuation in the capturing
 process with the handler frame reinstalled around resumed execution.
 
-- [ ] **Task 5.2.2 Complete**
+- [x] **Task 5.2.2 Complete**
 
 #### Subtask 5.2.2.1: Restore Deep Context
 
@@ -117,7 +117,7 @@ process with the handler frame reinstalled around resumed execution.
 result, execute to the matching delimiter, and return the delimiter result to
 the handler body.
 
-- [ ] **Subtask 5.2.2.1 Complete**
+- [x] **Subtask 5.2.2.1 Complete**
 
 #### Subtask 5.2.2.2: Preserve BEAM Process Semantics
 
@@ -125,7 +125,21 @@ the handler body.
 ownership, and process-local behavior remain those of the capturing process,
 even when a provider process computes an operation result.
 
-- [ ] **Subtask 5.2.2.2 Complete**
+- [x] **Subtask 5.2.2.2 Complete**
+
+**Implementation evidence:** `catena_effect_runtime` now carries explicit
+`local_resumable`, `local_value_provider`, and `process_provider` entries at
+each context level. Operation lookup is innermost-first and validates effect,
+operation, and arity while retaining parent fallback and the existing
+process-provider ownership of request/response errors. `perform_cps/5`
+captures real compiler-shaped closures for local cases, auto-resumes value
+cases, and passes the retained deep context back into the continuation.
+Control handlers may return or invoke the opaque resumption, and the
+delimiter result becomes the value of `resume`. Builtin, local-value, and
+process-backed providers compute only operation results; continuation code
+then runs on the capturing process. The focused context/runtime suites pass
+57 tests, including nested shadowing, deep delayed resume, builtin identity,
+and provider-process separation.
 
 ## Section 5.3: Retention, Cleanup, And Runtime Diagnostics
 
