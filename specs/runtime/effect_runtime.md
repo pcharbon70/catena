@@ -85,6 +85,9 @@ Section 7.3 advances the effect and resumption runtimes to ABI 3 with repeated
 branch authorization, capture-time state admissibility checks, and positive
 budgets for invocation count, retained words, reductions, cooperative
 timeout, and nested branch depth.
+Section 7.4 proves mixed-mode and fail-closed source-to-loaded-BEAM behavior;
+the compiled handler-mode inventory must exactly match the artifact runtime
+contract before loading.
 The current handler-process lifecycle acceptance criteria remain
 authoritative for the promoted request/response path.
 

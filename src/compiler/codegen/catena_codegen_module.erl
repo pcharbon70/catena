@@ -429,9 +429,17 @@ generate_attributes(Opts) ->
         }]
     end,
 
+    HandlerModesAttr = case maps:find(handler_modes, Opts) of
+        error -> [];
+        {ok, HandlerModes} -> [{
+            cerl:c_atom(catena_handler_modes),
+            cerl:abstract(HandlerModes)
+        }]
+    end,
+
     BaseAttrs ++ VersionAttr ++ AuthorAttr ++ RuntimeDependencyAttr ++
         ArtifactDependencyAttr ++ ControlAbiAttr ++ ResumptionRuntimeAttr ++
-        HandlerFeaturesAttr.
+        HandlerFeaturesAttr ++ HandlerModesAttr.
 
 %%====================================================================
 %% Function Compilation (1.3.4.2)

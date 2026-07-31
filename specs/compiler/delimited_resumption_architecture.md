@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted architecture with Phase 6 executable Core/BEAM integration. Phases 2
-through 6 implement the lexer, parser,
+Accepted architecture with Phase 7 executable mixed-mode Core/BEAM
+integration. Phases 2 through 7 implement the lexer, parser,
 AST, pretty-printer, semantic normalization, structural diagnostics,
 first-class resumption kinds and types, handler/resume inference,
 residual-effect checking, control-mode analysis, selective-CPS control IR,
@@ -11,20 +11,20 @@ calling conventions, fail-closed graph validation, opaque process-affine
 runtime authority, deep same-process handler frames, one-shot consumption,
 retention leases, lifecycle monitoring, structured runtime failures,
 selective-CPS Core lowering, versioned artifacts, and loaded-BEAM execution.
-Phase 7 Sections 7.1 through 7.3 accept and implement explicit
+Phase 7 accepts and implements explicit
 `handle shallow` and `handle multi_shot` mode modifiers through parsing,
 normalization, typing, control inventories, versioned interfaces, and the
 production runtime. Shallow handlers execute through depth-aware context
 restoration. Admissible multi-shot resumptions execute repeated isolated,
-bounded branches from compiler-reified continuations. Final phase integration
-remains owned by Phase 7 Section 7.4; dedicated promotion and tooling work
-remains in Phase 8.
+bounded branches from compiler-reified continuations. Mixed-mode and
+fail-closed integration evidence is complete; dedicated promotion and tooling
+work remains in Phase 8.
 
 This document makes
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
 concrete enough to guide parser, type-system, lowering, runtime, diagnostics,
-and conformance work while keeping the remaining Phase 7 and Phase 8 work
-explicitly incomplete.
+and conformance work while keeping the remaining Phase 8 work explicitly
+incomplete.
 
 The normative deep one-shot reduction rules are defined in
 [Delimited Resumption Operational Semantics](delimited_resumption_operational_semantics.md).
@@ -524,9 +524,11 @@ source opt-in is accepted and implemented.
 
 Phase 6 supplies this executable evidence for the deep one-shot boundary,
 Phase 7 Section 7.2 supplies the depth-distinguishing runtime/Core/artifact
-evidence for shallow one-shot handling, and Section 7.3 supplies bounded
-multi-shot runtime and source-to-loaded-BEAM evidence. Section 7.4 still owns
-the complete mixed-mode phase integration gate, and Phase 8 owns dedicated
+evidence for shallow one-shot handling, Section 7.3 supplies bounded
+multi-shot runtime and source-to-loaded-BEAM evidence, and Section 7.4 supplies
+the complete mixed-mode and negative phase gate. Generated resumable BEAM
+carries the exact handler-mode inventory; artifact validation compares that
+inventory with the runtime contract before loading. Phase 8 owns dedicated
 promotion/tooling work.
 
 ## Related Material

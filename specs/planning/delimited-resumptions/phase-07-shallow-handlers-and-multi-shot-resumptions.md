@@ -6,7 +6,7 @@ their source spellings, types, context restoration, branch-state policy,
 resource limits, and executable semantics without weakening the one-shot
 default or pretending to clone arbitrary external BEAM resources.
 
-**Status:** In progress; Sections 7.1 through 7.3 complete.
+**Status:** Complete.
 
 **Dependencies:** Phase 6 complete and deep one-shot behavior promoted at its
 phase boundary.
@@ -255,14 +255,14 @@ passes 5,272 tests with zero failures or skips.
 Catena source through loaded BEAM, including mixed modes, rejected residual
 effects, and nondeterministic control examples.
 
-- [ ] **Section 7.4 Complete**
+- [x] **Section 7.4 Complete**
 
 ### Task 7.4.1: Execute Shallow And Multi-Shot Programs
 
 **Description:** Compile, load, and run representative programs whose results
 distinguish depth and continuation-kind semantics.
 
-- [ ] **Task 7.4.1 Complete**
+- [x] **Task 7.4.1 Complete**
 
 #### Subtask 7.4.1.1: Test Handler Depth
 
@@ -270,7 +270,7 @@ distinguish depth and continuation-kind semantics.
 deep/shallow orderings, shadowing, parent fallback, abort, exceptions, retained
 resumptions, and process identity.
 
-- [ ] **Subtask 7.4.1.1 Complete**
+- [x] **Subtask 7.4.1.1 Complete**
 
 #### Subtask 7.4.1.2: Test Multi-Shot Branching
 
@@ -278,14 +278,14 @@ resumptions, and process identity.
 backtracking, nondeterministic solution enumeration, nested branching, branch
 failure, limits, and deterministic results.
 
-- [ ] **Subtask 7.4.1.2 Complete**
+- [x] **Subtask 7.4.1.2 Complete**
 
 ### Task 7.4.2: Execute Safety And Phase Gates
 
 **Description:** Prove that inadmissible effects and unselected modes fail
 closed and that deep one-shot remains the unchanged default.
 
-- [ ] **Task 7.4.2 Complete**
+- [x] **Task 7.4.2 Complete**
 
 #### Subtask 7.4.2.1: Test Negative Mode And Resource Paths
 
@@ -293,7 +293,7 @@ closed and that deep one-shot remains the unchanged default.
 errors, inadmissible external effects, open-row uncertainty, cross-process
 resume, budget exhaustion, and artifact-version mismatch.
 
-- [ ] **Subtask 7.4.2.1 Complete**
+- [x] **Subtask 7.4.2.1 Complete**
 
 #### Subtask 7.4.2.2: Run Repository Gates
 
@@ -301,4 +301,30 @@ resume, budget exhaustion, and artifact-version mismatch.
 regressions, `make check-specs`, `make conformance`, and the complete active
 EUnit suite and publish the exact phase-ending evidence.
 
-- [ ] **Subtask 7.4.2.2 Complete**
+- [x] **Subtask 7.4.2.2 Complete**
+
+### Section 7.4 Evidence
+
+The eight `catena_delimited_resumption_phase7_integration_tests` exercise the
+complete Phase 7 boundary. Loaded BEAM programs distinguish deep rehandling
+from shallow propagation in both nesting orders, prove shadowing and parent
+fallback, abort without resume, retained one-shot behavior, exception
+consumption, and owner-process identity. Multi-shot programs execute four
+different supplied values and a two-choice nondeterministic search whose
+nested branch tree deterministically enumerates `[0, 1, 10, 11]` on repeated
+runs.
+
+Negative evidence rejects malformed mode syntax, a shallow residual effect
+under a declared-pure signature, non-empty and open multi-shot residual rows,
+unselected default one-shot reuse, foreign-process invocation, exhausted
+budgets, stale runtime versions, and artifact handler-kind disagreement.
+Generated resumable BEAM now carries `catena_handler_modes`; artifact
+validation compares that compiled inventory with the public runtime contract
+before loading, so a supported but incorrect replacement mode also fails
+closed.
+
+The phase gate passes all eight new integration tests, all 418 manifest-driven
+conformance tests, and all 5,280 tests in the complete active EUnit suite with
+zero failures or skips. Specs governance passes with 42 requirements in five
+families, 11 scenarios, 20 evidence rows across 20 modules, 73 acceptance
+criteria across 11 component specs, seven ADRs, and 301 checked local links.

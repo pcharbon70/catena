@@ -416,7 +416,17 @@ validate_envelope(#{
                         Contract,
                         RuntimeDependencies
                     ) of
-                        ok -> validate_beam_identity(Beam, RuntimeModule);
+                        ok ->
+                            case validate_beam_control_contract(
+                                Beam,
+                                Contract
+                            ) of
+                                ok -> validate_beam_identity(
+                                    Beam,
+                                    RuntimeModule
+                                );
+                                {error, _} = Error -> Error
+                            end;
                         {error, _} = Error -> Error
                     end;
                 {error, _} = Error -> Error
@@ -519,6 +529,80 @@ handler_mode_features(#{depth := Depth, kind := Kind}) ->
     ];
 handler_mode_features(_Mode) ->
     [invalid_handler_mode].
+
+validate_beam_control_contract(Beam, #{
+    control_abi_version := none,
+    resumption_runtime_version := none,
+    required_handler_frame_features := [],
+    handler_modes := []
+}) ->
+    case beam_control_attributes(Beam) of
+        {ok, #{
+            control_abi_version := missing,
+            resumption_runtime_version := missing,
+            handler_frame_features := missing,
+            handler_modes := missing
+        }} ->
+            ok;
+        {ok, Actual} ->
+            {error, {unexpected_beam_control_contract, Actual}};
+        {error, _} = Error ->
+            Error
+    end;
+validate_beam_control_contract(Beam, #{
+    control_abi_version := ControlVersion,
+    resumption_runtime_version := ResumptionVersion,
+    required_handler_frame_features := Features,
+    handler_modes := HandlerModes
+}) ->
+    Expected = #{
+        control_abi_version => ControlVersion,
+        resumption_runtime_version => ResumptionVersion,
+        handler_frame_features => Features,
+        handler_modes => HandlerModes
+    },
+    case beam_control_attributes(Beam) of
+        {ok, Expected} ->
+            ok;
+        {ok, Actual} ->
+            {error, {beam_control_contract_mismatch, Expected, Actual}};
+        {error, _} = Error ->
+            Error
+    end.
+
+beam_control_attributes(Beam) ->
+    case beam_lib:chunks(Beam, [attributes]) of
+        {ok, {_Module, [{attributes, Attributes}]}} ->
+            {ok, #{
+                control_abi_version => beam_scalar_attribute(
+                    catena_control_abi_version,
+                    Attributes
+                ),
+                resumption_runtime_version => beam_scalar_attribute(
+                    catena_resumption_runtime_version,
+                    Attributes
+                ),
+                handler_frame_features => beam_list_attribute(
+                    catena_handler_frame_features,
+                    Attributes
+                ),
+                handler_modes => beam_list_attribute(
+                    catena_handler_modes,
+                    Attributes
+                )
+            }};
+        {error, Reason} ->
+            {error, {invalid_beam_binary, Reason}}
+    end.
+
+beam_scalar_attribute(Name, Attributes) ->
+    case proplists:get_value(Name, Attributes, missing) of
+        [Value] -> Value;
+        Value -> Value
+    end.
+
+beam_list_attribute(Name, Attributes) ->
+    proplists:get_value(Name, Attributes, missing).
 
 validate_interface_contract(
     Interface,

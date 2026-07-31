@@ -69,6 +69,12 @@ generate(Unit) ->
         Definitions = lists:append(Definitions0) ++ DictionaryDefinitions,
         Exports = public_exports(Unit, IR) ++
             private_exports(Unit, IR) ++ DictionaryExports,
+        HandlerModes = lists:usort(lists:append([
+            maps:get(handler_modes, Entry, [])
+            || Entry <- catena_control_mode:entries(
+                catena_compilation_unit:control_modes(Unit)
+            )
+        ])),
         Attributes = catena_codegen_module:generate_attributes(
             CodegenOptions#{
                 runtime_dependencies =>
@@ -79,7 +85,8 @@ generate(Unit) ->
                 resumption_runtime_version =>
                     catena_resumption_runtime:version(),
                 handler_frame_features =>
-                    catena_resumption_runtime:features()
+                    catena_resumption_runtime:features(),
+                handler_modes => HandlerModes
             }
         ),
         Core0 = cerl:c_module(

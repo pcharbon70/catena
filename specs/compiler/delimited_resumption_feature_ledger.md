@@ -2,12 +2,12 @@
 
 ## Status
 
-Phase 6 executable Core/BEAM boundary for
+Phase 7 executable mixed-mode Core/BEAM boundary for
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md).
 
 This ledger prevents internal helper names, marker callbacks, request/response
 runtime behavior, and the reference oracle from being mistaken for promoted
-Catena source-language delimited control. Later phases must update a row only
+Catena source-language delimited control. Phase 8 must update a row only
 when its implementation and required evidence are both present.
 
 ## Baseline Snapshot
@@ -100,6 +100,16 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Resource policy | implemented versioned boundary | Runtime ABI 3 bounds invocations, retained words, reductions, cooperative timeout, and nested branch depth |
 | Phase integration | pending | Section 7.4 still owns mixed-mode scenarios and the complete phase-ending repository gate |
 
+## Phase 7 Completion Snapshot
+
+| Measurement | Phase 7 result | Interpretation |
+| --- | ---: | --- |
+| Complete active EUnit suite | 5,280 pass; 0 failures; 0 skips | All Phase 7 and earlier repository behavior is green |
+| Manifest conformance | 418 pass; 0 failures; 0 skips | Every currently registered stable scenario remains green |
+| Mixed-mode integration | 8 pass; 0 failures; 0 skips | Depth orderings, retention, failure, owner identity, repeated branches, deterministic search, and negative mode/resource paths are executable |
+| Artifact mode integrity | implemented fail-closed boundary | The handler-mode inventory embedded in loaded BEAM must exactly match the runtime contract |
+| Specs governance | passed | 42 requirements, 11 scenarios, 20 evidence rows, 73 acceptance criteria, seven ADRs, and 301 local links validate |
+
 ## Classification Vocabulary
 
 | Classification | Meaning |
@@ -111,7 +121,7 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Frontend implementation | Source parses, preserves intent, normalizes, and validates structurally, but lacks the typing/lowering/runtime evidence required for promotion |
 | Typed frontend implementation | Source reaches kind, type, effect, flow, and typed-artifact validation, but lacks executable continuation lowering/runtime evidence |
 | Compiler IR implementation | Typed source reaches authoritative control classification, selective-CPS lowering, and fail-closed graph validation, but lacks production runtime/Core execution |
-| Runtime ABI implementation | Real compiler-shaped closures execute through the production deep one-shot runtime, but generated Core does not yet construct or invoke them |
+| Runtime ABI implementation | Real compiler-shaped closures execute through the production resumption runtime, but generated Core does not yet construct or invoke them |
 | Executable source implementation | Typed source lowers through validated selective CPS to runtime calls and OTP-accepted loaded BEAM with observable continuation semantics |
 | Planned source implementation | Accepted by the ADR and architecture but absent from the compiler/runtime path |
 | Deferred mode | Has an accepted conceptual meaning but lacks the required syntax, typing, runtime authority, or evidence for promotion |
@@ -130,7 +140,7 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Continuation capture | Generated binary CPS closures and captured contexts are registered behind opaque handles | Executable source implementation | Never claim ordinary Erlang stack capture |
 | One-shot consumption | A private serialized registry atomically enforces `fresh -> running -> consumed` for every exit | Executable source implementation | Preserve deterministic failure behavior |
 | Deep/shallow selection | Deep restoration reinstalls the selected frame; shallow restoration resumes from its parent context | Executable source implementation | Phase 8 owns promotion tooling |
-| Multi-shot | Closed empty residual rows lower to runtime ABI 3, whose opaque handles execute repeated isolated, bounded same-process branches | Executable source implementation | Phase 7 Section 7.4 owns complete mixed-mode promotion evidence |
+| Multi-shot | Closed empty residual rows lower to runtime ABI 3, whose opaque handles execute repeated isolated, bounded same-process branches | Executable source implementation | Phase 8 owns dedicated conformance and public promotion tooling |
 | Operational semantics | Normative written reductions | Semantic specification | Remains authoritative across later phases |
 | `catena_resumption_oracle` | Explicit free-request evaluator with deterministic trace/state | Semantic oracle | Comparison evidence only; never production ABI |
 

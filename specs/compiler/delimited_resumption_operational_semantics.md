@@ -512,9 +512,10 @@ and lexical environment with independent branch execution. It does not clone
 mailboxes, PIDs, ports, mutable external resources, provider state, or the
 outside world.
 
-Phase 7 Sections 7.1 through 7.3 supply source syntax, static semantics, and
-production runtime authority for shallow and multi-shot handlers. Multi-shot
-is admitted statically only for a closed, empty residual effect row. At
+Phase 7 supplies source syntax, static semantics, production runtime
+authority, and mixed-mode loaded-BEAM evidence for shallow and multi-shot
+handlers. Multi-shot is admitted statically only for a closed, empty residual
+effect row. At
 capture the runtime also rejects process providers, local value-provider
 state, and direct PID, port, or reference capabilities in the lexical
 environment.
@@ -529,8 +530,8 @@ state. Explicit discard consumes the multi-shot authority.
 Every multi-shot handle carries positive budgets for invocation count,
 retained words, reductions, cooperative timeout, and nested branch depth.
 Resource exhaustion reports `resumption_budget_exceeded`. Unsupported or
-inadmissible modes must never fall back to deep one-shot behavior. Phase 7
-Section 7.4 still owns the complete mixed-mode integration and promotion gate.
+inadmissible modes never fall back to deep one-shot behavior. Dedicated
+language conformance and public promotion remain owned by Phase 8.
 
 ## Representative Derivation
 

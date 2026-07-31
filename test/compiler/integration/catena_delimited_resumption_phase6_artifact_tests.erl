@@ -42,6 +42,10 @@ resumable_artifact_declares_and_loads_exact_contract_test() ->
         catena_resumption_runtime:features(),
         maps:get(catena_handler_frame_features, Attributes)
     ),
+    ?assertEqual(
+        [#{depth => deep, kind => one_shot}],
+        maps:get(catena_handler_modes, Attributes)
+    ),
     {ok, Artifact} = catena_beam_artifact:validate(Artifact),
     unload('PhaseSixArtifact'),
     try
