@@ -1,5 +1,13 @@
 # Phase 7: Handler/Resumption Core Model
 
+> **Reconciled status:** This older component-oriented plan predates
+> [ADR-0006](../../adr/ADR-0006-first-class-resumptions-and-selective-cps.md).
+> Its direct Erlang handler/resumption helpers remain useful internals, but
+> language-level continuation semantics are implemented and promoted by the
+> [delimited-resumptions roadmap](../delimited-resumptions/README.md) through
+> compiler-reified selective CPS, explicit runtime contexts, and `SCN-012`.
+> Unchecked items below must not be read as the current source-language status.
+
 **Description:** This phase implements the fundamental abstraction that distinguishes algebraic effects from simple effect tracking: the handler/resumption model. Handlers receive both operation values and resumptions (continuations representing the rest of the computation), enabling them to decide whether to resume, abort, or handle operations multiple times.
 
 ---

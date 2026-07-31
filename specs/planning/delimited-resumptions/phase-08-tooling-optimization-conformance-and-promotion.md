@@ -6,7 +6,8 @@ tools, reconstructs source-oriented control traces, measures and optimizes the
 selective-CPS path, adds normative contracts and executable conformance, and
 promotes only the behavior proven by the final repository gates.
 
-**Status:** Planned.
+**Status:** In progress. Sections 8.1 through 8.3 are complete; Section 8.4
+owns the final repository promotion gate.
 
 **Dependencies:** Phase 7 complete for promotion of shallow and multi-shot
 behavior. Deep one-shot tooling and measurement tasks may begin after Phase 6,
@@ -126,14 +127,14 @@ diagnostic and cleanup behavior.
 control plane with dedicated executable evidence and an explicit deferred
 ledger.
 
-- [ ] **Section 8.3 Complete**
+- [x] **Section 8.3 Complete**
 
 ### Task 8.3.1: Add Normative Requirements And Scenarios
 
 **Description:** Update compiler, runtime, testing, and observability contracts
 only for behavior proven by executable source-to-BEAM evidence.
 
-- [ ] **Task 8.3.1 Complete**
+- [x] **Task 8.3.1 Complete**
 
 #### Subtask 8.3.1.1: Add Requirement And AC Traceability
 
@@ -141,7 +142,7 @@ only for behavior proven by executable source-to-BEAM evidence.
 requirements catalog and conformance matrix, and distinguish deep one-shot
 from shallow/multi-shot promotion.
 
-- [ ] **Subtask 8.3.1.1 Complete**
+- [x] **Subtask 8.3.1.1 Complete**
 
 #### Subtask 8.3.1.2: Add Dedicated Executable Scenario Evidence
 
@@ -149,7 +150,7 @@ from shallow/multi-shot promotion.
 EUnit modules in the executable manifest, and cover positive and negative
 loaded-BEAM behavior.
 
-- [ ] **Subtask 8.3.1.2 Complete**
+- [x] **Subtask 8.3.1.2 Complete**
 
 ### Task 8.3.2: Reconcile Public Documentation And Feature Status
 
@@ -157,7 +158,7 @@ loaded-BEAM behavior.
 guidance, examples, migration notes, and feature ledgers to match the verified
 boundary exactly.
 
-- [ ] **Task 8.3.2 Complete**
+- [x] **Task 8.3.2 Complete**
 
 #### Subtask 8.3.2.1: Publish Language And Runtime Guidance
 
@@ -165,7 +166,7 @@ boundary exactly.
 depth, kinds, ownership, retention, effects, errors, performance, and safe
 usage with executable examples.
 
-- [ ] **Subtask 8.3.2.1 Complete**
+- [x] **Subtask 8.3.2.1 Complete**
 
 #### Subtask 8.3.2.2: Update Status And Deferred Scope
 
@@ -173,7 +174,7 @@ usage with executable examples.
 serialization, distribution, and unsupported effect-state cloning as
 deferred, and reconcile earlier algebraic-effects planning claims.
 
-- [ ] **Subtask 8.3.2.2 Complete**
+- [x] **Subtask 8.3.2.2 Complete**
 
 ## Section 8.4: Phase 8 Integration Tests
 

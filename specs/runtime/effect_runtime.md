@@ -60,6 +60,16 @@ through loaded BEAM.
 - Admissible multi-shot authority executes one branch at a time on the owner,
   assigns distinct branch identities, survives individual branch failures,
   and exposes only sanitized branch counters and budgets.
+- Immutable parent-handler lookup metadata may be cached, but the current
+  frame is always consulted first so shadowing and shallow restoration remain
+  exact.
+- Immediate one-shot value handlers may use a tail auto-resume fast path when
+  no first-class authority can escape. Control handlers and multi-shot
+  handlers always retain the full registry-backed authority path.
+- Runtime tracing and resumption descriptions expose stable public identities,
+  source locations, kind, depth, ownership relationship, state, and resource
+  counters without exposing closures, registry references, private contexts,
+  or forgeable handles.
 
 ## Implemented Runtime Evolution
 
@@ -143,6 +153,25 @@ The effect runtime is only promoted as correct when it lines up with the compile
 - handler cases cover every declared operation exactly once with the declared
   arity
 - handler removal/resolution semantics remain compatible with the type/effect system's current explicit effect tracking, including the implemented row-polymorphic/algebraic-effects surfaces
+
+### AC-ERT-006 Resumption Authority
+
+First-class resumptions must remain opaque, process-affine capabilities backed
+by runtime authority. Deep resume restores the selected handler frame;
+shallow resume restores its parent context. One-shot authorization is atomic
+and consuming, while multi-shot authorization is repeated only for statically
+and dynamically admissible state under explicit positive budgets. Malformed,
+stale, wrong-owner, re-entrant, consumed, unsupported-version, and exhausted
+operations fail before unauthorized continuation execution.
+
+### AC-ERT-007 Safe Runtime Tooling And Optimization
+
+Tracing and introspection must redact private runtime representation and use
+bounded process-owned storage. Runtime optimizations may cache immutable
+parent lookup metadata or elide non-escaping tail auto-resume authority only
+when evaluation order, lookup depth, ownership, consumption, cleanup,
+diagnostics, and observable results are preserved. Unknown or stateful cases
+remain on the conservative path.
 
 ## Out Of Scope
 

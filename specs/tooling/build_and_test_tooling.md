@@ -40,6 +40,11 @@ conformance, subsystem-organized coverage, and a green complete EUnit surface.
   the complete active test suite.
 - The read-only GitHub Actions workflow runs `make verify` for pull requests
   and pushes to `main`.
+- `SCN-012` selects dedicated delimited-resumption conformance, tooling, and
+  performance evidence. The benchmark surface measures direct, provider,
+  deep one-shot, mixed bridge, retained, shallow, and bounded multi-shot paths
+  and applies broad regression thresholds without treating wall-clock values
+  as semantic proof.
 
 ## Acceptance Criteria
 
@@ -103,3 +108,11 @@ Promoted requirements, scenarios, component criteria, ADRs, paths, and local
 Markdown links must pass `make check-specs`. Scenario evidence must remain
 executable through `make conformance`, while `make verify` must remain the
 single complete local and CI verification contract.
+
+### AC-TOOL-008 Resumption Conformance And Performance
+
+The maintained scenario manifest must select positive and negative
+source-to-loaded-BEAM delimited-resumption evidence together with safe tooling
+and optimization-equivalence tests. Performance evidence must report compiler
+and runtime metrics for every promoted path, retain explicit thresholds, and
+fail independently of semantic conformance when a threshold is exceeded.

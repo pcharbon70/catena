@@ -2,13 +2,15 @@
 
 ## Status
 
-Phase 1 semantic foundation for
+Normative semantic foundation for the promoted compiler/runtime boundary in
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md).
 
-This document is normative for the deep, one-shot core model. It defines what
-the Phase 1 reference oracle must execute and what later selective-CPS and
-runtime implementations must preserve. It does not claim that the current
-source-to-BEAM path implements these rules.
+This document remains normative for the deep, one-shot core model. It defines
+what the independent reference oracle and the production selective-CPS,
+explicit-context runtime, and source-to-loaded-BEAM implementation must
+preserve. Phase 7 extends the executable boundary with explicit shallow and
+bounded admissible multi-shot modes; Phase 8 adds dedicated conformance,
+tooling, and optimization-equivalence evidence.
 
 ## Scope
 
@@ -531,7 +533,8 @@ Every multi-shot handle carries positive budgets for invocation count,
 retained words, reductions, cooperative timeout, and nested branch depth.
 Resource exhaustion reports `resumption_budget_exceeded`. Unsupported or
 inadmissible modes never fall back to deep one-shot behavior. Dedicated
-language conformance and public promotion remain owned by Phase 8.
+language conformance is registered as `SCN-012` and exercises each promoted
+mode through optimized and unoptimized loaded BEAM.
 
 ## Representative Derivation
 
@@ -606,10 +609,13 @@ The reference oracle and later production implementation must preserve:
   or external capabilities;
 - preemptive cancellation of an owner-process continuation that exceeds a
   reduction or elapsed-time budget;
-- optimization of direct or CPS regions.
+- aggressive transformations whose proof obligations cannot establish
+  evaluation-order, context-depth, authority, diagnostic, and source-origin
+  equivalence.
 
 ## Related Material
 
 - [Delimited Resumption Architecture](delimited_resumption_architecture.md)
+- [Delimited Resumption User Guide](delimited_resumption_user_guide.md)
 - [Delimited Resumptions Implementation Plan](../planning/delimited-resumptions/README.md)
 - [Phase 1 Plan](../planning/delimited-resumptions/phase-01-operational-semantics-feature-ledger-and-reference-oracle.md)

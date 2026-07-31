@@ -94,11 +94,21 @@ classification decision.
 
 ### Neutral
 
-- This decision selects syntax and static policy; runtime context restoration,
-  branch execution, and resource budgets remain implementation obligations of
-  Phase 7.
+- This decision selected syntax and static policy. Phase 7 now implements
+  runtime context restoration, branch execution, and explicit resource
+  budgets at the conservative admissible boundary.
 - The order written by a user is not preserved by formatting; the semantic
   mode is preserved.
+
+## Implementation Status
+
+Phase 7 implements both modifier orders, canonical formatting, normalized and
+typed mode inventories, deep/shallow context restoration, atomic one-shot and
+bounded isolated multi-shot authority, exact artifact-mode validation, and
+mixed-mode loaded-BEAM evidence. Phase 8 registers dedicated `SCN-012`
+conformance and optimized/unoptimized equivalence. Multi-shot remains rejected
+for open or non-empty residual rows and runtime state that cannot be safely
+branched.
 
 ## Alternatives Rejected
 

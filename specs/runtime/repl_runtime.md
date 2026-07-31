@@ -2,14 +2,19 @@
 
 ## Status
 
-Promoted status: implemented as a compiler-backed interactive environment with prelude loading, command handling, multiline input support, and REPL workflow tests.
+Promoted status: implemented as a compiler-backed interactive environment
+with prelude loading, command handling, multiline input support, canonical
+compilation sessions, first-class resumption bindings, and bounded control
+tracing.
 
 ## Design Anchors
 
 - [Current Status](../planning/current_status.md)
 - [Runtime Contract](../contracts/runtime_contract.md)
 - `src/repl/catena_repl.erl`
+- `src/repl/catena_repl_session.erl`
 - `src/repl/catena_repl_effects.erl`
+- `src/tooling/catena_control_diagnostics.erl`
 - `src/stdlib/catena_prelude.erl`
 - `test/repl/catena_repl_tests.erl`
 - `test/repl/catena_repl_effects_tests.erl`
@@ -25,6 +30,16 @@ Promoted status: implemented as a compiler-backed interactive environment with p
   State handlers. The standard Process operations `spawn`, `send`, and `self`
   delegate to the reconciled BEAM process façade.
 - Phase 2 planning checkboxes are stale relative to the summaries and code, so this spec follows the reconciled implementation state.
+- Resumption-capable sessions compile definitions and expressions into
+  validated compilation units and BEAM artifacts, load them through the
+  canonical artifact gate, and execute them on the session owner process.
+- A session may bind an opaque runtime resumption, inspect only its public
+  description, and resume it on its owner. Session close unloads generated
+  modules and clears retained interactive state.
+- `:resumption` and `:trace` expose redacted resumption descriptions and
+  bounded structured control events. Source views collapse synthetic CPS
+  implementation details into Catena transform, perform, handler, binder,
+  resume, and delimiter frames.
 
 ## Acceptance Criteria
 
@@ -49,6 +64,8 @@ The promoted REPL command surface includes the implemented commands in `catena_r
 - `:env`
 - `:clear`
 - `:prelude`
+- `:resumption`
+- `:trace`
 - `:quit`
 
 Additional commands may be added later, but these form the current canonical baseline.
@@ -92,10 +109,27 @@ The REPL's automatic handlers are a direct evaluator surface. They must:
 This direct path does not replace the explicit-context runtime used by
 generated code.
 
+### AC-REPL-007 Canonical Control Session
+
+Interactive definitions and evaluation involving `handle`, `with`,
+`Resumption`, and `resume` must use the same parse, type/effect, selective-CPS,
+artifact validation, loading, and explicit-context runtime boundaries as
+ordinary compilation. Resumption invocation stays on the session owner
+process and surfaces stable runtime failures instead of bypassing authority.
+
+### AC-REPL-008 Safe Inspection And Tracing
+
+REPL resumption inspection must expose only public type, kind, owner
+relationship, state, depth, source capture location, and bounded resource
+information. Structured traces must be configurable and bounded, use stable
+public identifiers, reconstruct source-oriented control frames, and never
+print closures, private context maps, registry references, or forgeable
+authority terms.
+
 ## Out Of Scope
 
-- debugger-like introspection
+- general debugger-like introspection beyond the bounded control view
 - package management
-- the final production tooling experience for interactive development
+- production-grade time-travel debugging or distributed session control
 - automatic support for Process operations beyond the standard effect's
   current `spawn`, `send`, and `self` declarations

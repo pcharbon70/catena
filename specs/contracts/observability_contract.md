@@ -10,3 +10,4 @@ This contract defines the `REQ-OBS-*` family for Catena's traceability and statu
 - `REQ-OBS-004`: When planning checklists drift from implemented code, the repository SHOULD provide a reconciled current-status view rather than forcing contributors to infer it from Git history alone.
 - `REQ-OBS-005`: The project SHOULD retain enough documentation structure that contributors can understand current scope without reading the entire research archive.
 - `REQ-OBS-006`: Stable conformance scenarios MUST map to maintained executable evidence with source paths that can be checked automatically.
+- `REQ-OBS-007`: Resumption introspection and control tracing MUST expose only public type/mode/state/ownership relationships, stable non-authoritative identifiers, bounded events, and reconstructed Catena source frames; closures, contexts, PIDs, references, and private handles MUST be redacted.

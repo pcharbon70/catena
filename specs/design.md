@@ -29,15 +29,16 @@ The research corpus under `specs/research/` covers a much larger design space th
 - the repo now includes implemented algebraic-effects machinery in the compiler/type layers, including row-polymorphism-oriented effect operations and validation surfaces
 - [ADR-0006](adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
   accepts first-class `Resumption` values, explicit `with`/`resume` control,
-  and effect-directed selective CPS as the path to true delimited handlers;
-  the syntax, AST, and normalization frontend is implemented, while typing,
-  selective CPS, and executable explicit resumptions remain planned
+  and effect-directed selective CPS as the path to true delimited handlers.
+  The implemented source-to-loaded-BEAM boundary includes typing, deep and
+  shallow handlers, one-shot and bounded admissible multi-shot authority,
+  safe tooling, and proof-gated optimization.
 
 ### Runtime Direction
 
 - current effect execution is process-based and BEAM-native
 - explicit effect context passing is the preferred runtime model
-- future resumable source handlers execute compiler-reified continuations on
+- resumable source handlers execute compiler-reified continuations on
   the originating BEAM process while retaining explicit contexts as
   handler-lookup authority
 - an interactive REPL exists and reuses the compiler pipeline for inspection and evaluation-oriented workflows
@@ -57,6 +58,9 @@ The repository currently contains real code and tests for:
 - REPL, prelude, and testing framework work associated with Phase 2
 - advanced pattern features, decision trees, and exhaustiveness/redundancy checking associated with Phase 3
 - a newer algebraic-effects track through Phase 14-style orchestration, validation, and integration-test surfaces
+- delimited-resumption source syntax, typing, selective-CPS lowering,
+  explicit-context runtime authority, loaded-BEAM execution, REPL tooling,
+  optimization, and dedicated conformance
 - an implemented property-testing foundation spanning `src/proptest/catena_tree.erl`, `src/proptest/catena_gen.erl`, and `src/proptest/catena_range.erl`
 
 ## Still Planned Or Partial
@@ -64,8 +68,8 @@ The repository currently contains real code and tests for:
 - full Phase 4 module system beyond basic imports
 - actor model integration as a first-class Catena surface
 - full language-surface consolidation and long-tail ergonomics for the newer algebraic-effects machinery
-- true delimited source-level resumptions through the accepted selective-CPS
-  architecture
-- complete source-to-BEAM semantic coverage, including resolved named calls,
-  exhaustive lowering, and a public validated BEAM artifact API
+- cross-process or serializable resumptions and transparent ordinary-Erlang
+  stack capture
+- multi-shot cloning over open/residual effects, providers, mutable state, or
+  arbitrary BEAM/external capabilities
 - the remaining generator, runner, and law-testing layers of the internal property-testing framework

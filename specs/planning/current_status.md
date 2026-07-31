@@ -13,7 +13,7 @@ It exists because some planning checklists are stale relative to later implement
 | Track | Current promoted status |
 | --- | --- |
 | Proof-of-concept | Implemented through Phases 1 to 3, with Phase 4 partial/minimal and a verified local Phase 5 actor runtime toolkit whose source-language integration remains incomplete. |
-| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary. Delimited-resumption Phases 1 through 7 provide normative deep one-shot semantics, explicit shallow/multi-shot syntax and static modes, first-class `Resumption k a b e` typing, authoritative selective-CPS IR, process-affine runtime authority, executable deep/shallow context restoration, bounded isolated multi-shot branch authority, exact compiled handler-mode artifact validation, and source-to-loaded-BEAM execution. Phase 8 tooling, optimization, dedicated conformance, and final public promotion remain planned. |
+| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary. Delimited-resumption Phases 1 through 7 provide normative deep one-shot semantics, explicit shallow/multi-shot syntax and static modes, first-class `Resumption k a b e` typing, authoritative selective-CPS IR, process-affine runtime authority, executable deep/shallow context restoration, bounded isolated multi-shot branch authority, exact compiled handler-mode artifact validation, and source-to-loaded-BEAM execution. Phase 8 Sections 8.1 through 8.3 add compiler-backed REPL sessions, redacted control tracing, proof-gated compiler/runtime optimizations, performance baselines, public guidance, and dedicated `SCN-012` conformance; the Section 8.4 repository promotion gate remains pending. |
 | Property testing | Phases 1 to 4 are materially implemented in `src/proptest`; Phases 5 and 6 are substantial but partial; explicit Phase 7 helper surfaces are also materially implemented, while automatic language integration remains incomplete. |
 | Law verification | Structural and concrete stdlib laws execute, and known-instance generic checks bridge into the internal proptest framework; automatic derivation and broader workflow ergonomics remain future work. |
 | Language revamp migration | Completed and now historical. |
@@ -155,10 +155,17 @@ Important caveat:
   multi-shot branches, state-admissibility checks, resource budgets, control
   ABI 2, runtime ABI 3, artifact format 3, exact compiled handler-mode
   validation, and mixed-mode loaded-BEAM evidence
+- Phase 8 Sections 8.1 through 8.3 are complete with canonical compiler-backed
+  REPL sessions, safe first-class resumption inspection, bounded structured
+  tracing, source-frame reconstruction, seven-path compiler/runtime
+  benchmarks, conservative control-graph optimization, safe runtime fast
+  paths, normative contract traceability, user guidance, and manifest-selected
+  `SCN-012` conformance
 
 Next clear steps on this track:
 
-- continue Phase 8 tooling, optimization, conformance, and promotion work
+- run the Phase 8 Section 8.4 complete-suite, governance, conformance,
+  coverage, Dialyzer, deterministic-repeat, and performance promotion gates
 
 ## Property-Testing Track
 

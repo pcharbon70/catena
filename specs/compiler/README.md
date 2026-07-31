@@ -10,11 +10,13 @@ This index covers the promoted compiler-domain surfaces.
 - [delimited_resumption_architecture.md](delimited_resumption_architecture.md)
 - [delimited_resumption_operational_semantics.md](delimited_resumption_operational_semantics.md)
 - [delimited_resumption_feature_ledger.md](delimited_resumption_feature_ledger.md)
+- [delimited_resumption_user_guide.md](delimited_resumption_user_guide.md)
 
 These specs capture the current compiler that exists in `src/compiler/*`,
 including the fact that some roadmap items are partially implemented beyond
 what the raw planning checklists show. Delimited-resumption Phases 1 through
-5 now provide the accepted semantics, source and typed frontend, authoritative
-control-mode analysis, validated selective-CPS IR, and an executable deep
-one-shot runtime ABI with process-affine ownership and lifecycle management.
-Core lowering and source-to-loaded-BEAM explicit resumptions remain deferred.
+8 provide the accepted semantics, source and typed frontend, authoritative
+control-mode analysis, validated selective-CPS IR, executable deep/shallow and
+bounded admissible multi-shot authority, loaded-BEAM lowering, safe
+REPL/tooling views, proof-gated optimization, and dedicated conformance. The
+final Phase 8 repository promotion gate remains pending.

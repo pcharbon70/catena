@@ -1,5 +1,14 @@
 # Phase 10: One-Shot vs Multi-Shot Continuations
 
+> **Reconciled status:** This older component-oriented plan is superseded for
+> the public language boundary by
+> [ADR-0007](../../adr/ADR-0007-explicit-handler-and-resumption-mode-modifiers.md)
+> and [delimited-resumption Phase 7](../delimited-resumptions/phase-07-shallow-handlers-and-multi-shot-resumptions.md).
+> One-shot authority and bounded multi-shot branches are executable and
+> promoted only under the current ownership, residual-row, state-admissibility,
+> and resource policies. Unchecked helper tasks below do not broaden that
+> boundary.
+
 **Description:** This phase implements explicit one-shot and multi-shot continuation semantics, enabling precise control over resource management and enabling patterns like backtracking and nondeterminism.
 
 ---
