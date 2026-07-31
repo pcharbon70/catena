@@ -1,9 +1,9 @@
 %%%-------------------------------------------------------------------
 %%% @doc Phase 4 source-to-validated-control-IR integration contract.
 %%%
-%%% Phase 4 makes control flow explicit and validates its ABI, but does not
-%%% yet provide the Phase 5 runtime or Phase 6 Core lowering for explicit
-%%% resumptions. The production backend must therefore remain fail-closed.
+%%% Phase 4 makes control flow explicit and validates its ABI. Phase 6 now
+%%% consumes that validated handoff while the legacy raw-AST backend remains
+%%% fail-closed for normalized resumption nodes.
 %%% @end
 %%%-------------------------------------------------------------------
 -module(catena_delimited_resumption_phase4_tests).
@@ -288,7 +288,7 @@ malformed_graphs_fail_with_source_oriented_diagnostics_test() ->
         Cases
     ).
 
-direct_backend_remains_executable_and_explicit_control_fails_closed_test() ->
+direct_and_explicit_control_backends_are_executable_test() ->
     Direct =
         "module PhaseFourDirectExecution\n"
         "export transform run\n"
@@ -298,14 +298,7 @@ direct_backend_remains_executable_and_explicit_control_fails_closed_test() ->
         ?assertEqual(42, 'PhaseFourDirectExecution':run(41))
     end),
     Explicit = explicit_source(),
-    ?assertMatch(
-        {error, {missing_resumption_lowering, #{
-            stage := backend_compatibility,
-            mode := explicit_control,
-            location := {location, _, _}
-        }}},
-        catena_compile:compile_string_to_core(Explicit)
-    ),
+    ?assertMatch({ok, _}, catena_compile:compile_string_to_core(Explicit)),
     {ok, Unit} = catena_compile:compile_string_to_unit(Explicit),
     ?assert(catena_control_validate:is_report(
         catena_compilation_unit:control_validation(Unit)

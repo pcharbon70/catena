@@ -53,6 +53,17 @@
 generate_validated_module(Unit) ->
     case catena_compilation_unit:is_compilation_unit(Unit) of
         true ->
+            case has_resumable_control(Unit) of
+                true ->
+                    catena_control_codegen:generate(Unit);
+                false ->
+                    generate_legacy_validated_module(Unit)
+            end;
+        false ->
+            {error, {invalid_compilation_unit, unchecked_backend_input}}
+    end.
+
+generate_legacy_validated_module(Unit) ->
             case catena_declaration_disposition:prepare_for_codegen(Unit) of
                 {ok, BackendAST} ->
                     CompilerOpts = catena_compilation_unit:options(Unit),
@@ -69,10 +80,17 @@ generate_validated_module(Unit) ->
                     );
                 {error, _} = Error ->
                     Error
-            end;
-        false ->
-            {error, {invalid_compilation_unit, unchecked_backend_input}}
-    end.
+            end.
+
+has_resumable_control(Unit) ->
+    lists:any(
+        fun(Transform) ->
+            maps:get(control_mode, Transform) =:= resumable
+        end,
+        catena_control_ir:transforms(
+            catena_compilation_unit:control_ir(Unit)
+        )
+    ).
 
 %% @doc Generate a Core Erlang module directly from backend-shaped Catena AST.
 %%
@@ -377,8 +395,18 @@ generate_attributes(Opts) ->
                 ]
         end,
 
+    ControlAbiAttr = case maps:get(control_abi_version, Opts, undefined) of
+        undefined -> [];
+        ControlAbiVersion -> [
+            {
+                cerl:c_atom(catena_control_abi_version),
+                cerl:abstract(ControlAbiVersion)
+            }
+        ]
+    end,
+
     BaseAttrs ++ VersionAttr ++ AuthorAttr ++ RuntimeDependencyAttr ++
-        ArtifactDependencyAttr.
+        ArtifactDependencyAttr ++ ControlAbiAttr.
 
 %%====================================================================
 %% Function Compilation (1.3.4.2)

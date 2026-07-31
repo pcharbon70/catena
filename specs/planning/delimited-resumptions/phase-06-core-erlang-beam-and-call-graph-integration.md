@@ -6,7 +6,7 @@ identity, patterns, imports, traits, recursion, effects, runtime dependencies,
 and diagnostics while proving that loaded BEAM executes the real delimited
 continuation.
 
-**Status:** Planned.
+**Status:** In progress (Section 6.1 complete).
 
 **Dependencies:** Phase 5 complete.
 
@@ -16,7 +16,7 @@ continuation.
 OTP-accepted Core Erlang with explicit private calling conventions and stable
 public wrappers.
 
-- [ ] **Section 6.1 Complete**
+- [x] **Section 6.1 Complete**
 
 ### Task 6.1.1: Lower CPS Control Nodes
 
@@ -24,7 +24,7 @@ public wrappers.
 handler-frame installation, suspension, resumption construction, resume,
 abort, and direct/CPS bridges.
 
-- [ ] **Task 6.1.1 Complete**
+- [x] **Task 6.1.1 Complete**
 
 #### Subtask 6.1.1.1: Emit Continuations And Delimiters
 
@@ -32,7 +32,7 @@ abort, and direct/CPS bridges.
 versioned delimiter/runtime calls, tail positions, and synthetic source
 origins.
 
-- [ ] **Subtask 6.1.1.1 Complete**
+- [x] **Subtask 6.1.1.1 Complete**
 
 #### Subtask 6.1.1.2: Emit Perform And Resume Control
 
@@ -40,14 +40,14 @@ origins.
 construct opaque resumptions, invoke `resume` through runtime validation, and
 preserve handler result flow.
 
-- [ ] **Subtask 6.1.1.2 Complete**
+- [x] **Subtask 6.1.1.2 Complete**
 
 ### Task 6.1.2: Preserve Public Source Arity
 
 **Description:** Keep exported Catena transform arity stable while selecting
 direct or CPS private entries behind generated wrappers.
 
-- [ ] **Task 6.1.2 Complete**
+- [x] **Task 6.1.2 Complete**
 
 #### Subtask 6.1.2.1: Generate Initial Runtime Boundaries
 
@@ -55,7 +55,7 @@ direct or CPS private entries behind generated wrappers.
 once at public execution boundaries and reuse both through internal effectful
 calls.
 
-- [ ] **Subtask 6.1.2.1 Complete**
+- [x] **Subtask 6.1.2.1 Complete**
 
 #### Subtask 6.1.2.2: Preserve Function Values And Metadata
 
@@ -63,7 +63,19 @@ calls.
 export/interface arity, and hide private CPS parameters from source-visible
 module contracts.
 
-- [ ] **Subtask 6.1.2.2 Complete**
+- [x] **Subtask 6.1.2.2 Complete**
+
+**Implementation evidence:** `catena_control_codegen` consumes only validated
+compilation units and selective-CPS IR. It emits source-arity public wrappers,
+mode-specific private direct/CPS entries, explicit two-argument runtime
+continuations, deep handler delimiters, runtime suspension/resumption calls,
+abort flow, and direct/CPS bridges with synthetic origin annotations. Public
+wrappers establish one initial effect context and final continuation; internal
+entries reuse them. The module records control ABI version 1 while keeping
+private context and continuation parameters out of the source-visible export
+surface. The six focused `catena_control_codegen_tests` compile the emitted
+Core through OTP, inspect entry arities and metadata, and execute explicit
+resume plus transformed delimiter-result programs as loaded BEAM.
 
 ## Section 6.2: Complete Call-Graph And Language Integration
 
