@@ -71,7 +71,7 @@ accepted:
 - [x] [Phase 2: `with`/`resume` Syntax, AST, And Semantic Normalization](phase-02-with-resume-syntax-ast-and-semantic-normalization.md)
 - [x] [Phase 3: First-Class `Resumption` Kinds, Types, And Effects](phase-03-first-class-resumption-kinds-types-and-effects.md)
 - [x] [Phase 4: Control-Mode Analysis And Selective CPS IR](phase-04-control-mode-analysis-and-selective-cps-ir.md)
-- [ ] [Phase 5: Deep One-Shot Runtime And Resumption Ownership](phase-05-deep-one-shot-runtime-and-resumption-ownership.md)
+- [x] [Phase 5: Deep One-Shot Runtime And Resumption Ownership](phase-05-deep-one-shot-runtime-and-resumption-ownership.md)
 - [ ] [Phase 6: Core Erlang, BEAM, And Call-Graph Integration](phase-06-core-erlang-beam-and-call-graph-integration.md)
 - [ ] [Phase 7: Shallow Handlers And Multi-Shot Resumptions](phase-07-shallow-handlers-and-multi-shot-resumptions.md)
 - [ ] [Phase 8: Tooling, Optimization, Conformance, And Promotion](phase-08-tooling-optimization-conformance-and-promotion.md)
@@ -118,7 +118,7 @@ executable evidence exists.
       lowering
 - [x] Direct/resumable classification and all calling-convention bridges are
       explicit and validated
-- [ ] Deep one-shot resumptions are opaque, process-affine, and
+- [x] Deep one-shot resumptions are opaque, process-affine, and
       deterministically consumed
 - [ ] Local, recursive, imported, higher-order, trait-dispatched, and
       effect-polymorphic call graphs execute correctly

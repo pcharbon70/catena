@@ -6,7 +6,7 @@ one-shot state, same-process resumable handler frames, deep context
 restoration, retention-aware cleanup, and structured control failures without
 executing source continuations on handler-provider processes.
 
-**Status:** In Progress.
+**Status:** Complete.
 
 **Dependencies:** Phase 4 complete.
 
@@ -217,14 +217,14 @@ pass 67 tests.
 one-shot resume executes the intended continuation on its owner exactly once
 and that every lifecycle failure cleans up deterministically.
 
-- [ ] **Section 5.4 Complete**
+- [x] **Section 5.4 Complete**
 
 ### Task 5.4.1: Exercise Runtime Control And Lifecycle
 
 **Description:** Run compiler-shaped CPS fixtures through context lookup,
 capture, handler execution, resume, delimiter return, retention, and cleanup.
 
-- [ ] **Task 5.4.1 Complete**
+- [x] **Task 5.4.1 Complete**
 
 #### Subtask 5.4.1.1: Test Positive Deep One-Shot Paths
 
@@ -232,7 +232,7 @@ capture, handler execution, resume, delimiter return, retention, and cleanup.
 nested handlers, sequential operations, returned resumptions, delayed
 same-process invocation, builtin providers, and owner process identity.
 
-- [ ] **Subtask 5.4.1.1 Complete**
+- [x] **Subtask 5.4.1.1 Complete**
 
 #### Subtask 5.4.1.2: Test Negative Runtime Paths
 
@@ -240,14 +240,14 @@ same-process invocation, builtin providers, and owner process identity.
 stale versions, expired frames, provider death, owner death, exceptions,
 timeouts, and idempotent cleanup.
 
-- [ ] **Subtask 5.4.1.2 Complete**
+- [x] **Subtask 5.4.1.2 Complete**
 
 ### Task 5.4.2: Run Phase Completion Gates
 
 **Description:** Establish the runtime as a faithful target for validated CPS
 IR without yet claiming complete source-to-BEAM integration.
 
-- [ ] **Task 5.4.2 Complete**
+- [x] **Task 5.4.2 Complete**
 
 #### Subtask 5.4.2.1: Run Runtime And Compatibility Regressions
 
@@ -255,11 +255,26 @@ IR without yet claiming complete source-to-BEAM integration.
 actor, REPL, resumption-helper, and backend-runtime suites and verify current
 request/response behavior remains compatible.
 
-- [ ] **Subtask 5.4.2.1 Complete**
+- [x] **Subtask 5.4.2.1 Complete**
 
 #### Subtask 5.4.2.2: Run Repository Gates
 
 **Description:** Run Phase 5 integration tests, `make check-specs`, and the
 complete active EUnit suite and publish the exact phase-ending evidence.
 
-- [ ] **Subtask 5.4.2.2 Complete**
+- [x] **Subtask 5.4.2.2 Complete**
+
+**Implementation evidence:** The 12-test
+`catena_delimited_resumption_phase5_tests` suite runs compiler-shaped CPS
+closures through the production explicit-context and resumption runtimes. It
+covers explicit and automatic resume, transformed delimiter results,
+sequential and nested operations, shadowing and parent fallback, retained
+deep invocation, builtin and process-backed providers, and preservation of
+owner identity, mailbox, links, and monitors. Negative cases cover malformed
+and stale versions, wrong/dead owners, double and re-entrant resume, expired
+frames, provider death, handler exceptions, timeouts, and idempotent cleanup.
+The runtime-focused suites pass 79 tests. `make check-specs` passes with 293
+validated local links, and the complete active EUnit suite passes 5,233 tests
+with zero failures or skips. This establishes the production runtime as the
+faithful target for Phase 4 CPS IR; Phase 6 still owns Core lowering and
+source-to-loaded-BEAM evidence.

@@ -2,13 +2,15 @@
 
 ## Status
 
-Accepted target architecture. Phases 2 through 4 implement the lexer, parser,
+Accepted target architecture. Phases 2 through 5 implement the lexer, parser,
 AST, pretty-printer, semantic normalization, structural diagnostics,
 first-class resumption kinds and types, handler/resume inference,
 residual-effect checking, control-mode analysis, selective-CPS control IR,
-calling conventions, and fail-closed graph validation. Runtime authority and
-Core lowering for explicit resumptions remain unimplemented, so this is not
-yet a promoted source-to-BEAM feature.
+calling conventions, fail-closed graph validation, opaque process-affine
+runtime authority, deep same-process handler frames, one-shot consumption,
+retention leases, lifecycle monitoring, and structured runtime failures. Core
+lowering for explicit resumptions remains unimplemented, so this is not yet a
+promoted source-to-BEAM feature.
 
 This document makes
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
@@ -173,8 +175,9 @@ The implemented synthetic origin is:
 Semantic results and validated compilation units retain this normalized form.
 The Phase 3 typed frontend consumes it directly and retains resumption
 evidence and origins. Phase 4 classifies and lowers that authority into
-validated control IR. Until the Phase 5 runtime and Phase 6 Core lowering
-exist, the request/response backend receives a compatibility view only when
+validated control IR. Phase 5 supplies its executable runtime target. Until
+Phase 6 Core lowering connects them, the request/response backend receives a
+compatibility view only when
 the binder, origin, resume target, and tail shape exactly match
 compiler-generated auto-resume output. Explicit or malformed resumptions fail
 with `missing_resumption_lowering`; they are never emitted as ordinary calls
@@ -461,8 +464,8 @@ Shallow and multi-shot behavior receive separate promotion evidence when their
 source opt-ins are accepted and implemented.
 
 Until that evidence exists, component and status documents must distinguish
-the implemented typed frontend and compiler control IR from planned
-executable delimited source-level resumptions.
+the implemented typed frontend, compiler control IR, and executable runtime
+ABI from planned source-to-Core/BEAM integration.
 
 ## Related Material
 

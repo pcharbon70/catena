@@ -14,6 +14,7 @@ This index covers the promoted compiler-domain surfaces.
 These specs capture the current compiler that exists in `src/compiler/*`,
 including the fact that some roadmap items are partially implemented beyond
 what the raw planning checklists show. Delimited-resumption Phases 1 through
-4 now provide the accepted semantics, source and typed frontend, authoritative
-control-mode analysis, and validated selective-CPS IR. Runtime authority,
-Core lowering, and executable explicit resumptions remain deferred.
+5 now provide the accepted semantics, source and typed frontend, authoritative
+control-mode analysis, validated selective-CPS IR, and an executable deep
+one-shot runtime ABI with process-affine ownership and lifecycle management.
+Core lowering and source-to-loaded-BEAM explicit resumptions remain deferred.
