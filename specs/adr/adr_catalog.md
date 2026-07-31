@@ -12,6 +12,7 @@ This catalog is the canonical inventory of Catena's promoted ADR set.
 | [ADR-0004](ADR-0004-flow-as-arrow.md) | accepted | naming/library design | Commits Catena to `Flow` as the pragmatic name for Arrow and requires related planning and library surfaces to use that vocabulary. |
 | [ADR-0005](ADR-0005-fail-closed-semantics-preserving-beam-backend.md) | accepted | compiler/backend | Requires the Core Erlang and BEAM backend to resolve calls explicitly, classify every construct, reject unsupported semantics, and prove promoted behavior through source-to-BEAM execution. |
 | [ADR-0006](ADR-0006-first-class-resumptions-and-selective-cps.md) | accepted | compiler/runtime/effects | Commits true delimited handlers to first-class `Resumption` values, explicit `with` and `resume` syntax, deep one-shot defaults, and effect-directed selective CPS lowering while preserving explicit runtime contexts. |
+| [ADR-0007](ADR-0007-explicit-handler-and-resumption-mode-modifiers.md) | accepted | language/compiler/runtime/effects | Selects `handle shallow multi_shot` delimiter modifiers, preserves deep one-shot defaults, and requires closed effect-free residual rows for initial multi-shot admissibility. |
 
 ## Catalog Rules
 

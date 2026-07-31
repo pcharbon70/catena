@@ -11,7 +11,10 @@ calling conventions, fail-closed graph validation, opaque process-affine
 runtime authority, deep same-process handler frames, one-shot consumption,
 retention leases, lifecycle monitoring, structured runtime failures,
 selective-CPS Core lowering, versioned artifacts, and loaded-BEAM execution.
-Shallow and multi-shot source modes remain deferred to Phase 7; dedicated
+Phase 7 Section 7.1 accepts and implements explicit `handle shallow` and
+`handle multi_shot` mode modifiers through parsing, normalization, typing,
+control inventories, and versioned interfaces. Their executable runtime
+semantics remain owned by Phase 7 Sections 7.2 through 7.4; dedicated
 promotion and tooling work remains in Phase 8.
 
 This document makes
@@ -58,6 +61,31 @@ scope, kind, ownership, type, and consumption rules.
 | Process-affine | May be resumed only by the BEAM process that captured it. |
 
 ## Source Surface
+
+### Explicit mode selection
+
+[ADR-0007](../adr/ADR-0007-explicit-handler-and-resumption-mode-modifiers.md)
+selects delimiter-local modifiers:
+
+```catena
+handle shallow multi_shot choose_message() then {
+  Choice {
+    choose() with k ->
+      let first = resume(k, "hello")
+      in resume(k, "goodbye")
+  }
+}
+```
+
+Either modifier may appear alone. With neither modifier, the existing deep
+one-shot default is unchanged. Parsing accepts either modifier order and
+formatting emits `shallow multi_shot`. The selected mode determines the
+`ResumptionKind` and shallow residual-effect treatment of every `with k`
+binder owned by that delimiter.
+
+Initial multi-shot admissibility requires a closed, empty residual effect
+row. Known residual effects and open rows fail closed until Catena has an
+accepted effect-capability classification for branch-safe state.
 
 ### Explicit resumption binding
 

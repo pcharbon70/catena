@@ -6,7 +6,7 @@ their source spellings, types, context restoration, branch-state policy,
 resource limits, and executable semantics without weakening the one-shot
 default or pretending to clone arbitrary external BEAM resources.
 
-**Status:** Planned.
+**Status:** In progress; Section 7.1 complete.
 
 **Dependencies:** Phase 6 complete and deep one-shot behavior promoted at its
 phase boundary.
@@ -17,14 +17,14 @@ phase boundary.
 and resumption kind, then carry those modes through parsing, normalization,
 typing, interfaces, and control-mode analysis.
 
-- [ ] **Section 7.1 Complete**
+- [x] **Section 7.1 Complete**
 
 ### Task 7.1.1: Decide Shallow And Multi-Shot Source Spelling
 
 **Description:** Create and accept the focused language decision deferred by
 ADR-0006 without changing the existing deep one-shot defaults.
 
-- [ ] **Task 7.1.1 Complete**
+- [x] **Task 7.1.1 Complete**
 
 #### Subtask 7.1.1.1: Specify Mode Annotations
 
@@ -32,7 +32,7 @@ ADR-0006 without changing the existing deep one-shot defaults.
 multi-shot resumption kind, including defaults, nesting, formatting,
 migration, and interaction with `with k`.
 
-- [ ] **Subtask 7.1.1.1 Complete**
+- [x] **Subtask 7.1.1.1 Complete**
 
 #### Subtask 7.1.1.2: Update Lexer, Parser, AST, And Normalization
 
@@ -40,14 +40,14 @@ migration, and interaction with `with k`.
 recovery, source-origin, pretty-printing, round-trip, and conflict-accounting
 tests.
 
-- [ ] **Subtask 7.1.1.2 Complete**
+- [x] **Subtask 7.1.1.2 Complete**
 
 ### Task 7.1.2: Extend Kinds, Types, And Mode Validation
 
 **Description:** Infer the selected `ResumptionKind` and handler depth and
 reject unsupported combinations before CPS lowering.
 
-- [ ] **Task 7.1.2 Complete**
+- [x] **Task 7.1.2 Complete**
 
 #### Subtask 7.1.2.1: Type Shallow Resumptions
 
@@ -55,7 +55,7 @@ reject unsupported combinations before CPS lowering.
 effect rows under shallow semantics, and diagnose operations that incorrectly
 assume the shallow frame remains installed.
 
-- [ ] **Subtask 7.1.2.1 Complete**
+- [x] **Subtask 7.1.2.1 Complete**
 
 #### Subtask 7.1.2.2: Define Multi-Shot Admissibility
 
@@ -63,7 +63,25 @@ assume the shallow frame remains installed.
 external capabilities, resource-sensitive operations, and open rows before a
 resumption may have kind `MultiShot`.
 
-- [ ] **Subtask 7.1.2.2 Complete**
+- [x] **Subtask 7.1.2.2 Complete**
+
+### Section 7.1 Evidence
+
+[ADR-0007](../../adr/ADR-0007-explicit-handler-and-resumption-mode-modifiers.md)
+accepts `handle shallow multi_shot` as the canonical delimiter-local mode
+surface while retaining implicit deep one-shot defaults. The lexer and parser
+reserve both modifiers, accept either order, preserve source origins, and
+retain the existing 38 shift/reduce and zero reduce/reduce conflict baseline.
+
+`catena_resumption_mode` carries the normalized mode through inference,
+control-mode inventories, selective-CPS structural handoff, module interface
+version 3, and source formatting. Shallow resumptions retain the selected
+effect label in their residual row. Multi-shot resumptions are admitted only
+for closed empty residual rows; known external/stateful effects and open rows
+produce stable fail-closed diagnostics. The six focused
+`catena_delimited_resumption_phase7_static_tests` cover syntax round trips,
+normalization, kinds, effects, rejection, control inventories, and published
+interface metadata.
 
 ## Section 7.2: Shallow Handler Runtime Semantics
 

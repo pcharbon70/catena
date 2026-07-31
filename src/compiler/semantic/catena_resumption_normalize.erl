@@ -303,6 +303,24 @@ normalize_term(
 ) ->
     normalize_value_case(Operation, Params, Body, Location, State, Scope);
 normalize_term(
+    {handle_expr, Mode0, Body, Handlers, Location},
+    State,
+    Scope
+) ->
+    case catena_resumption_mode:normalize(Mode0, Location) of
+        {ok, Mode} ->
+            {NormalizedBody, State1} = normalize_term(Body, State, Scope),
+            {NormalizedHandlers, State2} = normalize_term(
+                Handlers,
+                State1,
+                Scope
+            ),
+            {{handle_expr, Mode, NormalizedBody, NormalizedHandlers, Location},
+                State2};
+        {error, Reason} ->
+            semantic_error(Reason)
+    end;
+normalize_term(
     {operation_case, Operation, Params, none, Body, Location},
     State,
     Scope
@@ -616,5 +634,7 @@ format_error({resumption_binder_scope, Details}) ->
     lists:flatten(
         io_lib:format("Resume target is outside its binder scope: ~p", [Details])
     );
+format_error({invalid_handler_mode, _Mode} = Error) ->
+    catena_resumption_mode:format_error(Error);
 format_error(Other) ->
     lists:flatten(io_lib:format("Resumption normalization error: ~p", [Other])).

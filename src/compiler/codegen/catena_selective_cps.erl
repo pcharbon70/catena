@@ -297,6 +297,22 @@ lower_expr(
     Context,
     State
 ) ->
+    lower_expr(
+        {
+            handle_expr,
+            catena_resumption_mode:default(Origin),
+            Body,
+            Handlers,
+            Origin
+        },
+        Context,
+        State
+    );
+lower_expr(
+    {handle_expr, HandlerMode, Body, Handlers, Origin},
+    Context,
+    State
+) ->
     {Delimiter, State1} = fresh_delimiter(
         maps:get(transform, Context),
         State
@@ -308,7 +324,8 @@ lower_expr(
     InnerContext = Context#{
         mode => resumable,
         delimiter => Delimiter,
-        continuation => Continuation
+        continuation => Continuation,
+        handler_mode => HandlerMode
     },
     case lower_expr(Body, InnerContext, State2) of
         {ok, BodyIR, State3} ->
@@ -329,6 +346,10 @@ lower_expr(
                         ),
                         #{
                             delimiter => Delimiter,
+                            depth =>
+                                catena_resumption_mode:depth(HandlerMode),
+                            kind =>
+                                catena_resumption_mode:kind(HandlerMode),
                             handlers => HandlerIR,
                             body => BodyIR
                         }
@@ -344,8 +365,10 @@ lower_expr(
                         #{
                             identity => Delimiter,
                             continuation => Continuation,
-                            depth => deep,
-                            kind => one_shot,
+                            depth =>
+                                catena_resumption_mode:depth(HandlerMode),
+                            kind =>
+                                catena_resumption_mode:kind(HandlerMode),
                             body => Install
                         },
                         State4
@@ -382,6 +405,11 @@ lower_expr(
                         State1
                     );
                 Delimiter ->
+                    HandlerMode = maps:get(
+                        handler_mode,
+                        Context,
+                        catena_resumption_mode:default(Origin)
+                    ),
                     {ok, Resumption} = catena_control_ir:node(
                         make_resumption,
                         metadata(
@@ -391,7 +419,8 @@ lower_expr(
                             requires_resumption_runtime
                         ),
                         #{
-                            kind => one_shot,
+                            kind => catena_resumption_mode:kind(HandlerMode),
+                            depth => catena_resumption_mode:depth(HandlerMode),
                             delimiter => Delimiter,
                             continuation =>
                                 maps:get(continuation, Context),

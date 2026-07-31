@@ -68,7 +68,8 @@
 
     % Delimited resumptions
     {resume_expr, expr(), expr(), term()} |
-    {handle_expr, expr(), [term()], term()}.
+    {handle_expr, expr(), [term()], term()} |
+    {handle_expr, catena_resumption_mode:mode(), expr(), [term()], term()}.
 
 %% @doc Pattern AST nodes
 -type pattern() ::

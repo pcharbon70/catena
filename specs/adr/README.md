@@ -9,5 +9,6 @@ This index covers Catena's promoted architectural decision records.
 - [ADR-0004-flow-as-arrow.md](ADR-0004-flow-as-arrow.md)
 - [ADR-0005-fail-closed-semantics-preserving-beam-backend.md](ADR-0005-fail-closed-semantics-preserving-beam-backend.md)
 - [ADR-0006-first-class-resumptions-and-selective-cps.md](ADR-0006-first-class-resumptions-and-selective-cps.md)
+- [ADR-0007-explicit-handler-and-resumption-mode-modifiers.md](ADR-0007-explicit-handler-and-resumption-mode-modifiers.md)
 
 These ADRs capture the current cross-cutting decisions that shape multiple subsystems at once.

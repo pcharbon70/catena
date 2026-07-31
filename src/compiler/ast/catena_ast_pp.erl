@@ -134,6 +134,17 @@ pp_expr_iolist({handle_expr, Body, Handlers, _Loc}) ->
     HandlerStrs = [pp_handler(H) || H <- Handlers],
     ["handle ", pp_expr_iolist(Body), " then { ", join(HandlerStrs, " "), " }"];
 
+pp_expr_iolist({handle_expr, Mode, Body, Handlers, _Loc}) ->
+    HandlerStrs = [pp_handler(H) || H <- Handlers],
+    [
+        "handle ",
+        pp_handler_mode(Mode),
+        pp_expr_iolist(Body),
+        " then { ",
+        join(HandlerStrs, " "),
+        " }"
+    ];
+
 pp_expr_iolist({try_with_expr, Body, Handlers, _Loc}) ->
     HandlerStrs = [pp_handler(H) || H <- Handlers],
     ["handle ", pp_expr_iolist(Body), " then { ", join(HandlerStrs, " "), " }"];
@@ -216,6 +227,15 @@ pp_handler_op({
         " -> ",
         pp_expr_iolist(Body)
     ].
+
+pp_handler_mode(#{depth := shallow, kind := multi_shot}) ->
+    "shallow multi_shot ";
+pp_handler_mode(#{depth := shallow}) ->
+    "shallow ";
+pp_handler_mode(#{kind := multi_shot}) ->
+    "multi_shot ";
+pp_handler_mode(_Mode) ->
+    "".
 
 %%%===================================================================
 %%% Pattern Pretty-Printing

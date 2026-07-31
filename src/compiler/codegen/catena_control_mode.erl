@@ -15,10 +15,11 @@
     entries/1,
     lookup/2,
     mode/2,
-    regions/2
+    regions/2,
+    handler_modes/2
 ]).
 
--define(INVENTORY_VERSION, 1).
+-define(INVENTORY_VERSION, 2).
 
 -type control_mode() :: direct | resumable.
 -type edge_kind() :: local | imported | higher_order | trait_dispatch.
@@ -37,6 +38,7 @@
     reasons := [term()],
     edges := [edge()],
     regions := [map()],
+    handler_modes := [map()],
     type := term(),
     effect_row := term(),
     location := term()
@@ -141,6 +143,13 @@ regions(Name, Inventory) ->
         none -> []
     end.
 
+-spec handler_modes(atom(), inventory()) -> [map()].
+handler_modes(Name, Inventory) ->
+    case lookup(Name, Inventory) of
+        {ok, Entry} -> maps:get(handler_modes, Entry, []);
+        none -> []
+    end.
+
 analyze_transform(
     {transform_decl, Name, _DeclaredType, Clauses, Location},
     TypedDeclaration,
@@ -152,6 +161,7 @@ analyze_transform(
         reasons => [],
         edges => [],
         regions => [],
+        handler_modes => [],
         provider_effect => false,
         handled_effects => []
     },
@@ -190,6 +200,7 @@ analyze_transform(
         reasons => LocalReasons,
         edges => stable_unique(maps:get(edges, Scan)),
         regions => lists:reverse(maps:get(regions, Scan)),
+        handler_modes => stable_unique(maps:get(handler_modes, Scan)),
         type => Type,
         effect_row => callable_effect_row(Type),
         location => Location
@@ -219,6 +230,24 @@ scan_term(
     Options,
     Scan
 ) ->
+    scan_term(
+        {
+            handle_expr,
+            catena_resumption_mode:default(Location),
+            Body,
+            Handlers,
+            Location
+        },
+        LocalNames,
+        Options,
+        Scan
+    );
+scan_term(
+    {handle_expr, Mode, Body, Handlers, Location},
+    LocalNames,
+    Options,
+    Scan
+) ->
     Effects = [
         Effect
         || {handler_clause, Effect, _Operations, _HandlerLocation} <-
@@ -228,13 +257,18 @@ scan_term(
         handler_delimiter,
         add_region(resumable, handler_delimiter, Location, Scan)
     ),
+    Scan2 = Scan1#{
+        handler_modes =>
+            maps:get(handler_modes, Scan1) ++
+                [catena_resumption_mode:interface_view(Mode)]
+    },
     BodyScan = scan_term(
         Body,
         LocalNames,
         Options,
-        Scan1#{
+        Scan2#{
             handled_effects =>
-                Effects ++ maps:get(handled_effects, Scan1)
+                Effects ++ maps:get(handled_effects, Scan2)
         }
     ),
     scan_term(Handlers, LocalNames, Options, BodyScan#{
@@ -630,15 +664,24 @@ valid_entry(#{
     mode := Mode,
     reason := _Reason,
     edges := Edges,
-    regions := Regions
+    regions := Regions,
+    handler_modes := HandlerModes
 }) ->
     is_atom(Name) andalso
         is_integer(Arity) andalso
         Arity >= 0 andalso
         lists:member(Mode, [direct, resumable]) andalso
         is_list(Edges) andalso
-        is_list(Regions);
+        is_list(Regions) andalso
+        is_list(HandlerModes) andalso
+        lists:all(fun valid_handler_mode/1, HandlerModes);
 valid_entry(_) ->
+    false.
+
+valid_handler_mode(#{depth := Depth, kind := Kind}) ->
+    lists:member(Depth, [deep, shallow]) andalso
+        lists:member(Kind, [one_shot, multi_shot]);
+valid_handler_mode(_) ->
     false.
 
 is_transform_definition(

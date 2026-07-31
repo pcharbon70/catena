@@ -290,8 +290,15 @@ validate_node_ownership(
     Delimiters,
     Continuations
 ) ->
-    case maps:get(kind, Fields, undefined) of
-        one_shot ->
+    case {
+        maps:get(kind, Fields, undefined),
+        maps:get(depth, Fields, undefined)
+    } of
+        {Kind, Depth}
+                when
+                    (Kind =:= one_shot orelse Kind =:= multi_shot),
+                    (Depth =:= deep orelse Depth =:= shallow)
+                ->
             case require_delimiter(
                 maps:get(delimiter, Fields, undefined),
                 Delimiters
@@ -308,8 +315,8 @@ validate_node_ownership(
                 {error, _} = Error ->
                     Error
             end;
-        Kind ->
-            {error, {resumption_kind_mismatch, one_shot, Kind}}
+        {Kind, Depth} ->
+            {error, {invalid_resumption_mode, Depth, Kind}}
     end;
 validate_node_ownership(
     #{op := resume, fields := Fields},
@@ -555,6 +562,10 @@ require_continuation(Continuation, Continuations) ->
 
 validate_resume_authority(#{
     type := {tresumption, {tcon, 'OneShot'}, _, _, _}
+}) ->
+    ok;
+validate_resume_authority(#{
+    type := {tresumption, {tcon, 'MultiShot'}, _, _, _}
 }) ->
     ok;
 validate_resume_authority(#{

@@ -121,14 +121,30 @@ map_expr(Fun, Expr, Depth) ->
                 value=map_expr(Fun, Value, NextDepth),
                 location=Loc
             };
-        #try_with_expr{body=Body, handlers=Handlers, location=Loc} ->
+        #try_with_expr{
+            body=Body,
+            handlers=Handlers,
+            depth=HandlerDepth,
+            resumption_kind=ResumptionKind,
+            location=Loc
+        } ->
             NewBody = map_expr(Fun, Body, NextDepth),
             NewHandlers = [map_handler(Fun, H, NextDepth) || H <- Handlers],
-            #try_with_expr{body=NewBody, handlers=NewHandlers, location=Loc};
+            #try_with_expr{
+                body=NewBody,
+                handlers=NewHandlers,
+                depth=HandlerDepth,
+                resumption_kind=ResumptionKind,
+                location=Loc
+            };
         {handle_expr, Body, Handlers, Loc} ->
             NewBody = map_expr(Fun, Body, NextDepth),
             NewHandlers = [map_handler(Fun, H, NextDepth) || H <- Handlers],
             {handle_expr, NewBody, NewHandlers, Loc};
+        {handle_expr, Mode, Body, Handlers, Loc} ->
+            NewBody = map_expr(Fun, Body, NextDepth),
+            NewHandlers = [map_handler(Fun, H, NextDepth) || H <- Handlers],
+            {handle_expr, Mode, NewBody, NewHandlers, Loc};
         _ ->
             %% Leaf nodes (literals, variables)
             Expr
@@ -223,6 +239,9 @@ fold_expr(Fun, Acc, Expr, Depth) ->
         {handle_expr, Body, Handlers, _Loc} ->
             Acc2 = fold_expr(Fun, Acc, Body, NextDepth),
             lists:foldl(fun(H, A) -> fold_handler(Fun, A, H, NextDepth) end, Acc2, Handlers);
+        {handle_expr, _Mode, Body, Handlers, _Loc} ->
+            Acc2 = fold_expr(Fun, Acc, Body, NextDepth),
+            lists:foldl(fun(H, A) -> fold_handler(Fun, A, H, NextDepth) end, Acc2, Handlers);
         _ ->
             %% Leaf nodes
             Acc
@@ -298,6 +317,9 @@ walk_expr(Fun, Expr, Depth) ->
             walk_expr(Fun, Body, NextDepth),
             [walk_handler(Fun, H, NextDepth) || H <- Handlers];
         {handle_expr, Body, Handlers, _Loc} ->
+            walk_expr(Fun, Body, NextDepth),
+            [walk_handler(Fun, H, NextDepth) || H <- Handlers];
+        {handle_expr, _Mode, Body, Handlers, _Loc} ->
             walk_expr(Fun, Body, NextDepth),
             [walk_handler(Fun, H, NextDepth) || H <- Handlers];
         _ ->
@@ -569,11 +591,24 @@ format_expr(#resume_expr{resumption=Resumption, value=Value}) ->
         "resume(~s, ~s)",
         [format_expr(Resumption), format_expr(Value)]
     );
-format_expr(#try_with_expr{body=Body, handlers=Handlers}) ->
+format_expr(#try_with_expr{
+    body=Body,
+    handlers=Handlers,
+    depth=Depth,
+    resumption_kind=Kind
+}) ->
     HandlerStr = string:join([format_handler(Handler) || Handler <- Handlers], " "),
-    io_lib:format("handle ~s then { ~s }", [format_expr(Body), HandlerStr]);
+    io_lib:format(
+        "handle ~s~s then { ~s }",
+        [format_handler_mode(Depth, Kind), format_expr(Body), HandlerStr]
+    );
 format_expr(_) ->
     "<??>".
+
+format_handler_mode(deep, one_shot) -> "";
+format_handler_mode(shallow, one_shot) -> "shallow ";
+format_handler_mode(deep, multi_shot) -> "multi_shot ";
+format_handler_mode(shallow, multi_shot) -> "shallow multi_shot ".
 
 format_handler(#handler_clause{effect=Effect, operations=Operations}) ->
     OperationStr = string:join(

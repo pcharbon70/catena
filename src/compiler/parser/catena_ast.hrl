@@ -289,9 +289,14 @@
 }).
 
 %% Try-with expression (effect handler)
+-type handler_depth() :: deep | shallow.
+-type resumption_kind() :: one_shot | multi_shot.
+
 -record(try_with_expr, {
     body :: expr(),
     handlers :: list(), % [#handler_clause{}] - forward ref commented temporarily
+    depth = deep :: handler_depth(),
+    resumption_kind = one_shot :: resumption_kind(),
     location :: location()
 }).
 

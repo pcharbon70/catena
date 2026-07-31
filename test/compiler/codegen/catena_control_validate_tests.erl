@@ -83,12 +83,12 @@ authority_and_kind_mismatches_are_rejected_test() ->
         make_resumption,
         fun(Node) ->
             Fields = maps:get(fields, Node),
-            Node#{fields => Fields#{kind => multi_shot}}
+            Node#{fields => Fields#{kind => unbounded}}
         end
     ),
     ?assertMatch(
         {error, {backend_error, invalid_control_ir, #{
-            reason := {resumption_kind_mismatch, one_shot, multi_shot}
+            reason := {invalid_resumption_mode, deep, unbounded}
         }}},
         validate(WrongKind, Unit)
     ).

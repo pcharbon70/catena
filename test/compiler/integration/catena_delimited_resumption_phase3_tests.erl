@@ -287,8 +287,11 @@ negative_consumption_mode_and_opacity_diagnostics_are_stable_test() ->
         Env
     ),
     ?assertMatch(
-        #{requested_mode := multi_shot},
-        error_context(unsupported_resumption_mode, ModeErrors)
+        #{
+            requested_mode := multi_shot,
+            reason := external_or_stateful_effects_not_duplicable
+        },
+        error_context(inadmissible_multi_shot_effects, ModeErrors)
     ).
 
 run_type_and_evidence(Source) ->

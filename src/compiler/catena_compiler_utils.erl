@@ -219,6 +219,7 @@ extract_location({effect_decl, _Name, _Operations, Loc}) -> Loc;
 extract_location({effect_operation, _Name, _Type, Loc}) -> Loc;
 extract_location({perform_expr, _Effect, _Operation, _Args, Loc}) -> Loc;
 extract_location({resume_expr, _Resumption, _Value, Loc}) -> Loc;
+extract_location({handle_expr, _Mode, _Body, _Handlers, Loc}) -> Loc;
 extract_location({try_with_expr, _Body, _Handlers, Loc}) -> Loc;
 extract_location({handler_clause, _Effect, _Operations, Loc}) -> Loc;
 extract_location({operation_case, _Operation, _Params, _Body, Loc}) -> Loc;

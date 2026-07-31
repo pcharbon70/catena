@@ -23,7 +23,7 @@
     with_artifact_dependencies/2
 ]).
 
--define(INTERFACE_VERSION, 2).
+-define(INTERFACE_VERSION, 3).
 
 -type interface() :: map().
 -export_type([interface/0]).
@@ -179,8 +179,11 @@ with_control_modes(Interface, Modes) ->
 
 attach_control_mode(#{kind := transform, name := Name} = Export, Modes) ->
     case catena_control_mode:mode(Name, Modes) of
-        {ok, Mode} -> Export#{control_mode => Mode};
-        none -> Export#{control_mode => resumable}
+        {ok, Mode} -> Export#{
+            control_mode => Mode,
+            handler_modes => catena_control_mode:handler_modes(Name, Modes)
+        };
+        none -> Export#{control_mode => resumable, handler_modes => []}
     end;
 attach_control_mode(#{kind := trait_method} = Export, _Modes) ->
     Export#{control_mode => resumable};

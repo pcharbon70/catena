@@ -219,7 +219,7 @@ nested_reentrant_shape_is_rejected_test() ->
         )
     ).
 
-multi_shot_resume_is_explicitly_deferred_test() ->
+multi_shot_resume_rejects_inadmissible_residual_effects_test() ->
     Type = catena_types:tresumption(
         catena_types:multi_shot(),
         catena_types:tcon(int),
@@ -237,10 +237,10 @@ multi_shot_resume_is_explicitly_deferred_test() ->
     ?assertMatch(
         #{
             requested_mode := multi_shot,
-            reason := multi_shot_deferred,
+            reason := external_or_stateful_effects_not_duplicable,
             residual_effects := {teffectrow, ['State'], closed}
         },
-        error_context(unsupported_resumption_mode, Errors)
+        error_context(inadmissible_multi_shot_effects, Errors)
     ).
 
 opaque_resumption_vocabulary_cannot_be_forged_test_() ->
