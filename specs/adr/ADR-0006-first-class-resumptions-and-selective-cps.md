@@ -360,15 +360,18 @@ making advanced control explicit.
 ## Implementation Status
 
 Not implemented at acceptance time. The staged implementation has since
-completed Phases 1 through 3: normative semantics and an oracle,
-`with`/`resume` syntax and normalization, and the first-class
-`Resumption k a b e` typed frontend are present.
+completed Phases 1 through 4: normative semantics and an oracle,
+`with`/`resume` syntax and normalization, the first-class
+`Resumption k a b e` typed frontend, authoritative control-mode analysis,
+selective-CPS control IR, stable calling conventions, and fail-closed graph
+validation are present.
 
 The current generated-code path still uses explicit request/response handler
 contexts, and the Erlang-facing `catena_resumption` capture still wraps a
 direct-style result marker. Neither is evidence of true language-level
-delimited continuation capture. Selective CPS, runtime ownership, and
-executable explicit resumptions remain future phases.
+delimited continuation capture. The Phase 4 selective-CPS graph is compiler
+IR only; runtime ownership, Core lowering, and executable explicit
+resumptions remain future phases.
 
 Promotion requires the staged work in
 [Delimited Resumptions Implementation Plan](../planning/delimited-resumptions/README.md)

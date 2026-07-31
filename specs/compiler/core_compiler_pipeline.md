@@ -42,8 +42,9 @@ frontend validation to Core Erlang and OTP-accepted BEAM output.
 - `compile_string_to_unit/1,2` is the maintained compiler-internal handoff for
   artifact backends. It retains normalized source, typed declarations, the
   effective environment, imports, exports, options, validation evidence,
-  symbols, the complete module-local callable inventory, locations, and
-  declaration dispositions.
+  symbols, the complete module-local callable inventory, locations,
+  authoritative control modes, validated selective-CPS IR, and declaration
+  dispositions.
 - Import processing publishes versioned module interfaces and resolves open,
   qualified, aliased, selective, and dotted imports to executable symbols and
   artifact dependencies. The compiler-internal closed-source-set path orders
@@ -56,17 +57,21 @@ frontend validation to Core Erlang and OTP-accepted BEAM output.
   Production Core generation accepts the resulting validated unit; direct raw
   AST generation remains a documented low-level codegen test helper.
 
-## Accepted Next Pipeline Extension
+## Implemented Control-IR Boundary
 
-ADR-0006 adds a planned control-flow boundary after validated typing, effect
-analysis, and call resolution and before ordinary Core Erlang expression
-emission. That boundary will classify callables as direct or resumable and
-lower only resumable regions through a validated CPS IR.
+ADR-0006's compiler boundary now runs after validated typing, effect, trait,
+import, and call analysis and before ordinary Core Erlang expression
+emission. `catena_control_mode` classifies callables and regions as direct or
+resumable; `catena_selective_cps` lowers the graph into `catena_control_ir`;
+`catena_control_abi` defines entries, closures, final continuations, and
+bridges; and `catena_control_validate` must produce a retained passing report
+before declaration projection.
 
-The extension is specified in
+The boundary is specified in
 [Delimited Resumption Architecture](delimited_resumption_architecture.md).
-It is not part of the currently implemented pipeline and must remain
-fail-closed until its source-to-BEAM promotion evidence exists.
+It is compiler IR, not runtime promotion evidence. Explicit resumptions remain
+fail-closed at Core emission until the deep one-shot runtime and Core lowering
+phases consume this graph.
 
 ## Acceptance Criteria
 

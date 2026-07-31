@@ -15,6 +15,8 @@
     context/4,
     unsupported_backend_construct/2,
     missing_resumption_lowering/2,
+    invalid_control_ir/2,
+    resumption_abi_mismatch/2,
     unresolved_call/3,
     ambiguous_call/4,
     arity_mismatch/4,
@@ -33,6 +35,8 @@
 -type category() ::
     unsupported_backend_construct |
     missing_resumption_lowering |
+    invalid_control_ir |
+    resumption_abi_mismatch |
     unresolved_call |
     ambiguous_call |
     arity_mismatch |
@@ -52,6 +56,8 @@ categories() ->
     [
         unsupported_backend_construct,
         missing_resumption_lowering,
+        invalid_control_ir,
+        resumption_abi_mismatch,
         unresolved_call,
         ambiguous_call,
         arity_mismatch,
@@ -98,6 +104,20 @@ missing_resumption_lowering(Construct, Context) ->
     new(
         missing_resumption_lowering,
         Context#{construct => Construct}
+    ).
+
+-spec invalid_control_ir(term(), map()) -> diagnostic().
+invalid_control_ir(Reason, Context) ->
+    new(
+        invalid_control_ir,
+        Context#{reason => Reason}
+    ).
+
+-spec resumption_abi_mismatch(term(), map()) -> diagnostic().
+resumption_abi_mismatch(Reason, Context) ->
+    new(
+        resumption_abi_mismatch,
+        Context#{reason => Reason}
     ).
 
 -spec unresolved_call(atom(), non_neg_integer(), map()) -> diagnostic().
@@ -265,6 +285,16 @@ category_message(missing_resumption_lowering, Details) ->
     io_lib:format(
         "has no validated resumption lowering for the ~p construct",
         [maps:get(construct, Details, undefined)]
+    );
+category_message(invalid_control_ir, Details) ->
+    io_lib:format(
+        "rejected invalid selective-CPS control IR: ~p",
+        [maps:get(reason, Details, undefined)]
+    );
+category_message(resumption_abi_mismatch, Details) ->
+    io_lib:format(
+        "rejected an incompatible direct/resumable bridge: ~p",
+        [maps:get(reason, Details, undefined)]
     );
 category_message(unresolved_call, _Details) ->
     "could not resolve transform call";

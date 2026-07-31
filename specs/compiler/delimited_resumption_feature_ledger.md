@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 3 typed-frontend implementation boundary for
+Phase 4 validated compiler-IR boundary for
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md).
 
 This ledger prevents internal helper names, marker callbacks, request/response
@@ -49,6 +49,16 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Resumption typing | implemented frontend | All four parameters, source origins, residual rows, schemes, and first-class flow are retained |
 | Resumption CPS/runtime | absent | Explicit control remains rejected before backend success; automatic value handlers retain request/response execution |
 
+## Phase 4 Snapshot
+
+| Measurement | Phase 4 result | Interpretation |
+| --- | ---: | --- |
+| Complete active EUnit suite | 5,192 pass; 0 failures; 0 skips | Control analysis, selective-CPS IR, ABI, validation, imports, and all earlier gates are green |
+| Parser conflicts | 38 shift/reduce; 0 reduce/reduce | Unchanged from the audited Phase 2 grammar boundary |
+| Control-mode analysis | implemented compiler boundary | Typed effects, handlers, calls, imports, traits, higher-order capabilities, and open rows produce one retained direct/resumable inventory |
+| Selective-CPS IR | implemented compiler boundary | Deterministic delimiters, continuations, resumptions, resume/abort nodes, calls, bridges, origins, and dispositions are retained and validated |
+| Resumption runtime/Core | absent | Explicit control still fails closed before Core success; Phase 5 runtime authority and Phase 6 Core lowering remain required |
+
 ## Classification Vocabulary
 
 | Classification | Meaning |
@@ -59,6 +69,7 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Semantic oracle | Independently executes the normative model for comparison and tests; never linked by generated application code |
 | Frontend implementation | Source parses, preserves intent, normalizes, and validates structurally, but lacks the typing/lowering/runtime evidence required for promotion |
 | Typed frontend implementation | Source reaches kind, type, effect, flow, and typed-artifact validation, but lacks executable continuation lowering/runtime evidence |
+| Compiler IR implementation | Typed source reaches authoritative control classification, selective-CPS lowering, and fail-closed graph validation, but lacks production runtime/Core execution |
 | Planned source implementation | Accepted by the ADR and architecture but absent from the compiler/runtime path |
 | Deferred mode | Has an accepted conceptual meaning but lacks the required syntax, typing, runtime authority, or evidence for promotion |
 
@@ -67,13 +78,13 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Surface | Current implementation | Classification | Promotion target |
 | --- | --- | --- | --- |
 | `perform` syntax and AST | Parsed and typed as the existing effect expression | Request/response | Preserve syntax; classify resumable suspension points |
-| `handle` and operation cases | Parsed value/control cases normalize to one explicit semantic shape and infer delimiter/residual types | Typed frontend implementation | Feed classified cases into selective CPS |
-| `with k` operation binder | Binds an opaque, first-class `Resumption OneShot a b e` with retained source evidence | Typed frontend implementation | Selective-CPS construction of runtime authority |
-| `resume(k, value)` | Checks typed authority and input, returns the delimiter result, and contributes residual effects | Typed frontend implementation | Selective-CPS invocation of the reified remainder |
-| Value-handler compatibility | Synthetic typed tail auto-resume is retained in normalized/typed artifacts and exactly projected for request/response execution | Typed frontend implementation plus request/response compatibility | Execute the same normalized form through selective CPS |
+| `handle` and operation cases | Parsed and typed cases lower to deterministic delimiter, handler-install, suspension, resume, and abort control nodes | Compiler IR implementation | Execute the validated graph through the deep one-shot runtime |
+| `with k` operation binder | Binds `Resumption OneShot a b e`; lowering constructs a typed resumption linked to its delimiter and continuation identity | Compiler IR implementation | Construct opaque process-affine runtime authority |
+| `resume(k, value)` | Typed authority and residual effects lower to validated resume nodes, including first-class authority-carried delimiters | Compiler IR implementation | Invoke the compiler-reified remainder through the runtime/Core ABI |
+| Value-handler compatibility | Synthetic typed tail auto-resume lowers through the same control IR and remains exactly projected for request/response execution | Compiler IR implementation plus request/response compatibility | Execute the normalized form through the production resumption runtime |
 | Effect context | Explicit context exists in the compiler runtime | Internal helper | Add same-process handler frame and delimiter entries |
-| Core Erlang effect backend | Emits `catena_effect_runtime:perform/4` and `with_handlers/3` calls | Request/response | Direct/resumable mode classification plus explicit bridges |
-| Continuation capture | `catena_resumption` and `catena_perform` use supplied functions or `{resumed, Value}` placeholders | Marker-backed | Compiler-reified remainder to the selected delimiter |
+| Core Erlang effect backend | Direct code still emits `catena_effect_runtime:perform/4` and `with_handlers/3`; validated CPS nodes are not emitted yet | Request/response plus fail-closed compiler IR | Phase 6 Core emission for the Phase 4 ABI |
+| Continuation capture | Phase 4 reifies compiler-owned continuation identities and remainder structure; production helpers still use supplied functions or `{resumed, Value}` placeholders | Compiler IR implementation plus marker-backed runtime | Executable compiler closure to the selected delimiter |
 | One-shot consumption | ETS-backed wrapper consumption is tested independently | Internal helper | Opaque process-affine runtime authority over a real continuation |
 | Deep/shallow selection | Helper modules model scope/depth behavior, often with process-local context | Internal helper | Deep restoration around a captured remainder; shallow remains deferred |
 | Multi-shot | State-copy and resume-count helpers exist | Deferred mode | Residual-effect admissibility and independent branch authority |
@@ -128,6 +139,22 @@ evidence. Only the backend disposition path may project the exact
 compiler-generated value-handler shape to the legacy request/response
 representation; explicit control and other resumption leakage remain
 fail-closed.
+
+### Phase 4 control analysis and selective-CPS infrastructure
+
+The compiler now retains and validates the non-executable control graph:
+
+- `catena_control_mode` classifies source regions and solves local call graphs;
+- `catena_control_ir` owns the versioned node and graph contracts;
+- `catena_selective_cps` lowers resumable regions and preserves direct ones;
+- `catena_control_abi` defines entries, closures, continuations, and bridges;
+- `catena_control_validate` proves ownership, arity, origin, authority,
+  disposition, and bridge invariants;
+- `catena_module_interface` publishes validated imported transform modes.
+
+`catena_compilation_unit` retains the mode inventory, control IR, and passing
+validation report before declaration disposition. This does not replace the
+Phase 5 runtime or Phase 6 Core lowering.
 
 ### Reference oracle
 
@@ -210,9 +237,10 @@ A helper test proves only its named helper behavior. An oracle test proves
 agreement with the Phase 1 model. Neither proves that Catena source parses,
 types, lowers, and executes a real delimited continuation.
 
-Only end-to-end evidence through the production source-to-BEAM path may change
-`with`, `resume`, first-class retention, selective CPS, shallow, or multi-shot
-rows from planned/deferred to implemented.
+Only end-to-end evidence through the production source-to-BEAM path may
+promote executable `with`, `resume`, first-class retention, shallow, or
+multi-shot semantics. Phase 4 may accurately claim implemented compiler IR,
+but not executable selective-CPS continuation behavior.
 
 ## Related Material
 
@@ -221,5 +249,6 @@ rows from planned/deferred to implemented.
 - [Phase 1 Plan](../planning/delimited-resumptions/phase-01-operational-semantics-feature-ledger-and-reference-oracle.md)
 - [Phase 2 Plan](../planning/delimited-resumptions/phase-02-with-resume-syntax-ast-and-semantic-normalization.md)
 - [Phase 3 Plan](../planning/delimited-resumptions/phase-03-first-class-resumption-kinds-types-and-effects.md)
+- [Phase 4 Plan](../planning/delimited-resumptions/phase-04-control-mode-analysis-and-selective-cps-ir.md)
 - [Effect Runtime](../runtime/effect_runtime.md)
 - [Current Status](../planning/current_status.md)

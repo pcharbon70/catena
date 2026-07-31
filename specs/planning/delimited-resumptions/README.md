@@ -70,7 +70,7 @@ accepted:
 - [x] [Phase 1: Operational Semantics, Feature Ledger, And Reference Oracle](phase-01-operational-semantics-feature-ledger-and-reference-oracle.md)
 - [x] [Phase 2: `with`/`resume` Syntax, AST, And Semantic Normalization](phase-02-with-resume-syntax-ast-and-semantic-normalization.md)
 - [x] [Phase 3: First-Class `Resumption` Kinds, Types, And Effects](phase-03-first-class-resumption-kinds-types-and-effects.md)
-- [ ] [Phase 4: Control-Mode Analysis And Selective CPS IR](phase-04-control-mode-analysis-and-selective-cps-ir.md)
+- [x] [Phase 4: Control-Mode Analysis And Selective CPS IR](phase-04-control-mode-analysis-and-selective-cps-ir.md)
 - [ ] [Phase 5: Deep One-Shot Runtime And Resumption Ownership](phase-05-deep-one-shot-runtime-and-resumption-ownership.md)
 - [ ] [Phase 6: Core Erlang, BEAM, And Call-Graph Integration](phase-06-core-erlang-beam-and-call-graph-integration.md)
 - [ ] [Phase 7: Shallow Handlers And Multi-Shot Resumptions](phase-07-shallow-handlers-and-multi-shot-resumptions.md)
@@ -114,9 +114,9 @@ executable evidence exists.
       computation
 - [x] Existing value handlers preserve their observable behavior through
       tail auto-resume
-- [ ] `Resumption OneShot a b e` is retained through validated typing and
+- [x] `Resumption OneShot a b e` is retained through validated typing and
       lowering
-- [ ] Direct/resumable classification and all calling-convention bridges are
+- [x] Direct/resumable classification and all calling-convention bridges are
       explicit and validated
 - [ ] Deep one-shot resumptions are opaque, process-affine, and
       deterministically consumed

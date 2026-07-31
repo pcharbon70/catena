@@ -2,12 +2,13 @@
 
 ## Status
 
-Accepted target architecture. Phases 2 and 3 implement the lexer, parser, AST,
-pretty-printer, semantic normalization, structural diagnostics, first-class
-resumption kinds and types, handler/resume inference, residual-effect
-checking, and conservative one-shot/mode gates. Selective CPS and executable
-explicit resumptions remain unimplemented, so this is not yet a promoted
-source-to-BEAM feature.
+Accepted target architecture. Phases 2 through 4 implement the lexer, parser,
+AST, pretty-printer, semantic normalization, structural diagnostics,
+first-class resumption kinds and types, handler/resume inference,
+residual-effect checking, control-mode analysis, selective-CPS control IR,
+calling conventions, and fail-closed graph validation. Runtime authority and
+Core lowering for explicit resumptions remain unimplemented, so this is not
+yet a promoted source-to-BEAM feature.
 
 This document makes
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
@@ -171,12 +172,13 @@ The implemented synthetic origin is:
 
 Semantic results and validated compilation units retain this normalized form.
 The Phase 3 typed frontend consumes it directly and retains resumption
-evidence and origins. Until the Phase 4 CPS boundary exists, the
-request/response backend receives a compatibility view only when the binder,
-origin, resume target, and tail shape exactly match compiler-generated
-auto-resume output. Explicit, standalone, or malformed resumptions fail with
-`missing_resumption_lowering`; they are never lowered as ordinary calls or
-marker closures.
+evidence and origins. Phase 4 classifies and lowers that authority into
+validated control IR. Until the Phase 5 runtime and Phase 6 Core lowering
+exist, the request/response backend receives a compatibility view only when
+the binder, origin, resume target, and tail shape exactly match
+compiler-generated auto-resume output. Explicit or malformed resumptions fail
+with `missing_resumption_lowering`; they are never emitted as ordinary calls
+or marker closures.
 
 AST traversal, pretty-printing, erasure, origin mapping, and diagnostic
 utilities must preserve these nodes. Pretty-printing must retain whether the
@@ -247,6 +249,12 @@ Classification is conservative:
 Classification participates in call resolution. Separate ad-hoc decisions in
 expression code generation are not permitted.
 
+This boundary is implemented by `catena_control_mode`. Validated compilation
+units retain a versioned inventory with source reasons, typed effect evidence,
+regions, and local/imported/higher-order/trait edges. Local modes are solved
+to a deterministic fixed point, and exported transforms publish their mode in
+the versioned module interface.
+
 ## CPS IR Boundary
 
 Selective CPS lowering occurs after semantic, kind, type, effect, trait,
@@ -287,6 +295,13 @@ perform_cps(
 The actual Core Erlang representation may use closures and explicit tail
 calls, but it must preserve the observable semantics of the control IR.
 
+The compiler-owned boundary is implemented by `catena_control_ir` and
+`catena_selective_cps`. It retains deterministic delimiter and continuation
+identities, types, effect rows, control modes, continuation arities, runtime
+dispositions, and origins. `catena_control_validate` rejects malformed graphs
+before declaration projection or ordinary Core emission. This is compiler IR
+evidence, not yet an executable runtime continuation.
+
 ## Calling Convention
 
 A direct private entry remains conceptually:
@@ -309,6 +324,12 @@ Named calls, higher-order calls, imports, recursion, mutual recursion, trait
 dictionaries, and closures must carry compatible control modes. The compiler
 must generate an explicit bridge or reject the call; it may not guess from
 Core Erlang arity after lowering.
+
+`catena_control_abi` now defines these public, private, closure, final
+continuation, and bridge shapes. Direct imported modes are published through
+module interfaces; unresolved dynamic capabilities remain resumable
+conservatively. Resumable-to-direct entry requires an explicit
+non-suspension proof.
 
 ## Runtime Model
 
@@ -440,8 +461,8 @@ Shallow and multi-shot behavior receive separate promotion evidence when their
 source opt-ins are accepted and implemented.
 
 Until that evidence exists, component and status documents must distinguish
-the implemented typed frontend from planned executable delimited
-source-level resumptions.
+the implemented typed frontend and compiler control IR from planned
+executable delimited source-level resumptions.
 
 ## Related Material
 

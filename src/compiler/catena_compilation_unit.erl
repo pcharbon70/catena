@@ -37,11 +37,17 @@
     artifact_dependencies/1,
     interface/1,
     locations/1,
+    control_modes/1,
+    control_ir/1,
+    control_validation/1,
     dispositions/1,
-    with_dispositions/2
+    with_dispositions/2,
+    with_control_modes/2,
+    with_control_ir/2,
+    with_control_validation/2
 ]).
 
--define(UNIT_VERSION, 7).
+-define(UNIT_VERSION, 10).
 
 -opaque t() :: #{
     '$catena_compilation_unit' := pos_integer(),
@@ -66,6 +72,9 @@
     artifact_dependencies := [map()],
     interface := catena_module_interface:interface(),
     locations := location_index(),
+    control_modes := catena_control_mode:inventory(),
+    control_ir := catena_control_ir:ir() | pending,
+    control_validation := catena_control_validate:report() | pending,
     dispositions := [map()]
 }.
 
@@ -206,7 +215,7 @@ new(
                                 TraitInventory
                             ) of
                                 {ok, Interface} ->
-                            {ok, #{
+                            Unit0 = #{
                                 '$catena_compilation_unit' => ?UNIT_VERSION,
                                 module_name => Name,
                                 runtime_module =>
@@ -236,7 +245,61 @@ new(
                                 locations => Locations,
                                 dispositions =>
                                     unclassified_dispositions(Declarations)
-                            }};
+                            },
+                            case catena_control_mode:analyze(
+                                Name,
+                                Declarations,
+                                TypedDeclarations,
+                                Callables,
+                                Options
+                            ) of
+                                {ok, ControlModes} ->
+                                    case catena_module_interface:
+                                        with_control_modes(
+                                            Interface,
+                                            ControlModes
+                                        )
+                                    of
+                                        {ok, ControlInterface} ->
+                                            Unit1 = Unit0#{
+                                                interface =>
+                                                    ControlInterface,
+                                                control_modes =>
+                                                    ControlModes,
+                                                control_ir => pending,
+                                                control_validation => pending
+                                            },
+                                            case catena_selective_cps:
+                                                lower(Unit1)
+                                            of
+                                                {ok, ControlIR} ->
+                                                    Unit2 = Unit1#{
+                                                        control_ir =>
+                                                            ControlIR
+                                                    },
+                                                    case
+                                                        catena_control_validate:
+                                                            validate(Unit2)
+                                                    of
+                                                        {ok,
+                                                            ValidationReport}
+                                                        ->
+                                                            {ok, Unit2#{
+                                                                control_validation =>
+                                                                    ValidationReport
+                                                            }};
+                                                        {error, _} = Error ->
+                                                            Error
+                                                    end;
+                                                {error, _} = Error ->
+                                                    Error
+                                            end;
+                                        {error, _} = Error ->
+                                            Error
+                                    end;
+                                {error, _} = Error ->
+                                    Error
+                            end;
                                 {error, _} = Error ->
                                     Error
                             end;
@@ -278,11 +341,11 @@ new(_NormalizedAST, _TypedModule, Metadata) ->
 validated_compatibility_declarations(ValidationState, Declarations) ->
     case validate_evidence(ValidationState) of
         ok ->
-            %% Phase 3 type checking has validated normalized Resumption
-            %% nodes. The unit must retain them for the later control-mode
-            %% pass; the backend compatibility projection still occurs only
-            %% in prepare_for_codegen/1 and remains fail-closed for explicit
-            %% control until selective CPS exists.
+            %% Phase 3 type checking validates normalized Resumption nodes.
+            %% Phase 4 retains them through control-mode analysis and the
+            %% validated selective-CPS graph. The backend compatibility
+            %% projection still occurs only in prepare_for_codegen/1 and
+            %% remains fail-closed until runtime and Core lowering exist.
             {ok, Declarations};
         {error, _} = Error ->
             Error
@@ -309,6 +372,9 @@ is_compilation_unit(#{
     artifact_dependencies := ArtifactDependencies,
     interface := Interface,
     locations := Locations,
+    control_modes := ControlModes,
+    control_ir := ControlIR,
+    control_validation := ControlValidation,
     dispositions := Dispositions
 }) ->
     is_atom(Name) andalso
@@ -325,6 +391,15 @@ is_compilation_unit(#{
         is_list(ArtifactDependencies) andalso
         catena_module_interface:is_interface(Interface) andalso
         is_map(Locations) andalso
+        catena_control_mode:is_inventory(ControlModes) andalso
+        (
+            ControlIR =:= pending orelse
+                catena_control_ir:is_ir(ControlIR)
+        ) andalso
+        (
+            ControlValidation =:= pending orelse
+                catena_control_validate:is_report(ControlValidation)
+        ) andalso
         is_list(Dispositions) andalso
         validate_evidence(ValidationState) =:= ok;
 is_compilation_unit(_) ->
@@ -414,6 +489,16 @@ interface(Unit) ->
 -spec locations(t()) -> location_index().
 locations(Unit) -> maps:get(locations, Unit).
 
+-spec control_modes(t()) -> catena_control_mode:inventory().
+control_modes(Unit) -> maps:get(control_modes, Unit).
+
+-spec control_ir(t()) -> catena_control_ir:ir() | pending.
+control_ir(Unit) -> maps:get(control_ir, Unit).
+
+-spec control_validation(t()) ->
+    catena_control_validate:report() | pending.
+control_validation(Unit) -> maps:get(control_validation, Unit).
+
 -spec dispositions(t()) -> [map()].
 dispositions(Unit) -> maps:get(dispositions, Unit).
 
@@ -445,6 +530,47 @@ with_dispositions(Unit, Dispositions) when
                     {disposition_count_mismatch,
                         length(Declarations),
                         DeclarationDispositionCount}}}
+    end.
+
+%% @doc Replace control-mode evidence after a validated re-analysis.
+-spec with_control_modes(t(), catena_control_mode:inventory()) ->
+    {ok, t()} | {error, term()}.
+with_control_modes(Unit, ControlModes) ->
+    Candidate = Unit#{control_modes => ControlModes},
+    case catena_control_mode:is_inventory(ControlModes) andalso
+        is_compilation_unit(Candidate)
+    of
+        true -> {ok, Candidate};
+        false ->
+            {error, {invalid_compilation_unit, invalid_control_modes}}
+    end.
+
+%% @doc Attach a canonical selective-CPS graph.
+-spec with_control_ir(t(), catena_control_ir:ir()) ->
+    {ok, t()} | {error, term()}.
+with_control_ir(Unit, ControlIR) ->
+    Candidate = Unit#{control_ir => ControlIR},
+    case catena_control_ir:is_ir(ControlIR) andalso
+        is_compilation_unit(Candidate)
+    of
+        true -> {ok, Candidate};
+        false ->
+            {error, {invalid_compilation_unit, invalid_control_ir}}
+    end.
+
+%% @doc Attach a successful fail-closed control-graph validation report.
+-spec with_control_validation(t(), catena_control_validate:report()) ->
+    {ok, t()} | {error, term()}.
+with_control_validation(Unit, Report) ->
+    Candidate = Unit#{control_validation => Report},
+    case catena_control_validate:is_report(Report) andalso
+        is_compilation_unit(Candidate)
+    of
+        true -> {ok, Candidate};
+        false ->
+            {error,
+                {invalid_compilation_unit,
+                    invalid_control_validation}}
     end.
 
 validate_evidence(ValidationState) when is_map(ValidationState) ->
