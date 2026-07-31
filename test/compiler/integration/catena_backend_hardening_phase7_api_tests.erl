@@ -18,7 +18,7 @@ string_api_returns_validated_artifact_test() ->
     {ok, Artifact} =
         catena_compile:compile_string_to_beam(Source, Options),
     ?assertEqual(catena_beam_artifact, maps:get(format, Artifact)),
-    ?assertEqual(1, maps:get(format_version, Artifact)),
+    ?assertEqual(2, maps:get(format_version, Artifact)),
     ?assertEqual('PublicBeamApi', maps:get(source_module, Artifact)),
     ?assertEqual('PublicBeamApi', maps:get(runtime_module, Artifact)),
     ?assert(is_binary(maps:get(beam, Artifact))),

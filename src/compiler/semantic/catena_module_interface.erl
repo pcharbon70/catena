@@ -14,16 +14,28 @@
     is_interface/1,
     source_module/1,
     runtime_module/1,
+    version/0,
+    checksum/1,
     exported_symbols/1,
     find_export/3,
     artifact_dependencies/1,
-    with_control_modes/2
+    with_control_modes/2,
+    with_artifact_dependencies/2
 ]).
 
 -define(INTERFACE_VERSION, 2).
 
 -type interface() :: map().
 -export_type([interface/0]).
+
+-spec version() -> pos_integer().
+version() -> ?INTERFACE_VERSION.
+
+%% @doc Stable digest used to bind consumers to the exact interface compiled.
+-spec checksum(interface()) -> binary().
+checksum(Interface) ->
+    true = is_interface(Interface),
+    crypto:hash(sha256, term_to_binary(Interface, [deterministic])).
 
 -spec build(atom(), [term()], [term()], [map()], [map()], term(),
     catena_trait_dictionary:inventory()) ->
@@ -125,6 +137,19 @@ find_export(Kind, Name, Interface) ->
 -spec artifact_dependencies(interface()) -> [map()].
 artifact_dependencies(Interface) ->
     maps:get(artifact_dependencies, Interface).
+
+-spec with_artifact_dependencies(interface(), [map()]) ->
+    {ok, interface()} | {error, term()}.
+with_artifact_dependencies(Interface, Dependencies) when is_list(Dependencies) ->
+    Candidate = Interface#{
+        artifact_dependencies := normalize_dependencies(Dependencies)
+    },
+    case is_interface(Candidate) of
+        true -> {ok, Candidate};
+        false -> {error, {invalid_module_interface_dependencies, Dependencies}}
+    end;
+with_artifact_dependencies(_Interface, Dependencies) ->
+    {error, {invalid_module_interface_dependencies, Dependencies}}.
 
 -spec with_control_modes(interface(), catena_control_mode:inventory()) ->
     {ok, interface()} | {error, term()}.

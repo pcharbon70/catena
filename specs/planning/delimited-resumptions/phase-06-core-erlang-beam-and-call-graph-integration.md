@@ -6,7 +6,7 @@ identity, patterns, imports, traits, recursion, effects, runtime dependencies,
 and diagnostics while proving that loaded BEAM executes the real delimited
 continuation.
 
-**Status:** In progress (Sections 6.1–6.2 complete).
+**Status:** In progress (Sections 6.1–6.3 complete).
 
 **Dependencies:** Phase 5 complete.
 
@@ -151,14 +151,14 @@ backend import, trait, recursion, conformance, and origin suites remain green.
 **Description:** Make resumption dependencies and source origins part of the
 validated public artifact rather than hidden assumptions in generated Core.
 
-- [ ] **Section 6.3 Complete**
+- [x] **Section 6.3 Complete**
 
 ### Task 6.3.1: Version Artifact And Runtime Dependencies
 
 **Description:** Declare the exact runtime capabilities required by resumable
 artifacts and reject incompatible load targets before execution.
 
-- [ ] **Task 6.3.1 Complete**
+- [x] **Task 6.3.1 Complete**
 
 #### Subtask 6.3.1.1: Extend Artifact Metadata
 
@@ -166,21 +166,21 @@ artifacts and reject incompatible load targets before execution.
 required handler-frame features, source/runtime module identities, and
 dependency checksums where applicable.
 
-- [ ] **Subtask 6.3.1.1 Complete**
+- [x] **Subtask 6.3.1.1 Complete**
 
 #### Subtask 6.3.1.2: Validate Load Compatibility
 
 **Description:** Reject missing, stale, or incompatible runtime contracts and
 normalize Core/OTP dependency diagnostics into Catena artifact failures.
 
-- [ ] **Subtask 6.3.1.2 Complete**
+- [x] **Subtask 6.3.1.2 Complete**
 
 ### Task 6.3.2: Preserve Source-Oriented Control Diagnostics
 
 **Description:** Relate every generated CPS or runtime failure to its Catena
 perform, handler case, binder, resume, call, and delimiter origin.
 
-- [ ] **Task 6.3.2 Complete**
+- [x] **Task 6.3.2 Complete**
 
 #### Subtask 6.3.2.1: Track Synthetic Origin Chains
 
@@ -188,7 +188,7 @@ perform, handler case, binder, resume, call, and delimiter origin.
 wrappers, bridges, imported entries, dictionary calls, and Core temporary
 variables.
 
-- [ ] **Subtask 6.3.2.1 Complete**
+- [x] **Subtask 6.3.2.1 Complete**
 
 #### Subtask 6.3.2.2: Normalize Backend And Runtime Failures
 
@@ -196,7 +196,27 @@ variables.
 compile, artifact version, ownership, consumption, and delimiter failures
 without exposing internal closure terms.
 
-- [ ] **Subtask 6.3.2.2 Complete**
+- [x] **Subtask 6.3.2.2 Complete**
+
+**Implementation evidence:** Artifact format 2 records source/runtime module
+identities, control ABI version 1, resumption-runtime version 1, exact deep
+one-shot handler capabilities, interface SHA-256 checksums, and the runtime
+dependencies required by conservatively resumable call graphs. The public
+`catena_beam_artifact:validate/1,2` and `load/1,2` boundaries reject malformed
+or stale artifact envelopes, mismatched BEAM identities, missing or
+incompatible runtime versions/features, altered interfaces, and stale module
+dependencies before code loading. Generated Core carries matching control,
+resumption, and handler-feature attributes.
+
+Control IR origins are published as source-to-synthetic chains for performs,
+generated continuations, captures, handler frames, resumptions, bridges, and
+closures. Generated runtime calls preserve perform, handler-case, delimiter,
+and closure origins, while normalized runtime and artifact failures sanitize
+private callable terms. The five focused
+`catena_delimited_resumption_phase6_artifact_tests` exercise successful
+validated loading, stale version/feature rejection, artifact and identity
+failure, dependency checksums, origin inventories, and closure-free runtime
+diagnostics. The complete active EUnit suite passes all 5,248 tests.
 
 ## Section 6.4: Phase 6 Integration Tests
 

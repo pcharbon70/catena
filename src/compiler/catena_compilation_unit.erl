@@ -199,18 +199,19 @@ new(
                                 RuntimeDependencies ++
                                     TraitRuntimeDependencies
                             ),
-                            AllArtifactDependencies =
+                            InitialArtifactDependencies =
                                 catena_module_linkage:
                                     artifact_dependencies(
                                         Imports,
-                                        AllRuntimeDependencies
+                                        AllRuntimeDependencies,
+                                        Interfaces
                                     ),
                             case catena_module_interface:build(
                                 Name,
                                 Exports,
                                 CompatibilityDeclarations,
                                 Symbols,
-                                AllArtifactDependencies,
+                                InitialArtifactDependencies,
                                 SourceIdentity,
                                 TraitInventory
                             ) of
@@ -240,7 +241,7 @@ new(
                                 runtime_dependencies =>
                                     AllRuntimeDependencies,
                                 artifact_dependencies =>
-                                    AllArtifactDependencies,
+                                    InitialArtifactDependencies,
                                 interface => Interface,
                                 locations => Locations,
                                 dispositions =>
@@ -254,16 +255,36 @@ new(
                                 Options
                             ) of
                                 {ok, ControlModes} ->
-                                    case catena_module_interface:
-                                        with_control_modes(
-                                            Interface,
+                                    ControlRuntimeDependencies =
+                                        control_runtime_dependencies(
                                             ControlModes
-                                        )
+                                        ),
+                                    FinalRuntimeDependencies =
+                                        lists:usort(
+                                            AllRuntimeDependencies ++
+                                                ControlRuntimeDependencies
+                                        ),
+                                    FinalArtifactDependencies =
+                                        catena_module_linkage:
+                                            artifact_dependencies(
+                                                Imports,
+                                                FinalRuntimeDependencies,
+                                                Interfaces
+                                            ),
+                                    case update_control_interface(
+                                        Interface,
+                                        ControlModes,
+                                        FinalArtifactDependencies
+                                    )
                                     of
                                         {ok, ControlInterface} ->
                                             Unit1 = Unit0#{
                                                 interface =>
                                                     ControlInterface,
+                                                runtime_dependencies =>
+                                                    FinalRuntimeDependencies,
+                                                artifact_dependencies =>
+                                                    FinalArtifactDependencies,
                                                 control_modes =>
                                                     ControlModes,
                                                 control_ir => pending,
@@ -868,3 +889,35 @@ effect_runtime_dependencies(_EffectfulTransforms) ->
         #{module => catena_effect_runtime, version => 1},
         #{module => catena_effect_system, version => 1}
     ].
+
+control_runtime_dependencies(ControlModes) ->
+    case lists:any(
+        fun(Entry) -> maps:get(mode, Entry) =:= resumable end,
+        catena_control_mode:entries(ControlModes)
+    ) of
+        true ->
+            [
+                #{module => catena_effect_runtime, version => 1},
+                #{
+                    module => catena_resumption_runtime,
+                    version => 1,
+                    features => catena_resumption_runtime:features()
+                }
+            ];
+        false ->
+            []
+    end.
+
+update_control_interface(Interface, ControlModes, ArtifactDependencies) ->
+    case catena_module_interface:with_artifact_dependencies(
+        Interface,
+        ArtifactDependencies
+    ) of
+        {ok, DependencyInterface} ->
+            catena_module_interface:with_control_modes(
+                DependencyInterface,
+                ControlModes
+            );
+        {error, _} = Error ->
+            Error
+    end.

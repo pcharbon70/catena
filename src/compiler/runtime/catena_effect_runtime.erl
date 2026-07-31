@@ -23,10 +23,13 @@
     empty_context/0,
     new_context/0,
     new_context/1,
+    version/0,
+    features/0,
 
     %% Main API
     perform/4,
     perform_cps/5,
+    perform_cps/6,
     with_handlers/3,
     with_value_provider/3,
     with_resumable_handler/3,
@@ -36,8 +39,11 @@
 
     %% Resumable handler construction
     control_case/3,
+    control_case/4,
     value_case/3,
+    value_case/4,
     control_closure/2,
+    control_closure/3,
     apply_control/4,
 
     %% Builtin effects
@@ -99,6 +105,7 @@
 -define(DEFAULT_MAX_PROCESS_COUNT, 50000).
 
 -define(CONTROL_CLOSURE_VERSION, 1).
+-define(RUNTIME_VERSION, 1).
 
 %% Default maximum file size for readFile (10 MB)
 -define(DEFAULT_MAX_FILE_SIZE, 10485760).
@@ -106,6 +113,13 @@
 %%====================================================================
 %% Context Creation
 %%====================================================================
+
+-spec version() -> pos_integer().
+version() -> ?RUNTIME_VERSION.
+
+-spec features() -> [atom()].
+features() ->
+    [explicit_contexts, local_resumable_handlers, versioned_control_closures].
 
 %% @doc Create an empty effect context
 -spec empty_context() -> effect_context().
@@ -186,9 +200,32 @@ perform_cps(Ctx, Effect, Operation, Args, Continuation)
             is_list(Args),
             is_function(Continuation, 2)
         ->
-    Origin = {runtime_effect_operation, Effect, Operation},
+    perform_cps(
+        Ctx,
+        Effect,
+        Operation,
+        Args,
+        Continuation,
+        {runtime_effect_operation, Effect, Operation}
+    ).
+
+-spec perform_cps(
+    effect_context(),
+    atom(),
+    atom(),
+    list(),
+    fun((term(), effect_context()) -> term()),
+    term()
+) -> term().
+perform_cps(Ctx, Effect, Operation, Args, Continuation, Origin)
+        when
+            is_atom(Effect),
+            is_atom(Operation),
+            is_list(Args),
+            is_function(Continuation, 2)
+        ->
     try
-        perform_cps_i(Ctx, Effect, Operation, Args, Continuation)
+        perform_cps_i(Ctx, Effect, Operation, Args, Continuation, Origin)
     catch
         Class:Reason:_Stack ->
             {error, catena_resumption_runtime:normalize_exception(
@@ -203,9 +240,10 @@ perform_cps(Ctx, Effect, Operation, Args, Continuation)
     atom(),
     atom(),
     list(),
-    fun((term(), effect_context()) -> term())
+    fun((term(), effect_context()) -> term()),
+    term()
 ) -> term().
-perform_cps_i(Ctx, Effect, Operation, Args, Continuation) ->
+perform_cps_i(Ctx, Effect, Operation, Args, Continuation, Origin) ->
     case lookup_entry(Ctx, Effect, Operation, length(Args)) of
         {ok, #{kind := local_resumable} = Frame, HandlerCtx} ->
             perform_local_resumable(
@@ -214,7 +252,8 @@ perform_cps_i(Ctx, Effect, Operation, Args, Continuation) ->
                 Frame,
                 Operation,
                 Args,
-                Continuation
+                Continuation,
+                Origin
             );
         {ok, #{kind := local_value_provider} = Entry, _HandlerCtx} ->
             Value = invoke_value_provider(Entry, Operation, Args),
@@ -344,12 +383,32 @@ control_case(Operation, Arity, Handler)
             Arity >= 0,
             is_function(Handler, 3)
         ->
+    control_case(
+        Operation,
+        Arity,
+        Handler,
+        {runtime_control_case, Operation}
+    ).
+
+-spec control_case(
+    atom(),
+    non_neg_integer(),
+    fun(([term()], term(), effect_context()) -> term()),
+    term()
+) -> resumable_case().
+control_case(Operation, Arity, Handler, Origin)
+        when
+            is_atom(Operation),
+            is_integer(Arity),
+            Arity >= 0,
+            is_function(Handler, 3)
+        ->
     #{
         operation => Operation,
         arity => Arity,
         mode => control,
         handler => Handler,
-        origin => {runtime_control_case, Operation}
+        origin => Origin
     }.
 
 %% @doc Construct an auto-resuming value case for a source handler frame.
@@ -365,12 +424,32 @@ value_case(Operation, Arity, Handler)
             Arity >= 0,
             is_function(Handler, 2)
         ->
+    value_case(
+        Operation,
+        Arity,
+        Handler,
+        {runtime_value_case, Operation}
+    ).
+
+-spec value_case(
+    atom(),
+    non_neg_integer(),
+    fun(([term()], effect_context()) -> term()),
+    term()
+) -> resumable_case().
+value_case(Operation, Arity, Handler, Origin)
+        when
+            is_atom(Operation),
+            is_integer(Arity),
+            Arity >= 0,
+            is_function(Handler, 2)
+        ->
     #{
         operation => Operation,
         arity => Arity,
         mode => value,
         handler => Handler,
-        origin => {runtime_value_case, Operation}
+        origin => Origin
     }.
 
 %% @doc Wrap a generated first-class callable with its control convention.
@@ -386,6 +465,19 @@ control_closure(Mode, Callable)
         ->
     {catena_control_closure, ?CONTROL_CLOSURE_VERSION, Mode, Callable}.
 
+-spec control_closure(
+    direct | resumable,
+    fun(([term()], effect_context(), fun((term(), effect_context()) -> term())) ->
+        term()),
+    term()
+) -> tuple().
+control_closure(Mode, Callable, Origin)
+        when
+            (Mode =:= direct orelse Mode =:= resumable),
+            is_function(Callable, 3)
+        ->
+    {catena_control_closure, ?CONTROL_CLOSURE_VERSION, Mode, Callable, Origin}.
+
 %% @doc Invoke a generated control closure or a source-arity BEAM function.
 %%
 %% Generated closures share one list/context/continuation convention. Plain
@@ -397,6 +489,27 @@ control_closure(Mode, Callable)
     effect_context(),
     fun((term(), effect_context()) -> term())
 ) -> term().
+apply_control(
+    {catena_control_closure, ?CONTROL_CLOSURE_VERSION, Mode, Callable, Origin},
+    Arguments,
+    Context,
+    Continuation
+) when
+    (Mode =:= direct orelse Mode =:= resumable),
+    is_function(Callable, 3),
+    is_list(Arguments),
+    is_function(Continuation, 2)
+->
+    try
+        Callable(Arguments, Context, Continuation)
+    catch
+        Class:Reason:_Stack ->
+            {error, catena_resumption_runtime:normalize_exception(
+                Class,
+                Reason,
+                Origin
+            )}
+    end;
 apply_control(
     {catena_control_closure, ?CONTROL_CLOSURE_VERSION, Mode, Callable},
     Arguments,
@@ -559,7 +672,8 @@ child_context(Ctx, Entry) ->
     context_entry(),
     atom(),
     [term()],
-    fun((term(), effect_context()) -> term())
+    fun((term(), effect_context()) -> term()),
+    term()
 ) -> term().
 perform_local_resumable(
     CapturedCtx,
@@ -567,7 +681,8 @@ perform_local_resumable(
     Frame,
     Operation,
     Args,
-    Continuation
+    Continuation,
+    PerformOrigin
 ) ->
     Case = select_resumable_case(
         maps:get(cases, Frame),
@@ -579,7 +694,11 @@ perform_local_resumable(
         delimiter => maps:get(delimiter, Frame),
         depth => maps:get(depth, Frame),
         kind => one_shot,
-        origin => maps:get(origin, Case, maps:get(origin, Frame)),
+        origin => #{
+            perform => PerformOrigin,
+            handler_case => maps:get(origin, Case, undefined),
+            delimiter => maps:get(origin, Frame)
+        },
         metadata => #{
             effect => maps:get(effect, Frame),
             operation => Operation,

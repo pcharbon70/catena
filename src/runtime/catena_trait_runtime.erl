@@ -4,7 +4,14 @@
 %%%-------------------------------------------------------------------
 -module(catena_trait_runtime).
 
--export([invoke/3, invoke_control/5, select_dictionary/2, matches/2]).
+-export([version/0, features/0, invoke/3, invoke_control/5,
+    select_dictionary/2, matches/2]).
+
+-spec version() -> pos_integer().
+version() -> 1.
+
+-spec features() -> [atom()].
+features() -> [control_context_dispatch].
 
 -spec invoke([map()], atom(), [term()]) -> term().
 invoke(Candidates, Method, Arguments) ->

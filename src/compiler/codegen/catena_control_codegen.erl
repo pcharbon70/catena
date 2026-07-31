@@ -75,7 +75,11 @@ generate(Unit) ->
                     catena_compilation_unit:runtime_dependencies(Unit),
                 artifact_dependencies =>
                     catena_compilation_unit:artifact_dependencies(Unit),
-                control_abi_version => ?CONTROL_ABI_VERSION
+                control_abi_version => ?CONTROL_ABI_VERSION,
+                resumption_runtime_version =>
+                    catena_resumption_runtime:version(),
+                handler_frame_features =>
+                    catena_resumption_runtime:features()
             }
         ),
         Core0 = cerl:c_module(
@@ -579,7 +583,8 @@ compile_perform(Node, Context, Continuation, State0) ->
                     cerl:c_atom(maps:get(effect, Fields)),
                     cerl:c_atom(maps:get(operation, Fields)),
                     core_list(Arguments),
-                    element(1, RuntimeContinuation)
+                    element(1, RuntimeContinuation),
+                    cerl:abstract(maps:get(origin, maps:get(metadata, Node)))
                 ]
             ),
             {Call, element(2, RuntimeContinuation)}
@@ -699,7 +704,8 @@ compile_handler_operation(Operation, State0) ->
             [
                 cerl:c_atom(maps:get(operation, Operation)),
                 cerl:c_int(length(Patterns)),
-                HandlerFun
+                HandlerFun,
+                cerl:abstract(maps:get(origin, Operation))
             ]
         ),
         State4
@@ -946,6 +952,7 @@ compile_callable_value(
                         Continuation
                     )
                 end,
+                maps:get(location, Callable, {callable, Name}),
                 State1
             )
     end.
@@ -968,10 +975,11 @@ compile_trait_callable_value(Name, Arity, Candidates, State0) ->
                 ]
             )
         end,
+        {trait_dictionary_call, Name},
         State1
     ).
 
-control_closure(Mode, Arguments, BodyBuilder, State0) ->
+control_closure(Mode, Arguments, BodyBuilder, Origin, State0) ->
     {ArgumentList, State1} = catena_codegen_utils:fresh_var(State0),
     {Context, State2} = catena_codegen_utils:fresh_var(State1),
     {Continuation, State3} = catena_codegen_utils:fresh_var(State2),
@@ -987,7 +995,7 @@ control_closure(Mode, Arguments, BodyBuilder, State0) ->
         runtime_call(
             catena_effect_runtime,
             control_closure,
-            [cerl:c_atom(Mode), Callable]
+            [cerl:c_atom(Mode), Callable, cerl:abstract(Origin)]
         ),
         State3
     }.
@@ -1081,6 +1089,7 @@ compile_closure(Node, Context, Continuation, State0) ->
                 CorePatterns,
                 Context,
                 Continuation,
+                maps:get(origin, maps:get(metadata, Node)),
                 State1
             )
     end.
@@ -1124,6 +1133,7 @@ compile_resumable_closure(
     CorePatterns,
     Context,
     Continuation,
+    Origin,
     State0
 ) ->
     {ArgumentList, State1} = catena_codegen_utils:fresh_var(State0),
@@ -1151,7 +1161,7 @@ compile_resumable_closure(
     Closure = runtime_call(
         catena_effect_runtime,
         control_closure,
-        [cerl:c_atom(resumable), Callable]
+        [cerl:c_atom(resumable), Callable, cerl:abstract(Origin)]
     ),
     {continue(Closure, Context, Continuation), State4}.
 
