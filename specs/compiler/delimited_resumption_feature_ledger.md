@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 5 executable runtime-ABI boundary for
+Phase 6 executable Core/BEAM boundary for
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md).
 
 This ledger prevents internal helper names, marker callbacks, request/response
@@ -69,6 +69,16 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Context and lifecycle | implemented runtime ABI | Local resumable/value and process-provider entries, retained leases, owner/provider monitors, timeouts, and cleanup are explicit |
 | Core integration | absent | Validated Phase 4 nodes are not yet emitted as runtime calls; explicit source control continues to fail closed before Core success |
 
+## Phase 6 Snapshot
+
+| Measurement | Phase 6 result | Interpretation |
+| --- | ---: | --- |
+| Complete active EUnit suite | 5,252 pass; 0 failures; 0 skips | Core lowering, call graphs, artifacts, diagnostics, loaded-BEAM semantics, and all earlier gates are green |
+| Parser conflicts | 38 shift/reduce; 0 reduce/reduce | Unchanged from the audited Phase 2 grammar boundary |
+| Core and BEAM integration | implemented executable boundary | Validated selective-CPS graphs emit source-arity wrappers, private direct/CPS entries, runtime control calls, and OTP-accepted BEAM |
+| Artifact/runtime contract | implemented executable boundary | Artifact format 2 validates exact control/runtime versions, handler features, identities, interface checksums, and dependency checksums before loading |
+| Deferred modes | rejected | Deep one-shot is executable; shallow and multi-shot remain fail-closed pending Phase 7 |
+
 ## Classification Vocabulary
 
 | Classification | Meaning |
@@ -81,6 +91,7 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Typed frontend implementation | Source reaches kind, type, effect, flow, and typed-artifact validation, but lacks executable continuation lowering/runtime evidence |
 | Compiler IR implementation | Typed source reaches authoritative control classification, selective-CPS lowering, and fail-closed graph validation, but lacks production runtime/Core execution |
 | Runtime ABI implementation | Real compiler-shaped closures execute through the production deep one-shot runtime, but generated Core does not yet construct or invoke them |
+| Executable source implementation | Typed source lowers through validated selective CPS to runtime calls and OTP-accepted loaded BEAM with observable continuation semantics |
 | Planned source implementation | Accepted by the ADR and architecture but absent from the compiler/runtime path |
 | Deferred mode | Has an accepted conceptual meaning but lacks the required syntax, typing, runtime authority, or evidence for promotion |
 
@@ -89,15 +100,15 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Surface | Current implementation | Classification | Promotion target |
 | --- | --- | --- | --- |
 | `perform` syntax and AST | Parsed and typed as the existing effect expression | Request/response | Preserve syntax; classify resumable suspension points |
-| `handle` and operation cases | Parsed and typed cases lower to deterministic control nodes; the runtime executes equivalent real-closure fixtures with local deep frames | Compiler IR plus runtime ABI implementation | Phase 6 emits the validated graph through the runtime |
-| `with k` operation binder | Binds `Resumption OneShot a b e`; runtime capture constructs opaque process-affine authority for a supplied compiler closure | Compiler IR plus runtime ABI implementation | Phase 6 connects the lowered binder to capture |
-| `resume(k, value)` | Typed authority lowers to validated resume nodes; runtime invocation executes the supplied delimited remainder on its owner | Compiler IR plus runtime ABI implementation | Phase 6 emits the runtime invocation |
-| Value-handler compatibility | Synthetic tail auto-resume is typed/lowered and runtime value cases execute the same exactly-once deep path | Compiler IR, runtime ABI, and request/response compatibility | Phase 6 emits the normalized form |
-| Effect context | Explicit contexts distinguish local resumable frames, local value providers, and process-backed providers with nested lookup | Runtime ABI implementation | Consume these entries from emitted Core |
-| Core Erlang effect backend | Direct code still emits `catena_effect_runtime:perform/4` and `with_handlers/3`; validated CPS nodes are not emitted yet | Request/response plus fail-closed compiler IR | Phase 6 Core emission for the Phase 4 ABI |
-| Continuation capture | Phase 4 reifies remainder structure; Phase 5 privately registers supplied binary CPS closures and captured contexts behind opaque handles | Compiler IR plus runtime ABI implementation | Phase 6 supplies emitted compiler closures |
-| One-shot consumption | A private serialized registry atomically enforces `fresh -> running -> consumed` for every exit | Runtime ABI implementation | Consume from emitted `resume` nodes |
-| Deep/shallow selection | Deep restoration is executable through retained contexts; shallow remains rejected | Runtime ABI implementation plus deferred mode | Phase 6 emits deep; Phase 7 owns shallow |
+| `handle` and operation cases | Parsed and typed cases emit deterministic Core handler frames and execute through local deep contexts | Executable source implementation | Phase 7 separately owns shallow opt-ins |
+| `with k` operation binder | Emitted capture constructs opaque process-affine authority for the compiler-reified remainder | Executable source implementation | Preserve through later optimization and tooling |
+| `resume(k, value)` | Emitted runtime invocation executes the delimited source remainder on its owner and returns the delimiter result | Executable source implementation | Preserve through later optimization and tooling |
+| Value-handler compatibility | Synthetic tail auto-resume emits and executes the same exactly-once deep path | Executable source implementation plus request/response compatibility | Preserve both specified paths |
+| Effect context | Generated wrappers create one context; emitted entries distinguish local resumable/value and process providers with nested lookup | Executable source implementation | Preserve explicit authority |
+| Core Erlang effect backend | `catena_control_codegen` emits validated direct/CPS entries, performs, handlers, resumptions, bridges, closures, imports, and dictionaries | Executable source implementation | Phase 8 owns optimization and promotion tooling |
+| Continuation capture | Generated binary CPS closures and captured contexts are registered behind opaque handles | Executable source implementation | Never claim ordinary Erlang stack capture |
+| One-shot consumption | A private serialized registry atomically enforces `fresh -> running -> consumed` for every exit | Executable source implementation | Preserve deterministic failure behavior |
+| Deep/shallow selection | Deep restoration executes from emitted Core; shallow remains rejected | Executable source implementation plus deferred mode | Phase 7 owns shallow |
 | Multi-shot | State-copy and resume-count helpers exist | Deferred mode | Residual-effect admissibility and independent branch authority |
 | Operational semantics | Normative written reductions | Semantic specification | Remains authoritative across later phases |
 | `catena_resumption_oracle` | Explicit free-request evaluator with deterministic trace/state | Semantic oracle | Comparison evidence only; never production ABI |
@@ -147,14 +158,15 @@ construct, retain its evidence, and reject unsupported lowering:
 Phase 3 extends kinds, internal types, substitution, schemes, unification,
 handler and resume inference, effect rows, and conservative first-class flow
 validation. Compilation units retain normalized nodes and typed origin
-evidence. Only the backend disposition path may project the exact
-compiler-generated value-handler shape to the legacy request/response
-representation; explicit control and other resumption leakage remain
-fail-closed.
+evidence. Only the legacy backend disposition path may project the exact
+compiler-generated value-handler shape to the request/response
+representation; the selective-CPS backend now consumes explicit control, and
+malformed resumption leakage remains fail-closed.
 
 ### Phase 4 control analysis and selective-CPS infrastructure
 
-The compiler now retains and validates the non-executable control graph:
+The compiler retains and validates the control graph before executable
+lowering:
 
 - `catena_control_mode` classifies source regions and solves local call graphs;
 - `catena_control_ir` owns the versioned node and graph contracts;
@@ -165,21 +177,31 @@ The compiler now retains and validates the non-executable control graph:
 - `catena_module_interface` publishes validated imported transform modes.
 
 `catena_compilation_unit` retains the mode inventory, control IR, and passing
-validation report before declaration disposition. Phase 6 must connect this
-graph to the Phase 5 runtime ABI.
+validation report before declaration disposition. Phase 6 connects this graph
+to the Phase 5 runtime ABI.
 
 ### Phase 5 runtime infrastructure
 
 - `catena_effect_runtime` owns typed explicit-context entries, nested lookup,
   local resumable/value execution, process-provider separation, and deep
-  `perform_cps/5`;
+  `perform_cps/5,6`;
 - `catena_resumption_runtime` owns opaque handles, private continuation and
   context state, atomic authorization, process affinity, leases, lifecycle
   monitors, deadlines, cleanup, and stable failures.
 
 The Phase 5 integration suite executes real compiler-shaped closures through
-these modules. Generated application code does not call this path until
-Phase 6 lowers the validated control graph.
+these modules. Phase 6 generated application code now calls this path.
+
+### Phase 6 Core, artifact, and call-graph infrastructure
+
+- `catena_control_codegen` emits source-arity wrappers, private direct/CPS
+  entries, control closures, runtime performs, handlers, resume/abort flow,
+  imports, dictionaries, and explicit bridges;
+- `catena_beam_artifact` format 2 validates and loads only matching BEAM,
+  runtime, handler-feature, interface, and dependency contracts;
+- `catena_runtime_contract` performs exact runtime version and feature checks;
+- `catena_core_origin` publishes generated definitions and source-to-synthetic
+  control chains without retaining private callable terms.
 
 ### Reference oracle
 

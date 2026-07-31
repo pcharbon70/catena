@@ -6,7 +6,7 @@ identity, patterns, imports, traits, recursion, effects, runtime dependencies,
 and diagnostics while proving that loaded BEAM executes the real delimited
 continuation.
 
-**Status:** In progress (Sections 6.1–6.3 complete).
+**Status:** Complete.
 
 **Dependencies:** Phase 5 complete.
 
@@ -224,14 +224,14 @@ diagnostics. The complete active EUnit suite passes all 5,248 tests.
 handlers execute real resumptions across the complete promoted call and data
 surface while invalid semantics fail closed.
 
-- [ ] **Section 6.4 Complete**
+- [x] **Section 6.4 Complete**
 
 ### Task 6.4.1: Execute Positive Source-To-BEAM Programs
 
 **Description:** Compile Catena source to validated units, selective-CPS IR,
 Core Erlang, and loaded BEAM and assert observable continuation behavior.
 
-- [ ] **Task 6.4.1 Complete**
+- [x] **Task 6.4.1 Complete**
 
 #### Subtask 6.4.1.1: Test Core Resumption Semantics
 
@@ -239,7 +239,7 @@ Core Erlang, and loaded BEAM and assert observable continuation behavior.
 delimiter results, nested deep handlers, multiple performs, retained
 same-process resumptions, and builtin-provider interaction.
 
-- [ ] **Subtask 6.4.1.1 Complete**
+- [x] **Subtask 6.4.1.1 Complete**
 
 #### Subtask 6.4.1.2: Test Complete Call And Data Surfaces
 
@@ -247,14 +247,14 @@ same-process resumptions, and builtin-provider interaction.
 trait-dispatched, open-row, patterned, ADT, list, tuple, and record programs
 that suspend and resume across those boundaries.
 
-- [ ] **Subtask 6.4.1.2 Complete**
+- [x] **Subtask 6.4.1.2 Complete**
 
 ### Task 6.4.2: Execute Negative And Phase-Gate Programs
 
 **Description:** Demonstrate fail-closed compilation, artifact validation, and
 structured runtime failures for every unsupported or invalid control path.
 
-- [ ] **Task 6.4.2 Complete**
+- [x] **Task 6.4.2 Complete**
 
 #### Subtask 6.4.2.1: Test Negative Artifacts And Runtime Behavior
 
@@ -262,7 +262,7 @@ structured runtime failures for every unsupported or invalid control path.
 invalid Core, stale runtimes, double resume, wrong owner, expired delimiters,
 and deferred shallow/multi-shot source behavior.
 
-- [ ] **Subtask 6.4.2.1 Complete**
+- [x] **Subtask 6.4.2.1 Complete**
 
 #### Subtask 6.4.2.2: Run Repository Gates
 
@@ -270,4 +270,26 @@ and deferred shallow/multi-shot source behavior.
 runtime suites, `make check-specs`, `make conformance`, and the complete active
 EUnit suite and publish the exact phase-ending evidence.
 
-- [ ] **Subtask 6.4.2.2 Complete**
+- [x] **Subtask 6.4.2.2 Complete**
+
+**Implementation evidence:** The four
+`catena_delimited_resumption_phase6_integration_tests` compile through the
+public artifact API, validate and load artifact format 2, and execute explicit
+resume with transformed delimiter results, automatic tail resume, deliberate
+abort, sequential performs, nested deep delimiters, first-class resumption
+flow through a helper transform, and builtin `Process.self` continuation on
+the originating process. Together with the three loaded-BEAM call-graph tests
+and five artifact tests, this covers recursive, imported, higher-order,
+trait-dispatched, patterned, ADT, list, tuple, record, guard, runtime-contract,
+and origin paths.
+
+The focused negative gate ran 66 tests across the Phase 6 integration,
+call-graph, artifact, control-validation, ABI, Phase 3 typing, Phase 5 runtime,
+authority, lifecycle, and public artifact API suites. It covers invalid Core
+and ABIs, unresolved bridges, leaked AST/IR, stale artifacts and runtimes,
+one-shot double/re-entrant use, wrong owners, expired delimiters, and rejected
+shallow/multi-shot modes. `make check-specs`
+passed 42 requirements, 11 scenarios, 20 evidence rows, 73 acceptance
+criteria, six ADRs, and 293 local links. `make conformance` passed all 418
+tests, and the complete active EUnit gate passed all 5,252 tests with zero
+failures or skips.
