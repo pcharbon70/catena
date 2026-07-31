@@ -24,8 +24,9 @@ The core model covers:
 - nested handlers and unhandled-operation propagation.
 
 Value-handler auto-resume and the process-affine ownership/lifetime policy are
-defined below as layers on this core. Shallow handlers and multi-shot
-resumptions have bounded meanings but remain deferred promotion targets.
+defined below as layers on this core. Phase 7 implements the bounded shallow
+and multi-shot extensions described at the semantic mode boundary while this
+deep one-shot calculus remains the normative core.
 
 ## Semantic Vocabulary
 
@@ -488,7 +489,7 @@ categories to these outcomes.
 
 ## Semantic Mode Boundary
 
-The only Phase 1 executable and initial source-promotion mode is:
+The Phase 1 executable and initial source-promotion mode was:
 
 ```text
 depth = Deep
@@ -511,19 +512,26 @@ and lexical environment with independent branch execution. It does not clone
 mailboxes, PIDs, ports, mutable external resources, provider state, or the
 outside world.
 
-Neither mode has source syntax or production runtime authority in Phase 1.
-Promotion of either requires:
+Phase 7 supplies source syntax, static semantics, production runtime
+authority, and mixed-mode loaded-BEAM evidence for shallow and multi-shot
+handlers. Multi-shot is admitted statically only for a closed, empty residual
+effect row. At
+capture the runtime also rejects process providers, local value-provider
+state, and direct PID, port, or reference capabilities in the lexical
+environment.
 
-- an accepted surface spelling and normalized representation;
-- type and effect rules for selecting the mode;
-- runtime versioning and authorization support;
-- diagnostics for unsupported or inadmissible use;
-- shallow context-restoration evidence or, for multi-shot, a conservative
-  residual-effect admissibility rule and branch-sharing policy;
-- resource bounds and executable integration evidence.
+Each authorized multi-shot invocation receives a new branch identity and
+starts from the same immutable continuation and captured context. Success or
+failure closes only that branch and returns the authority to `fresh`; a
+same-handle nested invocation remains a re-entrant error. One-shot authorities
+captured independently inside separate branches keep independent consumption
+state. Explicit discard consumes the multi-shot authority.
 
-A Phase 1 request for shallow or multi-shot behavior fails explicitly as an
-unsupported semantic mode. It must never fall back to deep one-shot behavior.
+Every multi-shot handle carries positive budgets for invocation count,
+retained words, reductions, cooperative timeout, and nested branch depth.
+Resource exhaustion reports `resumption_budget_exceeded`. Unsupported or
+inadmissible modes never fall back to deep one-shot behavior. Dedicated
+language conformance and public promotion remain owned by Phase 8.
 
 ## Representative Derivation
 
@@ -584,13 +592,20 @@ The reference oracle and later production implementation must preserve:
 11. Continuation execution stays on the owner process.
 12. Placeholder results and silent direct-style fallback are not valid
     implementations.
+13. Every authorized multi-shot invocation has a distinct branch identity and
+    begins from the immutable captured continuation environment.
+14. A multi-shot branch failure does not consume or poison later branches.
+15. Multi-shot execution never implies duplication of external BEAM state.
+16. Multi-shot capture and invocation fail deterministically when state or
+    resource policy is inadmissible.
 
 ## Deferred From The Core Rules
 
 - cross-process transfer, which ADR-0006 rejects for the initial design;
-- shallow handler context restoration;
-- multi-shot residual-effect admissibility and branch state;
-- concrete Core Erlang and runtime representation;
+- multi-shot use with open or non-empty residual rows and arbitrary stateful
+  or external capabilities;
+- preemptive cancellation of an owner-process continuation that exceeds a
+  reduction or elapsed-time budget;
 - optimization of direct or CPS regions.
 
 ## Related Material

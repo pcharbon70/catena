@@ -20,7 +20,7 @@
     compile_core/2
 ]).
 
--define(ARTIFACT_VERSION, 2).
+-define(ARTIFACT_VERSION, 3).
 
 -type artifact() :: #{
     format := catena_beam_artifact,
@@ -336,6 +336,12 @@ runtime_contract(Unit) ->
             catena_compilation_unit:control_modes(Unit)
         )
     ),
+    HandlerModes = lists:usort(lists:append([
+        maps:get(handler_modes, Entry, [])
+        || Entry <- catena_control_mode:entries(
+            catena_compilation_unit:control_modes(Unit)
+        )
+    ])),
     #{
         artifact_format_version => ?ARTIFACT_VERSION,
         control_abi_version => case Resumable of
@@ -348,6 +354,10 @@ runtime_contract(Unit) ->
         end,
         required_handler_frame_features => case Resumable of
             true -> catena_resumption_runtime:features();
+            false -> []
+        end,
+        handler_modes => case Resumable of
+            true -> HandlerModes;
             false -> []
         end,
         source_module => SourceModule,
@@ -406,7 +416,17 @@ validate_envelope(#{
                         Contract,
                         RuntimeDependencies
                     ) of
-                        ok -> validate_beam_identity(Beam, RuntimeModule);
+                        ok ->
+                            case validate_beam_control_contract(
+                                Beam,
+                                Contract
+                            ) of
+                                ok -> validate_beam_identity(
+                                    Beam,
+                                    RuntimeModule
+                                );
+                                {error, _} = Error -> Error
+                            end;
                         {error, _} = Error -> Error
                     end;
                 {error, _} = Error -> Error
@@ -422,13 +442,15 @@ validate_envelope(_Artifact) ->
 validate_control_contract(#{
     control_abi_version := none,
     resumption_runtime_version := none,
-    required_handler_frame_features := []
+    required_handler_frame_features := [],
+    handler_modes := []
 }, _RuntimeDependencies) ->
     ok;
 validate_control_contract(#{
     control_abi_version := ControlVersion,
     resumption_runtime_version := ResumptionVersion,
-    required_handler_frame_features := Features
+    required_handler_frame_features := Features,
+    handler_modes := HandlerModes
 }, RuntimeDependencies) ->
     ExpectedControl = catena_control_codegen:control_abi_version(),
     ExpectedFeatures = catena_resumption_runtime:features(),
@@ -446,23 +468,141 @@ validate_control_contract(#{
         ControlVersion =:= ExpectedControl,
         ResumptionVersion =:= catena_resumption_runtime:version(),
         Features =:= ExpectedFeatures,
-        MatchingRuntime
+        MatchingRuntime,
+        valid_handler_modes(HandlerModes),
+        handler_modes_supported(HandlerModes, Features)
     } of
-        {true, true, true, true} -> ok;
-        {false, _, _, _} ->
+        {true, true, true, true, true, true} -> ok;
+        {false, _, _, _, _, _} ->
             {error, {control_abi_version_mismatch,
                 ExpectedControl, ControlVersion}};
-        {_, false, _, _} ->
+        {_, false, _, _, _, _} ->
             {error, {resumption_runtime_version_mismatch,
                 catena_resumption_runtime:version(), ResumptionVersion}};
-        {_, _, false, _} ->
+        {_, _, false, _, _, _} ->
             {error, {handler_frame_feature_mismatch,
                 ExpectedFeatures, Features}};
-        {_, _, _, false} ->
-            {error, inconsistent_resumption_runtime_dependency}
+        {_, _, _, false, _, _} ->
+            {error, inconsistent_resumption_runtime_dependency};
+        {_, _, _, _, false, _} ->
+            {error, {invalid_handler_modes, HandlerModes}};
+        {_, _, _, _, _, false} ->
+            {error, {unsupported_handler_modes, HandlerModes}}
     end;
 validate_control_contract(_Contract, _RuntimeDependencies) ->
     {error, invalid_control_runtime_contract}.
+
+valid_handler_modes(Modes) when is_list(Modes) ->
+    lists:all(
+        fun
+            (#{depth := Depth, kind := Kind}) ->
+                (Depth =:= deep orelse Depth =:= shallow) andalso
+                    (Kind =:= one_shot orelse Kind =:= multi_shot);
+            (_) ->
+                false
+        end,
+        Modes
+    );
+valid_handler_modes(_Modes) ->
+    false.
+
+handler_modes_supported(Modes, Features) ->
+    Required = lists:usort(lists:append([
+        handler_mode_features(Mode)
+        || Mode <- Modes,
+           is_map(Mode)
+    ])),
+    lists:all(fun(Feature) -> lists:member(Feature, Features) end, Required).
+
+handler_mode_features(#{depth := Depth, kind := Kind}) ->
+    [
+        case Depth of
+            deep -> deep_handlers;
+            shallow -> shallow_handlers;
+            _ -> invalid_handler_depth
+        end,
+        case Kind of
+            one_shot -> one_shot_resumptions;
+            multi_shot -> multi_shot_resumptions;
+            _ -> invalid_resumption_kind
+        end
+    ];
+handler_mode_features(_Mode) ->
+    [invalid_handler_mode].
+
+validate_beam_control_contract(Beam, #{
+    control_abi_version := none,
+    resumption_runtime_version := none,
+    required_handler_frame_features := [],
+    handler_modes := []
+}) ->
+    case beam_control_attributes(Beam) of
+        {ok, #{
+            control_abi_version := missing,
+            resumption_runtime_version := missing,
+            handler_frame_features := missing,
+            handler_modes := missing
+        }} ->
+            ok;
+        {ok, Actual} ->
+            {error, {unexpected_beam_control_contract, Actual}};
+        {error, _} = Error ->
+            Error
+    end;
+validate_beam_control_contract(Beam, #{
+    control_abi_version := ControlVersion,
+    resumption_runtime_version := ResumptionVersion,
+    required_handler_frame_features := Features,
+    handler_modes := HandlerModes
+}) ->
+    Expected = #{
+        control_abi_version => ControlVersion,
+        resumption_runtime_version => ResumptionVersion,
+        handler_frame_features => Features,
+        handler_modes => HandlerModes
+    },
+    case beam_control_attributes(Beam) of
+        {ok, Expected} ->
+            ok;
+        {ok, Actual} ->
+            {error, {beam_control_contract_mismatch, Expected, Actual}};
+        {error, _} = Error ->
+            Error
+    end.
+
+beam_control_attributes(Beam) ->
+    case beam_lib:chunks(Beam, [attributes]) of
+        {ok, {_Module, [{attributes, Attributes}]}} ->
+            {ok, #{
+                control_abi_version => beam_scalar_attribute(
+                    catena_control_abi_version,
+                    Attributes
+                ),
+                resumption_runtime_version => beam_scalar_attribute(
+                    catena_resumption_runtime_version,
+                    Attributes
+                ),
+                handler_frame_features => beam_list_attribute(
+                    catena_handler_frame_features,
+                    Attributes
+                ),
+                handler_modes => beam_list_attribute(
+                    catena_handler_modes,
+                    Attributes
+                )
+            }};
+        {error, Reason} ->
+            {error, {invalid_beam_binary, Reason}}
+    end.
+
+beam_scalar_attribute(Name, Attributes) ->
+    case proplists:get_value(Name, Attributes, missing) of
+        [Value] -> Value;
+        Value -> Value
+    end.
+
+beam_list_attribute(Name, Attributes) ->
+    proplists:get_value(Name, Attributes, missing).
 
 validate_interface_contract(
     Interface,

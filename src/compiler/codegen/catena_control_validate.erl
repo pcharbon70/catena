@@ -57,6 +57,7 @@ validate_ir(IR, Modes, Context) ->
             Transforms = catena_control_ir:transforms(IR),
             Nodes = catena_control_ir:nodes(IR),
             Delimiters = delimiter_identities(Nodes),
+            DelimiterModes = delimiter_modes(Nodes),
             Continuations = continuation_identities(Transforms, Nodes),
             Checks = [
                 fun() -> validate_transforms(Transforms, Modes, Context) end,
@@ -73,6 +74,13 @@ validate_ir(IR, Modes, Context) ->
                         Nodes,
                         Delimiters,
                         Continuations,
+                        Context
+                    )
+                end,
+                fun() ->
+                    validate_handler_modes(
+                        Nodes,
+                        DelimiterModes,
                         Context
                     )
                 end,
@@ -290,8 +298,15 @@ validate_node_ownership(
     Delimiters,
     Continuations
 ) ->
-    case maps:get(kind, Fields, undefined) of
-        one_shot ->
+    case {
+        maps:get(kind, Fields, undefined),
+        maps:get(depth, Fields, undefined)
+    } of
+        {Kind, Depth}
+                when
+                    (Kind =:= one_shot orelse Kind =:= multi_shot),
+                    (Depth =:= deep orelse Depth =:= shallow)
+                ->
             case require_delimiter(
                 maps:get(delimiter, Fields, undefined),
                 Delimiters
@@ -308,8 +323,8 @@ validate_node_ownership(
                 {error, _} = Error ->
                     Error
             end;
-        Kind ->
-            {error, {resumption_kind_mismatch, one_shot, Kind}}
+        {Kind, Depth} ->
+            {error, {invalid_resumption_mode, Depth, Kind}}
     end;
 validate_node_ownership(
     #{op := resume, fields := Fields},
@@ -371,6 +386,66 @@ validate_node_ownership(
     _Continuations
 ) ->
     ok.
+
+validate_handler_modes([], _DelimiterModes, _Context) ->
+    ok;
+validate_handler_modes([Node | Rest], DelimiterModes, Context) ->
+    case validate_node_handler_mode(Node, DelimiterModes) of
+        ok ->
+            validate_handler_modes(Rest, DelimiterModes, Context);
+        {error, Reason} ->
+            control_error(Reason, node_context(Node, Context))
+    end.
+
+validate_node_handler_mode(
+    #{op := delimiter, fields := Fields},
+    _DelimiterModes
+) ->
+    validate_mode_fields(delimiter, Fields);
+validate_node_handler_mode(
+    #{op := Operation, fields := Fields},
+    DelimiterModes
+) when Operation =:= install_handler; Operation =:= make_resumption ->
+    case validate_mode_fields(Operation, Fields) of
+        ok ->
+            Delimiter = maps:get(delimiter, Fields, undefined),
+            Actual = mode_from_fields(Fields),
+            case maps:find(Delimiter, DelimiterModes) of
+                {ok, Actual} ->
+                    ok;
+                {ok, Expected} ->
+                    {error, {handler_mode_mismatch,
+                        Operation, Delimiter, Expected, Actual}};
+                error ->
+                    {error, {missing_delimiter_mode,
+                        Operation, Delimiter}}
+            end;
+        {error, _} = Error ->
+            Error
+    end;
+validate_node_handler_mode(_Node, _DelimiterModes) ->
+    ok.
+
+validate_mode_fields(Operation, Fields) ->
+    case {
+        maps:get(depth, Fields, undefined),
+        maps:get(kind, Fields, undefined)
+    } of
+        {Depth, Kind}
+                when
+                    (Depth =:= deep orelse Depth =:= shallow),
+                    (Kind =:= one_shot orelse Kind =:= multi_shot)
+                ->
+            ok;
+        {Depth, Kind} ->
+            {error, {invalid_handler_mode, Operation, Depth, Kind}}
+    end.
+
+mode_from_fields(Fields) ->
+    #{
+        depth => maps:get(depth, Fields, undefined),
+        kind => maps:get(kind, Fields, undefined)
+    }.
 
 validate_call_shapes([], _Context) ->
     ok;
@@ -497,6 +572,16 @@ delimiter_identities(Nodes) ->
            maps:get(op, Node) =:= delimiter
     ].
 
+delimiter_modes(Nodes) ->
+    maps:from_list([
+        {
+            maps:get(identity, maps:get(fields, Node)),
+            mode_from_fields(maps:get(fields, Node))
+        }
+        || Node <- Nodes,
+           maps:get(op, Node) =:= delimiter
+    ]).
+
 continuation_identities(Transforms, Nodes) ->
     [
         maps:get(
@@ -555,6 +640,10 @@ require_continuation(Continuation, Continuations) ->
 
 validate_resume_authority(#{
     type := {tresumption, {tcon, 'OneShot'}, _, _, _}
+}) ->
+    ok;
+validate_resume_authority(#{
+    type := {tresumption, {tcon, 'MultiShot'}, _, _, _}
 }) ->
     ok;
 validate_resume_authority(#{

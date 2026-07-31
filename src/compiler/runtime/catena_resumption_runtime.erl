@@ -20,6 +20,8 @@
     is_resumption/1,
     status/1,
     lease_status/1,
+    branch_stats/1,
+    default_budget/0,
     control_failure/3,
     normalize_exception/3,
     version/0,
@@ -43,7 +45,13 @@
 ]).
 
 -define(SERVER, catena_resumption_runtime_registry).
--define(VERSION, 1).
+-define(VERSION, 3).
+
+-define(DEFAULT_MAX_INVOCATIONS, 64).
+-define(DEFAULT_MAX_RETAINED_WORDS, 262144).
+-define(DEFAULT_MAX_REDUCTIONS, 1000000).
+-define(DEFAULT_BRANCH_TIMEOUT, 5000).
+-define(DEFAULT_MAX_BRANCH_DEPTH, 16).
 
 -opaque handle() ::
     {catena_resumption, ?VERSION, reference()}.
@@ -51,13 +59,15 @@
 -type capture_spec() :: #{
     context := map(),
     delimiter := reference(),
-    depth := deep,
-    kind := one_shot,
+    depth := deep | shallow,
+    kind := one_shot | multi_shot,
+    parent_context => map(),
     origin := term(),
     metadata => map(),
     type_identity => term(),
     providers => [pid()],
-    frame_identity => term()
+    frame_identity => term(),
+    budget => map()
 }.
 
 -type control_failure() :: #{
@@ -68,13 +78,14 @@
 
 -type entry() :: #{
     owner := pid(),
-    kind := one_shot,
+    kind := one_shot | multi_shot,
     state := fresh | running | consumed,
     continuation => fun((term(), map()) -> term()),
     context => map(),
+    parent_context => map(),
     delimiter := reference(),
     delimiter_status := live | expired,
-    depth := deep,
+    depth := deep | shallow,
     origin := term(),
     metadata := map(),
     type_identity := term(),
@@ -85,7 +96,15 @@
     provider_monitors => #{reference() => pid()},
     expired => owner | delimiter | provider,
     run_token => reference(),
-    consumed_reason => normal | exceptional | abandoned
+    consumed_reason => normal | exceptional | abandoned,
+    budget := map(),
+    retained_words := non_neg_integer(),
+    captured_branch_depth := non_neg_integer(),
+    invocation_count := non_neg_integer(),
+    completed_branches := non_neg_integer(),
+    failed_branches := non_neg_integer(),
+    current_branch => map(),
+    last_branch => map()
 }.
 
 -type registry_state() :: #{
@@ -106,11 +125,27 @@ version() ->
 features() ->
     [
         deep_handlers,
+        shallow_handlers,
+        depth_aware_context_restoration,
         explicit_contexts,
         one_shot_resumptions,
+        multi_shot_resumptions,
+        isolated_resumption_branches,
+        bounded_resumption_branches,
         retained_resumptions,
         same_process_resume
     ].
+
+%% @doc Default fail-closed limits for repeated continuation branches.
+-spec default_budget() -> map().
+default_budget() ->
+    #{
+        max_invocations => ?DEFAULT_MAX_INVOCATIONS,
+        max_retained_words => ?DEFAULT_MAX_RETAINED_WORDS,
+        max_reductions => ?DEFAULT_MAX_REDUCTIONS,
+        timeout => ?DEFAULT_BRANCH_TIMEOUT,
+        max_branch_depth => ?DEFAULT_MAX_BRANCH_DEPTH
+    }.
 
 %% @doc Register a compiler-reified continuation.
 %%
@@ -124,15 +159,21 @@ capture(Continuation, Spec) ->
         ok ->
             ok = ensure_started(),
             Ref = make_ref(),
+            Budget = normalized_budget(Spec),
             Entry = #{
                 owner => self(),
-                kind => one_shot,
+                kind => maps:get(kind, Spec),
                 state => fresh,
                 continuation => Continuation,
                 context => maps:get(context, Spec),
+                parent_context => maps:get(
+                    parent_context,
+                    Spec,
+                    maps:get(context, Spec)
+                ),
                 delimiter => maps:get(delimiter, Spec),
                 delimiter_status => live,
-                depth => deep,
+                depth => maps:get(depth, Spec),
                 origin => maps:get(origin, Spec),
                 metadata => maps:get(metadata, Spec, #{}),
                 type_identity => maps:get(type_identity, Spec, dynamic),
@@ -142,6 +183,12 @@ capture(Continuation, Spec) ->
                     Spec,
                     standalone
                 ),
+                budget => Budget,
+                retained_words => retained_words(Continuation, Spec),
+                captured_branch_depth => captured_branch_depth(Spec),
+                invocation_count => 0,
+                completed_branches => 0,
+                failed_branches => 0,
                 lease => #{
                     status => active,
                     delimiter => maps:get(delimiter, Spec),
@@ -158,11 +205,11 @@ capture(Continuation, Spec) ->
             Error
     end.
 
-%% @doc Invoke a deep one-shot resumption on its capturing process.
+%% @doc Invoke a depth-aware resumption on its capturing process.
 -spec resume(term(), term()) ->
     {ok, term()} | {error, control_failure()}.
 resume(Handle, Value) ->
-    resume(Handle, Value, infinity).
+    resume_with_timeout(Handle, Value, default).
 
 %% @doc Invoke with a same-process cooperative runtime timeout.
 %%
@@ -176,12 +223,21 @@ resume(Handle, Value, Timeout)
             Timeout =:= infinity;
             is_integer(Timeout) andalso Timeout >= 0
         ->
+    resume_with_timeout(Handle, Value, Timeout).
+
+resume_with_timeout(Handle, Value, RequestedTimeout) ->
     case decode_handle(Handle) of
         {ok, Ref} ->
             ok = ensure_started(),
             case gen_server:call(?SERVER, {authorize, Ref, self()}) of
                 {ok, Token, Invocation} ->
-                    invoke(Ref, Token, Value, Invocation, Timeout);
+                    invoke(
+                        Ref,
+                        Token,
+                        Value,
+                        Invocation,
+                        invocation_timeout(RequestedTimeout, Invocation)
+                    );
                 {error, _} = Error ->
                     Error
             end;
@@ -231,6 +287,13 @@ status(Handle) ->
 lease_status(Handle) ->
     with_registered_handle(Handle, fun(Ref) ->
         gen_server:call(?SERVER, {lease_status, Ref})
+    end).
+
+%% @doc Return branch counters and budgets without exposing continuations.
+-spec branch_stats(term()) -> {ok, map()} | {error, control_failure()}.
+branch_stats(Handle) ->
+    with_registered_handle(Handle, fun(Ref) ->
+        gen_server:call(?SERVER, {branch_stats, Ref})
     end).
 
 %% @doc Construct a stable runtime control failure.
@@ -301,13 +364,19 @@ reset_for_test() ->
 
 -spec invoke(reference(), reference(), term(), map(), timeout()) ->
     {ok, term()} | {error, control_failure()}.
-invoke(Ref, Token, Value, #{
+invoke(Ref, Token, Value, Invocation = #{
     continuation := Continuation,
     context := Context,
     origin := Origin
 }, Timeout) ->
     StartedAt = erlang:monotonic_time(millisecond),
-    RestoredContext = context_with_deadline(Context, StartedAt, Timeout),
+    StartedReductions = process_reductions(),
+    BranchContext = context_with_branch(Context, Invocation),
+    RestoredContext = context_with_deadline(
+        BranchContext,
+        StartedAt,
+        Timeout
+    ),
     InitialOutcome =
         try
             {ok, Continuation(Value, RestoredContext)}
@@ -315,11 +384,16 @@ invoke(Ref, Token, Value, #{
             Class:Reason:_Stack ->
                 {error, normalize_exception(Class, Reason, Origin)}
         end,
-    Outcome = apply_timeout(
+    TimedOutcome = apply_timeout(
         InitialOutcome,
         StartedAt,
         Timeout,
-        Origin
+        Invocation
+    ),
+    Outcome = apply_reduction_budget(
+        TimedOutcome,
+        StartedReductions,
+        Invocation
     ),
     CompletionReason = case Outcome of
         {ok, _} -> normal;
@@ -332,6 +406,28 @@ invoke(Ref, Token, Value, #{
             CompletionError
     end.
 
+invocation_timeout(Requested, #{kind := one_shot}) ->
+    case Requested of
+        default -> infinity;
+        Timeout -> Timeout
+    end;
+invocation_timeout(Requested, #{kind := multi_shot, budget := Budget}) ->
+    BudgetTimeout = maps:get(timeout, Budget),
+    case Requested of
+        default -> BudgetTimeout;
+        infinity -> BudgetTimeout;
+        Timeout -> erlang:min(Timeout, BudgetTimeout)
+    end.
+
+context_with_branch(Context, #{kind := one_shot}) ->
+    Context;
+context_with_branch(Context, #{kind := multi_shot, branch := Branch}) ->
+    Stack = maps:get(runtime_branch_stack, Context, []),
+    Context#{
+        runtime_branch => Branch,
+        runtime_branch_stack => [Branch | Stack]
+    }.
+
 -spec context_with_deadline(map(), integer(), timeout()) -> map().
 context_with_deadline(Context, _StartedAt, infinity) ->
     Context;
@@ -342,21 +438,42 @@ context_with_deadline(Context, StartedAt, Timeout) ->
     {ok, term()} | {error, control_failure()},
     integer(),
     timeout(),
-    term()
+    map()
 ) -> {ok, term()} | {error, control_failure()}.
-apply_timeout({ok, _Value}, StartedAt, Timeout, Origin)
+apply_timeout({ok, _Value}, StartedAt, Timeout, Invocation)
         when is_integer(Timeout) ->
     FinishedAt = erlang:monotonic_time(millisecond),
     case FinishedAt - StartedAt >= Timeout of
         true ->
-            {error, failure(handler_failure, Origin, #{
-                reason => timeout
-            })};
+            timeout_failure(Invocation, Timeout);
         false ->
             {ok, _Value}
     end;
-apply_timeout(Outcome, _StartedAt, _Timeout, _Origin) ->
+apply_timeout(Outcome, _StartedAt, _Timeout, _Invocation) ->
     Outcome.
+
+timeout_failure(#{kind := multi_shot, origin := Origin}, Limit) ->
+    {error, budget_failure(Origin, timeout, Limit, Limit)};
+timeout_failure(#{origin := Origin}, _Limit) ->
+    {error, failure(handler_failure, Origin, #{reason => timeout})}.
+
+apply_reduction_budget(
+    Outcome,
+    StartedReductions,
+    #{kind := multi_shot, budget := Budget, origin := Origin}
+) ->
+    Used = process_reductions() - StartedReductions,
+    Limit = maps:get(max_reductions, Budget),
+    case Used > Limit of
+        true -> {error, budget_failure(Origin, reductions, Limit, Used)};
+        false -> Outcome
+    end;
+apply_reduction_budget(Outcome, _StartedReductions, _Invocation) ->
+    Outcome.
+
+process_reductions() ->
+    {reductions, Reductions} = process_info(self(), reductions),
+    Reductions.
 
 %%====================================================================
 %% gen_server callbacks
@@ -396,13 +513,24 @@ handle_call({authorize, Ref, Caller}, _From, State) ->
 handle_call({complete, Ref, Token, Reason}, _From, State) ->
     Entries0 = maps:get(entries, State),
     case maps:find(Ref, Entries0) of
-        {ok, #{state := running, run_token := Token} = Entry} ->
+        {ok, #{
+            state := running,
+            run_token := Token,
+            kind := one_shot
+        } = Entry} ->
             Entry1 = release_entry(
                 Entry#{
                     state := consumed,
                     consumed_reason => Reason
                 }
             ),
+            {reply, ok, State#{entries := Entries0#{Ref := Entry1}}};
+        {ok, #{
+            state := running,
+            run_token := Token,
+            kind := multi_shot
+        } = Entry} ->
+            Entry1 = complete_multishot_branch(Entry, Reason),
             {reply, ok, State#{entries := Entries0#{Ref := Entry1}}};
         {ok, Entry} ->
             Error = failure(
@@ -465,6 +593,13 @@ handle_call({lease_status, Ref}, _From, State) ->
         {ok, Entry} ->
             Lease = maps:get(lease, Entry),
             {reply, {ok, maps:get(status, Lease)}, State};
+        error ->
+            {reply, invalid_registered_handle(), State}
+    end;
+handle_call({branch_stats, Ref}, _From, State) ->
+    case maps:find(Ref, maps:get(entries, State)) of
+        {ok, Entry} ->
+            {reply, {ok, public_branch_stats(Entry)}, State};
         error ->
             {reply, invalid_registered_handle(), State}
     end;
@@ -544,11 +679,13 @@ authorize_entry(Entry, Caller) ->
 authorize_live_entry(#{delimiter_status := Status}, Origin)
         when Status =/= live ->
     {error, failure(stale_resumption_delimiter, Origin, #{})};
-authorize_live_entry(#{kind := Kind}, Origin) when Kind =/= one_shot ->
+authorize_live_entry(#{kind := Kind}, Origin)
+        when Kind =/= one_shot, Kind =/= multi_shot ->
     {error, failure(unsupported_semantic_mode, Origin, #{
         kind => Kind
     })};
-authorize_live_entry(#{depth := Depth}, Origin) when Depth =/= deep ->
+authorize_live_entry(#{depth := Depth}, Origin)
+        when Depth =/= deep, Depth =/= shallow ->
     {error, failure(unsupported_semantic_mode, Origin, #{
         depth => Depth
     })};
@@ -556,22 +693,100 @@ authorize_live_entry(#{state := running}, Origin) ->
     {error, failure(resumption_reentrant, Origin, #{})};
 authorize_live_entry(#{state := consumed}, Origin) ->
     {error, failure(resumption_already_consumed, Origin, #{})};
-authorize_live_entry(#{state := fresh} = Entry, _Origin) ->
+authorize_live_entry(#{state := fresh, kind := one_shot} = Entry, _Origin) ->
     Token = make_ref(),
-    {ok, Token, Entry#{state := running, run_token => Token}}.
+    {ok, Token, Entry#{
+        state := running,
+        run_token => Token,
+        invocation_count := 1
+    }};
+authorize_live_entry(#{state := fresh, kind := multi_shot} = Entry, Origin) ->
+    Budget = maps:get(budget, Entry),
+    Count = maps:get(invocation_count, Entry),
+    MaxInvocations = maps:get(max_invocations, Budget),
+    BranchDepth = maps:get(captured_branch_depth, Entry) + 1,
+    MaxDepth = maps:get(max_branch_depth, Budget),
+    case {Count < MaxInvocations, BranchDepth =< MaxDepth} of
+        {false, _} ->
+            {error, budget_failure(
+                Origin,
+                invocations,
+                MaxInvocations,
+                Count
+            )};
+        {_, false} ->
+            {error, budget_failure(
+                Origin,
+                branch_depth,
+                MaxDepth,
+                BranchDepth
+            )};
+        {true, true} ->
+            Token = make_ref(),
+            Branch = #{
+                id => Count + 1,
+                depth => BranchDepth,
+                status => running
+            },
+            {ok, Token, Entry#{
+                state := running,
+                run_token => Token,
+                invocation_count := Count + 1,
+                current_branch => Branch
+            }}
+    end.
 
 -spec invocation_data(entry()) -> map().
 invocation_data(Entry) ->
     #{
         continuation => maps:get(continuation, Entry),
-        context => maps:get(context, Entry),
+        context => restored_context(Entry),
         delimiter => maps:get(delimiter, Entry),
         depth => maps:get(depth, Entry),
         kind => maps:get(kind, Entry),
         origin => maps:get(origin, Entry),
         metadata => maps:get(metadata, Entry),
-        type_identity => maps:get(type_identity, Entry)
+        type_identity => maps:get(type_identity, Entry),
+        budget => maps:get(budget, Entry),
+        branch => maps:get(current_branch, Entry, none)
     }.
+
+complete_multishot_branch(Entry, Reason) ->
+    Branch0 = maps:get(current_branch, Entry),
+    Branch = Branch0#{status => Reason},
+    Failed0 = maps:get(failed_branches, Entry),
+    Failed = case Reason of
+        normal -> Failed0;
+        exceptional -> Failed0 + 1
+    end,
+    maps:without(
+        [run_token, current_branch],
+        Entry#{
+            state := fresh,
+            completed_branches := maps:get(completed_branches, Entry) + 1,
+            failed_branches := Failed,
+            last_branch => Branch
+        }
+    ).
+
+public_branch_stats(Entry) ->
+    #{
+        kind => maps:get(kind, Entry),
+        state => maps:get(state, Entry),
+        invocation_count => maps:get(invocation_count, Entry),
+        completed_branches => maps:get(completed_branches, Entry),
+        failed_branches => maps:get(failed_branches, Entry),
+        retained_words => maps:get(retained_words, Entry),
+        budget => maps:get(budget, Entry),
+        current_branch => maps:get(current_branch, Entry, none),
+        last_branch => maps:get(last_branch, Entry, none)
+    }.
+
+-spec restored_context(entry()) -> map().
+restored_context(#{depth := deep} = Entry) ->
+    maps:get(context, Entry);
+restored_context(#{depth := shallow} = Entry) ->
+    maps:get(parent_context, Entry).
 
 -spec validate_capture(term(), term()) ->
     ok | {error, control_failure()}.
@@ -585,25 +800,27 @@ validate_capture(Continuation, Spec)
                 fields => Missing
             })};
         [] ->
-            validate_capture_fields(Spec)
+            validate_capture_fields(Continuation, Spec)
     end;
 validate_capture(_Continuation, _Spec) ->
     {error, failure(invalid_resumption, undefined, #{
         reason => invalid_compiler_capture
     })}.
 
--spec validate_capture_fields(map()) ->
+-spec validate_capture_fields(function(), map()) ->
     ok | {error, control_failure()}.
-validate_capture_fields(Spec) ->
+validate_capture_fields(Continuation, Spec) ->
     Context = maps:get(context, Spec),
     Delimiter = maps:get(delimiter, Spec),
     Depth = maps:get(depth, Spec),
     Kind = maps:get(kind, Spec),
     Origin = maps:get(origin, Spec),
     Metadata = maps:get(metadata, Spec, #{}),
+    ParentContext = maps:get(parent_context, Spec, Context),
     Providers = maps:get(providers, Spec, []),
     case {
         is_map(Context),
+        is_map(ParentContext),
         is_reference(Delimiter),
         Depth,
         Kind,
@@ -612,27 +829,185 @@ validate_capture_fields(Spec) ->
         is_list(Providers) andalso
             lists:all(fun is_pid/1, Providers)
     } of
-        {false, _, _, _, _, _, _} ->
+        {false, _, _, _, _, _, _, _} ->
             invalid_capture_field(context);
-        {_, false, _, _, _, _, _} ->
+        {_, false, _, _, _, _, _, _} ->
+            invalid_capture_field(parent_context);
+        {_, _, false, _, _, _, _, _} ->
             invalid_capture_field(delimiter);
-        {_, _, deep, one_shot, true, true, true} ->
-            ok;
-        {_, _, UnsupportedDepth, one_shot, true, true, true} ->
+        {_, _, true, Depth, Kind, true, true, true}
+                when
+                    (Depth =:= deep orelse Depth =:= shallow),
+                    (Kind =:= one_shot orelse Kind =:= multi_shot)
+                ->
+            validate_capture_policy(Continuation, Spec);
+        {_, _, true, UnsupportedDepth, Kind, true, true, true}
+                when Kind =:= one_shot; Kind =:= multi_shot ->
             {error, failure(unsupported_semantic_mode, Origin, #{
                 depth => UnsupportedDepth
             })};
-        {_, _, deep, UnsupportedKind, true, true, true} ->
+        {_, _, true, Depth, UnsupportedKind, true, true, true}
+                when Depth =:= deep; Depth =:= shallow ->
             {error, failure(unsupported_semantic_mode, Origin, #{
                 kind => UnsupportedKind
             })};
-        {_, _, _, _, false, _, _} ->
+        {_, _, _, _, _, false, _, _} ->
             invalid_capture_field(origin);
-        {_, _, _, _, _, false, _} ->
+        {_, _, _, _, _, _, false, _} ->
             invalid_capture_field(metadata);
-        {_, _, _, _, _, _, false} ->
+        {_, _, _, _, _, _, _, false} ->
             invalid_capture_field(providers)
     end.
+
+validate_capture_policy(Continuation, Spec) ->
+    case validate_budget(maps:get(budget, Spec, #{}), maps:get(origin, Spec)) of
+        ok ->
+            case maps:get(kind, Spec) of
+                one_shot ->
+                    ok;
+                multi_shot ->
+                    validate_multishot_capture(Continuation, Spec)
+            end;
+        {error, _} = Error ->
+            Error
+    end.
+
+validate_budget(Override, Origin) when is_map(Override) ->
+    Defaults = default_budget(),
+    Unknown = maps:keys(Override) -- maps:keys(Defaults),
+    Budget = maps:merge(Defaults, Override),
+    ValidValues = lists:all(
+        fun(Key) ->
+            Value = maps:get(Key, Budget),
+            is_integer(Value) andalso Value > 0
+        end,
+        maps:keys(Defaults)
+    ),
+    case {Unknown, ValidValues} of
+        {[], true} ->
+            ok;
+        {[_ | _], _} ->
+            {error, failure(invalid_resumption, Origin, #{
+                reason => unknown_budget_fields,
+                fields => Unknown
+            })};
+        {[], false} ->
+            {error, failure(invalid_resumption, Origin, #{
+                reason => invalid_resumption_budget,
+                budget => sanitize_budget(Budget)
+            })}
+    end;
+validate_budget(_Override, Origin) ->
+    {error, failure(invalid_resumption, Origin, #{
+        reason => invalid_resumption_budget
+    })}.
+
+validate_multishot_capture(Continuation, Spec) ->
+    Origin = maps:get(origin, Spec),
+    Providers = maps:get(providers, Spec, []),
+    Context = maps:get(context, Spec),
+    ParentContext = maps:get(parent_context, Spec, Context),
+    RetainedWords = retained_words(Continuation, Spec),
+    Limit = maps:get(max_retained_words, normalized_budget(Spec)),
+    case {
+        Providers,
+        context_branch_safe(Context),
+        context_branch_safe(ParentContext),
+        lexical_environment_safe(Continuation),
+        RetainedWords =< Limit
+    } of
+        {[_ | _], _, _, _, _} ->
+            inadmissible_multishot_context(Origin, process_provider);
+        {[], {error, Reason}, _, _, _} ->
+            inadmissible_multishot_context(Origin, Reason);
+        {[], ok, {error, Reason}, _, _} ->
+            inadmissible_multishot_context(Origin, Reason);
+        {[], ok, ok, false, _} ->
+            inadmissible_multishot_context(Origin, lexical_capability);
+        {[], ok, ok, true, false} ->
+            {error, budget_failure(
+                Origin,
+                retained_words,
+                Limit,
+                RetainedWords
+            )};
+        {[], ok, ok, true, true} ->
+            ok
+    end.
+
+context_branch_safe(Context) when is_map(Context) ->
+    Handlers = maps:get(handlers, Context, #{}),
+    Entries = maps:get(entries, Context, []),
+    case {map_size(Handlers), branch_safe_entries(Entries)} of
+        {Size, _} when Size > 0 ->
+            {error, process_provider};
+        {0, {error, _} = Error} ->
+            Error;
+        {0, ok} ->
+            case maps:get(parent, Context, undefined) of
+                undefined -> ok;
+                Parent -> context_branch_safe(Parent)
+            end
+    end;
+context_branch_safe(_Context) ->
+    {error, invalid_context}.
+
+branch_safe_entries([]) ->
+    ok;
+branch_safe_entries([#{kind := local_resumable} | Rest]) ->
+    branch_safe_entries(Rest);
+branch_safe_entries([#{kind := local_value_provider} | _Rest]) ->
+    {error, local_provider_state};
+branch_safe_entries([#{kind := process_provider} | _Rest]) ->
+    {error, process_provider};
+branch_safe_entries([_Entry | _Rest]) ->
+    {error, unknown_handler_state}.
+
+lexical_environment_safe(Continuation) ->
+    {env, Environment} = erlang:fun_info(Continuation, env),
+    not lists:any(fun unsafe_lexical_term/1, Environment).
+
+unsafe_lexical_term(Term) when is_pid(Term); is_port(Term); is_reference(Term) ->
+    true;
+unsafe_lexical_term(Term) when is_tuple(Term) ->
+    lists:any(fun unsafe_lexical_term/1, tuple_to_list(Term));
+unsafe_lexical_term(Term) when is_list(Term) ->
+    lists:any(fun unsafe_lexical_term/1, Term);
+unsafe_lexical_term(Term) when is_map(Term) ->
+    lists:any(fun unsafe_lexical_term/1, maps:to_list(Term));
+unsafe_lexical_term(_Term) ->
+    false.
+
+inadmissible_multishot_context(Origin, Reason) ->
+    {error, failure(inadmissible_multishot_context, Origin, #{
+        reason => Reason
+    })}.
+
+normalized_budget(Spec) ->
+    maps:merge(default_budget(), maps:get(budget, Spec, #{})).
+
+sanitize_budget(Budget) ->
+    maps:with(maps:keys(default_budget()), Budget).
+
+retained_words(Continuation, Spec) ->
+    erts_debug:flat_size({
+        Continuation,
+        maps:get(context, Spec),
+        maps:get(parent_context, Spec, maps:get(context, Spec)),
+        maps:get(metadata, Spec, #{}),
+        maps:get(type_identity, Spec, dynamic)
+    }).
+
+captured_branch_depth(Spec) ->
+    Context = maps:get(context, Spec),
+    length(maps:get(runtime_branch_stack, Context, [])).
+
+budget_failure(Origin, Resource, Limit, Observed) ->
+    failure(resumption_budget_exceeded, Origin, #{
+        resource => Resource,
+        limit => Limit,
+        observed => Observed
+    }).
 
 -spec invalid_capture_field(atom()) -> {error, control_failure()}.
 invalid_capture_field(Field) ->
@@ -696,6 +1071,7 @@ release_entry(Entry) ->
         [
             continuation,
             context,
+            parent_context,
             run_token,
             owner_monitor,
             provider_monitors,

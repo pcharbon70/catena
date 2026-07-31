@@ -30,7 +30,7 @@
     % Effect expressions
     perform_expr/4, perform_expr/3,
     resume_expr/3, resume_expr/2,
-    try_with_expr/3, try_with_expr/2,
+    try_with_expr/5, try_with_expr/3, try_with_expr/2,
     handler_clause/3, handler_clause/2,
     operation_case/5, operation_case/4, operation_case/3,
     % Patterns
@@ -313,6 +313,26 @@ resume_expr(Resumption, Value) ->
 -spec try_with_expr(expr(), [#handler_clause{}], location()) -> #try_with_expr{}.
 try_with_expr(Body, Handlers, Loc) when is_list(Handlers) ->
     #try_with_expr{body = Body, handlers = Handlers, location = Loc}.
+
+%% @doc Create an explicitly mode-selected handler expression.
+-spec try_with_expr(
+    expr(),
+    [#handler_clause{}],
+    handler_depth(),
+    resumption_kind(),
+    location()
+) -> #try_with_expr{}.
+try_with_expr(Body, Handlers, Depth, Kind, Loc)
+        when is_list(Handlers),
+             (Depth =:= deep orelse Depth =:= shallow),
+             (Kind =:= one_shot orelse Kind =:= multi_shot) ->
+    #try_with_expr{
+        body = Body,
+        handlers = Handlers,
+        depth = Depth,
+        resumption_kind = Kind,
+        location = Loc
+    }.
 
 %% @doc Create a try-with expression with location inferred from body
 -spec try_with_expr(expr(), [#handler_clause{}]) -> #try_with_expr{}.

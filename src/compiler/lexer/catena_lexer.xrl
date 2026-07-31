@@ -75,6 +75,8 @@ forall : {token, {forall, TokenLine}}.
 operation : {token, {operation, TokenLine}}.
 with : {token, {with, TokenLine}}.
 resume : {token, {resume, TokenLine}}.
+shallow : {token, {shallow, TokenLine}}.
+multi_shot : {token, {multi_shot, TokenLine}}.
 
 %% Module system keywords
 import : {token, {'import', TokenLine}}.

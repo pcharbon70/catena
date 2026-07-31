@@ -12,6 +12,7 @@
 
 -export([
     validate_declarations/1,
+    validate_case/4,
     validate_one_shot_case/4,
     validate_supported_mode/2
 ]).
@@ -20,6 +21,28 @@
 -spec validate_declarations([term()]) -> ok | {error, term()}.
 validate_declarations(Declarations) ->
     validate_opaque_terms(Declarations).
+
+%% @doc Validate the statically selected invocation policy for a handler
+%% case. One-shot retains conservative duplicate-use checking; an admissible
+%% multi-shot authority deliberately permits repeated resume sites.
+-spec validate_case(atom(), catena_types:type(), term(), map()) ->
+    ok | {error, term()}.
+validate_case(
+    Binder,
+    {tresumption, {tcon, 'OneShot'}, _A, _B, _Effects} = Type,
+    Body,
+    Context
+) ->
+    validate_one_shot_case(Binder, Type, Body, Context);
+validate_case(
+    _Binder,
+    {tresumption, {tcon, 'MultiShot'}, _A, _B, _Effects} = Type,
+    _Body,
+    Context
+) ->
+    validate_supported_mode(Type, Context);
+validate_case(_Binder, Type, _Body, Context) ->
+    validate_supported_mode(Type, Context).
 
 %% @doc Reject a provable second resume of the same one-shot authority.
 -spec validate_one_shot_case(
@@ -48,18 +71,37 @@ validate_one_shot_case(Binder, Type, Body, Context) ->
             Error
     end.
 
-%% @doc Phase 3 admits one-shot and generic types, but no concrete multi-shot
-%% construction or invocation.
+%% @doc Multi-shot is admitted only for a closed, empty residual effect row.
+%% Any open, external, stateful, or otherwise unknown authority fails closed.
 -spec validate_supported_mode(catena_types:type(), map()) ->
     ok | {error, term()}.
 validate_supported_mode(
-    {tresumption, {tcon, 'MultiShot'}, _A, _B, Effects},
+    {tresumption, {tcon, 'MultiShot'}, _A, _B, {teffectrow, [], closed}},
+    _Context
+) ->
+    ok;
+validate_supported_mode(
+    {tresumption, {tcon, 'MultiShot'}, _A, _B,
+        {teffectrow, Effects, closed} = Row},
     Context
 ) ->
-    {error, {unsupported_resumption_mode, Context#{
+    {error, {inadmissible_multi_shot_effects, Context#{
         requested_mode => multi_shot,
-        residual_effects => Effects,
-        reason => multi_shot_deferred
+        residual_effects => Row,
+        inadmissible_effects => Effects,
+        reason => external_or_stateful_effects_not_duplicable
+    }}};
+validate_supported_mode(
+    {tresumption, {tcon, 'MultiShot'}, _A, _B,
+        {teffectrow, Effects, Tail} = Row},
+    Context
+) ->
+    {error, {inadmissible_multi_shot_effects, Context#{
+        requested_mode => multi_shot,
+        residual_effects => Row,
+        known_effects => Effects,
+        open_tail => Tail,
+        reason => open_effect_row
     }}};
 validate_supported_mode(
     {tresumption, {tcon, 'OneShot'}, _A, _B, _Effects},
@@ -196,6 +238,14 @@ usage({'match', Scrutinee, Clauses, _Location}, Aliases) ->
 usage({match, Scrutinee, Clauses}, Aliases) ->
     usage_match(Scrutinee, Clauses, Aliases);
 usage({handle_expr, Body, Handlers, _Location}, Aliases) ->
+    combine_sequence([
+        usage(Body, Aliases),
+        combine_alternatives([
+            usage_handler(Handler, Aliases)
+            || Handler <- Handlers
+        ])
+    ]);
+usage({handle_expr, _Mode, Body, Handlers, _Location}, Aliases) ->
     combine_sequence([
         usage(Body, Aliases),
         combine_alternatives([

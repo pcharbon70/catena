@@ -39,7 +39,7 @@ Nonterminals
   record_fields record_field
   record_pattern_fields record_pattern_field
   literal
-  perform_expr try_with_expr resume_expr
+  perform_expr try_with_expr resume_expr handler_modes
   handler_clauses handler_clause operation_cases operation_case
   effect_list effect_list_nonempty
   type_expr type_expr_primary type_expr_app type_expr_primary_list
@@ -63,7 +63,7 @@ Terminals
   test property
 
   %% Syntax Keywords (supplementary keywords)
-  'case' 'of' 'when' as forall fn with resume
+  'case' 'of' 'when' as forall fn with resume shallow multi_shot
 
   %% Trait system keywords
   extend constrain
@@ -1073,6 +1073,20 @@ try_with_expr -> handle expr then lbrace handler_clauses rbrace :
         '$5',
         extract_location('$1')}.
 
+%% Explicit handler-mode modifiers. Their order is canonicalized so source
+%% formatting and interface metadata remain deterministic.
+try_with_expr -> handle handler_modes expr then lbrace handler_clauses rbrace :
+    {handle_expr,
+        make_handler_mode('$2', '$1'),
+        '$3',
+        '$6',
+        extract_location('$1')}.
+
+handler_modes -> shallow : [shallow].
+handler_modes -> multi_shot : [multi_shot].
+handler_modes -> shallow multi_shot : [shallow, multi_shot].
+handler_modes -> multi_shot shallow : [shallow, multi_shot].
+
 %% Handler clauses: Effect { operation cases }
 handler_clauses -> handler_clause :
     ['$1'].
@@ -1285,6 +1299,22 @@ make_resume_expr(ResumeToken, _Operands) ->
         extract_error_line(ResumeToken),
         "resume expects exactly two operands"
     ).
+
+%% @doc Build canonical, source-oriented handler mode metadata.
+make_handler_mode(Modifiers, HandleToken) ->
+    #{
+        '$catena_handler_mode' => 1,
+        depth => case lists:member(shallow, Modifiers) of
+            true -> shallow;
+            false -> deep
+        end,
+        kind => case lists:member(multi_shot, Modifiers) of
+            true -> multi_shot;
+            false -> one_shot
+        end,
+        explicit => true,
+        origin => extract_location(HandleToken)
+    }.
 
 %% @doc Extract transform name from transform signature
 extract_transform_name({transform_sig, Name, _Type, _Loc}) -> Name.

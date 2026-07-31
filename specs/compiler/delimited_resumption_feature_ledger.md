@@ -2,12 +2,12 @@
 
 ## Status
 
-Phase 6 executable Core/BEAM boundary for
+Phase 7 executable mixed-mode Core/BEAM boundary for
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md).
 
 This ledger prevents internal helper names, marker callbacks, request/response
 runtime behavior, and the reference oracle from being mistaken for promoted
-Catena source-language delimited control. Later phases must update a row only
+Catena source-language delimited control. Phase 8 must update a row only
 when its implementation and required evidence are both present.
 
 ## Baseline Snapshot
@@ -79,6 +79,37 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Artifact/runtime contract | implemented executable boundary | Artifact format 2 validates exact control/runtime versions, handler features, identities, interface checksums, and dependency checksums before loading |
 | Deferred modes | rejected | Deep one-shot is executable; shallow and multi-shot remain fail-closed pending Phase 7 |
 
+## Phase 7 Section 7.2 Snapshot
+
+| Measurement | Section 7.2 result | Interpretation |
+| --- | ---: | --- |
+| Complete active EUnit suite | 5,263 pass; 0 failures; 0 skips | Shallow runtime/Core/artifact integration and all earlier gates are green |
+| Parser conflicts | 38 shift/reduce; 0 reduce/reduce | Unchanged from the audited grammar boundary |
+| Shallow one-shot | implemented executable boundary | Resumption restores the selected handler's parent context while preserving unrelated frames and process affinity |
+| Control/artifact contract | implemented versioned boundary | Control ABI 2, runtime ABI 2, artifact format 3, interface 3, and explicit handler modes fail closed on disagreement |
+| Multi-shot | deferred | Static admissibility exists; repeated branch authority and budgets remain owned by Section 7.3 |
+
+## Phase 7 Section 7.3 Snapshot
+
+| Measurement | Section 7.3 result | Interpretation |
+| --- | ---: | --- |
+| Complete active EUnit suite | 5,272 pass; 0 failures; 0 skips | Multi-shot runtime, loaded-BEAM behavior, and all earlier gates are green |
+| Focused multi-shot integration | 9 pass; 0 failures; 0 skips | Branch identity, failure isolation, nested one-shot state, ownership, budgets, capture policy, cleanup, artifacts, and loaded-BEAM execution are green |
+| Multi-shot | implemented executable boundary | A closed empty residual row may authorize repeated, isolated same-process branches from the same compiler-reified continuation |
+| State policy | conservative fail-closed boundary | Process providers, local value-provider state, and direct lexical PIDs, ports, and references are rejected; no external-world cloning is claimed |
+| Resource policy | implemented versioned boundary | Runtime ABI 3 bounds invocations, retained words, reductions, cooperative timeout, and nested branch depth |
+| Phase integration | pending | Section 7.4 still owns mixed-mode scenarios and the complete phase-ending repository gate |
+
+## Phase 7 Completion Snapshot
+
+| Measurement | Phase 7 result | Interpretation |
+| --- | ---: | --- |
+| Complete active EUnit suite | 5,280 pass; 0 failures; 0 skips | All Phase 7 and earlier repository behavior is green |
+| Manifest conformance | 418 pass; 0 failures; 0 skips | Every currently registered stable scenario remains green |
+| Mixed-mode integration | 8 pass; 0 failures; 0 skips | Depth orderings, retention, failure, owner identity, repeated branches, deterministic search, and negative mode/resource paths are executable |
+| Artifact mode integrity | implemented fail-closed boundary | The handler-mode inventory embedded in loaded BEAM must exactly match the runtime contract |
+| Specs governance | passed | 42 requirements, 11 scenarios, 20 evidence rows, 73 acceptance criteria, seven ADRs, and 301 local links validate |
+
 ## Classification Vocabulary
 
 | Classification | Meaning |
@@ -90,7 +121,7 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Frontend implementation | Source parses, preserves intent, normalizes, and validates structurally, but lacks the typing/lowering/runtime evidence required for promotion |
 | Typed frontend implementation | Source reaches kind, type, effect, flow, and typed-artifact validation, but lacks executable continuation lowering/runtime evidence |
 | Compiler IR implementation | Typed source reaches authoritative control classification, selective-CPS lowering, and fail-closed graph validation, but lacks production runtime/Core execution |
-| Runtime ABI implementation | Real compiler-shaped closures execute through the production deep one-shot runtime, but generated Core does not yet construct or invoke them |
+| Runtime ABI implementation | Real compiler-shaped closures execute through the production resumption runtime, but generated Core does not yet construct or invoke them |
 | Executable source implementation | Typed source lowers through validated selective CPS to runtime calls and OTP-accepted loaded BEAM with observable continuation semantics |
 | Planned source implementation | Accepted by the ADR and architecture but absent from the compiler/runtime path |
 | Deferred mode | Has an accepted conceptual meaning but lacks the required syntax, typing, runtime authority, or evidence for promotion |
@@ -100,7 +131,7 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Surface | Current implementation | Classification | Promotion target |
 | --- | --- | --- | --- |
 | `perform` syntax and AST | Parsed and typed as the existing effect expression | Request/response | Preserve syntax; classify resumable suspension points |
-| `handle` and operation cases | Parsed and typed cases emit deterministic Core handler frames and execute through local deep contexts | Executable source implementation | Phase 7 separately owns shallow opt-ins |
+| `handle` and operation cases | Parsed and typed cases emit deterministic Core handler frames and execute through selected deep or shallow contexts | Executable source implementation | Preserve the deep default and explicit shallow selection |
 | `with k` operation binder | Emitted capture constructs opaque process-affine authority for the compiler-reified remainder | Executable source implementation | Preserve through later optimization and tooling |
 | `resume(k, value)` | Emitted runtime invocation executes the delimited source remainder on its owner and returns the delimiter result | Executable source implementation | Preserve through later optimization and tooling |
 | Value-handler compatibility | Synthetic tail auto-resume emits and executes the same exactly-once deep path | Executable source implementation plus request/response compatibility | Preserve both specified paths |
@@ -108,8 +139,8 @@ count. Parser conflicts are checked on every ordinary compilation.
 | Core Erlang effect backend | `catena_control_codegen` emits validated direct/CPS entries, performs, handlers, resumptions, bridges, closures, imports, and dictionaries | Executable source implementation | Phase 8 owns optimization and promotion tooling |
 | Continuation capture | Generated binary CPS closures and captured contexts are registered behind opaque handles | Executable source implementation | Never claim ordinary Erlang stack capture |
 | One-shot consumption | A private serialized registry atomically enforces `fresh -> running -> consumed` for every exit | Executable source implementation | Preserve deterministic failure behavior |
-| Deep/shallow selection | Deep restoration executes from emitted Core; shallow remains rejected | Executable source implementation plus deferred mode | Phase 7 owns shallow |
-| Multi-shot | State-copy and resume-count helpers exist | Deferred mode | Residual-effect admissibility and independent branch authority |
+| Deep/shallow selection | Deep restoration reinstalls the selected frame; shallow restoration resumes from its parent context | Executable source implementation | Phase 8 owns promotion tooling |
+| Multi-shot | Closed empty residual rows lower to runtime ABI 3, whose opaque handles execute repeated isolated, bounded same-process branches | Executable source implementation | Phase 8 owns dedicated conformance and public promotion tooling |
 | Operational semantics | Normative written reductions | Semantic specification | Remains authoritative across later phases |
 | `catena_resumption_oracle` | Explicit free-request evaluator with deterministic trace/state | Semantic oracle | Comparison evidence only; never production ABI |
 
@@ -119,8 +150,8 @@ count. Parser conflicts are checked on every ordinary compilation.
 
 | Modules | Honest boundary |
 | --- | --- |
-| `src/compiler/runtime/catena_effect_runtime.erl` | Promoted request/response operations plus non-promoted local resumable frames, `perform_cps/5`, deep context restoration, and provider separation |
-| `src/compiler/runtime/catena_resumption_runtime.erl` | Opaque versioned handles, private closure/context authority, atomic one-shot invocation, retention leases, lifecycle monitors, deadlines, cleanup, and stable failures |
+| `src/compiler/runtime/catena_effect_runtime.erl` | Promoted request/response operations plus local resumable frames, `perform_cps/5`, deep/shallow context selection, and provider separation |
+| `src/compiler/runtime/catena_resumption_runtime.erl` | Opaque versioned handles, private captured/parent context authority, atomic one-shot or isolated multi-shot invocation, state-admissibility checks, resource budgets, retention leases, lifecycle monitors, deadlines, cleanup, and stable failures |
 | `src/compiler/codegen/catena_effect_codegen.erl` | Lowers perform/handle to the request/response runtime |
 | `src/compiler/effects/catena_effects.erl`, `catena_effect_system.erl` | Public/internal orchestration around current direct-style effect execution |
 | `src/compiler/effects/catena_handler.erl`, `catena_handler_stack.erl`, `catena_handler_check.erl` | Handler construction, lookup, execution, and validation helpers |
@@ -186,7 +217,8 @@ to the Phase 5 runtime ABI.
   local resumable/value execution, process-provider separation, and deep
   `perform_cps/5,6`;
 - `catena_resumption_runtime` owns opaque handles, private continuation and
-  context state, atomic authorization, process affinity, leases, lifecycle
+  context state, atomic one-shot and multi-shot branch authorization, process
+  affinity, admissibility checks, resource budgets, leases, lifecycle
   monitors, deadlines, cleanup, and stable failures.
 
 The Phase 5 integration suite executes real compiler-shaped closures through
@@ -255,7 +287,7 @@ exclude PIDs, references, timestamps, stack traces, and function identities.
 | `resume_value_type_mismatch` | Supplied operation result does not unify with the resumption input |
 | `resume_effect_mismatch` | Residual resumed effects are not admitted by the current context |
 | `obvious_one_shot_reuse` | Static analysis proves duplicate invocation on a one-shot path |
-| `unsupported_resumption_mode` | Source requests a shallow or multi-shot mode not yet promoted |
+| `unsupported_resumption_mode` | Source or runtime requests a mode that is not implemented at that boundary |
 | `missing_resumption_lowering` | A resumable validated node reaches a backend without a classified lowering |
 | `resumption_abi_mismatch` | Direct/resumable bridge or runtime ABI does not match validated metadata |
 
@@ -271,6 +303,8 @@ exclude PIDs, references, timestamps, stack traces, and function identities.
 | `unsupported_semantic_mode` | Runtime/oracle cannot execute the requested depth or kind |
 | `resumption_reentrant` | Invocation observed the same one-shot authority in `running` state |
 | `resumption_already_consumed` | Invocation observed the authority in `consumed` state |
+| `inadmissible_multishot_context` | Multi-shot capture contains provider state or direct capabilities without accepted branch semantics |
+| `resumption_budget_exceeded` | Multi-shot capture or invocation exceeds a retained-memory, invocation, reduction, timeout, or branch-depth limit |
 | `resumption_value_type_mismatch` | A dynamic boundary receives an incompatible operation result |
 | `unhandled_effect` | A request reaches the top of the explicit context |
 | `handler_failure` | Production handler/provider execution fails before a valid result |

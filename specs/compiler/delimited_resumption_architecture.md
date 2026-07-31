@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted architecture with Phase 6 executable Core/BEAM integration. Phases 2
-through 6 implement the lexer, parser,
+Accepted architecture with Phase 7 executable mixed-mode Core/BEAM
+integration. Phases 2 through 7 implement the lexer, parser,
 AST, pretty-printer, semantic normalization, structural diagnostics,
 first-class resumption kinds and types, handler/resume inference,
 residual-effect checking, control-mode analysis, selective-CPS control IR,
@@ -11,14 +11,20 @@ calling conventions, fail-closed graph validation, opaque process-affine
 runtime authority, deep same-process handler frames, one-shot consumption,
 retention leases, lifecycle monitoring, structured runtime failures,
 selective-CPS Core lowering, versioned artifacts, and loaded-BEAM execution.
-Shallow and multi-shot source modes remain deferred to Phase 7; dedicated
-promotion and tooling work remains in Phase 8.
+Phase 7 accepts and implements explicit
+`handle shallow` and `handle multi_shot` mode modifiers through parsing,
+normalization, typing, control inventories, versioned interfaces, and the
+production runtime. Shallow handlers execute through depth-aware context
+restoration. Admissible multi-shot resumptions execute repeated isolated,
+bounded branches from compiler-reified continuations. Mixed-mode and
+fail-closed integration evidence is complete; dedicated promotion and tooling
+work remains in Phase 8.
 
 This document makes
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
 concrete enough to guide parser, type-system, lowering, runtime, diagnostics,
-and conformance work while keeping the remaining Phase 7 and Phase 8 work
-explicitly incomplete.
+and conformance work while keeping the remaining Phase 8 work explicitly
+incomplete.
 
 The normative deep one-shot reduction rules are defined in
 [Delimited Resumption Operational Semantics](delimited_resumption_operational_semantics.md).
@@ -58,6 +64,31 @@ scope, kind, ownership, type, and consumption rules.
 | Process-affine | May be resumed only by the BEAM process that captured it. |
 
 ## Source Surface
+
+### Explicit mode selection
+
+[ADR-0007](../adr/ADR-0007-explicit-handler-and-resumption-mode-modifiers.md)
+selects delimiter-local modifiers:
+
+```catena
+handle shallow multi_shot choose_message() then {
+  Choice {
+    choose() with k ->
+      let first = resume(k, "hello")
+      in resume(k, "goodbye")
+  }
+}
+```
+
+Either modifier may appear alone. With neither modifier, the existing deep
+one-shot default is unchanged. Parsing accepts either modifier order and
+formatting emits `shallow multi_shot`. The selected mode determines the
+`ResumptionKind` and shallow residual-effect treatment of every `with k`
+binder owned by that delimiter.
+
+Initial multi-shot admissibility requires a closed, empty residual effect
+row. Known residual effects and open rows fail closed until Catena has an
+accepted effect-capability classification for branch-safe state.
 
 ### Explicit resumption binding
 
@@ -366,9 +397,13 @@ Only the runtime can dereference `OpaqueHandle`. The private state contains:
   state => fresh | running | consumed,
   continuation => fun(),
   context => effect_context(),
+  parent_context => effect_context(),
   delimiter => reference(),
   depth => deep | shallow,
-  origin => term()}.
+  origin => term(),
+  budget => map(),
+  invocation_count => non_neg_integer(),
+  current_branch => map()}.
 ```
 
 This is a semantic inventory, not permission to expose a constructible map.
@@ -386,6 +421,13 @@ This is a semantic inventory, not permission to expose a constructible map.
 6. marks a one-shot resumption consumed even if execution raises;
 7. returns the delimiter result or a structured runtime failure.
 
+For `multi_shot`, authorization assigns a monotonically increasing branch
+identity, restores the immutable captured continuation and selected deep or
+shallow context for that branch, and returns the authority to `fresh` after
+either success or failure. The same handle cannot be entered re-entrantly,
+and every invocation repeats process-ownership and resource checks. Explicit
+discard consumes the authority and releases its lease.
+
 The consumption authority may use a monitored helper process or another
 explicit runtime object. It must not rely on a forgeable source term or
 process-dictionary handler lookup.
@@ -401,25 +443,38 @@ the BEAM, but invoking it from another process is.
 
 ## Deep, Shallow, One-Shot, And Multi-Shot
 
-The first executable promotion target is deep plus one-shot:
+The default executable mode remains deep plus one-shot:
 
 - the handler frame is active during resumed execution;
 - a resumption begins at most once;
 - existing value cases tail-resume exactly once.
 
-Shallow support changes context restoration, not continuation capture.
+Implemented shallow support changes context restoration, not continuation
+capture: it restores the selected frame's captured parent context while
+preserving unrelated surrounding frames.
 Multi-shot support changes authorization and repeated invocation, not the
 source meaning of the captured continuation.
 
-Multi-shot must not claim to copy external world state. Before promotion it
-needs:
+Multi-shot does not copy external world state. Its initial executable boundary
+is deliberately narrow:
 
-- a source opt-in spelling;
-- a residual-effect admissibility rule;
-- specified sharing behavior for stateful handlers;
-- deterministic behavior for exceptions and partial branch completion;
-- resource limits and diagnostics;
-- executable nondeterminism/backtracking evidence.
+- the source must opt in with `multi_shot`;
+- the residual effect row must be closed and empty;
+- immutable lexical values and local resumable definitions are structurally
+  shared by the persistent BEAM terms captured by the compiler-reified
+  continuation;
+- process providers, local value-provider state, and direct lexical PID,
+  port, or reference capabilities are rejected at runtime capture;
+- one branch's exception is reported for that invocation and does not poison
+  later branches; one-shot resumptions captured separately inside branches
+  remain independently one-shot;
+- positive budgets bound invocation count, retained words, reductions,
+  cooperative timeout, and nested branch depth.
+
+Reduction and elapsed-time checks occur on the owner process after the
+continuation returns, while provider waits observe the propagated cooperative
+deadline. This preserves `self()` and mailbox identity; it is not preemptive
+stack capture or cancellation.
 
 ## Diagnostics
 
@@ -438,6 +493,8 @@ Diagnostics require Catena source locations for:
 - cross-process resume;
 - expired handler or delimiter;
 - inadmissible multi-shot effects;
+- inadmissible multi-shot runtime context;
+- exhausted multi-shot resource budget;
 - invalid or stale runtime representation.
 
 Synthetic CPS frames and auto-resume expressions retain an origin chain back
@@ -462,12 +519,17 @@ source-to-BEAM evidence covers:
 11. Core validation and loaded-BEAM execution;
 12. no placeholder continuation or silent direct-style fallback.
 
-Shallow and multi-shot behavior receive separate promotion evidence when their
-source opt-ins are accepted and implemented.
+Shallow and multi-shot behavior receive separate promotion evidence when each
+source opt-in is accepted and implemented.
 
-Phase 6 supplies this executable evidence for the deep one-shot boundary.
-Component and status documents must continue to distinguish it from deferred
-shallow/multi-shot semantics and Phase 8 promotion/tooling work.
+Phase 6 supplies this executable evidence for the deep one-shot boundary,
+Phase 7 Section 7.2 supplies the depth-distinguishing runtime/Core/artifact
+evidence for shallow one-shot handling, Section 7.3 supplies bounded
+multi-shot runtime and source-to-loaded-BEAM evidence, and Section 7.4 supplies
+the complete mixed-mode and negative phase gate. Generated resumable BEAM
+carries the exact handler-mode inventory; artifact validation compares that
+inventory with the runtime contract before loading. Phase 8 owns dedicated
+promotion/tooling work.
 
 ## Related Material
 

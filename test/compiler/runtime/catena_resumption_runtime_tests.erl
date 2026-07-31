@@ -14,7 +14,7 @@ catena_resumption_runtime_test_() ->
             fun reentrant_resume_is_rejected/0,
             fun cross_process_resume_is_rejected_without_consuming/0,
             fun malformed_stale_and_unregistered_handles_are_rejected/0,
-            fun unsupported_modes_are_rejected/0
+            fun invalid_modes_are_rejected/0
         ]}.
 
 setup() ->
@@ -27,10 +27,9 @@ opaque_handle_hides_private_state() ->
     SecretContext = #{secret => context},
     SecretContinuation = fun(Value, _Context) -> Value end,
     {ok, Handle} = capture(SecretContinuation, SecretContext),
-    ?assertMatch(
-        {catena_resumption, 1, Opaque} when is_reference(Opaque),
-        Handle
-    ),
+    {catena_resumption, Version, Opaque} = Handle,
+    ?assertEqual(catena_resumption_runtime:version(), Version),
+    ?assert(is_reference(Opaque)),
     ?assert(catena_resumption_runtime:is_resumption(Handle)),
     ?assertNot(
         lists:member(SecretContext, tuple_to_list(Handle))
@@ -163,20 +162,20 @@ malformed_stale_and_unregistered_handles_are_rejected() ->
         )
     ).
 
-unsupported_modes_are_rejected() ->
+invalid_modes_are_rejected() ->
     Continuation = fun(Value, _Context) -> Value end,
     ?assertMatch(
         {error, #{category := unsupported_semantic_mode}},
         catena_resumption_runtime:capture(
             Continuation,
-            (capture_spec(#{}))#{kind := multi_shot}
+            (capture_spec(#{}))#{kind := unbounded}
         )
     ),
     ?assertMatch(
         {error, #{category := unsupported_semantic_mode}},
         catena_resumption_runtime:capture(
             Continuation,
-            (capture_spec(#{}))#{depth := shallow}
+            (capture_spec(#{}))#{depth := dynamic}
         )
     ).
 

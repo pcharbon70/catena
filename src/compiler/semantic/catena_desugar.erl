@@ -143,6 +143,14 @@ desugar_expr({handle_expr, Body, Handlers, Loc}) ->
         [desugar_handler(Handler) || Handler <- Handlers],
         Loc
     };
+desugar_expr({handle_expr, Mode, Body, Handlers, Loc}) ->
+    {
+        handle_expr,
+        Mode,
+        desugar_expr(Body),
+        [desugar_handler(Handler) || Handler <- Handlers],
+        Loc
+    };
 desugar_expr({resume_expr, Resumption, Value, Loc}) ->
     {
         resume_expr,

@@ -458,6 +458,34 @@ infer({resume_expr, Target, Value, Location}, Env, State) ->
 % case. Effects in the handled computation are isolated so the residual row
 % can be derived before handler bodies are checked.
 infer({handle_expr, Body, Handlers, Location}, Env, State) ->
+    infer_handle_expression(
+        catena_resumption_mode:default(Location),
+        Body,
+        Handlers,
+        Location,
+        Env,
+        State
+    );
+infer({handle_expr, Mode0, Body, Handlers, Location}, Env, State) ->
+    case catena_resumption_mode:normalize(Mode0, Location) of
+        {ok, Mode} ->
+            infer_handle_expression(
+                Mode,
+                Body,
+                Handlers,
+                Location,
+                Env,
+                State
+            );
+        {error, Reason} ->
+            resumption_inference_error(
+                invalid_handler_mode,
+                #{reason => Reason, location => Location},
+                State
+            )
+    end.
+
+infer_handle_expression(Mode, Body, Handlers, Location, Env, State) ->
     ScopedState = catena_infer_state:push_effect_scope(State),
     PerformedBefore = catena_infer_state:get_performed_operations(
         ScopedState
@@ -483,19 +511,61 @@ infer({handle_expr, Body, Handlers, Location}, Env, State) ->
                 BodyEffects,
                 HandledEffects
             ),
-            ResidualRow = effect_set_to_row(ResidualEffects),
+            DeepResidualRow = effect_set_to_row(ResidualEffects),
+            ResumptionRow = catena_resumption_mode:resumption_effect_row(
+                Mode,
+                HandledEffects,
+                DeepResidualRow
+            ),
             HandlerState0 = catena_infer_state:set_effects(
                 catena_types:empty_effects(),
                 BodyState
             ),
-            case infer_handler_clauses(
-                Handlers,
-                BodyType,
-                ResidualRow,
-                Location,
-                HandlerEnv,
-                HandlerState0
+            case catena_resumption_mode:validate_multi_shot(
+                Mode,
+                ResumptionRow
             ) of
+                ok ->
+                    infer_handle_expression_cases(
+                        Mode,
+                        Handlers,
+                        BodyType,
+                        ResidualEffects,
+                        ResumptionRow,
+                        Location,
+                        HandlerEnv,
+                        HandlerState0
+                    );
+                {error, {ModeReason, ModeContext}} ->
+                    resumption_inference_error(
+                        ModeReason,
+                        ModeContext,
+                        HandlerState0
+                    )
+            end;
+        {error, _, _} = Error ->
+            Error
+    end.
+
+infer_handle_expression_cases(
+    Mode,
+    Handlers,
+    BodyType,
+    ResidualEffects,
+    ResumptionRow,
+    Location,
+    HandlerEnv,
+    HandlerState0
+) ->
+    case infer_handler_clauses(
+        Handlers,
+        BodyType,
+        ResumptionRow,
+        Mode,
+        Location,
+        HandlerEnv,
+        HandlerState0
+    ) of
                 {ok, HandlerState1} ->
                     HandlerEffects =
                         catena_infer_state:get_effects(HandlerState1),
@@ -516,9 +586,6 @@ infer({handle_expr, Body, Handlers, Location}, Env, State) ->
                         ),
                         catena_infer_state:pop_effect_scope(FinalState0)
                     };
-                {error, _, _} = Error ->
-                    Error
-            end;
         {error, _, _} = Error ->
             Error
     end.
@@ -723,6 +790,7 @@ infer_handler_clauses(
     [],
     _DelimiterResult,
     _ResidualRow,
+    _Mode,
     _DelimiterLocation,
     _Env,
     State
@@ -735,6 +803,7 @@ infer_handler_clauses(
     ],
     DelimiterResult,
     ResidualRow,
+    Mode,
     DelimiterLocation,
     Env,
     State
@@ -744,6 +813,7 @@ infer_handler_clauses(
         Operations,
         DelimiterResult,
         ResidualRow,
+        Mode,
         DelimiterLocation,
         Env,
         State
@@ -753,6 +823,7 @@ infer_handler_clauses(
                 Rest,
                 DelimiterResult,
                 ResidualRow,
+                Mode,
                 DelimiterLocation,
                 Env,
                 State1
@@ -766,6 +837,7 @@ infer_handler_operations(
     [],
     _DelimiterResult,
     _ResidualRow,
+    _Mode,
     _DelimiterLocation,
     _Env,
     State
@@ -786,6 +858,7 @@ infer_handler_operations(
     ],
     DelimiterResult,
     ResidualRow,
+    Mode,
     DelimiterLocation,
     Env,
     State
@@ -822,7 +895,8 @@ infer_handler_operations(
                             State3a
                         } ->
                             ResumptionType = catena_types:tresumption(
-                                catena_types:one_shot(),
+                                catena_resumption_mode:
+                                    resumption_kind_type(Mode),
                                 ConstrainedOperationResult,
                                 DelimiterResult,
                                 ResidualRow
@@ -837,7 +911,12 @@ infer_handler_operations(
                                 kind => resumption_binder,
                                 binder => Binder,
                                 type => ResumptionType,
-                                mode => one_shot,
+                                mode => catena_resumption_mode:kind(Mode),
+                                handler_depth =>
+                                    catena_resumption_mode:depth(Mode),
+                                handler_mode =>
+                                    catena_resumption_mode:
+                                        interface_view(Mode),
                                 effect => Effect,
                                 operation => Operation,
                                 binder_origin => BinderOrigin,
@@ -870,7 +949,7 @@ infer_handler_operations(
                                     State3a
                                 ),
                             case catena_resumption_flow:
-                                validate_one_shot_case(
+                                validate_case(
                                     Binder,
                                     ResumptionType,
                                     CaseBody,
@@ -883,6 +962,7 @@ infer_handler_operations(
                                         Rest,
                                         DelimiterResult,
                                         ResidualRow,
+                                        Mode,
                                         DelimiterLocation,
                                         Env,
                                         CaseBody,
@@ -939,6 +1019,7 @@ infer_handler_operations(
                         ],
                         DelimiterResult,
                         ResidualRow,
+                        Mode,
                         DelimiterLocation,
                         CompatibilityEnv,
                         State1
@@ -960,6 +1041,7 @@ infer_handler_operations(
     [Invalid | _Rest],
     _DelimiterResult,
     _ResidualRow,
+    _Mode,
     _DelimiterLocation,
     _Env,
     State
@@ -975,6 +1057,7 @@ infer_handler_case_body(
     Rest,
     DelimiterResult,
     ResidualRow,
+    Mode,
     DelimiterLocation,
     Env,
     CaseBody,
@@ -995,6 +1078,7 @@ infer_handler_case_body(
                         Rest,
                         DelimiterResult,
                         ResidualRow,
+                        Mode,
                         DelimiterLocation,
                         Env,
                         State2

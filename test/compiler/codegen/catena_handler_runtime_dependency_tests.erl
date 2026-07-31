@@ -81,8 +81,12 @@ generated_modules_declare_runtime_dependencies_test() ->
     Dependencies = catena_compilation_unit:runtime_dependencies(Unit),
     ?assertEqual(
         [
-            #{module => catena_effect_runtime, version => 1},
-            #{module => catena_effect_system, version => 1}
+            #{module => catena_effect_system, version => 1},
+            #{
+                module => catena_effect_runtime,
+                version => catena_effect_runtime:version(),
+                features => catena_effect_runtime:features()
+            }
         ],
         Dependencies
     ),
@@ -93,8 +97,8 @@ generated_modules_declare_runtime_dependencies_test() ->
     ]),
     ?assertEqual(
         [
-            {catena_effect_runtime, 1},
-            {catena_effect_system, 1}
+            {catena_effect_system, 1},
+            {catena_effect_runtime, catena_effect_runtime:version()}
         ],
         maps:get(catena_runtime_dependencies, Attributes)
     ).
@@ -105,7 +109,7 @@ unavailable_runtime_contract_fails_artifact_preparation_test() ->
         Source,
         #{
             codegen_opts => #{
-                available_runtime_modules => []
+                available_runtime_modules => [catena_effect_system]
             }
         }
     ),

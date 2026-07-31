@@ -62,7 +62,9 @@
         cases := [resumable_case()],
         delimiter := reference(),
         frame_identity := reference(),
-        depth := deep,
+        depth := deep | shallow,
+        resumption_kind := one_shot | multi_shot,
+        resumption_budget := map(),
         owner := pid(),
         origin := term()
     }
@@ -92,7 +94,8 @@
     handlers := #{atom() => pid()},
     entries := [context_entry()],
     parent := effect_context() | undefined,
-    timeout := pos_integer()
+    timeout := pos_integer(),
+    resumption_budget := map()
 }.
 
 -export_type([effect_context/0, context_entry/0, resumable_case/0]).
@@ -105,7 +108,7 @@
 -define(DEFAULT_MAX_PROCESS_COUNT, 50000).
 
 -define(CONTROL_CLOSURE_VERSION, 1).
--define(RUNTIME_VERSION, 1).
+-define(RUNTIME_VERSION, 3).
 
 %% Default maximum file size for readFile (10 MB)
 -define(DEFAULT_MAX_FILE_SIZE, 10485760).
@@ -119,7 +122,16 @@ version() -> ?RUNTIME_VERSION.
 
 -spec features() -> [atom()].
 features() ->
-    [explicit_contexts, local_resumable_handlers, versioned_control_closures].
+    [
+        explicit_contexts,
+        local_resumable_handlers,
+        shallow_handlers,
+        depth_aware_context_restoration,
+        multi_shot_resumptions,
+        isolated_resumption_branches,
+        bounded_resumption_branches,
+        versioned_control_closures
+    ].
 
 %% @doc Create an empty effect context
 -spec empty_context() -> effect_context().
@@ -128,7 +140,8 @@ empty_context() ->
         handlers => #{},
         entries => [],
         parent => undefined,
-        timeout => ?EFFECT_TIMEOUT
+        timeout => ?EFFECT_TIMEOUT,
+        resumption_budget => catena_resumption_runtime:default_budget()
     }.
 
 %% @doc Create a new effect context (alias for empty_context)
@@ -137,15 +150,22 @@ new_context() ->
     empty_context().
 
 %% @doc Create a context with runtime options.
--spec new_context(#{timeout => pos_integer()}) -> effect_context().
+-spec new_context(map()) -> effect_context().
 new_context(Options) when is_map(Options) ->
     Timeout = maps:get(timeout, Options, ?EFFECT_TIMEOUT),
+    ResumptionBudget = maps:get(
+        resumption_budget,
+        Options,
+        catena_resumption_runtime:default_budget()
+    ),
     true = is_integer(Timeout) andalso Timeout > 0,
+    true = is_map(ResumptionBudget),
     #{
         handlers => #{},
         entries => [],
         parent => undefined,
-        timeout => Timeout
+        timeout => Timeout,
+        resumption_budget => ResumptionBudget
     }.
 
 %%====================================================================
@@ -283,7 +303,12 @@ with_handlers(Ctx, HandlerSpecs, BodyFun) ->
         handlers => maps:merge(maps:get(handlers, Ctx), NewHandlers),
         entries => ProcessEntries,
         parent => Ctx,
-        timeout => maps:get(timeout, Ctx, ?EFFECT_TIMEOUT)
+        timeout => maps:get(timeout, Ctx, ?EFFECT_TIMEOUT),
+        resumption_budget => maps:get(
+            resumption_budget,
+            Ctx,
+            catena_resumption_runtime:default_budget()
+        )
     },
     ChildCtx = inherit_deadline(Ctx, ChildCtx0),
 
@@ -316,7 +341,7 @@ with_value_provider(Ctx, {Effect, Operations}, BodyFun)
     },
     BodyFun(child_context(Ctx, Entry)).
 
-%% @doc Execute a body under a same-process deep resumable handler frame.
+%% @doc Execute a body under a same-process resumable handler frame.
 -spec with_resumable_handler(
     effect_context(),
     map(),
@@ -326,24 +351,57 @@ with_resumable_handler(Ctx, #{
     effect := Effect,
     cases := Cases,
     origin := Origin
-}, BodyFun)
+} = Spec, BodyFun)
         when
             is_atom(Effect),
             is_list(Cases),
             is_function(BodyFun, 1)
         ->
     ok = validate_resumable_cases(Cases),
+    Depth = maps:get(depth, Spec, deep),
+    ResumptionKind = maps:get(
+        resumption_kind,
+        Spec,
+        one_shot
+    ),
+    ResumptionBudget = maps:get(
+        resumption_budget,
+        Spec,
+        maps:get(
+            resumption_budget,
+            Ctx,
+            catena_resumption_runtime:default_budget()
+        )
+    ),
+    ok = validate_handler_mode(Depth, ResumptionKind),
     Frame = #{
         kind => local_resumable,
         effect => Effect,
         cases => Cases,
         delimiter => make_ref(),
         frame_identity => make_ref(),
-        depth => deep,
+        depth => Depth,
+        resumption_kind => ResumptionKind,
+        resumption_budget => ResumptionBudget,
         owner => self(),
         origin => Origin
     },
     BodyFun(child_context(Ctx, Frame)).
+
+-spec validate_handler_mode(term(), term()) -> ok.
+validate_handler_mode(Depth, ResumptionKind)
+        when
+            (Depth =:= deep orelse Depth =:= shallow),
+            (ResumptionKind =:= one_shot orelse
+                ResumptionKind =:= multi_shot)
+        ->
+    ok;
+validate_handler_mode(Depth, ResumptionKind) ->
+    erlang:error({effect_runtime_error, {
+        unsupported_handler_mode,
+        Depth,
+        ResumptionKind
+    }}).
 
 %% @doc Invoke an opaque resumption and return its delimiter result.
 -spec resume(term(), term()) -> term().
@@ -658,7 +716,12 @@ child_context(Ctx, Entry) ->
         handlers => maps:get(handlers, Ctx, #{}),
         entries => [Entry],
         parent => Ctx,
-        timeout => maps:get(timeout, Ctx, ?EFFECT_TIMEOUT)
+        timeout => maps:get(timeout, Ctx, ?EFFECT_TIMEOUT),
+        resumption_budget => maps:get(
+            resumption_budget,
+            Ctx,
+            catena_resumption_runtime:default_budget()
+        )
     },
     inherit_deadline(Ctx, ChildCtx).
 
@@ -691,9 +754,11 @@ perform_local_resumable(
     ),
     CaptureSpec = #{
         context => CapturedCtx,
+        parent_context => HandlerCtx,
         delimiter => maps:get(delimiter, Frame),
         depth => maps:get(depth, Frame),
-        kind => one_shot,
+        kind => maps:get(resumption_kind, Frame),
+        budget => maps:get(resumption_budget, Frame),
         origin => #{
             perform => PerformOrigin,
             handler_case => maps:get(origin, Case, undefined),
@@ -712,11 +777,12 @@ perform_local_resumable(
         providers => required_providers(CapturedCtx),
         frame_identity => maps:get(frame_identity, Frame)
     },
-    {ok, Resumption} = catena_resumption_runtime:capture(
-        Continuation,
-        CaptureSpec
-    ),
-    invoke_resumable_case(Case, Args, Resumption, HandlerCtx).
+    case catena_resumption_runtime:capture(Continuation, CaptureSpec) of
+        {ok, Resumption} ->
+            invoke_resumable_case(Case, Args, Resumption, HandlerCtx);
+        {error, Failure} ->
+            {error, Failure}
+    end.
 
 -spec select_resumable_case([resumable_case()], atom(), non_neg_integer()) ->
     resumable_case().

@@ -1344,6 +1344,14 @@ convert_expr({handle_expr, Body, Handlers, Loc}) ->
         [convert_inference_handler(Handler) || Handler <- Handlers],
         Loc
     };
+convert_expr({handle_expr, Mode, Body, Handlers, Loc}) ->
+    {
+        handle_expr,
+        Mode,
+        convert_expr(Body),
+        [convert_inference_handler(Handler) || Handler <- Handlers],
+        Loc
+    };
 convert_expr({resume_expr, Target, Value, Loc}) ->
     {
         resume_expr,

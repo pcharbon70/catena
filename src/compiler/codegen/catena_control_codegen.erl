@@ -15,7 +15,7 @@
     control_abi_version/0
 ]).
 
--define(CONTROL_ABI_VERSION, 1).
+-define(CONTROL_ABI_VERSION, 2).
 
 -spec control_abi_version() -> pos_integer().
 control_abi_version() -> ?CONTROL_ABI_VERSION.
@@ -69,6 +69,12 @@ generate(Unit) ->
         Definitions = lists:append(Definitions0) ++ DictionaryDefinitions,
         Exports = public_exports(Unit, IR) ++
             private_exports(Unit, IR) ++ DictionaryExports,
+        HandlerModes = lists:usort(lists:append([
+            maps:get(handler_modes, Entry, [])
+            || Entry <- catena_control_mode:entries(
+                catena_compilation_unit:control_modes(Unit)
+            )
+        ])),
         Attributes = catena_codegen_module:generate_attributes(
             CodegenOptions#{
                 runtime_dependencies =>
@@ -79,7 +85,8 @@ generate(Unit) ->
                 resumption_runtime_version =>
                     catena_resumption_runtime:version(),
                 handler_frame_features =>
-                    catena_resumption_runtime:features()
+                    catena_resumption_runtime:features(),
+                handler_modes => HandlerModes
             }
         ),
         Core0 = cerl:c_module(
@@ -596,18 +603,20 @@ compile_delimiter(Node, Context, Continuation, State0) ->
     Fields = maps:get(fields, Node),
     {DelimitedResult, State1} = compile_delimiter_body(
         maps:get(body, Fields),
+        handler_mode(Fields),
         Context,
         State0
     ),
     {continue(DelimitedResult, Context, Continuation), State1}.
 
-compile_delimiter_body(InstallNode, Context, State0) ->
+compile_delimiter_body(InstallNode, HandlerMode, Context, State0) ->
     case maps:get(op, InstallNode) of
         install_handler ->
             Fields = maps:get(fields, InstallNode),
             compile_handlers(
                 maps:get(handlers, Fields),
                 maps:get(body, Fields),
+                HandlerMode,
                 Context,
                 State0
             );
@@ -621,23 +630,25 @@ compile_install_handler(Node, Context, Continuation, State0) ->
     {Result, State1} = compile_handlers(
         maps:get(handlers, Fields),
         maps:get(body, Fields),
+        handler_mode(Fields),
         Context,
         State0
     ),
     {continue(Result, Context, Continuation), State1}.
 
-compile_handlers([], BodyNode, Context, State0) ->
+compile_handlers([], BodyNode, _HandlerMode, Context, State0) ->
     {Identity, State1} = identity_continuation(State0),
     compile_node(BodyNode, Context, Identity, State1);
-compile_handlers([Handler | Rest], BodyNode, Context, State0) ->
+compile_handlers([Handler | Rest], BodyNode, HandlerMode, Context, State0) ->
     {ChildContext, State1} = catena_codegen_utils:fresh_var(State0),
     {Inner, State2} = compile_handlers(
         Rest,
         BodyNode,
+        HandlerMode,
         ChildContext,
         State1
     ),
-    {HandlerSpec, State3} = compile_handler(Handler, State2),
+    {HandlerSpec, State3} = compile_handler(Handler, HandlerMode, State2),
     BodyFun = cerl:c_fun([ChildContext], Inner),
     {
         runtime_call(
@@ -648,7 +659,7 @@ compile_handlers([Handler | Rest], BodyNode, Context, State0) ->
         State3
     }.
 
-compile_handler(Handler, State0) ->
+compile_handler(Handler, HandlerMode, State0) ->
     {Cases, State1} = lists:mapfoldl(
         fun compile_handler_operation/2,
         State0,
@@ -658,9 +669,18 @@ compile_handler(Handler, State0) ->
         core_map([
             {effect, cerl:c_atom(maps:get(effect, Handler))},
             {cases, core_list(Cases)},
+            {depth, cerl:c_atom(maps:get(depth, HandlerMode))},
+            {resumption_kind,
+                cerl:c_atom(maps:get(kind, HandlerMode))},
             {origin, cerl:abstract(maps:get(origin, Handler))}
         ]),
         State1
+    }.
+
+handler_mode(Fields) ->
+    #{
+        depth => maps:get(depth, Fields),
+        kind => maps:get(kind, Fields)
     }.
 
 compile_handler_operation(Operation, State0) ->

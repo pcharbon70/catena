@@ -398,6 +398,16 @@ collect_handler_term(
             Error
     end;
 collect_handler_term(
+    {handle_expr, _Mode, Body, HandlerClauses, Location},
+    Inventory,
+    Handlers
+) ->
+    collect_handler_term(
+        {handle_expr, Body, HandlerClauses, Location},
+        Inventory,
+        Handlers
+    );
+collect_handler_term(
     {try_with_expr, Body, HandlerClauses, Location},
     Inventory,
     Handlers
@@ -722,6 +732,8 @@ clauses_require_runtime(Clauses) ->
 term_requires_runtime({perform_expr, _, _, _, _}) ->
     true;
 term_requires_runtime({handle_expr, _, _, _}) ->
+    true;
+term_requires_runtime({handle_expr, _, _, _, _}) ->
     true;
 term_requires_runtime({try_with_expr, _, _, _}) ->
     true;

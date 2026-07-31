@@ -13,7 +13,7 @@ It exists because some planning checklists are stale relative to later implement
 | Track | Current promoted status |
 | --- | --- |
 | Proof-of-concept | Implemented through Phases 1 to 3, with Phase 4 partial/minimal and a verified local Phase 5 actor runtime toolkit whose source-language integration remains incomplete. |
-| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary. Delimited-resumption Phases 1 through 6 now provide normative deep one-shot semantics, an executable oracle, `with`/`resume` syntax, first-class `Resumption k a b e` typing, authoritative control modes, validated selective-CPS IR, process-affine runtime authority, Core emission, versioned artifact validation, and source-to-loaded-BEAM execution. Shallow and multi-shot source modes remain deferred. |
+| Algebraic-effects | Public effect execution, handler/resumption orchestration, type helpers, and Phase 14 validation are reconciled at the current integration boundary. Delimited-resumption Phases 1 through 7 provide normative deep one-shot semantics, explicit shallow/multi-shot syntax and static modes, first-class `Resumption k a b e` typing, authoritative selective-CPS IR, process-affine runtime authority, executable deep/shallow context restoration, bounded isolated multi-shot branch authority, exact compiled handler-mode artifact validation, and source-to-loaded-BEAM execution. Phase 8 tooling, optimization, dedicated conformance, and final public promotion remain planned. |
 | Property testing | Phases 1 to 4 are materially implemented in `src/proptest`; Phases 5 and 6 are substantial but partial; explicit Phase 7 helper surfaces are also materially implemented, while automatic language integration remains incomplete. |
 | Law verification | Structural and concrete stdlib laws execute, and known-instance generic checks bridge into the internal proptest framework; automatic derivation and broader workflow ergonomics remain future work. |
 | Language revamp migration | Completed and now historical. |
@@ -142,18 +142,22 @@ Important caveat:
 - Phase 6 is complete with source-arity public wrappers, private direct/CPS
   entries, executable perform/handler/resume/abort lowering, complete local,
   recursive, imported, higher-order, trait, open-row, pattern, and data-path
-  integration, artifact format 2 runtime/feature/checksum validation, source
+  integration, versioned runtime/feature/checksum validation, source
   origin chains, and loaded-BEAM positive and negative evidence
 - existing value handlers preserve their executable request/response behavior
   through an exact compiler-generated compatibility projection while their
   normalized and typed AST remains authoritative
 - the oracle remains comparison evidence; generated Phase 6 Core consumes the
   validated Phase 4 control IR through the Phase 5 production runtime ABI
+- Phase 7 is complete with explicit handler-mode modifiers, conservative
+  multi-shot static admissibility, shallow residual
+  effects, depth-aware parent-context restoration, bounded isolated
+  multi-shot branches, state-admissibility checks, resource budgets, control
+  ABI 2, runtime ABI 3, artifact format 3, exact compiled handler-mode
+  validation, and mixed-mode loaded-BEAM evidence
 
 Next clear steps on this track:
 
-- implement the separately gated Phase 7 source spelling, typing, runtime
-  policy, and evidence for shallow or multi-shot opt-ins
 - continue Phase 8 tooling, optimization, conformance, and promotion work
 
 ## Property-Testing Track
@@ -302,8 +306,9 @@ Important caveat:
 ## Current Quality State
 
 The default `rebar3 eunit` entry point discovers, compiles, and executes the
-complete active test tree. Delimited-resumption Phase 6 passed 5,252 tests
-with zero failures or skips on 2026-07-31; Phase 5 passed 5,233 tests
+complete active test tree. Delimited-resumption Phase 7 passed 5,280 tests
+with zero failures or skips on 2026-07-31; Phase 6 passed 5,252 tests with
+zero failures or skips on 2026-07-31; Phase 5 passed 5,233 tests
 with zero failures or skips on 2026-07-31; Phase 4 passed 5,192, Phase 3
 passed 5,164, Phase 2 passed 5,128, and Phase 1 passed 5,061. The preceding backend-hardening
 Phase 7 gate passed 5,029 tests. Its Phase 6 gate was also green; Phase 5,
@@ -318,9 +323,9 @@ Promoted interpretation:
 - `make test` and `rebar3 eunit` expose the complete active EUnit result
 - `make check-specs` validates 42 concrete requirements in five families, 11
   scenarios, 20 executable evidence rows across 20 modules, 73 component
-  acceptance criteria, six ADRs, promoted paths, and local Markdown links
+  acceptance criteria, seven ADRs, promoted paths, and local Markdown links
 - `make conformance` runs the unique EUnit modules named by the executable
-  scenario manifest; the Phase 6 delimited-resumption gate passed all 418
+  scenario manifest; the Phase 7 delimited-resumption gate passed all 418
   focused tests
 - `make verify` combines specs governance, manifest-selected conformance, and
   the complete active suite and is the read-only CI contract for pull requests

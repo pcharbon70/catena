@@ -886,7 +886,11 @@ effect_runtime_dependencies(EffectfulTransforms)
     [];
 effect_runtime_dependencies(_EffectfulTransforms) ->
     [
-        #{module => catena_effect_runtime, version => 1},
+        #{
+            module => catena_effect_runtime,
+            version => catena_effect_runtime:version(),
+            features => catena_effect_runtime:features()
+        },
         #{module => catena_effect_system, version => 1}
     ].
 
@@ -897,10 +901,14 @@ control_runtime_dependencies(ControlModes) ->
     ) of
         true ->
             [
-                #{module => catena_effect_runtime, version => 1},
+                #{
+                    module => catena_effect_runtime,
+                    version => catena_effect_runtime:version(),
+                    features => catena_effect_runtime:features()
+                },
                 #{
                     module => catena_resumption_runtime,
-                    version => 1,
+                    version => catena_resumption_runtime:version(),
                     features => catena_resumption_runtime:features()
                 }
             ];

@@ -143,6 +143,8 @@ infer_effects({perform_expr, EffectName, _OpName, Args, _Loc}, Env, State) ->
 %% Handle: removes effects
 infer_effects({handle_expr, Body, Handlers, _Loc}, Env, State) ->
     infer_handle(Body, Handlers, Env, State);
+infer_effects({handle_expr, Mode, Body, Handlers, _Loc}, Env, State) ->
+    infer_handle(Body, Handlers, Mode, Env, State);
 
 %% Do expression: effects from all statements
 infer_effects({do_expr, Stmts, _Loc}, Env, State) ->
@@ -191,6 +193,18 @@ infer_perform(EffectName, _OpName, _Args, State) ->
 %% from the body's effect set. The result has effects: body_effects - {Effect}
 -spec infer_handle(expr(), term(), env(), state()) -> state().
 infer_handle(Body, Handlers, Env, State) ->
+    infer_handle(
+        Body,
+        Handlers,
+        catena_resumption_mode:default(undefined),
+        Env,
+        State
+    ).
+
+-spec infer_handle(
+    expr(), term(), catena_resumption_mode:mode(), env(), state()
+) -> state().
+infer_handle(Body, Handlers, Mode, Env, State) ->
     %% Enter a new scope to track body effects separately
     State1 = catena_infer_state:push_effect_scope(State),
 
@@ -203,8 +217,12 @@ infer_handle(Body, Handlers, Env, State) ->
     %% Get the list of handled effects from handlers
     HandledEffects = extract_handled_effects(Handlers),
 
-    %% Remove handled effects
-    ResolvedEffects = resolve_handler(BodyEffects, HandledEffects, State2),
+    %% A shallow frame is absent while the continuation runs, so the handled
+    %% label remains visible to the surrounding effect context.
+    ResolvedEffects = case catena_resumption_mode:depth(Mode) of
+        deep -> resolve_handler(BodyEffects, HandledEffects, State2);
+        shallow -> BodyEffects
+    end,
 
     %% Pop scope and merge resolved effects with outer scope
     State3 = catena_infer_state:pop_effect_scope(State2),

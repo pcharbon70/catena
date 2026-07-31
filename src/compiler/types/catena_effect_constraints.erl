@@ -94,6 +94,8 @@ generate_from_expr({perform, {Effect, _Operation, _Args}, _Loc}, State) ->
     generate_from_perform(Effect, State);
 generate_from_expr({handle_expr, Expr, Handlers, _Loc}, State) ->
     generate_from_handle(Expr, Handlers, State);
+generate_from_expr({handle_expr, Mode, Expr, Handlers, _Loc}, State) ->
+    generate_from_handle(Expr, Handlers, Mode, State);
 generate_from_expr({handle, Expr, Handlers, _Loc}, State) ->
     generate_from_handle(Expr, Handlers, State);
 generate_from_expr({resume_expr, Target, Value, _Loc}, State) ->
@@ -167,6 +169,18 @@ generate_from_handle(Expr, Handlers, State) ->
         {remove_effect, handle_scope, Effect} ||
         {handler_clause, Effect, _Operations, _Loc} <- Handlers
     ],
+    {BodyConstraints ++ HandlerConstraints ++ RemovalConstraints, State2}.
+
+generate_from_handle(Expr, Handlers, Mode, State) ->
+    {BodyConstraints, State1} = generate_from_expr(Expr, State),
+    {HandlerConstraints, State2} = generate_from_handlers(Handlers, State1),
+    RemovalConstraints = case catena_resumption_mode:depth(Mode) of
+        deep -> [
+            {remove_effect, handle_scope, Effect} ||
+            {handler_clause, Effect, _Operations, _Loc} <- Handlers
+        ];
+        shallow -> []
+    end,
     {BodyConstraints ++ HandlerConstraints ++ RemovalConstraints, State2}.
 
 -spec generate_from_perform(atom(), state()) -> {constraints(), state()}.

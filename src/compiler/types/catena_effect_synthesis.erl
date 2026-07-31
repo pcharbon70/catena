@@ -74,6 +74,8 @@ synthesize({perform, {Effect, _Operation, Args}, _Loc}, Env, State) ->
     synthesize_perform({Effect, undefined, Args}, Env, State);
 synthesize({handle_expr, Body, Handlers, _Loc}, Env, State) ->
     synthesize_handle({Body, Handlers}, Env, State);
+synthesize({handle_expr, Mode, Body, Handlers, _Loc}, Env, State) ->
+    synthesize_handle({Body, Handlers, Mode}, Env, State);
 synthesize({handle, Body, Handlers, _Loc}, Env, State) ->
     synthesize_handle({Body, Handlers}, Env, State);
 synthesize({resume_expr, Target, Value, _Loc}, Env, State) ->
@@ -169,7 +171,16 @@ synthesize_handle({Expr, Handlers}, Env, State) ->
     {BodyEffects, State1} = synthesize(Expr, Env, State),
     {HandlerEffects, State2} = synthesize_handlers(Handlers, Env, State1),
     HandledEffects = handled_effects(Handlers),
-    {union(remove(BodyEffects, HandledEffects), HandlerEffects), State2}.
+    {union(remove(BodyEffects, HandledEffects), HandlerEffects), State2};
+
+synthesize_handle({Expr, Handlers, Mode}, Env, State) ->
+    {BodyEffects, State1} = synthesize(Expr, Env, State),
+    {HandlerEffects, State2} = synthesize_handlers(Handlers, Env, State1),
+    ResumedEffects = case catena_resumption_mode:depth(Mode) of
+        deep -> remove(BodyEffects, handled_effects(Handlers));
+        shallow -> BodyEffects
+    end,
+    {union(ResumedEffects, HandlerEffects), State2}.
 
 -spec synthesize_let({expr(), expr()}, state()) -> synthesis_result().
 synthesize_let({Value, Body}, State) ->

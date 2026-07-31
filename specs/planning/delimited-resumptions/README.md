@@ -73,7 +73,7 @@ accepted:
 - [x] [Phase 4: Control-Mode Analysis And Selective CPS IR](phase-04-control-mode-analysis-and-selective-cps-ir.md)
 - [x] [Phase 5: Deep One-Shot Runtime And Resumption Ownership](phase-05-deep-one-shot-runtime-and-resumption-ownership.md)
 - [x] [Phase 6: Core Erlang, BEAM, And Call-Graph Integration](phase-06-core-erlang-beam-and-call-graph-integration.md)
-- [ ] [Phase 7: Shallow Handlers And Multi-Shot Resumptions](phase-07-shallow-handlers-and-multi-shot-resumptions.md)
+- [x] [Phase 7: Shallow Handlers And Multi-Shot Resumptions](phase-07-shallow-handlers-and-multi-shot-resumptions.md)
 - [ ] [Phase 8: Tooling, Optimization, Conformance, And Promotion](phase-08-tooling-optimization-conformance-and-promotion.md)
 
 ## Dependency Graph
@@ -122,8 +122,8 @@ executable evidence exists.
       deterministically consumed
 - [x] Local, recursive, imported, higher-order, trait-dispatched, and
       effect-polymorphic call graphs execute correctly
-- [x] Shallow and multi-shot behavior remains rejected until its Phase 7
-      surface and safety gates pass
+- [x] Shallow and multi-shot behavior passes its distinct Phase 7 surface,
+      static-safety, runtime-policy, and loaded-BEAM gates
 - [x] Source-origin diagnostics cover compile-time and runtime control
       failures
 - [x] Public source-to-BEAM APIs return only OTP-accepted artifacts
