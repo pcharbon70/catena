@@ -71,7 +71,7 @@ configurable overhead.
 **Description:** Measure the cost of selective CPS and optimize only where
 oracle and source-to-BEAM equivalence remain demonstrable.
 
-- [ ] **Section 8.2 Complete**
+- [x] **Section 8.2 Complete**
 
 ### Task 8.2.1: Establish Performance Baselines
 
@@ -79,14 +79,14 @@ oracle and source-to-BEAM equivalence remain demonstrable.
 capture/resume, mixed-mode bridges, retained resumptions, shallow handling,
 and multi-shot branching.
 
-- [ ] **Task 8.2.1 Complete**
+- [x] **Task 8.2.1 Complete**
 
 #### Subtask 8.2.1.1: Measure Compiler And Artifact Costs
 
 **Description:** Record classification, CPS lowering, Core size, compile time,
 artifact size, generated function count, and source-map metadata overhead.
 
-- [ ] **Subtask 8.2.1.1 Complete**
+- [x] **Subtask 8.2.1.1 Complete**
 
 #### Subtask 8.2.1.2: Measure Runtime Costs
 
@@ -94,7 +94,7 @@ artifact size, generated function count, and source-map metadata overhead.
 throughput, scheduler behavior, handler lookup, bridge cost, retention, and
 branch-resource consumption.
 
-- [ ] **Subtask 8.2.1.2 Complete**
+- [x] **Subtask 8.2.1.2 Complete**
 
 ### Task 8.2.2: Implement Validated Optimizations
 
@@ -102,7 +102,7 @@ branch-resource consumption.
 handler depth, ownership, consumption, effects, failures, or source
 diagnostics.
 
-- [ ] **Task 8.2.2 Complete**
+- [x] **Task 8.2.2 Complete**
 
 #### Subtask 8.2.2.1: Optimize Proven Direct Regions And Bridges
 
@@ -110,7 +110,7 @@ diagnostics.
 continuations, collapse redundant bridges, and preserve conservative behavior
 for open effect rows.
 
-- [ ] **Subtask 8.2.2.1 Complete**
+- [x] **Subtask 8.2.2.1 Complete**
 
 #### Subtask 8.2.2.2: Optimize Handler And Resumption Runtime Paths
 
@@ -118,7 +118,7 @@ for open effect rows.
 tail auto-resume, optimize one-shot state authority, and retain complete
 diagnostic and cleanup behavior.
 
-- [ ] **Subtask 8.2.2.2 Complete**
+- [x] **Subtask 8.2.2.2 Complete**
 
 ## Section 8.3: Contracts, Conformance, Documentation, And Status
 

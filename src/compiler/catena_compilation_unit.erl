@@ -293,22 +293,42 @@ new(
                                             case catena_selective_cps:
                                                 lower(Unit1)
                                             of
-                                                {ok, ControlIR} ->
-                                                    Unit2 = Unit1#{
-                                                        control_ir =>
-                                                            ControlIR
-                                                    },
-                                                    case
-                                                        catena_control_validate:
-                                                            validate(Unit2)
+                                                {ok, LoweredControlIR} ->
+                                                    OptimizationOptions =
+                                                        control_optimization_options(
+                                                            Options
+                                                        ),
+                                                    case catena_control_optimize:
+                                                        optimize(
+                                                            LoweredControlIR,
+                                                            OptimizationOptions
+                                                        )
                                                     of
                                                         {ok,
-                                                            ValidationReport}
+                                                            ControlIR,
+                                                            OptimizationReport}
                                                         ->
-                                                            {ok, Unit2#{
-                                                                control_validation =>
-                                                                    ValidationReport
-                                                            }};
+                                                            Unit2 = Unit1#{
+                                                                control_ir =>
+                                                                    ControlIR
+                                                            },
+                                                            case
+                                                                catena_control_validate:
+                                                                    validate(Unit2)
+                                                            of
+                                                                {ok,
+                                                                    ValidationReport}
+                                                                ->
+                                                                    {ok, Unit2#{
+                                                                        control_validation =>
+                                                                            ValidationReport#{
+                                                                                optimization =>
+                                                                                    OptimizationReport
+                                                                            }
+                                                                    }};
+                                                                {error, _} = Error ->
+                                                                    Error
+                                                            end;
                                                         {error, _} = Error ->
                                                             Error
                                                     end;
@@ -915,6 +935,12 @@ control_runtime_dependencies(ControlModes) ->
         false ->
             []
     end.
+
+control_optimization_options(Options) ->
+    CodegenOptions = maps:get(codegen_opts, Options, #{}),
+    #{
+        enabled => maps:get(optimize_control, CodegenOptions, true)
+    }.
 
 update_control_interface(Interface, ControlModes, ArtifactDependencies) ->
     case catena_module_interface:with_artifact_dependencies(

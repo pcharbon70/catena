@@ -93,6 +93,7 @@
 -type effect_context() :: #{
     handlers := #{atom() => pid()},
     entries := [context_entry()],
+    lookup_cache := map(),
     parent := effect_context() | undefined,
     timeout := pos_integer(),
     resumption_budget := map()
@@ -139,6 +140,7 @@ empty_context() ->
     #{
         handlers => #{},
         entries => [],
+        lookup_cache => #{},
         parent => undefined,
         timeout => ?EFFECT_TIMEOUT,
         resumption_budget => catena_resumption_runtime:default_budget()
@@ -163,6 +165,7 @@ new_context(Options) when is_map(Options) ->
     #{
         handlers => #{},
         entries => [],
+        lookup_cache => #{},
         parent => undefined,
         timeout => Timeout,
         resumption_budget => ResumptionBudget
@@ -302,6 +305,7 @@ with_handlers(Ctx, HandlerSpecs, BodyFun) ->
     ChildCtx0 = #{
         handlers => maps:merge(maps:get(handlers, Ctx), NewHandlers),
         entries => ProcessEntries,
+        lookup_cache => extend_lookup_cache(Ctx, ProcessEntries),
         parent => Ctx,
         timeout => maps:get(timeout, Ctx, ?EFFECT_TIMEOUT),
         resumption_budget => maps:get(
@@ -627,11 +631,17 @@ lookup_entry(Ctx, Effect, Operation, Arity) ->
         {error, _} = Error ->
             Error;
         none ->
-            case maps:get(parent, Ctx, undefined) of
-                undefined ->
-                    none;
-                ParentCtx ->
-                    lookup_entry(ParentCtx, Effect, Operation, Arity)
+            Key = {Effect, Operation, Arity},
+            case maps:find(Key, maps:get(lookup_cache, Ctx, #{})) of
+                {ok, {Entry, HandlerCtx}} ->
+                    {ok, Entry, HandlerCtx};
+                error ->
+                    case maps:get(parent, Ctx, undefined) of
+                        undefined ->
+                            none;
+                        ParentCtx ->
+                            lookup_entry(ParentCtx, Effect, Operation, Arity)
+                    end
             end
     end.
 
@@ -710,11 +720,41 @@ operation_arity({_Operation, Handler}) ->
     {arity, Arity} = erlang:fun_info(Handler, arity),
     Arity.
 
+%% Cache immutable nearest-handler metadata. Current entries are still
+%% checked first so an arity mismatch continues to shadow a compatible parent
+%% exactly as before; cache hits only replace parent-chain traversal.
+extend_lookup_cache(ParentCtx, Entries) ->
+    ParentCache = maps:get(lookup_cache, ParentCtx, #{}),
+    CurrentCache = maps:from_list(lists:append([
+        [
+            {Identity, {Entry, ParentCtx}}
+            || Identity <- entry_identities(Entry)
+        ]
+        || Entry <- Entries
+    ])),
+    maps:merge(ParentCache, CurrentCache).
+
+entry_identities(#{
+    kind := local_resumable,
+    effect := Effect,
+    cases := Cases
+}) ->
+    [
+        {Effect, maps:get(operation, Case), maps:get(arity, Case)}
+        || Case <- Cases
+    ];
+entry_identities(#{effect := Effect, operations := Operations}) ->
+    [
+        {Effect, Operation, operation_arity({Operation, Handler})}
+        || {Operation, Handler} <- Operations
+    ].
+
 -spec child_context(effect_context(), context_entry()) -> effect_context().
 child_context(Ctx, Entry) ->
     ChildCtx = #{
         handlers => maps:get(handlers, Ctx, #{}),
         entries => [Entry],
+        lookup_cache => extend_lookup_cache(Ctx, [Entry]),
         parent => Ctx,
         timeout => maps:get(timeout, Ctx, ?EFFECT_TIMEOUT),
         resumption_budget => maps:get(
@@ -752,6 +792,44 @@ perform_local_resumable(
         Operation,
         length(Args)
     ),
+    case {
+        maps:get(mode, Case),
+        maps:get(resumption_kind, Frame)
+    } of
+        {value, one_shot} ->
+            perform_tail_value_case(
+                Case,
+                Args,
+                maps:get(depth, Frame),
+                CapturedCtx,
+                HandlerCtx,
+                Continuation,
+                PerformOrigin,
+                Frame
+            );
+        _ ->
+            capture_and_invoke_case(
+                CapturedCtx,
+                HandlerCtx,
+                Frame,
+                Operation,
+                Args,
+                Continuation,
+                PerformOrigin,
+                Case
+            )
+    end.
+
+capture_and_invoke_case(
+    CapturedCtx,
+    HandlerCtx,
+    Frame,
+    Operation,
+    Args,
+    Continuation,
+    PerformOrigin,
+    Case
+) ->
     CaptureSpec = #{
         context => CapturedCtx,
         parent_context => HandlerCtx,
@@ -782,6 +860,51 @@ perform_local_resumable(
             invoke_resumable_case(Case, Args, Resumption, HandlerCtx);
         {error, Failure} ->
             {error, Failure}
+    end.
+
+perform_tail_value_case(
+    #{handler := Handler} = Case,
+    Args,
+    Depth,
+    CapturedCtx,
+    HandlerCtx,
+    Continuation,
+    PerformOrigin,
+    Frame
+) ->
+    HandlerOutcome = try Handler(Args, HandlerCtx) of
+        HandlerValue -> {value, HandlerValue}
+    catch
+        HandlerClass:HandlerReason:_HandlerStack ->
+            {failure, catena_resumption_runtime:normalize_exception(
+                HandlerClass,
+                HandlerReason,
+                maps:get(origin, Case)
+            )}
+    end,
+    case HandlerOutcome of
+        {failure, HandlerFailure} ->
+            {error, HandlerFailure};
+        {value, OperationValue} ->
+            RestoredContext = case Depth of
+                deep -> CapturedCtx;
+                shallow -> HandlerCtx
+            end,
+            ContinuationOrigin = #{
+                perform => PerformOrigin,
+                handler_case => maps:get(origin, Case, undefined),
+                delimiter => maps:get(origin, Frame)
+            },
+            try Continuation(OperationValue, RestoredContext) of
+                Result -> Result
+            catch
+                Class:Reason:_Stack ->
+                    {error, catena_resumption_runtime:normalize_exception(
+                        Class,
+                        Reason,
+                        ContinuationOrigin
+                    )}
+            end
     end.
 
 -spec select_resumable_case([resumable_case()], atom(), non_neg_integer()) ->
