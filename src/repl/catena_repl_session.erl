@@ -222,7 +222,10 @@ describe(Session) ->
     end).
 
 %% @doc Safely describe a value, recognizing first-class resumptions.
--spec describe_value(term()) -> map().
+-spec describe_value(term()) ->
+    #{kind := value, value := term()} |
+    #{kind := resumption, description := map()} |
+    #{kind := resumption, failure := map()}.
 describe_value(Value) ->
     case catena_resumption_runtime:is_resumption(Value) of
         true ->

@@ -20,7 +20,17 @@
 
 -define(DEFAULT_ITERATIONS, 100).
 
--spec scenarios() -> #{atom() => string()}.
+-type source_text() :: nonempty_list(1..255).
+
+-spec scenarios() -> #{
+    direct := source_text(),
+    provider_only := source_text(),
+    deep_one_shot := source_text(),
+    mixed_mode_bridges := source_text(),
+    retained_resumptions := source_text(),
+    shallow_handling := source_text(),
+    multi_shot_branching := source_text()
+}.
 scenarios() ->
     #{
         direct => direct_source(),
@@ -179,7 +189,12 @@ suite(Options) when is_map(Options) ->
 suite(Options) ->
     {error, {invalid_benchmark_options, Options}}.
 
--spec thresholds() -> map().
+-spec thresholds() -> #{
+    compile_us := 5000000,
+    artifact_size_bytes := 5000000,
+    source_map_bytes := 2000000,
+    runtime_latency_us := 100000
+}.
 thresholds() ->
     #{
         compile_us => 5000000,

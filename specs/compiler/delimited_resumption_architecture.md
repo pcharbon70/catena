@@ -25,8 +25,9 @@ proof-gated control optimization, performance baselines, and dedicated
 This document makes
 [ADR-0006](../adr/ADR-0006-first-class-resumptions-and-selective-cps.md)
 concrete enough to guide parser, type-system, lowering, runtime, diagnostics,
-and conformance work. Phase 8's final repository-wide promotion gate remains
-the authority for its recorded aggregate test and quality evidence.
+and conformance work. Phase 8's completed repository-wide promotion gate is
+the authority for its recorded aggregate test and quality evidence, including
+the explicitly non-green coverage and Dialyzer baselines.
 
 The normative deep one-shot reduction rules are defined in
 [Delimited Resumption Operational Semantics](delimited_resumption_operational_semantics.md).

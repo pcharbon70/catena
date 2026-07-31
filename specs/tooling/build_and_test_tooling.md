@@ -29,11 +29,11 @@ conformance, subsystem-organized coverage, and a green complete EUnit surface.
 - Tests are organized by subsystem across compiler, runtime, integration, REPL, stdlib, testing, and property-testing areas.
 - `test_legacy/proper/` is now historical/documentary only; it no longer holds runnable suites that participate in the maintained workflow.
 - The repo-wide `rebar3 eunit` entry point compiles and executes the complete
-  active suite; the backend-hardening Phase 7 gate passes 5,029 tests.
+  active suite; the delimited-resumption Phase 8 gate passes 5,294 tests.
 - `make check-specs` validates promoted requirements, scenarios, executable
   evidence, component criteria, ADRs, paths, and local Markdown links.
 - `make conformance` runs the unique EUnit module set named by
-  `specs/conformance/executable_scenarios.tsv`; the Phase 7 gate passes 418
+  `specs/conformance/executable_scenarios.tsv`; the Phase 8 gate passes 432
   tests, with `SCN-011` consolidated in
   `catena_backend_conformance_tests`.
 - `make verify` composes specs governance, manifest-selected conformance, and
@@ -74,7 +74,7 @@ The following is part of the current promoted repo status:
 
 - `rebar3 eunit` discovers, compiles, and executes the maintained suite
 - its current green result and exact total are published in the
-  backend-hardening Phase 7 completion evidence
+  delimited-resumption Phase 8 completion evidence
 - the default path no longer depends on or compiles runnable PropEr-era test modules from `test_legacy/proper/`
 
 This criterion prevents a partial or filtered command from being promoted as a
@@ -87,11 +87,12 @@ The promoted tooling configuration includes the current coverage and dialyzer bo
 - generated parser/lexer modules are excluded where appropriate
 - owned compiler/runtime/tooling code is the main coverage and analysis target
 - static analysis is part of the intended workflow even if it is not run on every edit
-- the Phase 7 completion run reports 27% repository-wide coverage, with the
-  new artifact, diagnostic, and origin modules still below the 90%
+- the Phase 8 completion run reports 11% repository-wide and 16% focused
+  Phase 8 coverage; seven of eight modified modules remain below the 90%
   modified-module target
-- Dialyzer is visible but non-green at 822 repository-wide warnings; warning
-  remediation remains a separate enforced-zero roadmap
+- Dialyzer is visible but non-green at 984 repository-wide warnings versus
+  the previously recorded 822-warning baseline; warning remediation remains
+  a separate enforced-zero roadmap
 
 ### AC-TOOL-006 Migration Expectation
 

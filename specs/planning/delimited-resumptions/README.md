@@ -74,7 +74,7 @@ accepted:
 - [x] [Phase 5: Deep One-Shot Runtime And Resumption Ownership](phase-05-deep-one-shot-runtime-and-resumption-ownership.md)
 - [x] [Phase 6: Core Erlang, BEAM, And Call-Graph Integration](phase-06-core-erlang-beam-and-call-graph-integration.md)
 - [x] [Phase 7: Shallow Handlers And Multi-Shot Resumptions](phase-07-shallow-handlers-and-multi-shot-resumptions.md)
-- [ ] [Phase 8: Tooling, Optimization, Conformance, And Promotion](phase-08-tooling-optimization-conformance-and-promotion.md)
+- [x] [Phase 8: Tooling, Optimization, Conformance, And Promotion](phase-08-tooling-optimization-conformance-and-promotion.md)
 
 ## Dependency Graph
 
@@ -135,3 +135,9 @@ tooling requirements plus `SCN-012` executable evidence.
       pass
 - [x] Current-status and component specs distinguish implemented, partial,
       and deferred resumption behavior accurately
+
+The Phase 8 gate executed coverage rather than treating it as implicitly
+green. Focused modified-module coverage remains below 90% for seven of eight
+modules, so the coverage item stays unchecked as explicit quality debt. This
+does not broaden the semantics promoted by the green source-to-BEAM,
+conformance, and complete-suite gates.

@@ -18,5 +18,5 @@ what the raw planning checklists show. Delimited-resumption Phases 1 through
 8 provide the accepted semantics, source and typed frontend, authoritative
 control-mode analysis, validated selective-CPS IR, executable deep/shallow and
 bounded admissible multi-shot authority, loaded-BEAM lowering, safe
-REPL/tooling views, proof-gated optimization, and dedicated conformance. The
-final Phase 8 repository promotion gate remains pending.
+REPL/tooling views, proof-gated optimization, dedicated conformance, and a
+completed repository promotion gate with explicit coverage and Dialyzer debt.

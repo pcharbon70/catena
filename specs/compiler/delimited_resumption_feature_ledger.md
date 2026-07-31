@@ -113,14 +113,21 @@ count. Parser conflicts are checked on every ordinary compilation.
 
 ## Phase 8 Promotion Snapshot
 
-| Measurement | Phase 8 Section 8.3 result | Interpretation |
+| Measurement | Phase 8 result | Interpretation |
 | --- | ---: | --- |
 | REPL and diagnostics | implemented public tooling boundary | Compiler-backed sessions evaluate and bind resumptions on their owner, while redacted descriptions and bounded control traces reconstruct source frames |
 | Control optimization | implemented proof-gated boundary | Return wrappers and proven direct-to-CPS bridges may be removed; unknown, higher-order, and open-effect paths remain conservative |
 | Runtime optimization | implemented semantics-preserving boundary | Immutable parent lookup metadata may be cached and non-escaping one-shot value handlers may tail auto-resume without allocating first-class authority |
 | Performance evidence | implemented threshold boundary | Seven compiler and seven runtime scenario classes publish compiler, artifact, latency, throughput, scheduler, retention, and branch-resource metrics |
 | Dedicated conformance | registered as `SCN-012` | Positive and negative loaded-BEAM, runtime-authority, tooling-redaction, and optimization-equivalence behavior has stable manifest-selected evidence |
-| Final repository promotion gate | pending Section 8.4 | Exact complete-suite, coverage, Dialyzer, benchmark, governance, and conformance results are published only after the final run |
+| Complete active EUnit suite | 5,294 pass; 0 failures; 0 skips | All Phase 8 and earlier repository behavior is green |
+| Manifest conformance | 432 pass; 0 failures; 0 skips | All 12 stable scenarios, including dedicated `SCN-012`, are green |
+| Specs governance | passed | 48 requirements, 12 scenarios, 23 evidence modules, 84 acceptance criteria, seven ADRs, and 318 local links validate |
+| Deterministic resumption repeat | 3 runs x 4 pass | The canonical `SCN-012` module remains stable across repeated runs |
+| Performance thresholds | passed at 25 iterations | Compiler/artifact/source-map maxima are 52,736 microseconds, 2,860 bytes, and 3,677 bytes; runtime latency maximum is 15.92 microseconds |
+| Artifact/runtime versions | format 3; control ABI 2; runtime ABI 3 | Exact handler-mode and feature inventories continue to fail closed before load |
+| Coverage | 11% repository; 16% focused Phase 8 | Only `catena_control_optimize` reaches the 90% modified-module target; the remaining gap is recorded quality debt |
+| Dialyzer | non-green at 984 warnings | The previously recorded 822-warning repository baseline has not reached an enforced-zero gate |
 
 ## Classification Vocabulary
 
