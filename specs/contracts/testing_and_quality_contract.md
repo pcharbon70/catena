@@ -1,0 +1,15 @@
+# Testing And Quality Contract
+
+This contract defines the `REQ-TEST-*` family for Catena's build, test, and quality workflow.
+
+## Requirements
+
+- `REQ-TEST-001`: Build tooling MUST regenerate lexer and parser artifacts from source grammar files before compile.
+- `REQ-TEST-002`: Test suites SHOULD remain organized by subsystem so compiler, runtime, stdlib, REPL, and property-testing work can be validated independently.
+- `REQ-TEST-003`: Security, resource-limit, and regression hardening work SHOULD be reflected in dedicated tests or clearly scoped summaries.
+- `REQ-TEST-004`: The internal property-testing framework transition MUST be explicit about removed external dependencies, compatibility/front-end adapters, implemented generic law bridges, and remaining advanced boundaries.
+- `REQ-TEST-005`: Known quality gaps in the default build/test workflow SHOULD be documented canonically until they are resolved.
+- `REQ-TEST-006`: Planning sections that claim completion SHOULD ideally have corresponding tests, summaries, or code surfaces that make that completion reviewable.
+- `REQ-TEST-007`: The maintained workflow MUST expose executable spec-governance and scenario-conformance commands that validate promoted catalog relationships and run representative evidence without replacing the complete active suite.
+- `REQ-TEST-008`: Every Catena construct promoted as BEAM-supported MUST have positive source-to-Core-to-BEAM execution evidence, while deferred and invalid backend paths that could otherwise be approximated or omitted MUST have negative artifact-generation evidence.
+- `REQ-TEST-009`: Promoted delimited-resumption modes MUST have a dedicated manifest-selected scenario covering positive and negative loaded-BEAM behavior, optimized/unoptimized equivalence, interactive tooling, resource policy, and accepted performance thresholds.
