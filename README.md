@@ -9,11 +9,6 @@ starts without the proof-of-concept implementation so the compiler,
 architecture, and development workflow can be reconsidered without carrying
 forward accidental constraints.
 
-The language-design material under [`specs/`](specs/) has been retained as
-research input. It documents prior decisions and explorations, but it should
-not be treated as a promise that the rewrite will preserve every earlier
-implementation choice.
-
 ## Historical implementation
 
 The complete proof-of-concept implementation and its history remain available
