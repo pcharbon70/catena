@@ -14,6 +14,7 @@ defmodule Catena.TypedCore do
     value
     |> Enum.map(fn
       {:type, type} -> {:type, Type.apply(type, substitution)}
+      {:result, type} -> {:result, Type.apply(type, substitution)}
       {key, item} -> {key, apply_substitution(item, substitution)}
     end)
     |> Map.new()

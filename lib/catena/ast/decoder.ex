@@ -1,26 +1,37 @@
 defmodule Catena.AST.Decoder do
-  @moduledoc "Strict decoder for the temporary, versioned C001 JSON AST."
+  @moduledoc "Strict decoder for the temporary, versioned Catena JSON AST."
 
   alias Catena.Diagnostic
 
-  @version "0.1"
+  @versions ~w(0.1 0.2)
   @module_name ~r/^[A-Z][A-Za-z0-9_]*$/
+  @type_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @value_name ~r/^[a-z][a-zA-Z0-9_]*$/
-  @expression_tags ~w(integer boolean variable function call let tuple annotate)
+  @expression_tags ~w(integer boolean variable function call let tuple annotate construct match)
+  @pattern_tags ~w(wildcard bind integer boolean tuple constructor as or)
 
   @spec decode(binary()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def decode(json) when is_binary(json) do
     with {:ok, value} <- JSON.decode(json),
          :ok <- require_map(value, "$"),
-         :ok <- version(value),
+         {:ok, frontend_version} <- version(value),
          {:ok, module_name} <- name(value, "module", @module_name, "$"),
+         {:ok, origin} <- origin(value, frontend_version),
          {:ok, exports} <- exports(value),
+         {:ok, type_exports} <- type_exports(value, frontend_version),
+         {:ok, type_groups} <- type_groups(value, frontend_version),
+         {:ok, imports} <- imports(value, frontend_version),
          {:ok, definitions} <- definitions(value) do
       {:ok,
        %{
-         version: @version,
+         version: "0.2",
+         frontend_version: frontend_version,
+         origin: origin,
          module: module_name,
          exports: exports,
+         type_exports: type_exports,
+         type_groups: type_groups,
+         imports: imports,
          definitions: definitions,
          source: Map.get(value, "source", "<catena-json>")
        }}
@@ -30,13 +41,22 @@ defmodule Catena.AST.Decoder do
     end
   end
 
-  defp version(%{"version" => @version}), do: :ok
+  defp version(%{"version" => version}) when version in @versions, do: {:ok, version}
 
   defp version(%{"version" => version}) do
-    error("unsupported AST version #{inspect(version)}; expected #{@version}", "$.version")
+    error("unsupported AST version #{inspect(version)}; expected 0.1 or 0.2", "$.version")
   end
 
   defp version(_), do: error("missing AST version", "$.version")
+
+  defp origin(_value, "0.1"), do: {:ok, "legacy://json-ast-0.1"}
+
+  defp origin(value, "0.2") do
+    case Map.get(value, "origin") do
+      origin when is_binary(origin) and byte_size(origin) > 0 -> {:ok, origin}
+      _ -> error("AST 0.2 requires a non-empty origin", "$.origin")
+    end
+  end
 
   defp exports(%{"exports" => exports}) when is_list(exports) do
     if Enum.all?(exports, &(is_binary(&1) and Regex.match?(@value_name, &1))) and
@@ -49,9 +69,210 @@ defmodule Catena.AST.Decoder do
 
   defp exports(_), do: error("exports must be a list", "$.exports")
 
+  defp type_exports(_value, "0.1"), do: {:ok, []}
+
+  defp type_exports(value, "0.2") do
+    exports = Map.get(value, "type_exports", [])
+
+    with true <- is_list(exports),
+         {:ok, decoded} <- map_ok(exports, &type_export/2),
+         true <- unique_by?(decoded, & &1.name) do
+      {:ok, decoded}
+    else
+      false ->
+        semantic_error("A002", "type exports must have unique type names", "$.type_exports")
+
+      {:error, _} = result ->
+        result
+    end
+  end
+
+  defp type_export(value, index) do
+    path = "$.type_exports[#{index}]"
+
+    with :ok <- require_map(value, path),
+         {:ok, name} <- name(value, "name", @type_name, path),
+         visibility when visibility in ["transparent", "abstract"] <-
+           Map.get(value, "visibility") do
+      {:ok, %{name: name, visibility: String.to_existing_atom(visibility), path: path}}
+    else
+      nil ->
+        error("type export requires visibility", path <> ".visibility")
+
+      visibility when is_binary(visibility) ->
+        error("visibility must be transparent or abstract", path <> ".visibility")
+
+      {:error, _} = result ->
+        result
+    end
+  end
+
+  defp type_groups(_value, "0.1"), do: {:ok, []}
+
+  defp type_groups(value, "0.2") do
+    groups = Map.get(value, "type_groups", [])
+
+    if is_list(groups) do
+      map_ok(groups, &type_group/2)
+    else
+      error("type_groups must be a list", "$.type_groups")
+    end
+  end
+
+  defp type_group(value, index) do
+    path = "$.type_groups[#{index}]"
+    declarations = if is_map(value), do: Map.get(value, "declarations"), else: nil
+
+    with :ok <- require_map(value, path),
+         true <- is_list(declarations) and declarations != [],
+         {:ok, decoded} <- map_ok(declarations, &type_declaration(&1, &2, path)) do
+      if unique_by?(decoded, & &1.name),
+        do: {:ok, %{declarations: decoded, path: path}},
+        else:
+          semantic_error("A002", "type declaration names must be unique", path <> ".declarations")
+    else
+      false -> error("a type group requires declarations", path <> ".declarations")
+      {:error, _} = result -> result
+    end
+  end
+
+  defp type_declaration(value, index, group_path) do
+    path = "#{group_path}.declarations[#{index}]"
+
+    with :ok <- require_map(value, path),
+         {:ok, name} <- name(value, "name", @type_name, path),
+         {:ok, parameters} <-
+           type_parameters(Map.get(value, "parameters", []), path <> ".parameters"),
+         {:ok, constructors} <- constructors(Map.get(value, "constructors"), path),
+         {:ok, derivations} <-
+           string_list(Map.get(value, "derivations", []), path <> ".derivations") do
+      {:ok,
+       %{
+         name: name,
+         parameters: parameters,
+         constructors: constructors,
+         derivations: derivations,
+         path: path
+       }}
+    end
+  end
+
+  defp type_parameters(parameters, path) when is_list(parameters) do
+    with {:ok, decoded} <- map_ok(parameters, &type_parameter(&1, &2, path)),
+         true <- unique_by?(decoded, & &1.name) do
+      {:ok, decoded}
+    else
+      false -> semantic_error("A002", "type parameters must have unique names", path)
+      {:error, _} = result -> result
+    end
+  end
+
+  defp type_parameters(_, path), do: error("type parameters must be a list", path)
+
+  defp type_parameter(value, index, base_path) do
+    path = "#{base_path}[#{index}]"
+
+    with :ok <- require_map(value, path),
+         {:ok, name} <- name(value, "name", @value_name, path),
+         kind when is_binary(kind) <- Map.get(value, "kind") do
+      {:ok, %{name: name, kind: kind, path: path}}
+    else
+      nil -> error("type parameter requires a kind", path <> ".kind")
+      {:error, _} = result -> result
+    end
+  end
+
+  defp constructors(constructors, path) when is_list(constructors) do
+    with {:ok, decoded} <- map_ok(constructors, &constructor(&1, &2, path)),
+         true <- unique_by?(decoded, & &1.name) do
+      {:ok, decoded}
+    else
+      false ->
+        semantic_error(
+          "A002",
+          "constructor names must be unique within a type",
+          path <> ".constructors"
+        )
+
+      {:error, _} = result ->
+        result
+    end
+  end
+
+  defp constructors(_, path), do: error("constructors must be a list", path <> ".constructors")
+
+  defp constructor(value, index, declaration_path) do
+    path = "#{declaration_path}.constructors[#{index}]"
+
+    with :ok <- require_map(value, path),
+         {:ok, name} <- name(value, "name", @type_name, path),
+         {:ok, existentials} <-
+           type_parameters(Map.get(value, "existentials", []), path <> ".existentials"),
+         {:ok, fields, style} <- fields(Map.get(value, "fields", []), path) do
+      {:ok,
+       %{
+         name: name,
+         existentials: existentials,
+         fields: fields,
+         field_style: style,
+         result: Map.get(value, "result"),
+         path: path
+       }}
+    end
+  end
+
+  defp fields(fields, path) when is_list(fields) do
+    named? =
+      Enum.all?(fields, fn field ->
+        is_map(field) and is_binary(Map.get(field, "name")) and Map.has_key?(field, "type")
+      end)
+
+    positional? = Enum.all?(fields, &(is_map(&1) and not Map.has_key?(&1, "type")))
+
+    cond do
+      fields == [] -> {:ok, [], :positional}
+      named? -> named_fields(fields, path)
+      positional? -> {:ok, fields, :positional}
+      true -> error("constructor fields must be all positional or all named", path <> ".fields")
+    end
+  end
+
+  defp fields(_, path), do: error("constructor fields must be a list", path <> ".fields")
+
+  defp named_fields(fields, path) do
+    decoded =
+      fields
+      |> Enum.with_index()
+      |> Enum.map(fn {field, index} ->
+        %{
+          name: Map.get(field, "name"),
+          type: Map.get(field, "type"),
+          path: "#{path}.fields[#{index}]"
+        }
+      end)
+
+    cond do
+      not Enum.all?(decoded, &(Regex.match?(@value_name, &1.name) and not is_nil(&1.type))) ->
+        error("named fields require value names and types", path <> ".fields")
+
+      not unique_by?(decoded, & &1.name) ->
+        semantic_error("A002", "named constructor fields must be unique", path <> ".fields")
+
+      true ->
+        {:ok, decoded, :named}
+    end
+  end
+
+  defp imports(_value, "0.1"), do: {:ok, []}
+
+  defp imports(value, "0.2") do
+    imports = Map.get(value, "imports", [])
+    if is_list(imports), do: {:ok, imports}, else: error("imports must be a list", "$.imports")
+  end
+
   defp definitions(%{"definitions" => definitions}) when is_list(definitions) do
     with {:ok, decoded} <- map_ok(definitions, &definition/2),
-         true <- unique_names?(decoded) do
+         true <- unique_by?(decoded, & &1.name) do
       {:ok, decoded}
     else
       false -> error("definition names must be unique", "$.definitions")
@@ -101,6 +322,8 @@ defmodule Catena.AST.Decoder do
       "let" -> let(value, path)
       "tuple" -> tuple(value, path)
       "annotate" -> annotate(value, path)
+      "construct" -> construct(value, path)
+      "match" -> match_expression(value, path)
     end
   end
 
@@ -135,8 +358,7 @@ defmodule Catena.AST.Decoder do
 
     with {:ok, callee} <- expression(Map.get(value, "callee"), path <> ".callee"),
          true <- is_list(arguments),
-         {:ok, decoded} <-
-           map_ok(arguments, fn item, index -> expression(item, "#{path}.arguments[#{index}]") end) do
+         {:ok, decoded} <- map_ok(arguments, &expression(&1, "#{path}.arguments[#{&2}]")) do
       {:ok, %{tag: :call, callee: callee, arguments: decoded, path: path}}
     else
       false -> error("call arguments must be a list", path <> ".arguments")
@@ -156,8 +378,7 @@ defmodule Catena.AST.Decoder do
     elements = Map.get(value, "elements")
 
     if is_list(elements) do
-      with {:ok, decoded} <-
-             map_ok(elements, fn item, index -> expression(item, "#{path}.elements[#{index}]") end) do
+      with {:ok, decoded} <- map_ok(elements, &expression(&1, "#{path}.elements[#{&2}]")) do
         {:ok, %{tag: :tuple, elements: decoded, path: path}}
       end
     else
@@ -175,6 +396,191 @@ defmodule Catena.AST.Decoder do
     end
   end
 
+  defp construct(value, path) do
+    with constructor when is_binary(constructor) <- Map.get(value, "constructor"),
+         {:ok, arguments, style} <- construction_fields(value, path) do
+      {:ok,
+       %{
+         tag: :construct,
+         constructor: constructor,
+         arguments: arguments,
+         field_style: style,
+         path: path
+       }}
+    else
+      nil -> error("construction requires a constructor", path <> ".constructor")
+      {:error, _} = result -> result
+    end
+  end
+
+  defp construction_fields(%{"arguments" => arguments}, path) when is_list(arguments) do
+    with {:ok, decoded} <- map_ok(arguments, &expression(&1, "#{path}.arguments[#{&2}]")) do
+      {:ok, decoded, :positional}
+    end
+  end
+
+  defp construction_fields(%{"fields" => fields}, path) when is_list(fields) do
+    decoded =
+      map_ok(fields, fn field, index ->
+        field_path = "#{path}.fields[#{index}]"
+
+        with :ok <- require_map(field, field_path),
+             {:ok, name} <- name(field, "name", @value_name, field_path),
+             {:ok, expression} <- expression(Map.get(field, "value"), field_path <> ".value") do
+          {:ok, %{name: name, expression: expression, path: field_path}}
+        end
+      end)
+
+    with {:ok, fields} <- decoded, true <- unique_by?(fields, & &1.name) do
+      {:ok, fields, :named}
+    else
+      false -> semantic_error("A003", "construction fields must be unique", path <> ".fields")
+      {:error, _} = result -> result
+    end
+  end
+
+  defp construction_fields(_, path),
+    do: error("construction requires arguments or fields", path)
+
+  defp match_expression(value, path) do
+    clauses = Map.get(value, "clauses")
+
+    with {:ok, scrutinee} <- expression(Map.get(value, "scrutinee"), path <> ".scrutinee"),
+         true <- is_list(clauses),
+         {:ok, clauses} <- map_ok(clauses, &match_clause(&1, &2, path)) do
+      {:ok, %{tag: :match, scrutinee: scrutinee, clauses: clauses, path: path}}
+    else
+      false -> error("match clauses must be a list", path <> ".clauses")
+      {:error, _} = result -> result
+    end
+  end
+
+  defp match_clause(value, index, match_path) do
+    path = "#{match_path}.clauses[#{index}]"
+
+    with :ok <- require_map(value, path),
+         {:ok, pattern} <- pattern(Map.get(value, "pattern"), path <> ".pattern"),
+         {:ok, guard} <- optional_expression(Map.get(value, "guard"), path <> ".guard"),
+         {:ok, body} <- expression(Map.get(value, "body"), path <> ".body") do
+      {:ok, %{pattern: pattern, guard: guard, body: body, path: path}}
+    end
+  end
+
+  defp optional_expression(nil, _path), do: {:ok, nil}
+  defp optional_expression(value, path), do: expression(value, path)
+
+  defp pattern(%{"tag" => tag} = value, path) when tag in @pattern_tags do
+    case tag do
+      "wildcard" -> {:ok, %{tag: :wildcard, path: path}}
+      "bind" -> pattern_bind(value, path)
+      "integer" -> literal(value, "value", &is_integer/1, :integer, path)
+      "boolean" -> literal(value, "value", &is_boolean/1, :boolean, path)
+      "tuple" -> pattern_list(value, "elements", :tuple, path)
+      "constructor" -> constructor_pattern(value, path)
+      "as" -> as_pattern(value, path)
+      "or" -> or_pattern(value, path)
+    end
+  end
+
+  defp pattern(%{"tag" => tag}, path),
+    do: pattern_error("unsupported pattern tag #{inspect(tag)}", path)
+
+  defp pattern(_, path), do: error("pattern must contain a tag", path)
+
+  defp pattern_bind(value, path) do
+    with {:ok, name} <- name(value, "name", @value_name, path) do
+      {:ok, %{tag: :bind, name: name, path: path}}
+    end
+  end
+
+  defp pattern_list(value, key, tag, path) do
+    items = Map.get(value, key)
+
+    if is_list(items) do
+      with {:ok, decoded} <- map_ok(items, &pattern(&1, "#{path}.#{key}[#{&2}]")) do
+        {:ok, %{tag: tag, elements: decoded, path: path}}
+      end
+    else
+      error("#{key} must be a list", path <> "." <> key)
+    end
+  end
+
+  defp constructor_pattern(value, path) do
+    with constructor when is_binary(constructor) <- Map.get(value, "constructor"),
+         {:ok, fields, style, rest?} <- pattern_fields(value, path) do
+      {:ok,
+       %{
+         tag: :constructor,
+         constructor: constructor,
+         fields: fields,
+         field_style: style,
+         rest?: rest?,
+         path: path
+       }}
+    else
+      nil -> error("constructor pattern requires a constructor", path <> ".constructor")
+      {:error, _} = result -> result
+    end
+  end
+
+  defp pattern_fields(%{"arguments" => arguments}, path) when is_list(arguments) do
+    with {:ok, decoded} <- map_ok(arguments, &pattern(&1, "#{path}.arguments[#{&2}]")) do
+      {:ok, decoded, :positional, false}
+    end
+  end
+
+  defp pattern_fields(%{"fields" => fields} = value, path) when is_list(fields) do
+    decoded =
+      map_ok(fields, fn field, index ->
+        field_path = "#{path}.fields[#{index}]"
+
+        with :ok <- require_map(field, field_path),
+             {:ok, name} <- name(field, "name", @value_name, field_path),
+             {:ok, pattern} <- pattern(Map.get(field, "pattern"), field_path <> ".pattern") do
+          {:ok, %{name: name, pattern: pattern, path: field_path}}
+        end
+      end)
+
+    with {:ok, fields} <- decoded, true <- unique_by?(fields, & &1.name) do
+      {:ok, fields, :named, Map.get(value, "rest", false) == true}
+    else
+      false -> semantic_error("M003", "named pattern fields must be unique", path <> ".fields")
+      {:error, _} = result -> result
+    end
+  end
+
+  defp pattern_fields(_, path),
+    do: error("constructor pattern requires arguments or fields", path)
+
+  defp as_pattern(value, path) do
+    with {:ok, pattern} <- pattern(Map.get(value, "pattern"), path <> ".pattern"),
+         {:ok, name} <- name(value, "name", @value_name, path) do
+      {:ok, %{tag: :as, pattern: pattern, name: name, path: path}}
+    end
+  end
+
+  defp or_pattern(value, path) do
+    alternatives = Map.get(value, "alternatives")
+
+    if is_list(alternatives) and length(alternatives) >= 2 do
+      with {:ok, decoded} <-
+             map_ok(alternatives, &pattern(&1, "#{path}.alternatives[#{&2}]")) do
+        {:ok, %{tag: :or, alternatives: decoded, path: path}}
+      end
+    else
+      error("or pattern requires at least two alternatives", path <> ".alternatives")
+    end
+  end
+
+  defp string_list(values, path)
+       when is_list(values) do
+    if Enum.all?(values, &is_binary/1) and length(values) == length(Enum.uniq(values)),
+      do: {:ok, values},
+      else: error("expected a list of unique strings", path)
+  end
+
+  defp string_list(_, path), do: error("expected a list of strings", path)
+
   defp name(value, key, regex, path) do
     case Map.get(value, key) do
       name when is_binary(name) ->
@@ -190,8 +596,10 @@ defmodule Catena.AST.Decoder do
   defp require_map(value, _path) when is_map(value), do: :ok
   defp require_map(_, path), do: error("expected an object", path)
 
-  defp unique_names?(definitions),
-    do: definitions |> Enum.map(& &1.name) |> then(&(length(&1) == length(Enum.uniq(&1))))
+  defp unique_by?(items, function) do
+    keys = Enum.map(items, function)
+    length(keys) == length(Enum.uniq(keys))
+  end
 
   defp map_ok(items, function) do
     items
@@ -209,4 +617,8 @@ defmodule Catena.AST.Decoder do
   end
 
   defp error(message, path), do: {:error, Diagnostic.new("T012", message, path: path)}
+  defp pattern_error(message, path), do: {:error, Diagnostic.new("M005", message, path: path)}
+
+  defp semantic_error(id, message, path),
+    do: {:error, Diagnostic.new(id, message, path: path)}
 end

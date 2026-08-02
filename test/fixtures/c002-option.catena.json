@@ -1,0 +1,77 @@
+{
+  "version": "0.2",
+  "origin": "test://c002-conformance",
+  "module": "C002Fixture",
+  "type_groups": [
+    {
+      "declarations": [
+        {
+          "name": "Option",
+          "parameters": [{"name": "a", "kind": "Type"}],
+          "constructors": [
+            {"name": "None", "fields": [], "existentials": []},
+            {
+              "name": "Some",
+              "fields": [{"tag": "variable", "name": "a"}],
+              "existentials": []
+            }
+          ],
+          "derivations": ["fold"]
+        }
+      ]
+    }
+  ],
+  "type_exports": [{"name": "Option", "visibility": "transparent"}],
+  "imports": [],
+  "exports": ["make", "main"],
+  "definitions": [
+    {
+      "name": "make",
+      "parameters": [],
+      "signature": {
+        "forall": [],
+        "type": {
+          "tag": "named",
+          "name": "Option",
+          "arguments": [{"tag": "integer"}]
+        }
+      },
+      "body": {
+        "tag": "construct",
+        "constructor": "Option.Some",
+        "arguments": [{"tag": "integer", "value": 7}]
+      }
+    },
+    {
+      "name": "main",
+      "parameters": [],
+      "signature": {"forall": [], "type": {"tag": "integer"}},
+      "body": {
+        "tag": "match",
+        "scrutinee": {
+          "tag": "construct",
+          "constructor": "Option.Some",
+          "arguments": [{"tag": "integer", "value": 7}]
+        },
+        "clauses": [
+          {
+            "pattern": {
+              "tag": "constructor",
+              "constructor": "Option.None",
+              "arguments": []
+            },
+            "body": {"tag": "integer", "value": 0}
+          },
+          {
+            "pattern": {
+              "tag": "constructor",
+              "constructor": "Option.Some",
+              "arguments": [{"tag": "bind", "name": "value"}]
+            },
+            "body": {"tag": "variable", "name": "value"}
+          }
+        ]
+      }
+    }
+  ]
+}

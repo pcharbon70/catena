@@ -7,6 +7,13 @@ defmodule Catena.OTP.Compiler do
           {:ok, module(), binary(), [term()]} | {:error, Diagnostic.t()}
   def compile(forms, options \\ []) do
     source = Keyword.get(options, :source, "<catena-json>")
+    specification = options |> Keyword.get(:specification, "0.2") |> String.to_charlist()
+
+    frontend =
+      options
+      |> Keyword.get(:frontend_version, "0.2")
+      |> then(&("json-ast-" <> &1))
+      |> String.to_charlist()
 
     compiler_options = [
       :binary,
@@ -14,7 +21,7 @@ defmodule Catena.OTP.Compiler do
       :return_warnings,
       :deterministic,
       {:source, String.to_charlist(source)},
-      {:compile_info, [{:catena_specification, ~c"0.1"}, {:catena_frontend, ~c"json-ast-0.1"}]}
+      {:compile_info, [{:catena_specification, specification}, {:catena_frontend, frontend}]}
     ]
 
     case :compile.noenv_forms(forms, compiler_options) do

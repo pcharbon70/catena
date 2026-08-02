@@ -36,6 +36,14 @@ defmodule Catena.Type.Unify do
     end)
   end
 
+  defp do_unify({:nominal, id, left}, {:nominal, id, right}, substitution, path)
+       when length(left) == length(right) do
+    Enum.zip(left, right)
+    |> Enum.reduce(substitution, fn {left_type, right_type}, current ->
+      unify(left_type, right_type, current, path)
+    end)
+  end
+
   defp do_unify(left, right, _substitution, path) do
     raise Catena.TypeError,
       diagnostic:

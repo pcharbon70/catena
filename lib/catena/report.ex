@@ -9,6 +9,18 @@ defmodule Catena.Report do
       version: core.version,
       module: core.module,
       profile: Atom.to_string(core.profile),
+      types:
+        Enum.map(Map.get(core, :data, %{types: []}).types, fn type ->
+          %{
+            id: type.id,
+            name: type.name,
+            visibility: Atom.to_string(type.visibility),
+            inhabitation: Atom.to_string(type.inhabitation),
+            variance: Enum.map(type.variance, &Atom.to_string/1),
+            positive: type.positive?,
+            regular: type.regular?
+          }
+        end),
       definitions:
         Enum.map(core.definitions, fn definition ->
           %{name: definition.name, scheme: scheme(definition.scheme)}

@@ -11,6 +11,7 @@ defmodule Catena.Type do
           | :boolean
           | variable()
           | {:skolem, term()}
+          | {:nominal, String.t(), [t()]}
           | {:function, t(), t()}
           | {:tuple, [t()]}
 
@@ -20,6 +21,9 @@ defmodule Catena.Type do
 
   def free({:tuple, elements}),
     do: Enum.reduce(elements, MapSet.new(), &MapSet.union(free(&1), &2))
+
+  def free({:nominal, _id, arguments}),
+    do: Enum.reduce(arguments, MapSet.new(), &MapSet.union(free(&1), &2))
 
   def free(type) when type in [:integer, :boolean], do: MapSet.new()
   def free({:skolem, _name}), do: MapSet.new()
@@ -38,7 +42,24 @@ defmodule Catena.Type do
   def apply({:tuple, elements}, substitution),
     do: {:tuple, Enum.map(elements, &apply(&1, substitution))}
 
+  def apply({:nominal, id, arguments}, substitution),
+    do: {:nominal, id, Enum.map(arguments, &apply(&1, substitution))}
+
   def apply(type, _substitution), do: type
+
+  @spec refine(t(), map()) :: t()
+  def refine({:skolem, id} = type, refinements), do: Map.get(refinements, id, type)
+
+  def refine({:function, parameter, result}, refinements),
+    do: {:function, refine(parameter, refinements), refine(result, refinements)}
+
+  def refine({:tuple, elements}, refinements),
+    do: {:tuple, Enum.map(elements, &refine(&1, refinements))}
+
+  def refine({:nominal, id, arguments}, refinements),
+    do: {:nominal, id, Enum.map(arguments, &refine(&1, refinements))}
+
+  def refine(type, _refinements), do: type
 
   @spec free_environment(map(), map()) :: MapSet.t(non_neg_integer())
   def free_environment(environment, substitution) do
@@ -80,6 +101,11 @@ defmodule Catena.Type do
   defp normalize({:tuple, elements}, names) do
     {elements, names} = Enum.map_reduce(elements, names, &normalize/2)
     {{:tuple, elements}, names}
+  end
+
+  defp normalize({:nominal, id, arguments}, names) do
+    {arguments, names} = Enum.map_reduce(arguments, names, &normalize/2)
+    {{:nominal, id, arguments}, names}
   end
 
   defp normalize(type, names), do: {type, names}
