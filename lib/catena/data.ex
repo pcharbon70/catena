@@ -533,6 +533,9 @@ defmodule Catena.Data do
 
           put_unique!(current, alias_name, constructor)
 
+        %{"kind" => "condition"} ->
+          current
+
         _ ->
           fail(
             "A001",

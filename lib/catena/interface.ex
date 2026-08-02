@@ -1,10 +1,10 @@
 defmodule Catena.Interface do
-  @moduledoc "Deterministic, layout-free C002 module interfaces."
+  @moduledoc "Deterministic, layout-free C002/C003 module interfaces."
 
-  alias Catena.{CanonicalJSON, Diagnostic}
+  alias Catena.{CanonicalJSON, Condition, Diagnostic}
   alias Catena.Type.Scheme
 
-  @version "0.2"
+  @versions ~w(0.2 0.3)
 
   @spec build(map()) :: map()
   def build(core) do
@@ -12,7 +12,12 @@ defmodule Catena.Interface do
       core.definitions
       |> Enum.filter(&(&1.name in core.exports))
       |> Enum.map(fn definition ->
-        %{"name" => definition.name, "scheme" => encode_scheme(definition.scheme)}
+        value = %{"name" => definition.name, "scheme" => encode_scheme(definition.scheme)}
+
+        case Map.get(definition, :condition) do
+          nil -> value
+          evidence -> Map.put(value, "condition", Condition.encode_evidence(evidence))
+        end
       end)
       |> Enum.sort_by(& &1["name"])
 
@@ -24,7 +29,7 @@ defmodule Catena.Interface do
 
     payload = %{
       "format" => "catena-interface",
-      "version" => @version,
+      "version" => if(core.frontend_version == "0.3", do: "0.3", else: "0.2"),
       "origin" => core.origin,
       "module" => core.module,
       "types" => types,
@@ -41,7 +46,7 @@ defmodule Catena.Interface do
   def decode(binary) when is_binary(binary) do
     with {:ok, value} <- JSON.decode(binary),
          true <- is_map(value),
-         @version <- Map.get(value, "version"),
+         version when version in @versions <- Map.get(value, "version"),
          "catena-interface" <- Map.get(value, "format"),
          digest when is_binary(digest) <- Map.get(value, "digest"),
          payload = Map.delete(value, "digest"),
@@ -50,7 +55,7 @@ defmodule Catena.Interface do
          {:ok, values} <- decode_values(Map.get(value, "values"), types) do
       {:ok,
        %{
-         version: @version,
+         version: version,
          origin: Map.fetch!(value, "origin"),
          module: Map.fetch!(value, "module"),
          digest: digest,
@@ -185,10 +190,42 @@ defmodule Catena.Interface do
   defp decode_types(_, _interface), do: error("interface types must be a list")
 
   defp decode_values(values, _types) when is_list(values) do
-    {:ok,
-     Enum.map(values, fn value ->
-       %{name: Map.fetch!(value, "name"), scheme: decode_scheme(Map.fetch!(value, "scheme"))}
-     end)}
+    values
+    |> Enum.with_index()
+    |> Enum.reduce_while({:ok, []}, fn {value, index}, {:ok, decoded} ->
+      base = %{
+        name: Map.fetch!(value, "name"),
+        scheme: decode_scheme(Map.fetch!(value, "scheme"))
+      }
+
+      case Map.get(value, "condition") do
+        nil ->
+          {:cont, {:ok, [Map.put(base, :condition, nil) | decoded]}}
+
+        encoded ->
+          case Condition.decode_evidence(encoded, "$.values[#{index}].condition") do
+            {:ok, evidence} ->
+              if Condition.valid_for_scheme?(evidence, base.scheme) do
+                {:cont, {:ok, [Map.put(base, :condition, evidence) | decoded]}}
+              else
+                {:halt,
+                 {:error,
+                  Diagnostic.new(
+                    "CND005",
+                    "condition evidence does not match its exported type scheme",
+                    path: "$.values[#{index}].condition"
+                  )}}
+              end
+
+            {:error, _} = error ->
+              {:halt, error}
+          end
+      end
+    end)
+    |> case do
+      {:ok, decoded} -> {:ok, Enum.reverse(decoded)}
+      error -> error
+    end
   end
 
   defp decode_values(_, _types), do: error("interface values must be a list")

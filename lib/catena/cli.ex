@@ -6,15 +6,21 @@ defmodule Catena.CLI do
   def main(arguments) do
     {options, positional, invalid} =
       OptionParser.parse(arguments,
-        strict: [interface: :keep, layout: :string],
+        strict: [interface: :keep, layout: :string, condition_lowering: :string],
         aliases: [i: :interface]
       )
 
     if invalid != [], do: halt_with(usage(), 64)
 
     with {:ok, interfaces} <- load_interfaces(Keyword.get_values(options, :interface)),
-         {:ok, layout} <- layout(Keyword.get(options, :layout, "compact")) do
-      compiler_options = [interfaces: interfaces, layout: layout]
+         {:ok, layout} <- layout(Keyword.get(options, :layout, "compact")),
+         {:ok, condition_lowering} <-
+           condition_lowering(Keyword.get(options, :condition_lowering, "auto")) do
+      compiler_options = [
+        interfaces: interfaces,
+        layout: layout,
+        condition_lowering: condition_lowering
+      ]
 
       case positional do
         ["check-ir", path] -> check(path, compiler_options)
@@ -52,6 +58,7 @@ defmodule Catena.CLI do
           output: beam_output,
           interface: interface_output,
           layout: Atom.to_string(metadata.layout),
+          condition_lowering: Atom.to_string(metadata.condition_lowering),
           warnings: inspect(metadata.warnings)
         })
 
@@ -79,6 +86,13 @@ defmodule Catena.CLI do
   defp layout(other),
     do: {:error, Catena.Diagnostic.new("L001", "unknown ADT layout #{inspect(other)}")}
 
+  defp condition_lowering("auto"), do: {:ok, :auto}
+  defp condition_lowering("native"), do: {:ok, :native}
+  defp condition_lowering("ordinary"), do: {:ok, :ordinary}
+
+  defp condition_lowering(other),
+    do: {:error, Catena.Diagnostic.new("CND001", "unknown condition lowering #{inspect(other)}")}
+
   defp diagnostic(diagnostic) do
     IO.puts(:stderr, JSON.encode!(%{status: "error", diagnostic: Report.diagnostic(diagnostic)}))
     System.halt(1)
@@ -93,6 +107,7 @@ defmodule Catena.CLI do
 
   defp usage do
     "usage: catena [--interface FILE.cati.json] [--layout compact|uniform] " <>
+      "[--condition-lowering auto|native|ordinary] " <>
       "{check-ir|elaborate-ir|compile-ir} FILE.json"
   end
 end

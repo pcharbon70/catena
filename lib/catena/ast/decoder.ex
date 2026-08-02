@@ -3,11 +3,11 @@ defmodule Catena.AST.Decoder do
 
   alias Catena.Diagnostic
 
-  @versions ~w(0.1 0.2)
+  @versions ~w(0.1 0.2 0.3)
   @module_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @type_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @value_name ~r/^[a-z][a-zA-Z0-9_]*$/
-  @expression_tags ~w(integer boolean variable function call let tuple annotate construct match)
+  @expression_tags ~w(integer boolean variable function call let tuple annotate construct match unary binary)
   @pattern_tags ~w(wildcard bind integer boolean tuple constructor as or)
 
   @spec decode(binary()) :: {:ok, map()} | {:error, Diagnostic.t()}
@@ -21,10 +21,10 @@ defmodule Catena.AST.Decoder do
          {:ok, type_exports} <- type_exports(value, frontend_version),
          {:ok, type_groups} <- type_groups(value, frontend_version),
          {:ok, imports} <- imports(value, frontend_version),
-         {:ok, definitions} <- definitions(value) do
+         {:ok, definitions} <- definitions(value, frontend_version) do
       {:ok,
        %{
-         version: "0.2",
+         version: if(frontend_version == "0.3", do: "0.3", else: "0.2"),
          frontend_version: frontend_version,
          origin: origin,
          module: module_name,
@@ -44,14 +44,14 @@ defmodule Catena.AST.Decoder do
   defp version(%{"version" => version}) when version in @versions, do: {:ok, version}
 
   defp version(%{"version" => version}) do
-    error("unsupported AST version #{inspect(version)}; expected 0.1 or 0.2", "$.version")
+    error("unsupported AST version #{inspect(version)}; expected 0.1, 0.2, or 0.3", "$.version")
   end
 
   defp version(_), do: error("missing AST version", "$.version")
 
   defp origin(_value, "0.1"), do: {:ok, "legacy://json-ast-0.1"}
 
-  defp origin(value, "0.2") do
+  defp origin(value, version) when version in ~w(0.2 0.3) do
     case Map.get(value, "origin") do
       origin when is_binary(origin) and byte_size(origin) > 0 -> {:ok, origin}
       _ -> error("AST 0.2 requires a non-empty origin", "$.origin")
@@ -71,7 +71,7 @@ defmodule Catena.AST.Decoder do
 
   defp type_exports(_value, "0.1"), do: {:ok, []}
 
-  defp type_exports(value, "0.2") do
+  defp type_exports(value, version) when version in ~w(0.2 0.3) do
     exports = Map.get(value, "type_exports", [])
 
     with true <- is_list(exports),
@@ -109,7 +109,7 @@ defmodule Catena.AST.Decoder do
 
   defp type_groups(_value, "0.1"), do: {:ok, []}
 
-  defp type_groups(value, "0.2") do
+  defp type_groups(value, version) when version in ~w(0.2 0.3) do
     groups = Map.get(value, "type_groups", [])
 
     if is_list(groups) do
@@ -265,38 +265,167 @@ defmodule Catena.AST.Decoder do
 
   defp imports(_value, "0.1"), do: {:ok, []}
 
-  defp imports(value, "0.2") do
+  defp imports(value, version) when version in ~w(0.2 0.3) do
     imports = Map.get(value, "imports", [])
-    if is_list(imports), do: {:ok, imports}, else: error("imports must be a list", "$.imports")
-  end
 
-  defp definitions(%{"definitions" => definitions}) when is_list(definitions) do
-    with {:ok, decoded} <- map_ok(definitions, &definition/2),
-         true <- unique_by?(decoded, & &1.name) do
-      {:ok, decoded}
-    else
-      false -> error("definition names must be unique", "$.definitions")
-      {:error, _} = result -> result
+    cond do
+      not is_list(imports) ->
+        error("imports must be a list", "$.imports")
+
+      version != "0.3" and
+          Enum.any?(imports, &(is_map(&1) and Map.get(&1, "kind") == "condition")) ->
+        semantic_error("CND001", "condition imports require AST 0.3", "$.imports")
+
+      true ->
+        {:ok, imports}
     end
   end
 
-  defp definitions(_), do: error("definitions must be a list", "$.definitions")
+  defp definitions(%{"definitions" => definitions}, version) when is_list(definitions) do
+    with {:ok, decoded} <- map_ok(definitions, &definition(&1, &2, version)),
+         true <- unique_by?(decoded, & &1.name),
+         true <- version == "0.3" or Enum.all?(decoded, &(not condition_operator?(&1.body))) do
+      {:ok, decoded}
+    else
+      false ->
+        if unique_by?(definitions, &Map.get(&1, "name")) do
+          semantic_error("CND001", "condition operators require AST 0.3", "$.definitions")
+        else
+          error("definition names must be unique", "$.definitions")
+        end
 
-  defp definition(value, index) do
+      {:error, _} = result ->
+        result
+    end
+  end
+
+  defp definitions(_, _version), do: error("definitions must be a list", "$.definitions")
+
+  defp definition(value, index, version) do
     path = "$.definitions[#{index}]"
+    kind = Map.get(value, "kind", "value")
 
     with :ok <- require_map(value, path),
          {:ok, name} <- name(value, "name", @value_name, path),
-         {:ok, parameters} <- parameters(value, path),
-         {:ok, body} <- expression(Map.get(value, "body"), path <> ".body") do
+         :ok <- definition_kind(kind, version, path),
+         {:ok, parameters, body, clause_definition?} <- definition_body(value, version, path) do
       {:ok,
        %{
          name: name,
          parameters: parameters,
          signature: Map.get(value, "signature"),
          body: body,
+         kind: if(kind == "condition", do: :condition, else: :value),
+         clause_definition?: clause_definition?,
          path: path
        }}
+    end
+  end
+
+  defp definition_kind("value", _version, _path), do: :ok
+  defp definition_kind("condition", "0.3", _path), do: :ok
+
+  defp definition_kind("condition", _version, path),
+    do: semantic_result("CND001", "condition declarations require AST 0.3", path <> ".kind")
+
+  defp definition_kind(_kind, _version, path),
+    do: semantic_result("CND001", "definition kind must be value or condition", path <> ".kind")
+
+  defp definition_body(%{"clauses" => clauses} = value, "0.3", path) when is_list(clauses) do
+    if Map.has_key?(value, "body") or Map.has_key?(value, "parameters") do
+      semantic_error(
+        "CND001",
+        "a clause definition cannot also contain parameters or body",
+        path
+      )
+    else
+      with true <- clauses != [],
+           {:ok, decoded} <- map_ok(clauses, &definition_clause(&1, &2, path)),
+           [first | _] <- decoded,
+           arity = length(first.patterns),
+           true <- Enum.all?(decoded, &(length(&1.patterns) == arity)),
+           true <- arity > 0 do
+        parameters = Enum.map(0..(arity - 1), &"__clause_arg_#{&1}")
+
+        {scrutinee, match_clauses} =
+          if arity == 1 do
+            {%{tag: :variable, name: hd(parameters), path: path <> ".clauses"},
+             Enum.map(decoded, fn clause ->
+               Map.put(clause, :pattern, hd(clause.patterns)) |> Map.delete(:patterns)
+             end)}
+          else
+            {%{
+               tag: :tuple,
+               elements:
+                 Enum.map(parameters, &%{tag: :variable, name: &1, path: path <> ".clauses"}),
+               path: path <> ".clauses"
+             },
+             Enum.map(decoded, fn clause ->
+               pattern = %{
+                 tag: :tuple,
+                 elements: clause.patterns,
+                 path: clause.path <> ".patterns"
+               }
+
+               Map.put(clause, :pattern, pattern) |> Map.delete(:patterns)
+             end)}
+          end
+
+        body = %{
+          tag: :match,
+          scrutinee: scrutinee,
+          clauses: match_clauses,
+          path: path <> ".clauses"
+        }
+
+        {:ok, parameters, body, true}
+      else
+        false ->
+          semantic_error(
+            "CND001",
+            "clause definitions require one shared non-zero arity",
+            path <> ".clauses"
+          )
+
+        [] ->
+          semantic_error(
+            "CND001",
+            "clause definitions require at least one clause",
+            path <> ".clauses"
+          )
+
+        {:error, _} = result ->
+          result
+      end
+    end
+  end
+
+  defp definition_body(%{"clauses" => _clauses}, _version, path),
+    do: semantic_error("CND001", "multi-clause definitions require AST 0.3", path <> ".clauses")
+
+  defp definition_body(value, _version, path) do
+    with {:ok, parameters} <- parameters(value, path),
+         {:ok, body} <- expression(Map.get(value, "body"), path <> ".body") do
+      {:ok, parameters, body, false}
+    end
+  end
+
+  defp definition_clause(value, index, definition_path) do
+    path = "#{definition_path}.clauses[#{index}]"
+    patterns = if is_map(value), do: Map.get(value, "patterns"), else: nil
+
+    with :ok <- require_map(value, path),
+         true <- is_list(patterns),
+         {:ok, patterns} <- map_ok(patterns, &pattern(&1, "#{path}.patterns[#{&2}]")),
+         {:ok, guard} <- optional_expression(Map.get(value, "guard"), path <> ".guard"),
+         {:ok, body} <- expression(Map.get(value, "body"), path <> ".body") do
+      {:ok, %{patterns: patterns, guard: guard, body: body, path: path}}
+    else
+      false ->
+        semantic_error("CND001", "definition clause patterns must be a list", path <> ".patterns")
+
+      {:error, _} = result ->
+        result
     end
   end
 
@@ -324,6 +453,8 @@ defmodule Catena.AST.Decoder do
       "annotate" -> annotate(value, path)
       "construct" -> construct(value, path)
       "match" -> match_expression(value, path)
+      "unary" -> unary(value, path)
+      "binary" -> binary(value, path)
     end
   end
 
@@ -363,6 +494,45 @@ defmodule Catena.AST.Decoder do
     else
       false -> error("call arguments must be a list", path <> ".arguments")
       {:error, _} = result -> result
+    end
+  end
+
+  defp unary(value, path) do
+    operator = Map.get(value, "operator")
+
+    with true <- operator in ~w(not negate),
+         {:ok, operand} <- expression(Map.get(value, "operand"), path <> ".operand") do
+      {:ok, %{tag: :unary, operator: String.to_atom(operator), operand: operand, path: path}}
+    else
+      false ->
+        semantic_error("CND001", "unsupported unary condition operator", path <> ".operator")
+
+      {:error, _} = result ->
+        result
+    end
+  end
+
+  defp binary(value, path) do
+    operator = Map.get(value, "operator")
+
+    with true <-
+           operator in ~w(and or equal not_equal less less_equal greater greater_equal add subtract multiply),
+         {:ok, left} <- expression(Map.get(value, "left"), path <> ".left"),
+         {:ok, right} <- expression(Map.get(value, "right"), path <> ".right") do
+      {:ok,
+       %{
+         tag: :binary,
+         operator: String.to_atom(operator),
+         left: left,
+         right: right,
+         path: path
+       }}
+    else
+      false ->
+        semantic_error("CND001", "unsupported binary condition operator", path <> ".operator")
+
+      {:error, _} = result ->
+        result
     end
   end
 
@@ -468,6 +638,37 @@ defmodule Catena.AST.Decoder do
 
   defp optional_expression(nil, _path), do: {:ok, nil}
   defp optional_expression(value, path), do: expression(value, path)
+
+  defp condition_operator?(%{tag: tag}) when tag in [:unary, :binary], do: true
+  defp condition_operator?(%{tag: :function, body: body}), do: condition_operator?(body)
+
+  defp condition_operator?(%{tag: :call, callee: callee, arguments: arguments}),
+    do: condition_operator?(callee) or Enum.any?(arguments, &condition_operator?/1)
+
+  defp condition_operator?(%{tag: :let, value: value, body: body}),
+    do: condition_operator?(value) or condition_operator?(body)
+
+  defp condition_operator?(%{tag: :tuple, elements: elements}),
+    do: Enum.any?(elements, &condition_operator?/1)
+
+  defp condition_operator?(%{tag: :annotate, expression: expression}),
+    do: condition_operator?(expression)
+
+  defp condition_operator?(%{tag: :construct, arguments: arguments}),
+    do:
+      Enum.any?(arguments, fn argument ->
+        condition_operator?(Map.get(argument, :expression, argument))
+      end)
+
+  defp condition_operator?(%{tag: :match, scrutinee: scrutinee, clauses: clauses}),
+    do:
+      condition_operator?(scrutinee) or
+        Enum.any?(clauses, fn clause ->
+          (not is_nil(clause.guard) and condition_operator?(clause.guard)) or
+            condition_operator?(clause.body)
+        end)
+
+  defp condition_operator?(_expression), do: false
 
   defp pattern(%{"tag" => tag} = value, path) when tag in @pattern_tags do
     case tag do
@@ -618,6 +819,9 @@ defmodule Catena.AST.Decoder do
 
   defp error(message, path), do: {:error, Diagnostic.new("T012", message, path: path)}
   defp pattern_error(message, path), do: {:error, Diagnostic.new("M005", message, path: path)}
+
+  defp semantic_result(id, message, path),
+    do: {:error, Diagnostic.new(id, message, path: path)}
 
   defp semantic_error(id, message, path),
     do: {:error, Diagnostic.new(id, message, path: path)}

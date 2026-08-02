@@ -2,6 +2,7 @@ defmodule Catena.Pattern.Coverage do
   @moduledoc "Typed-pattern usefulness, exhaustiveness, and redundancy analysis."
 
   alias Catena.{Diagnostic, Type}
+  alias Catena.Condition.Facts
 
   @default_budget 20_000
 
@@ -10,10 +11,11 @@ defmodule Catena.Pattern.Coverage do
     budget_limit = Keyword.get(options, :coverage_budget, @default_budget)
     match_path = Keyword.get(options, :path)
 
-    {matrix, checked, budget} =
+    {matrix, checked, budget, root_formulas} =
       clauses
       |> Enum.with_index()
-      |> Enum.reduce({[], [], budget_limit}, fn {clause, index}, {matrix, checked, remaining} ->
+      |> Enum.reduce({[], [], budget_limit, []}, fn {clause, index},
+                                                    {matrix, checked, remaining, root_formulas} ->
         alternatives = expand(clause.pattern, remaining)
 
         {useful?, remaining} =
@@ -24,9 +26,19 @@ defmodule Catena.Pattern.Coverage do
             end
           end)
 
-        guard_class = guard_class(clause.guard)
+        guard_formula = Facts.guard_formula(clause.guard, clause.pattern)
+        guard_class = guard_class(clause.guard, options)
 
-        if guard_class == false or not useful? do
+        fact_redundant? =
+          if Facts.root_pattern?(clause.pattern) and root_formulas != [] do
+            prior = Facts.disjoin(root_formulas)
+            uncovered = Facts.conjoin(guard_formula, Facts.negate(prior))
+            Facts.satisfiable?(uncovered, options) == false
+          else
+            false
+          end
+
+        if guard_class == false or not useful? or fact_redundant? do
           fail("M002", "redundant match clause #{index + 1}", clause.path)
         end
 
@@ -37,19 +49,39 @@ defmodule Catena.Pattern.Coverage do
             matrix
           end
 
-        {matrix, [Map.put(clause, :guard_class, guard_class) | checked], remaining}
+        root_formulas =
+          if Facts.root_pattern?(clause.pattern),
+            do: root_formulas ++ [guard_formula],
+            else: root_formulas
+
+        checked_clause =
+          clause
+          |> Map.put(:guard_class, guard_class)
+          |> Map.put(:fact_evidence, %{
+            formula: guard_formula,
+            classification: guard_class,
+            theory: :integer_difference_constraints
+          })
+
+        {matrix, [checked_clause | checked], remaining, root_formulas}
       end)
 
     wildcard = %{tag: :wildcard, type: scrutinee_type, path: nil}
 
-    case useful(matrix, [wildcard], [scrutinee_type], data, budget) do
-      {{:useful, witness}, _remaining} ->
-        rendered = witness |> List.first() |> render_witness()
+    structural_result = useful(matrix, [wildcard], [scrutinee_type], data, budget)
 
-        fail("M001", "non-exhaustive match; missing #{rendered}", match_path,
-          witness: rendered,
-          scrutinee_type: Type.normalize(scrutinee_type)
-        )
+    case structural_result do
+      {{:useful, witness}, _remaining} ->
+        if root_formulas != [] and Facts.tautology?(Facts.disjoin(root_formulas), options) == true do
+          %{clauses: Enum.reverse(checked), exhaustive?: true, budget: budget_limit - budget}
+        else
+          rendered = witness |> List.first() |> render_witness()
+
+          fail("M001", "non-exhaustive match; missing #{rendered}", match_path,
+            witness: rendered,
+            scrutinee_type: Type.normalize(scrutinee_type)
+          )
+        end
 
       {:not_useful, remaining} ->
         %{clauses: Enum.reverse(checked), exhaustive?: true, budget: budget_limit - remaining}
@@ -60,6 +92,16 @@ defmodule Catena.Pattern.Coverage do
   def guard_class(%{tag: :boolean, value: true}), do: true
   def guard_class(%{tag: :boolean, value: false}), do: false
   def guard_class(_), do: :unknown
+
+  def guard_class(guard, options) do
+    formula = Facts.guard_formula(guard, %{tag: :wildcard})
+
+    case {Facts.satisfiable?(formula, options), Facts.tautology?(formula, options)} do
+      {false, _} -> false
+      {_, true} -> true
+      _ -> :unknown
+    end
+  end
 
   defp useful(_matrix, _vector, _types, _data, budget) when budget <= 0 do
     fail("M004", "pattern coverage analysis exceeded its deterministic budget", nil,

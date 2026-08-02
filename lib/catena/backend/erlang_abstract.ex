@@ -1,12 +1,19 @@
 defmodule Catena.Backend.ErlangAbstract do
   @moduledoc "Lower verified Catena typed core to Erlang/OTP 29 Abstract Format."
 
+  alias Catena.Diagnostic
+
   @spec lower(map(), keyword()) :: [term()]
   def lower(core, options \\ []) do
     annotation = annotation(core)
     module = safe_atom(core.module)
     layout = Keyword.get(options, :layout, :compact)
-    globals = Map.new(core.definitions, &{&1.name, length(&1.parameters)})
+
+    globals =
+      core.definitions
+      |> Map.new(&{&1.name, length(&1.parameters)})
+      |> Map.merge(imported_condition_globals(core))
+      |> Map.put(:condition_lowering, Keyword.get(options, :condition_lowering, :auto))
 
     exports =
       core.definitions
@@ -24,6 +31,63 @@ defmodule Catena.Backend.ErlangAbstract do
       {:attribute, annotation, :export, exports}
       | functions
     ]
+  end
+
+  @doc "Lowers already typed clauses through the selective-receive condition harness."
+  @spec lower_receive!(map(), [map()], keyword()) :: term()
+  def lower_receive!(core, clauses, options) when is_list(clauses) do
+    message_type = Keyword.get(options, :message_type)
+
+    if is_nil(message_type) or not closed_type?(message_type) do
+      condition_fail(
+        "CND006",
+        "receive lowering requires one explicit closed message type",
+        "$.receive"
+      )
+    end
+
+    annotation = annotation(core)
+    layout = Keyword.get(options, :layout, :compact)
+
+    globals =
+      core.definitions
+      |> Map.new(&{&1.name, length(&1.parameters)})
+      |> Map.merge(imported_condition_globals(core))
+      |> Map.put(:condition_lowering, :native)
+
+    lowered =
+      Enum.map(clauses, fn clause ->
+        if contains_or_pattern?(clause.pattern) do
+          condition_fail(
+            "CND006",
+            "the receive harness does not admit or-pattern expansion",
+            clause.path
+          )
+        end
+
+        {pattern, bindings} = lower_pattern(clause.pattern, annotation, layout, %{})
+        body = lower_expression(clause.body, bindings, globals, annotation, layout)
+
+        guards =
+          case clause.guard do
+            nil ->
+              []
+
+            %{condition_evidence: %{native: true, expanded_core: expanded}} ->
+              [[lower_native(expanded, bindings, annotation)]]
+
+            _guard ->
+              condition_fail(
+                "CND006",
+                "receive conditions must lower to portable native guard operations",
+                clause.path
+              )
+          end
+
+        {:clause, annotation, [pattern], guards, [body]}
+      end)
+
+    {:receive, annotation, lowered}
   end
 
   defp lower_definition(
@@ -96,10 +160,42 @@ defmodule Catena.Backend.ErlangAbstract do
        ),
        do: {:atom, annotation, value}
 
+  defp lower_expression(
+         %{tag: :unary, operator: operator, operand: operand},
+         environment,
+         globals,
+         annotation,
+         layout
+       ) do
+    {:op, annotation, erlang_operator(operator),
+     lower_expression(operand, environment, globals, annotation, layout)}
+  end
+
+  defp lower_expression(
+         %{tag: :binary, operator: operator, left: left, right: right},
+         environment,
+         globals,
+         annotation,
+         layout
+       ) do
+    {:op, annotation, erlang_operator(operator),
+     lower_expression(left, environment, globals, annotation, layout),
+     lower_expression(right, environment, globals, annotation, layout)}
+  end
+
   defp lower_expression(%{tag: :variable, name: name}, environment, globals, annotation, _layout) do
     case Map.fetch(environment, name) do
-      {:ok, variable} -> {:var, annotation, variable}
-      :error -> curried_global(name, Map.fetch!(globals, name), annotation)
+      {:ok, variable} ->
+        {:var, annotation, variable}
+
+      :error ->
+        case Map.fetch!(globals, name) do
+          arity when is_integer(arity) ->
+            curried_global(name, arity, annotation)
+
+          {:remote, module, function, arity} ->
+            curried_remote(module, function, arity, annotation)
+        end
     end
   end
 
@@ -128,16 +224,34 @@ defmodule Catena.Backend.ErlangAbstract do
   end
 
   defp lower_expression(
-         %{tag: :call, callee: %{tag: :variable, name: name}, arguments: arguments},
+         %{tag: :call, callee: %{tag: :variable, name: name} = callee, arguments: arguments},
          environment,
          globals,
          annotation,
          layout
-       )
-       when not is_map_key(environment, name) and is_map_key(globals, name) and
-              :erlang.map_get(name, globals) == length(arguments) do
-    {:call, annotation, {:atom, annotation, safe_atom(name)},
-     Enum.map(arguments, &lower_expression(&1, environment, globals, annotation, layout))}
+       ) do
+    lowered_arguments =
+      Enum.map(arguments, &lower_expression(&1, environment, globals, annotation, layout))
+
+    case {Map.has_key?(environment, name), Map.get(globals, name)} do
+      {false, arity} when is_integer(arity) and arity == length(arguments) ->
+        {:call, annotation, {:atom, annotation, safe_atom(name)}, lowered_arguments}
+
+      {false, {:remote, module, function, arity}} when arity == length(arguments) ->
+        {:call, annotation,
+         {:remote, annotation, {:atom, annotation, module}, {:atom, annotation, function}},
+         lowered_arguments}
+
+      _other ->
+        Enum.reduce(
+          arguments,
+          lower_expression(callee, environment, globals, annotation, layout),
+          fn argument, current ->
+            {:call, annotation, current,
+             [lower_expression(argument, environment, globals, annotation, layout)]}
+          end
+        )
+    end
   end
 
   defp lower_expression(
@@ -236,7 +350,7 @@ defmodule Catena.Backend.ErlangAbstract do
     decision =
       lower_clause_chain(
         variable,
-        expand_clauses(clauses),
+        clauses,
         environment,
         globals,
         annotation,
@@ -271,10 +385,6 @@ defmodule Catena.Backend.ErlangAbstract do
          layout,
          depth
        ) do
-    {pattern, bindings} = lower_pattern(clause.pattern, annotation, layout, %{})
-    branch_environment = Map.merge(environment, bindings)
-    body = lower_expression(clause.body, branch_environment, globals, annotation, layout)
-
     fallback =
       lower_clause_chain(
         variable,
@@ -286,44 +396,127 @@ defmodule Catena.Backend.ErlangAbstract do
         depth + 1
       )
 
-    case clause.guard do
-      nil ->
-        {:case, annotation, {:var, annotation, variable},
+    alternatives = expand_pattern(clause.pattern)
+    {_first_pattern, first_bindings} = lower_pattern(hd(alternatives), annotation, layout, %{})
+    binding_names = first_bindings |> Map.keys() |> Enum.sort()
+    branch_environment = Map.merge(environment, first_bindings)
+    body = lower_expression(clause.body, branch_environment, globals, annotation, layout)
+    continuation_variable = String.to_atom("#{variable}_Clause_#{depth}")
+
+    continuation_arguments =
+      Enum.map(binding_names, &{:var, annotation, Map.fetch!(first_bindings, &1)})
+
+    continuation_clauses =
+      continuation_clauses(
+        clause,
+        continuation_arguments,
+        body,
+        fallback,
+        branch_environment,
+        globals,
+        annotation,
+        layout
+      )
+
+    continuation = {:fun, annotation, {:clauses, continuation_clauses}}
+
+    pattern_clauses =
+      Enum.map(alternatives, fn alternative ->
+        {pattern, bindings} = lower_pattern(alternative, annotation, layout, %{})
+        arguments = Enum.map(binding_names, &{:var, annotation, Map.fetch!(bindings, &1)})
+        call = {:call, annotation, {:var, annotation, continuation_variable}, arguments}
+        {:clause, annotation, [pattern], [], [call]}
+      end)
+
+    decision =
+      {:case, annotation, {:var, annotation, variable},
+       pattern_clauses ++ [{:clause, annotation, [{:var, annotation, :_}], [], [fallback]}]}
+
+    {:block, annotation,
+     [
+       {:match, annotation, {:var, annotation, continuation_variable}, continuation},
+       decision
+     ]}
+  end
+
+  defp continuation_clauses(
+         %{guard: nil},
+         arguments,
+         body,
+         _fallback,
+         _environment,
+         _globals,
+         annotation,
+         _layout
+       ),
+       do: [{:clause, annotation, arguments, [], [body]}]
+
+  defp continuation_clauses(
+         %{guard: guard},
+         arguments,
+         body,
+         fallback,
+         environment,
+         globals,
+         annotation,
+         layout
+       ) do
+    lowering = Map.fetch!(globals, :condition_lowering)
+    evidence = Map.get(guard, :condition_evidence)
+    native? = not is_nil(evidence) and evidence.native
+
+    if lowering in [:auto, :native] and native? do
+      native_guard = lower_native(evidence.expanded_core, environment, annotation)
+
+      [
+        {:clause, annotation, arguments, [[native_guard]], [body]},
+        {:clause, annotation, arguments, [], [fallback]}
+      ]
+    else
+      ordinary_guard =
+        if is_nil(evidence) do
+          lower_expression(guard, environment, globals, annotation, layout)
+        else
+          lower_native(evidence.expanded_core, environment, annotation)
+        end
+
+      guarded_body =
+        {:case, annotation, ordinary_guard,
          [
-           {:clause, annotation, [pattern], [], [body]},
-           {:clause, annotation, [{:var, annotation, :_}], [], [fallback]}
+           {:clause, annotation, [{:atom, annotation, true}], [], [body]},
+           {:clause, annotation, [{:atom, annotation, false}], [], [fallback]}
          ]}
 
-      guard ->
-        fallback_variable = String.to_atom("#{variable}_Fallback_#{depth}")
-
-        fallback_function =
-          {:fun, annotation, {:clauses, [{:clause, annotation, [], [], [fallback]}]}}
-
-        fallback_call = {:call, annotation, {:var, annotation, fallback_variable}, []}
-        guard = lower_expression(guard, branch_environment, globals, annotation, layout)
-
-        guarded_body =
-          {:case, annotation, guard,
-           [
-             {:clause, annotation, [{:atom, annotation, true}], [], [body]},
-             {:clause, annotation, [{:atom, annotation, false}], [], [fallback_call]}
-           ]}
-
-        decision =
-          {:case, annotation, {:var, annotation, variable},
-           [
-             {:clause, annotation, [pattern], [], [guarded_body]},
-             {:clause, annotation, [{:var, annotation, :_}], [], [fallback_call]}
-           ]}
-
-        {:block, annotation,
-         [
-           {:match, annotation, {:var, annotation, fallback_variable}, fallback_function},
-           decision
-         ]}
+      [{:clause, annotation, arguments, [], [guarded_body]}]
     end
   end
+
+  defp lower_native(%{tag: :integer, value: value}, _environment, annotation),
+    do: {:integer, annotation, value}
+
+  defp lower_native(%{tag: :boolean, value: value}, _environment, annotation),
+    do: {:atom, annotation, value}
+
+  defp lower_native(%{tag: :variable, name: name}, environment, annotation),
+    do: {:var, annotation, Map.fetch!(environment, name)}
+
+  defp lower_native(
+         %{tag: :unary, operator: operator, operand: operand},
+         environment,
+         annotation
+       ),
+       do:
+         {:op, annotation, erlang_operator(operator),
+          lower_native(operand, environment, annotation)}
+
+  defp lower_native(
+         %{tag: :binary, operator: operator, left: left, right: right},
+         environment,
+         annotation
+       ),
+       do:
+         {:op, annotation, erlang_operator(operator), lower_native(left, environment, annotation),
+          lower_native(right, environment, annotation)}
 
   defp lower_pattern(%{tag: :wildcard}, annotation, _layout, bindings),
     do: {{:var, annotation, :_}, bindings}
@@ -387,12 +580,6 @@ defmodule Catena.Backend.ErlangAbstract do
   defp constructor_pattern(constructor, values, annotation, layout),
     do: constructor_value(constructor, values, annotation, layout)
 
-  defp expand_clauses(clauses) do
-    Enum.flat_map(clauses, fn clause ->
-      Enum.map(expand_pattern(clause.pattern), &%{clause | pattern: &1})
-    end)
-  end
-
   defp expand_pattern(%{tag: :or, alternatives: alternatives}),
     do: Enum.flat_map(alternatives, &expand_pattern/1)
 
@@ -412,6 +599,20 @@ defmodule Catena.Backend.ErlangAbstract do
   defp cartesian([]), do: [[]]
   defp cartesian([head | tail]), do: for(item <- head, rest <- cartesian(tail), do: [item | rest])
 
+  defp erlang_operator(:not), do: :not
+  defp erlang_operator(:negate), do: :-
+  defp erlang_operator(:and), do: :andalso
+  defp erlang_operator(:or), do: :orelse
+  defp erlang_operator(:equal), do: :"=:="
+  defp erlang_operator(:not_equal), do: :"=/="
+  defp erlang_operator(:less), do: :<
+  defp erlang_operator(:less_equal), do: :"=<"
+  defp erlang_operator(:greater), do: :>
+  defp erlang_operator(:greater_equal), do: :>=
+  defp erlang_operator(:add), do: :+
+  defp erlang_operator(:subtract), do: :-
+  defp erlang_operator(:multiply), do: :*
+
   defp curried_global(name, 0, annotation),
     do: {:fun, annotation, {:function, safe_atom(name), 0}}
 
@@ -425,6 +626,34 @@ defmodule Catena.Backend.ErlangAbstract do
     Enum.reduce(Enum.reverse(variables), body, fn variable, inner ->
       clause = {:clause, annotation, [{:var, annotation, variable}], [], [inner]}
       {:fun, annotation, {:clauses, [clause]}}
+    end)
+  end
+
+  defp curried_remote(module, function, 0, annotation) do
+    {:fun, annotation, {:function, module, function, 0}}
+  end
+
+  defp curried_remote(module, function, arity, annotation) do
+    variables = Enum.map(1..arity, &String.to_atom("RemoteCurry#{&1}"))
+
+    body =
+      {:call, annotation,
+       {:remote, annotation, {:atom, annotation, module}, {:atom, annotation, function}},
+       Enum.map(variables, &{:var, annotation, &1})}
+
+    Enum.reduce(Enum.reverse(variables), body, fn variable, inner ->
+      clause = {:clause, annotation, [{:var, annotation, variable}], [], [inner]}
+      {:fun, annotation, {:clauses, [clause]}}
+    end)
+  end
+
+  defp imported_condition_globals(core) do
+    core
+    |> Map.get(:conditions, %{})
+    |> Map.get(:imported, %{})
+    |> Map.new(fn {alias_name, record} ->
+      [module, function] = String.split(record.id, ".", parts: 2)
+      {alias_name, {:remote, safe_atom(module), safe_atom(function), length(record.parameters)}}
     end)
   end
 
@@ -447,4 +676,28 @@ defmodule Catena.Backend.ErlangAbstract do
   defp constructor_atom(constructor), do: safe_atom("#{constructor.type_id}::#{constructor.name}")
   defp variable_atom(name), do: String.to_atom("V_" <> name)
   defp safe_atom(name), do: String.to_atom(name)
+
+  defp closed_type?({:var, _id}), do: false
+  defp closed_type?({:skolem, _id}), do: false
+
+  defp closed_type?(tuple) when is_tuple(tuple),
+    do: tuple |> Tuple.to_list() |> Enum.all?(&closed_type?/1)
+
+  defp closed_type?(list) when is_list(list), do: Enum.all?(list, &closed_type?/1)
+  defp closed_type?(_type), do: true
+
+  defp contains_or_pattern?(%{tag: :or}), do: true
+
+  defp contains_or_pattern?(%{tag: :tuple, elements: elements}),
+    do: Enum.any?(elements, &contains_or_pattern?/1)
+
+  defp contains_or_pattern?(%{tag: :constructor, patterns: patterns}),
+    do: Enum.any?(patterns, &contains_or_pattern?/1)
+
+  defp contains_or_pattern?(%{tag: :as, pattern: pattern}), do: contains_or_pattern?(pattern)
+  defp contains_or_pattern?(_pattern), do: false
+
+  defp condition_fail(id, message, path) do
+    raise Catena.TypeError, diagnostic: Diagnostic.new(id, message, path: path)
+  end
 end
