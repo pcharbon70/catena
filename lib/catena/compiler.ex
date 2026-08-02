@@ -1,5 +1,5 @@
 defmodule Catena.Compiler do
-  @moduledoc "The C001/C002 compiler pipeline and its typed-core verification gate."
+  @moduledoc "The C001-C003 compiler pipeline and its typed-core verification gate."
 
   alias Catena.{Backend.ErlangAbstract, Diagnostic, Interface, Type.Infer}
   alias Catena.OTP.Compiler, as: OTPCompiler
@@ -23,10 +23,16 @@ defmodule Catena.Compiler do
   @spec compile(map(), keyword()) :: {:ok, module(), binary(), map()} | {:error, Diagnostic.t()}
   def compile(ast, options \\ []) do
     layout = Keyword.get(options, :layout, :compact)
+    condition_lowering = Keyword.get(options, :condition_lowering, :auto)
 
     with :ok <- validate_layout(layout),
+         :ok <- validate_condition_lowering(condition_lowering),
          {:ok, core} <- check(ast, options),
-         forms <- ErlangAbstract.lower(core, layout: layout),
+         forms <-
+           ErlangAbstract.lower(core,
+             layout: layout,
+             condition_lowering: condition_lowering
+           ),
          {:ok, module, binary, warnings} <-
            OTPCompiler.compile(
              forms,
@@ -35,7 +41,7 @@ defmodule Catena.Compiler do
              |> Keyword.put(:frontend_version, ast.frontend_version)
              |> Keyword.put(
                :specification,
-               if(ast.frontend_version == "0.1", do: "0.1", else: "0.2")
+               ast.frontend_version
              )
            ) do
       interface = Interface.build(core)
@@ -46,6 +52,7 @@ defmodule Catena.Compiler do
          warnings: warnings,
          forms: forms,
          layout: layout,
+         condition_lowering: condition_lowering,
          interface: interface,
          interface_binary: Interface.encode(interface)
        }}
@@ -56,6 +63,11 @@ defmodule Catena.Compiler do
 
   defp validate_layout(layout),
     do: {:error, Diagnostic.new("L001", "unknown ADT layout #{inspect(layout)}")}
+
+  defp validate_condition_lowering(lowering) when lowering in [:auto, :native, :ordinary], do: :ok
+
+  defp validate_condition_lowering(lowering),
+    do: {:error, Diagnostic.new("CND001", "unknown condition lowering #{inspect(lowering)}")}
 
   defp protect(function) do
     function.()

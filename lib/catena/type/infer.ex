@@ -1,7 +1,7 @@
 defmodule Catena.Type.Infer do
   @moduledoc "Algorithm W plus the annotation-directed C002 datatype boundary."
 
-  alias Catena.{Data, Derive, Diagnostic, Type}
+  alias Catena.{Condition, Data, Derive, Diagnostic, Type}
   alias Catena.Pattern.Coverage
   alias Catena.Type.{Advanced, Parser, Scheme, Unify}
 
@@ -17,8 +17,14 @@ defmodule Catena.Type.Infer do
     end
 
     data = Data.elaborate(ast, Keyword.get(options, :interfaces, []))
+    conditions = Condition.prepare!(ast, data, options)
     derived = Derive.folds(data)
-    initial_environment = Map.new(derived, &{&1.name, &1.scheme})
+
+    initial_environment =
+      derived
+      |> Map.new(&{&1.name, &1.scheme})
+      |> Map.merge(conditions.schemes)
+
     initial = %{next: 10_000, substitution: %{}}
 
     {definitions, environment, state} =
@@ -37,7 +43,13 @@ defmodule Catena.Type.Infer do
           fail("T010", "a definition matching a GADT requires a signature", definition.path)
         end
 
-        inference_options = Keyword.take(options, [:coverage_budget])
+        inference_options =
+          options
+          |> Keyword.take([:coverage_budget, :fact_budget])
+          |> Keyword.put(
+            :conditions,
+            if(ast.frontend_version == "0.3", do: conditions, else: nil)
+          )
 
         {typed, scheme, state} =
           if match? and not is_nil(definition.signature) do
@@ -51,6 +63,9 @@ defmodule Catena.Type.Infer do
           parameters: definition.parameters,
           expression: Catena.TypedCore.apply_substitution(typed, state.substitution),
           scheme: scheme,
+          kind: definition.kind,
+          condition: Condition.definition_evidence(conditions, definition.name),
+          clause_definition?: definition.clause_definition?,
           generated?: false,
           path: definition.path
         }
@@ -72,6 +87,7 @@ defmodule Catena.Type.Infer do
       definitions: definitions,
       environment: environment,
       data: data,
+      conditions: conditions,
       profile:
         if(
           Enum.any?(
@@ -89,7 +105,11 @@ defmodule Catena.Type.Infer do
 
   defp infer_definition(definition, expression, environment, state, data, options) do
     {typed, inferred_type, state} =
-      infer(expression, environment, state, %{data: data, coverage_options: options})
+      infer(expression, environment, state, %{
+        data: data,
+        coverage_options: options,
+        conditions: Keyword.get(options, :conditions)
+      })
 
     inferred_type = Type.apply(inferred_type, state.substitution)
 
@@ -130,6 +150,7 @@ defmodule Catena.Type.Infer do
       infer(definition.body, local_environment, state, %{
         data: data,
         coverage_options: options,
+        conditions: Keyword.get(options, :conditions),
         expected: result_type,
         signed?: true
       })
@@ -171,6 +192,76 @@ defmodule Catena.Type.Infer do
 
   defp infer(%{tag: :boolean} = expression, _environment, state, _context),
     do: {Map.put(expression, :type, :boolean), :boolean, state}
+
+  defp infer(
+         %{tag: :unary, operator: operator, operand: operand, path: path} = expression,
+         environment,
+         state,
+         context
+       ) do
+    {typed_operand, operand_type, state} =
+      infer(operand, environment, state, Map.delete(context, :expected))
+
+    expected = if operator == :not, do: :boolean, else: :integer
+    result = expected
+    substitution = Unify.unify(operand_type, expected, state.substitution, path)
+
+    typed = expression |> Map.put(:operand, typed_operand) |> Map.put(:type, result)
+    {typed, result, %{state | substitution: substitution}}
+  end
+
+  defp infer(
+         %{tag: :binary, operator: operator, left: left, right: right, path: path} = expression,
+         environment,
+         state,
+         context
+       ) do
+    child_context = Map.delete(context, :expected)
+    {typed_left, left_type, state} = infer(left, environment, state, child_context)
+    {typed_right, right_type, state} = infer(right, environment, state, child_context)
+
+    {operand_type, result_type, state} =
+      case operator do
+        operator when operator in [:and, :or] ->
+          substitution = Unify.unify(left_type, :boolean, state.substitution, path)
+          substitution = Unify.unify(right_type, :boolean, substitution, path)
+          {:boolean, :boolean, %{state | substitution: substitution}}
+
+        operator
+        when operator in [
+               :add,
+               :subtract,
+               :multiply,
+               :less,
+               :less_equal,
+               :greater,
+               :greater_equal
+             ] ->
+          substitution = Unify.unify(left_type, :integer, state.substitution, path)
+          substitution = Unify.unify(right_type, :integer, substitution, path)
+          result = if operator in [:add, :subtract, :multiply], do: :integer, else: :boolean
+          {:integer, result, %{state | substitution: substitution}}
+
+        operator when operator in [:equal, :not_equal] ->
+          substitution = Unify.unify(left_type, right_type, state.substitution, path)
+          compared = Type.apply(left_type, substitution)
+
+          unless compared in [:integer, :boolean] do
+            fail("CND003", "condition equality is defined only for Int and Bool", path)
+          end
+
+          {compared, :boolean, %{state | substitution: substitution}}
+      end
+
+    typed =
+      expression
+      |> Map.put(:left, typed_left)
+      |> Map.put(:right, typed_right)
+      |> Map.put(:operand_type, operand_type)
+      |> Map.put(:type, result_type)
+
+    {typed, result_type, state}
+  end
 
   defp infer(%{tag: :variable, name: name, path: path} = expression, environment, state, context) do
     case Map.fetch(environment, name) do
@@ -348,8 +439,23 @@ defmodule Catena.Type.Infer do
                   Map.delete(branch_context, :expected)
                 )
 
+              if not is_nil(Map.get(branch_context, :conditions)) and
+                   Type.apply(guard_type, next.substitution) != :boolean do
+                fail("CND002", "clause conditions must have type Bool", clause.path <> ".guard")
+              end
+
               substitution =
                 Unify.unify(guard_type, :boolean, next.substitution, clause.path <> ".guard")
+
+              typed =
+                case Map.get(branch_context, :conditions) do
+                  nil ->
+                    typed
+
+                  conditions ->
+                    evidence = Condition.guard!(typed, conditions, clause.path <> ".guard")
+                    Map.put(typed, :condition_evidence, evidence)
+                end
 
               {typed, %{next | substitution: substitution}}
           end
@@ -405,8 +511,14 @@ defmodule Catena.Type.Infer do
       |> Map.put(:scrutinee, typed_scrutinee)
       |> Map.put(:clauses, coverage.clauses)
       |> Map.put(:decision_tree, %{
-        tag: :ordered_decision,
+        tag:
+          if(is_nil(Map.get(context, :conditions)),
+            do: :ordered_decision,
+            else: :ordered_guard_tree
+          ),
         exhaustive?: true,
+        guard_once?: true,
+        false_falls_through?: true,
         clauses: coverage.clauses
       })
       |> Map.put(:type, result_type)
@@ -798,6 +910,12 @@ defmodule Catena.Type.Infer do
   defp contains_gadt_match?(%{tag: :annotate, expression: expression}, data),
     do: contains_gadt_match?(expression, data)
 
+  defp contains_gadt_match?(%{tag: :unary, operand: operand}, data),
+    do: contains_gadt_match?(operand, data)
+
+  defp contains_gadt_match?(%{tag: :binary, left: left, right: right}, data),
+    do: contains_gadt_match?(left, data) or contains_gadt_match?(right, data)
+
   defp contains_gadt_match?(_expression, _data), do: false
 
   defp contains_match?(%{tag: :match}), do: true
@@ -813,6 +931,11 @@ defmodule Catena.Type.Infer do
     do: Enum.any?(elements, &contains_match?/1)
 
   defp contains_match?(%{tag: :annotate, expression: expression}), do: contains_match?(expression)
+  defp contains_match?(%{tag: :unary, operand: operand}), do: contains_match?(operand)
+
+  defp contains_match?(%{tag: :binary, left: left, right: right}),
+    do: contains_match?(left) or contains_match?(right)
+
   defp contains_match?(_expression), do: false
 
   defp gadt_pattern?(%{tag: :constructor, constructor: reference}, data) do

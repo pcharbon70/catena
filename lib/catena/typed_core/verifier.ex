@@ -1,6 +1,7 @@
 defmodule Catena.TypedCore.Verifier do
-  @moduledoc "An inference-independent structural verifier for C001/C002 typed core."
+  @moduledoc "An inference-independent structural verifier for C001-C003 typed core."
 
+  alias Catena.Condition
   alias Catena.Pattern.Coverage
   alias Catena.Type
   alias Catena.Type.Scheme
@@ -11,6 +12,7 @@ defmodule Catena.TypedCore.Verifier do
       module.definitions
       |> Enum.filter(&Map.get(&1, :generated?, false))
       |> Map.new(&{&1.name, &1.scheme})
+      |> Map.merge(get_in(module, [:conditions, :schemes]) || %{})
 
     Enum.reduce_while(module.definitions, {:ok, initial_globals}, fn definition, {:ok, globals} ->
       case verify_definition(definition, globals, Map.get(module, :data, empty_data())) do
@@ -56,22 +58,77 @@ defmodule Catena.TypedCore.Verifier do
   end
 
   defp verify_definition(definition, globals, data) do
-    case verify_expression(definition.expression, globals, data) do
-      {:ok, type} ->
-        if instance?(type, definition.scheme),
-          do: :ok,
-          else: {:error, "definition scheme is inconsistent"}
+    with :ok <- verify_condition_definition(definition),
+         result <- verify_expression(definition.expression, globals, data) do
+      case result do
+        {:ok, type} ->
+          if instance?(type, definition.scheme),
+            do: :ok,
+            else: {:error, "definition scheme is inconsistent"}
 
-      error ->
-        error
+        error ->
+          error
+      end
     end
   end
+
+  defp verify_condition_definition(%{kind: :condition, condition: evidence}) do
+    if Condition.valid_evidence?(evidence, :definition),
+      do: :ok,
+      else: {:error, "condition definition evidence is invalid"}
+  end
+
+  defp verify_condition_definition(_definition), do: :ok
 
   defp verify_expression(%{tag: :integer, type: :integer}, _environment, _data),
     do: {:ok, :integer}
 
   defp verify_expression(%{tag: :boolean, type: :boolean}, _environment, _data),
     do: {:ok, :boolean}
+
+  defp verify_expression(
+         %{tag: :unary, operator: :not, operand: operand, type: :boolean},
+         environment,
+         data
+       ) do
+    with {:ok, :boolean} <- verify_expression(operand, environment, data), do: {:ok, :boolean}
+  end
+
+  defp verify_expression(
+         %{tag: :unary, operator: :negate, operand: operand, type: :integer},
+         environment,
+         data
+       ) do
+    with {:ok, :integer} <- verify_expression(operand, environment, data), do: {:ok, :integer}
+  end
+
+  defp verify_expression(
+         %{tag: :binary, operator: operator, left: left, right: right, type: result_type},
+         environment,
+         data
+       ) do
+    expected =
+      cond do
+        operator in [:and, :or] -> {:boolean, :boolean}
+        operator in [:add, :subtract, :multiply] -> {:integer, :integer}
+        operator in [:less, :less_equal, :greater, :greater_equal] -> {:integer, :boolean}
+        operator in [:equal, :not_equal] -> {Map.get(left, :type), :boolean}
+        true -> :invalid
+      end
+
+    case expected do
+      {operand_type, ^result_type} when operand_type in [:integer, :boolean] ->
+        with {:ok, ^operand_type} <- verify_expression(left, environment, data),
+             {:ok, ^operand_type} <- verify_expression(right, environment, data) do
+          {:ok, result_type}
+        else
+          _ -> {:error, "condition operator operand types are inconsistent"}
+        end
+
+      _ ->
+        {:error, "condition operator metadata is inconsistent"}
+    end
+  end
 
   defp verify_expression(%{tag: :variable, name: name, type: type}, environment, _data) do
     case Map.fetch(environment, name) do
@@ -202,10 +259,10 @@ defmodule Catena.TypedCore.Verifier do
        ) do
     with {:ok, scrutinee_type} <- verify_expression(scrutinee, environment, data),
          true <-
-           decision.tag == :ordered_decision and decision.exhaustive? and
-             decision.clauses == clauses,
+           valid_decision?(decision, clauses),
          :ok <- verify_clauses(clauses, scrutinee_type, result_type, environment, data),
-         %{exhaustive?: true} <- Coverage.check!(clauses, scrutinee_type, data) do
+         coverage <- Coverage.check!(clauses, scrutinee_type, data),
+         true <- coverage.clauses == clauses do
       {:ok, result_type}
     else
       false -> {:error, "match decision tree is missing or inconsistent"}
@@ -216,6 +273,23 @@ defmodule Catena.TypedCore.Verifier do
 
   defp verify_expression(expression, _environment, _data),
     do: {:error, "malformed typed-core node #{inspect(expression)}"}
+
+  defp valid_decision?(%{tag: :ordered_decision, exhaustive?: true, clauses: clauses}, clauses),
+    do: true
+
+  defp valid_decision?(
+         %{
+           tag: :ordered_guard_tree,
+           exhaustive?: true,
+           guard_once?: true,
+           false_falls_through?: true,
+           clauses: clauses
+         },
+         clauses
+       ),
+       do: true
+
+  defp valid_decision?(_decision, _clauses), do: false
 
   defp verify_construct_arguments(arguments, fields, environment, data) do
     ordered = Enum.sort_by(arguments, &Map.get(&1, :field_index, 0))
@@ -252,9 +326,22 @@ defmodule Catena.TypedCore.Verifier do
 
   defp verify_guard(guard, environment, data) do
     case verify_expression(guard, environment, data) do
-      {:ok, :boolean} -> :ok
-      {:ok, _other} -> {:error, "match guard is not Boolean"}
-      error -> error
+      {:ok, :boolean} ->
+        case Map.get(guard, :condition_evidence) do
+          nil ->
+            :ok
+
+          evidence ->
+            if Condition.valid_evidence?(evidence, :guard),
+              do: :ok,
+              else: {:error, "match guard condition evidence is invalid"}
+        end
+
+      {:ok, _other} ->
+        {:error, "match guard is not Boolean"}
+
+      error ->
+        error
     end
   end
 

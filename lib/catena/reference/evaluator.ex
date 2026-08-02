@@ -1,5 +1,5 @@
 defmodule Catena.Reference.Evaluator do
-  @moduledoc "Pure reference evaluator for the executable C001/C002 core."
+  @moduledoc "Pure reference evaluator for the executable C001-C003 core."
 
   @spec run(map(), String.t(), [term()]) :: {:ok, term()} | {:error, term()}
   def run(core, name, arguments \\ []) do
@@ -25,6 +25,49 @@ defmodule Catena.Reference.Evaluator do
 
   defp evaluate(%{tag: :integer, value: value}, _environment, _definitions), do: value
   defp evaluate(%{tag: :boolean, value: value}, _environment, _definitions), do: value
+
+  defp evaluate(%{tag: :unary, operator: :not, operand: operand}, environment, definitions),
+    do: not evaluate(operand, environment, definitions)
+
+  defp evaluate(%{tag: :unary, operator: :negate, operand: operand}, environment, definitions),
+    do: -evaluate(operand, environment, definitions)
+
+  defp evaluate(
+         %{tag: :binary, operator: :and, left: left, right: right},
+         environment,
+         definitions
+       ) do
+    evaluate(left, environment, definitions) and evaluate(right, environment, definitions)
+  end
+
+  defp evaluate(
+         %{tag: :binary, operator: :or, left: left, right: right},
+         environment,
+         definitions
+       ) do
+    evaluate(left, environment, definitions) or evaluate(right, environment, definitions)
+  end
+
+  defp evaluate(
+         %{tag: :binary, operator: operator, left: left, right: right},
+         environment,
+         definitions
+       ) do
+    left = evaluate(left, environment, definitions)
+    right = evaluate(right, environment, definitions)
+
+    case operator do
+      :equal -> left === right
+      :not_equal -> left !== right
+      :less -> left < right
+      :less_equal -> left <= right
+      :greater -> left > right
+      :greater_equal -> left >= right
+      :add -> left + right
+      :subtract -> left - right
+      :multiply -> left * right
+    end
+  end
 
   defp evaluate(%{tag: :variable, name: name}, environment, definitions) do
     case Map.fetch(environment, name) do
