@@ -2,6 +2,7 @@ defmodule Catena.CLI do
   @moduledoc "Command-line entry point for the versioned JSON AST compiler."
 
   alias Catena.{Interface, Report}
+  alias Catena.Package.Linker
 
   def main(arguments) do
     {options, positional, invalid} =
@@ -26,6 +27,7 @@ defmodule Catena.CLI do
         ["check-ir", path] -> check(path, compiler_options)
         ["elaborate-ir", path] -> check(path, compiler_options)
         ["compile-ir", path] -> compile(path, compiler_options)
+        ["compile-package-ir", path] -> compile_package(path, compiler_options)
         _ -> halt_with(usage(), 64)
       end
     else
@@ -60,6 +62,23 @@ defmodule Catena.CLI do
           layout: Atom.to_string(metadata.layout),
           condition_lowering: Atom.to_string(metadata.condition_lowering),
           warnings: inspect(metadata.warnings)
+        })
+
+      {:error, diagnostic} ->
+        diagnostic(diagnostic)
+    end
+  end
+
+  defp compile_package(path, options) do
+    case Linker.compile_manifest(path, options) do
+      {:ok, result} ->
+        print(%{
+          status: "ok",
+          module: Atom.to_string(result.module),
+          output: result.output,
+          module_outputs: result.module_outputs,
+          specialization_keys: result.specialization_keys,
+          evidence_erased: result.evidence_erased
         })
 
       {:error, diagnostic} ->
@@ -108,6 +127,6 @@ defmodule Catena.CLI do
   defp usage do
     "usage: catena [--interface FILE.cati.json] [--layout compact|uniform] " <>
       "[--condition-lowering auto|native|ordinary] " <>
-      "{check-ir|elaborate-ir|compile-ir} FILE.json"
+      "{check-ir|elaborate-ir|compile-ir|compile-package-ir} FILE.json"
   end
 end

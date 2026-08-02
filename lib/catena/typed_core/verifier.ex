@@ -1,5 +1,5 @@
 defmodule Catena.TypedCore.Verifier do
-  @moduledoc "An inference-independent structural verifier for C001-C003 typed core."
+  @moduledoc "An inference-independent structural verifier for C001-C004 typed core."
 
   alias Catena.Condition
   alias Catena.Pattern.Coverage
@@ -57,6 +57,87 @@ defmodule Catena.TypedCore.Verifier do
     end
   end
 
+  defp verify_definition(
+         %{expression: %{tag: :derived_capability} = expression, scheme: scheme},
+         _globals,
+         _data
+       ) do
+    requested =
+      Enum.any?(expression.datatype.derivations, fn
+        %{"capability" => capability, "targets" => targets} ->
+          capability == expression.capability and
+            Enum.map(targets, fn target ->
+              Enum.find_index(expression.datatype.parameters, &(&1.name == target))
+            end) == expression.target_indexes
+
+        _other ->
+          false
+      end)
+
+    cond do
+      expression.provenance != :compiler_derived ->
+        {:error, "generated capability lacks compiler provenance"}
+
+      expression.capability not in ~w(Equatable Orderable Mapper TwoSlotMapper Reducible CollectingMapper) ->
+        {:error, "unsupported generated capability"}
+
+      not requested ->
+        {:error, "generated capability was not explicitly requested"}
+
+      scheme.type != expression.type ->
+        {:error, "generated capability scheme is inconsistent"}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp verify_definition(
+         %{expression: %{tag: :derived_eliminator} = expression, scheme: scheme},
+         _globals,
+         _data
+       ) do
+    cond do
+      expression.provenance != :compiler_derived ->
+        {:error, "generated eliminator lacks compiler provenance"}
+
+      not requested_capability?(expression.datatype, "CollectingMapper") ->
+        {:error, "generated eliminator was not explicitly requested"}
+
+      scheme.type != expression.type ->
+        {:error, "generated eliminator scheme is inconsistent"}
+
+      length(expression.handler_names) != length(expression.datatype.constructors) ->
+        {:error, "generated eliminator handler count is inconsistent"}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp verify_definition(
+         %{expression: %{tag: :derived_constructor} = expression, scheme: scheme},
+         _globals,
+         _data
+       ) do
+    cond do
+      expression.provenance != :compiler_derived ->
+        {:error, "generated constructor helper lacks compiler provenance"}
+
+      not requested_capability?(expression.datatype, "CollectingMapper") ->
+        {:error, "generated constructor helper was not explicitly requested"}
+
+      expression.constructor not in expression.datatype.constructors ->
+        {:error, "generated constructor helper is not constructor complete"}
+
+      scheme.type != expression.type ->
+        {:error, "generated constructor helper scheme is inconsistent"}
+
+      true ->
+        :ok
+    end
+  end
+
   defp verify_definition(definition, globals, data) do
     with :ok <- verify_condition_definition(definition),
          result <- verify_expression(definition.expression, globals, data) do
@@ -70,6 +151,13 @@ defmodule Catena.TypedCore.Verifier do
           error
       end
     end
+  end
+
+  defp requested_capability?(datatype, capability) do
+    Enum.any?(datatype.derivations, fn
+      %{"capability" => ^capability} -> true
+      _other -> false
+    end)
   end
 
   defp verify_condition_definition(%{kind: :condition, condition: evidence}) do

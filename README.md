@@ -31,8 +31,8 @@ git switch rewrite
 
 ## Current status
 
-The clean rewrite now contains executable type-system, data-and-pattern, and
-clause-condition slices. The bootstrap toolchain is written in Elixir 1.20.2
+The clean rewrite now contains executable type-system, data-and-pattern,
+clause-condition, and trait/categorical-operation slices. The bootstrap toolchain is written in Elixir 1.20.2
 on Erlang/OTP 29.0.4 and targets only the BEAM VM. It does not reuse the
 historical proof-of-concept's compiler or language design.
 
@@ -45,15 +45,19 @@ that specification.
 
 ```mermaid
 flowchart LR
-    JSON[Versioned JSON AST 0.1, 0.2, or 0.3] --> D[Nominal data elaboration]
+    JSON[Versioned JSON AST 0.1 through 0.4] --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
-    C --> G[Pattern coverage and ordered guard tree]
+    C --> T[Kinded traits and coherent evidence]
+    T --> G[Pattern coverage and ordered guard tree]
     G --> TC[Typed core]
     TC --> V[Independent core verifier]
     V --> EAF[Erlang Abstract Format]
     EAF --> OTP[OTP 29 compile:noenv_forms/2]
-    OTP --> BEAM[.beam]
+    OTP --> BEAM[Module .beam]
+    I[Digest-bound 0.4 interfaces] --> L[Manifest-directed specialization]
+    L --> OTP
+    OTP --> CB[Companion .beam with direct calls]
 ```
 
 The JSON AST is a temporary versioned toolchain input, not a proposed Catena
@@ -61,8 +65,8 @@ surface syntax. A later parser will feed the same typed pipeline. The backend
 does not emit Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
 
-The implementation preserves the C001 and C002 evidence and adds the C003
-clause-condition slice. Together they include:
+The implementation preserves the C001 through C003 evidence and adds the
+candidate C004 trait slice. Together they include:
 
 - Algorithm W for literals, variables, lambdas, application, polymorphic
   `let`, tuples, and signatures;
@@ -104,11 +108,30 @@ clause-condition slice. Together they include:
 - selectable `auto`, `native`, and `ordinary` lowering for differential tests,
   with native conditions emitted as Erlang guards; and
 - a typed selective-receive lowering harness that requires one closed message
-  type and portable native conditions.
+  type and portable native conditions;
+- rigid `Type`, `Type -> Type`, and `Type -> Type -> Type` kinds plus a
+  terminating, parent-aware trait solver;
+- all seventeen behavior-first standard capabilities in a compiled canonical
+  SHA-256-bound ordinary-library interface;
+- trait-or-type ownership, global non-overlap, decreasing contexts, functional
+  dependencies, associated types, and coherent parent evidence;
+- exact minimal method ABI with promised, tested, and compiler-derived law
+  evidence and no law-directed rewrites;
+- explicit-target structural derivation for `Equatable`, `Orderable`,
+  `Mapper`, `TwoSlotMapper`, `Reducible`, and `CollectingMapper`, including
+  type-qualified operations and independent verifier checks;
+- version 0.4 module interfaces carrying traits, instances, derivation
+  provenance, verified templates, helper closure, and the standard digest
+  while retaining 0.2 and 0.3 decoding;
+- an explicit package build manifest and deterministic 20,000-step
+  specialization boundary that emits one companion BEAM containing direct
+  calls and no runtime dictionaries; and
+- tested standard `List` mapping and reduction whose ordinary-library
+  implementations remain stack safe on inputs of at least 250,000 elements.
 
-This is not yet a Catena source parser or a complete implementation of traits,
-effects, handlers, structural variants, programmable patterns, or foreign-term
-validation. The JSON AST remains the bootstrap boundary.
+This is not yet a Catena source parser or a complete implementation of effects,
+handlers, structural variants, programmable patterns, package distribution,
+or foreign-term validation. The JSON AST remains the bootstrap boundary.
 
 ## Build and test
 
@@ -120,7 +143,7 @@ asdf exec mix test
 asdf exec mix escript.build
 ```
 
-The CLI accepts three commands:
+The CLI accepts four commands:
 
 ```bash
 ./catena check-ir program.json
@@ -129,6 +152,7 @@ The CLI accepts three commands:
 ./catena compile-ir --layout uniform program.json
 ./catena compile-ir --condition-lowering native program.json
 ./catena compile-ir --condition-lowering ordinary program.json
+./catena compile-package-ir package.catena-package.json
 ```
 
 `compile-ir` writes an OTP-generated `.beam` and a deterministic `.cati.json`
@@ -137,7 +161,11 @@ normalized into the AST 0.2 compiler representation; new datatype programs
 use AST 0.2 and supply a canonical package/build origin. AST 0.3 adds clause
 conditions, explicit condition imports, and multi-clause definitions. Every
 exported value still requires a signature, and every condition declaration
-requires a monomorphic first-order signature ending in `Bool`.
+requires a monomorphic first-order signature ending in `Bool`. AST 0.4 adds
+kinded traits, coherent instances, law status, explicit structural derivation,
+and verified specialization templates. `compile-package-ir` consumes only the
+modules, interfaces, roots, and outputs explicitly named by its toolchain
+manifest; it is not a package manager.
 
 ## Intended evolution
 

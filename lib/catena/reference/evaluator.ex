@@ -1,5 +1,5 @@
 defmodule Catena.Reference.Evaluator do
-  @moduledoc "Pure reference evaluator for the executable C001-C003 core."
+  @moduledoc "Pure reference evaluator for the executable C001-C004 core."
 
   @spec run(map(), String.t(), [term()]) :: {:ok, term()} | {:error, term()}
   def run(core, name, arguments \\ []) do
@@ -18,6 +18,13 @@ defmodule Catena.Reference.Evaluator do
   defp evaluate_definition(%{expression: %{tag: :derived_fold} = fold}, definitions) do
     arity = length(fold.handler_names) + 1
     curry(arity, fn arguments -> evaluate_fold(fold, arguments, definitions) end)
+  end
+
+  defp evaluate_definition(
+         %{expression: %{tag: :derived_capability} = derived} = definition,
+         _definitions
+       ) do
+    curry(length(definition.parameters), &evaluate_capability(derived, &1))
   end
 
   defp evaluate_definition(definition, definitions),
@@ -193,6 +200,56 @@ defmodule Catena.Reference.Evaluator do
     handler = Enum.at(handlers, constructor.index)
     Enum.reduce(payload, handler, &apply_value(&2, &1))
   end
+
+  defp evaluate_capability(%{capability: "Equatable"}, [left, right]), do: left === right
+
+  defp evaluate_capability(%{capability: "Orderable"}, [left, right]) do
+    cond do
+      left < right -> -1
+      left === right -> 0
+      true -> 1
+    end
+  end
+
+  defp evaluate_capability(
+         %{capability: capability, datatype: datatype, target_indexes: targets},
+         arguments
+       )
+       when capability in ~w(Mapper TwoSlotMapper CollectingMapper) do
+    {callbacks, [subject]} = Enum.split(arguments, length(arguments) - 1)
+    {:catena_value, constructor_id, payload} = subject
+    constructor = Enum.find(datatype.constructors, &(&1.id == constructor_id))
+
+    mapped =
+      Enum.zip(constructor.fields, payload)
+      |> Enum.map(fn {field, value} ->
+        case Enum.find_index(targets, &(&1 == direct_variable(field.type))) do
+          nil -> value
+          target -> apply_value(Enum.at(callbacks, target), value)
+        end
+      end)
+
+    {:catena_value, constructor_id, mapped}
+  end
+
+  defp evaluate_capability(
+         %{capability: "Reducible", datatype: datatype, target_indexes: targets},
+         [callback, initial, {:catena_value, constructor_id, payload}]
+       ) do
+    constructor = Enum.find(datatype.constructors, &(&1.id == constructor_id))
+
+    Enum.zip(constructor.fields, payload)
+    |> Enum.reduce(initial, fn {field, value}, accumulator ->
+      if direct_variable(field.type) in targets do
+        callback |> apply_value(accumulator) |> apply_value(value)
+      else
+        accumulator
+      end
+    end)
+  end
+
+  defp direct_variable({:var, index}), do: index
+  defp direct_variable(_type), do: nil
 
   defp curry(0, function), do: function.([])
   defp curry(arity, function), do: curry(arity, function, [])

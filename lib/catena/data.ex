@@ -265,7 +265,7 @@ defmodule Catena.Data do
   end
 
   defp validate_derivations!(derivations, constructors, path) do
-    unknown = derivations -- ["fold"]
+    unknown = Enum.filter(derivations, &(is_binary(&1) and &1 != "fold"))
 
     if unknown != [],
       do: fail("A001", "unsupported derivations: #{Enum.join(unknown, ", ")}", path)

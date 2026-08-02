@@ -17,7 +17,7 @@ defmodule Catena.Backend.ErlangAbstract do
 
     exports =
       core.definitions
-      |> Enum.filter(&(&1.name in core.exports))
+      |> Enum.filter(&(&1.name in core.exports or Map.get(&1, :linker_only?, false)))
       |> Enum.map(fn definition ->
         {safe_atom(definition.name), length(definition.parameters)}
       end)
@@ -91,11 +91,12 @@ defmodule Catena.Backend.ErlangAbstract do
   end
 
   defp lower_definition(
-         %{expression: %{tag: :derived_fold} = fold} = definition,
+         %{expression: %{tag: tag} = fold} = definition,
          _globals,
          annotation,
          layout
-       ) do
+       )
+       when tag in [:derived_fold, :derived_eliminator] do
     arguments = Enum.map(definition.parameters, &{:var, annotation, variable_atom(&1)})
     value = {:var, annotation, variable_atom(fold.value_name)}
 
@@ -121,6 +122,30 @@ defmodule Catena.Backend.ErlangAbstract do
     {:function, annotation, safe_atom(definition.name), length(arguments), [clause]}
   end
 
+  defp lower_definition(
+         %{expression: %{tag: :derived_constructor, constructor: constructor}} = definition,
+         _globals,
+         annotation,
+         layout
+       ) do
+    arguments = Enum.map(definition.parameters, &{:var, annotation, variable_atom(&1)})
+    body = constructor_value(constructor, arguments, annotation, layout)
+    clause = {:clause, annotation, arguments, [], [body]}
+    {:function, annotation, safe_atom(definition.name), length(arguments), [clause]}
+  end
+
+  defp lower_definition(
+         %{expression: %{tag: :derived_capability} = derived} = definition,
+         _globals,
+         annotation,
+         layout
+       ) do
+    arguments = Enum.map(definition.parameters, &{:var, annotation, variable_atom(&1)})
+    body = lower_derived_capability(derived, definition.parameters, annotation, layout)
+    clause = {:clause, annotation, arguments, [], [body]}
+    {:function, annotation, safe_atom(definition.name), length(arguments), [clause]}
+  end
+
   defp lower_definition(definition, globals, annotation, layout) do
     {parameters, body} = unwrap_parameters(definition.expression, definition.parameters, [])
     environment = Map.new(parameters, fn name -> {name, variable_atom(name)} end)
@@ -128,6 +153,95 @@ defmodule Catena.Backend.ErlangAbstract do
     expression = lower_expression(body, environment, globals, annotation, layout)
     clause = {:clause, annotation, arguments, [], [expression]}
     {:function, annotation, safe_atom(definition.name), length(parameters), [clause]}
+  end
+
+  defp lower_derived_capability(%{capability: "Equatable"}, [left, right], annotation, _layout) do
+    {:op, annotation, :"=:=", {:var, annotation, variable_atom(left)},
+     {:var, annotation, variable_atom(right)}}
+  end
+
+  defp lower_derived_capability(%{capability: "Orderable"}, [left, right], annotation, _layout) do
+    left = {:var, annotation, variable_atom(left)}
+    right = {:var, annotation, variable_atom(right)}
+
+    {:if, annotation,
+     [
+       {:clause, annotation, [], [[{:op, annotation, :<, left, right}]],
+        [{:integer, annotation, -1}]},
+       {:clause, annotation, [], [[{:op, annotation, :"=:=", left, right}]],
+        [{:integer, annotation, 0}]},
+       {:clause, annotation, [], [[{:atom, annotation, true}]], [{:integer, annotation, 1}]}
+     ]}
+  end
+
+  defp lower_derived_capability(
+         %{capability: capability, datatype: datatype, target_indexes: targets},
+         parameters,
+         annotation,
+         layout
+       )
+       when capability in ~w(Mapper TwoSlotMapper CollectingMapper) do
+    subject = parameters |> List.last() |> variable_atom() |> then(&{:var, annotation, &1})
+    callbacks = parameters |> Enum.drop(-1) |> Enum.map(&{:var, annotation, variable_atom(&1)})
+
+    clauses =
+      Enum.map(datatype.constructors, fn constructor ->
+        fields =
+          Enum.map(constructor.fields, &{:var, annotation, field_variable(constructor, &1.index)})
+
+        values =
+          Enum.zip(constructor.fields, fields)
+          |> Enum.map(fn {field, value} ->
+            case field_target(field.type, targets) do
+              nil -> value
+              target -> apply_curried(Enum.at(callbacks, target), [value], annotation)
+            end
+          end)
+
+        {:clause, annotation, [constructor_pattern(constructor, fields, annotation, layout)], [],
+         [constructor_value(constructor, values, annotation, layout)]}
+      end)
+
+    {:case, annotation, subject, clauses}
+  end
+
+  defp lower_derived_capability(
+         %{capability: "Reducible", datatype: datatype, target_indexes: targets},
+         [callback_name, initial_name, subject_name],
+         annotation,
+         layout
+       ) do
+    callback = {:var, annotation, variable_atom(callback_name)}
+    initial = {:var, annotation, variable_atom(initial_name)}
+    subject = {:var, annotation, variable_atom(subject_name)}
+
+    clauses =
+      Enum.map(datatype.constructors, fn constructor ->
+        fields =
+          Enum.map(constructor.fields, &{:var, annotation, field_variable(constructor, &1.index)})
+
+        result =
+          Enum.zip(constructor.fields, fields)
+          |> Enum.reduce(initial, fn {field, value}, accumulator ->
+            if is_nil(field_target(field.type, targets)),
+              do: accumulator,
+              else: apply_curried(callback, [accumulator, value], annotation)
+          end)
+
+        {:clause, annotation, [constructor_pattern(constructor, fields, annotation, layout)], [],
+         [result]}
+      end)
+
+    {:case, annotation, subject, clauses}
+  end
+
+  defp field_target({:var, index}, targets), do: Enum.find_index(targets, &(&1 == index))
+  defp field_target(_type, _targets), do: nil
+
+  defp apply_curried(function, arguments, annotation) do
+    Enum.reduce(arguments, function, fn argument, current ->
+      {:call, annotation, current, [argument]}
+    end)
   end
 
   defp unwrap_parameters(expression, [], parameters), do: {Enum.reverse(parameters), expression}
