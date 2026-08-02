@@ -1,0 +1,5 @@
+/_build/
+/deps/
+/catena
+*.beam
+.elixir_ls/
