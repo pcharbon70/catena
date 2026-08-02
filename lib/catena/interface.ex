@@ -1,10 +1,11 @@
 defmodule Catena.Interface do
-  @moduledoc "Deterministic, layout-free C002/C003 module interfaces."
+  @moduledoc "Deterministic, layout-free C002-C004 module interfaces."
 
-  alias Catena.{CanonicalJSON, Condition, Diagnostic}
+  alias Catena.Categorical.TypeTerm
+  alias Catena.{CanonicalJSON, Condition, Diagnostic, Kind}
   alias Catena.Type.Scheme
 
-  @versions ~w(0.2 0.3)
+  @versions ~w(0.2 0.3 0.4)
 
   @spec build(map()) :: map()
   def build(core) do
@@ -27,14 +28,16 @@ defmodule Catena.Interface do
       |> Enum.map(&encode_datatype/1)
       |> Enum.sort_by(& &1["id"])
 
-    payload = %{
-      "format" => "catena-interface",
-      "version" => if(core.frontend_version == "0.3", do: "0.3", else: "0.2"),
-      "origin" => core.origin,
-      "module" => core.module,
-      "types" => types,
-      "values" => values
-    }
+    payload =
+      %{
+        "format" => "catena-interface",
+        "version" => if(core.frontend_version == "0.1", do: "0.2", else: core.frontend_version),
+        "origin" => core.origin,
+        "module" => core.module,
+        "types" => types,
+        "values" => values
+      }
+      |> categorical_payload(core)
 
     Map.put(payload, "digest", digest(payload))
   end
@@ -52,16 +55,20 @@ defmodule Catena.Interface do
          payload = Map.delete(value, "digest"),
          true <- secure_equal?(digest, digest(payload)),
          {:ok, types} <- decode_types(Map.get(value, "types"), value),
-         {:ok, values} <- decode_values(Map.get(value, "values"), types) do
+         {:ok, values} <- decode_values(Map.get(value, "values"), types),
+         {:ok, categorical} <- decode_categorical(value, version) do
       {:ok,
-       %{
-         version: version,
-         origin: Map.fetch!(value, "origin"),
-         module: Map.fetch!(value, "module"),
-         digest: digest,
-         types: types,
-         values: values
-       }}
+       Map.merge(
+         %{
+           version: version,
+           origin: Map.fetch!(value, "origin"),
+           module: Map.fetch!(value, "module"),
+           digest: digest,
+           types: types,
+           values: values
+         },
+         categorical
+       )}
     else
       false -> error("interface digest does not match its contents")
       {:error, %Diagnostic{} = diagnostic} -> {:error, diagnostic}
@@ -92,6 +99,64 @@ defmodule Catena.Interface do
       base
     end
   end
+
+  defp categorical_payload(payload, %{frontend_version: "0.4", categorical: categorical}) do
+    Map.merge(payload, %{
+      "standard_digest" => categorical.standard_digest,
+      "traits" => Enum.map(categorical.traits, &encode_trait/1),
+      "instances" => Enum.map(categorical.instances, &encode_instance/1),
+      "templates" => categorical.templates
+    })
+  end
+
+  defp categorical_payload(payload, _core), do: payload
+
+  defp encode_trait(trait) do
+    %{
+      "id" => trait.id,
+      "name" => trait.name,
+      "formal_name" => trait.formal_name,
+      "parameters" =>
+        Enum.map(trait.parameters, &%{"name" => &1.name, "kind" => Kind.encode(&1.kind)}),
+      "parents" =>
+        Enum.map(trait.parents, fn parent ->
+          %{
+            "trait" => parent.trait,
+            "arguments" => Enum.map(parent.arguments, &TypeTerm.encode/1)
+          }
+        end),
+      "methods" => Enum.map(trait.methods, &stringify_record/1),
+      "laws" => Enum.map(trait.laws, &stringify_record/1),
+      "fundeps" =>
+        Enum.map(trait.fundeps, fn {inputs, outputs} ->
+          %{"inputs" => inputs, "outputs" => outputs}
+        end)
+    }
+  end
+
+  defp encode_instance(instance) do
+    %{
+      "id" => instance.id,
+      "trait" => instance.trait,
+      "arguments" => Enum.map(instance.arguments, &TypeTerm.encode/1),
+      "owner" => instance.owner,
+      "context" =>
+        Enum.map(instance.context, fn predicate ->
+          %{
+            "trait" => predicate.trait,
+            "arguments" => Enum.map(predicate.arguments, &TypeTerm.encode/1)
+          }
+        end),
+      "methods" => instance.methods,
+      "associated_types" =>
+        Map.new(instance.associated_types, fn {name, type} -> {name, TypeTerm.encode(type)} end),
+      "law_status" => Atom.to_string(instance.law_status),
+      "derivation" => instance.derivation
+    }
+  end
+
+  defp stringify_record(record),
+    do: Map.new(record, fn {key, value} -> {Atom.to_string(key), value} end)
 
   defp encode_constructor(constructor) do
     %{
@@ -229,6 +294,56 @@ defmodule Catena.Interface do
   end
 
   defp decode_values(_, _types), do: error("interface values must be a list")
+
+  defp decode_categorical(_value, version) when version in ~w(0.2 0.3),
+    do: {:ok, %{traits: [], instances: [], templates: [], standard_digest: nil}}
+
+  defp decode_categorical(value, "0.4") do
+    traits = Map.get(value, "traits")
+    instances = Map.get(value, "instances")
+    templates = Map.get(value, "templates")
+    standard_digest = Map.get(value, "standard_digest")
+
+    cond do
+      not (is_list(traits) and Enum.all?(traits, &is_map/1)) ->
+        error("interface traits must be a list of objects")
+
+      not (is_list(instances) and Enum.all?(instances, &is_map/1)) ->
+        error("interface instances must be a list of objects")
+
+      not valid_templates?(templates) ->
+        error("interface templates must contain a verified helper closure")
+
+      not is_binary(standard_digest) ->
+        error("interface requires a standard hierarchy digest")
+
+      true ->
+        {:ok,
+         %{
+           traits: traits,
+           instances: instances,
+           templates: templates,
+           standard_digest: standard_digest
+         }}
+    end
+  end
+
+  defp valid_templates?(templates) when is_list(templates) do
+    if Enum.all?(templates, fn template ->
+         is_map(template) and is_binary(Map.get(template, "id")) and
+           is_list(Map.get(template, "parameters")) and is_list(Map.get(template, "helpers")) and
+           Map.has_key?(template, "body")
+       end) do
+      ids = MapSet.new(templates, & &1["id"])
+
+      MapSet.size(ids) == length(templates) and
+        Enum.all?(templates, &MapSet.subset?(MapSet.new(&1["helpers"]), ids))
+    else
+      false
+    end
+  end
+
+  defp valid_templates?(_templates), do: false
 
   defp decode_scheme(%{"variables" => variables, "type" => type}),
     do: %Scheme{variables: variables, type: decode_type(type)}

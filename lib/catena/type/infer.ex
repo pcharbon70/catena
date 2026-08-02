@@ -1,7 +1,7 @@
 defmodule Catena.Type.Infer do
   @moduledoc "Algorithm W plus the annotation-directed C002 datatype boundary."
 
-  alias Catena.{Condition, Data, Derive, Diagnostic, Type}
+  alias Catena.{Categorical, Condition, Data, Derive, Diagnostic, Type}
   alias Catena.Pattern.Coverage
   alias Catena.Type.{Advanced, Parser, Scheme, Unify}
 
@@ -18,7 +18,8 @@ defmodule Catena.Type.Infer do
 
     data = Data.elaborate(ast, Keyword.get(options, :interfaces, []))
     conditions = Condition.prepare!(ast, data, options)
-    derived = Derive.folds(data)
+    categorical = Categorical.prepare!(ast, data, Keyword.get(options, :interfaces, []))
+    derived = Derive.folds(data) ++ Derive.capabilities(data, categorical.derivations)
 
     initial_environment =
       derived
@@ -48,7 +49,7 @@ defmodule Catena.Type.Infer do
           |> Keyword.take([:coverage_budget, :fact_budget])
           |> Keyword.put(
             :conditions,
-            if(ast.frontend_version == "0.3", do: conditions, else: nil)
+            if(ast.frontend_version in ~w(0.3 0.4), do: conditions, else: nil)
           )
 
         {typed, scheme, state} =
@@ -75,7 +76,9 @@ defmodule Catena.Type.Infer do
 
     definitions = Enum.reverse(definitions) ++ derived
     environment = Enum.reduce(derived, environment, &Map.put(&2, &1.name, &1.scheme))
-    derived_exports = Enum.map(derived, & &1.name)
+
+    derived_exports =
+      derived |> Enum.reject(&Map.get(&1, :linker_only?, false)) |> Enum.map(& &1.name)
 
     %{
       version: ast.version,
@@ -88,6 +91,7 @@ defmodule Catena.Type.Infer do
       environment: environment,
       data: data,
       conditions: conditions,
+      categorical: categorical,
       profile:
         if(
           Enum.any?(

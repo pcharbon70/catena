@@ -1,5 +1,5 @@
 defmodule Catena.Compiler do
-  @moduledoc "The C001-C003 compiler pipeline and its typed-core verification gate."
+  @moduledoc "The C001-C004 compiler pipeline and its typed-core verification gate."
 
   alias Catena.{Backend.ErlangAbstract, Diagnostic, Interface, Type.Infer}
   alias Catena.OTP.Compiler, as: OTPCompiler
