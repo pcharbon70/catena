@@ -1,11 +1,12 @@
 defmodule Catena.Interface do
-  @moduledoc "Deterministic, layout-free C002-C004 module interfaces."
+  @moduledoc "Deterministic, layout-free C002-C005 module interfaces."
 
   alias Catena.Categorical.TypeTerm
+  alias Catena.Effect.Row
   alias Catena.{CanonicalJSON, Condition, Diagnostic, Kind}
   alias Catena.Type.Scheme
 
-  @versions ~w(0.2 0.3 0.4)
+  @versions ~w(0.2 0.3 0.4 0.5)
 
   @spec build(map()) :: map()
   def build(core) do
@@ -14,6 +15,12 @@ defmodule Catena.Interface do
       |> Enum.filter(&(&1.name in core.exports))
       |> Enum.map(fn definition ->
         value = %{"name" => definition.name, "scheme" => encode_scheme(definition.scheme)}
+
+        value =
+          case get_in(definition, [:uses, :row]) do
+            %Row{} = row -> Map.put(value, "uses", encode_effect_row(row))
+            _ -> value
+          end
 
         case Map.get(definition, :condition) do
           nil -> value
@@ -38,6 +45,7 @@ defmodule Catena.Interface do
         "values" => values
       }
       |> categorical_payload(core)
+      |> effect_payload(core)
 
     Map.put(payload, "digest", digest(payload))
   end
@@ -56,7 +64,8 @@ defmodule Catena.Interface do
          true <- secure_equal?(digest, digest(payload)),
          {:ok, types} <- decode_types(Map.get(value, "types"), value),
          {:ok, values} <- decode_values(Map.get(value, "values"), types),
-         {:ok, categorical} <- decode_categorical(value, version) do
+         {:ok, categorical} <- decode_categorical(value, version),
+         {:ok, effects} <- decode_effects(value, version) do
       {:ok,
        Map.merge(
          %{
@@ -67,7 +76,7 @@ defmodule Catena.Interface do
            types: types,
            values: values
          },
-         categorical
+         Map.merge(categorical, effects)
        )}
     else
       false -> error("interface digest does not match its contents")
@@ -100,7 +109,8 @@ defmodule Catena.Interface do
     end
   end
 
-  defp categorical_payload(payload, %{frontend_version: "0.4", categorical: categorical}) do
+  defp categorical_payload(payload, %{frontend_version: version, categorical: categorical})
+       when version in ~w(0.4 0.5) do
     Map.merge(payload, %{
       "standard_digest" => categorical.standard_digest,
       "traits" => Enum.map(categorical.traits, &encode_trait/1),
@@ -110,6 +120,80 @@ defmodule Catena.Interface do
   end
 
   defp categorical_payload(payload, _core), do: payload
+
+  defp effect_payload(payload, %{frontend_version: "0.5", effects: effects}) do
+    Map.merge(payload, %{
+      "effects" =>
+        effects.exported_families
+        |> Enum.map(&encode_effect_family/1)
+        |> Enum.sort_by(& &1["id"]),
+      "handlers" =>
+        effects.exported_handlers
+        |> Enum.map(&encode_handler/1)
+        |> Enum.sort_by(& &1["id"])
+    })
+  end
+
+  defp effect_payload(payload, _core), do: payload
+
+  defp encode_effect_family(family) do
+    %{
+      "id" => family.id,
+      "origin" => family.origin,
+      "module" => family.module,
+      "name" => family.name,
+      "parameters" => family.parameters,
+      "operations" =>
+        family.operations
+        |> Map.values()
+        |> Enum.sort_by(& &1.name)
+        |> Enum.map(fn operation ->
+          %{
+            "name" => operation.name,
+            "parameters" => Enum.map(operation.parameters, &encode_type/1),
+            "parameter_names" => operation.parameter_names,
+            "result" => encode_type(operation.result)
+          }
+        end)
+    }
+  end
+
+  defp encode_handler(handler) do
+    %{
+      "id" => handler.id,
+      "origin" => handler.origin,
+      "module" => handler.module,
+      "name" => handler.name,
+      "family" => handler.family,
+      "family_name" => handler.family_name,
+      "arguments" => Enum.map(handler.arguments, &encode_type/1),
+      "variables" => handler.variables,
+      "input" => encode_type(handler.input),
+      "output" => encode_type(handler.output),
+      "parameters" =>
+        Enum.map(handler.parameters, fn parameter ->
+          %{"name" => parameter.name, "type" => encode_type(parameter.parsed_type)}
+        end),
+      "uses" => encode_effect_row(Map.get(handler, :uses_row, Row.empty()))
+    }
+  end
+
+  defp encode_effect_row(%Row{} = row) do
+    %{
+      "entries" =>
+        Enum.map(row.entries, fn entry ->
+          %{
+            "family" => entry.family,
+            "family_name" => entry.family_name,
+            "arguments" => Enum.map(entry.arguments, &encode_type/1),
+            "capability" => entry.capability,
+            "name" => Map.get(entry, :name),
+            "abstract" => Map.get(entry, :abstract?, false)
+          }
+        end),
+      "tail" => row.tail
+    }
+  end
 
   defp encode_trait(trait) do
     %{
@@ -260,7 +344,8 @@ defmodule Catena.Interface do
     |> Enum.reduce_while({:ok, []}, fn {value, index}, {:ok, decoded} ->
       base = %{
         name: Map.fetch!(value, "name"),
-        scheme: decode_scheme(Map.fetch!(value, "scheme"))
+        scheme: decode_scheme(Map.fetch!(value, "scheme")),
+        uses: decode_effect_row(Map.get(value, "uses", %{"entries" => [], "tail" => nil}))
       }
 
       case Map.get(value, "condition") do
@@ -298,7 +383,7 @@ defmodule Catena.Interface do
   defp decode_categorical(_value, version) when version in ~w(0.2 0.3),
     do: {:ok, %{traits: [], instances: [], templates: [], standard_digest: nil}}
 
-  defp decode_categorical(value, "0.4") do
+  defp decode_categorical(value, version) when version in ~w(0.4 0.5) do
     traits = Map.get(value, "traits")
     instances = Map.get(value, "instances")
     templates = Map.get(value, "templates")
@@ -326,6 +411,110 @@ defmodule Catena.Interface do
            standard_digest: standard_digest
          }}
     end
+  end
+
+  defp decode_effects(_value, version) when version in ~w(0.2 0.3 0.4),
+    do: {:ok, %{effects: [], handlers: []}}
+
+  defp decode_effects(value, "0.5") do
+    effects = Map.get(value, "effects")
+    handlers = Map.get(value, "handlers")
+
+    if is_list(effects) and Enum.all?(effects, &is_map/1) and is_list(handlers) and
+         Enum.all?(handlers, &is_map/1) do
+      decoded_effects = Enum.map(effects, &decode_effect_family/1)
+      decoded_handlers = Enum.map(handlers, &decode_handler/1)
+
+      if unique_identity_records?(decoded_effects) and unique_identity_records?(decoded_handlers) do
+        {:ok, %{effects: decoded_effects, handlers: decoded_handlers}}
+      else
+        error("interface effect and handler identities must be unique")
+      end
+    else
+      error("interface effects and handlers must be lists of objects")
+    end
+  end
+
+  defp decode_effect_family(family) do
+    parameters = Map.fetch!(family, "parameters")
+
+    operations =
+      family
+      |> Map.fetch!("operations")
+      |> Enum.map(fn operation ->
+        decoded = %{
+          name: Map.fetch!(operation, "name"),
+          parameters: Enum.map(Map.fetch!(operation, "parameters"), &decode_type/1),
+          parameter_names: Map.fetch!(operation, "parameter_names"),
+          result: decode_type(Map.fetch!(operation, "result")),
+          path: "interface://#{family["module"]}/#{operation["name"]}"
+        }
+
+        {decoded.name, decoded}
+      end)
+      |> Map.new()
+
+    %{
+      id: Map.fetch!(family, "id"),
+      origin: Map.fetch!(family, "origin"),
+      module: Map.fetch!(family, "module"),
+      name: Map.fetch!(family, "name"),
+      parameters: parameters,
+      parameter_ids: Enum.to_list(0..length(parameters)//1) |> Enum.take(length(parameters)),
+      arity: length(parameters),
+      operations: operations,
+      visibility: :public,
+      imported?: true,
+      path: "interface://#{family["module"]}/#{family["name"]}"
+    }
+  end
+
+  defp decode_handler(handler) do
+    %{
+      id: Map.fetch!(handler, "id"),
+      origin: Map.fetch!(handler, "origin"),
+      module: Map.fetch!(handler, "module"),
+      name: Map.fetch!(handler, "name"),
+      family: Map.fetch!(handler, "family"),
+      family_name: Map.fetch!(handler, "family_name"),
+      arguments: Enum.map(Map.fetch!(handler, "arguments"), &decode_type/1),
+      variables: Map.fetch!(handler, "variables"),
+      input: decode_type(Map.fetch!(handler, "input")),
+      output: decode_type(Map.fetch!(handler, "output")),
+      parameters:
+        Enum.map(Map.fetch!(handler, "parameters"), fn parameter ->
+          %{
+            name: Map.fetch!(parameter, "name"),
+            parsed_type: decode_type(Map.fetch!(parameter, "type"))
+          }
+        end),
+      uses_row: decode_effect_row(Map.fetch!(handler, "uses")),
+      visibility: :public,
+      imported?: true,
+      path: "interface://#{handler["module"]}/#{handler["name"]}"
+    }
+  end
+
+  defp decode_effect_row(%{"entries" => entries, "tail" => tail}) do
+    Row.new(
+      Enum.map(entries, fn entry ->
+        %{
+          family: Map.fetch!(entry, "family"),
+          family_name: Map.fetch!(entry, "family_name"),
+          arguments: Enum.map(Map.fetch!(entry, "arguments"), &decode_type/1),
+          capability: Map.fetch!(entry, "capability"),
+          name: Map.get(entry, "name"),
+          abstract?: Map.get(entry, "abstract", false)
+        }
+      end),
+      tail
+    )
+  end
+
+  defp unique_identity_records?(records) do
+    names = Enum.map(records, & &1.name)
+    ids = Enum.map(records, & &1.id)
+    names == Enum.uniq(names) and ids == Enum.uniq(ids)
   end
 
   defp valid_templates?(templates) when is_list(templates) do
