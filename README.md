@@ -31,9 +31,9 @@ git switch rewrite
 
 ## Current status
 
-The clean rewrite now contains executable type-system, data-and-pattern,
-clause-condition, trait/categorical-operation, and normative effect-handler
-slices plus the candidate 0.6 specification-and-governance spine. The
+The clean rewrite now contains executable normative type-system,
+data-and-pattern, clause-condition, trait/categorical-operation,
+effect-handler, and 0.6 specification-and-governance slices. The
 bootstrap toolchain is written in Elixir 1.20.2 on Erlang/OTP 29.0.4 and
 targets only the BEAM VM. It does not reuse the
 historical proof-of-concept's compiler or language design.
@@ -47,6 +47,11 @@ To explore the language as a programmer, begin with the
 [Catena Language Tour](LANGUAGE-TOUR.md). It introduces the language model,
 shows how to run the current JSON-AST prototype, and routes into the
 authoritative `catena-research` documents.
+
+The [Catena Guides](guides/README.md) provide a detailed source-first learning
+path, task guides for each implemented language slice, governance operations,
+and compiler developer documentation. Contributors should also read
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Compiler path
 
@@ -80,7 +85,7 @@ does not emit Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
 
 The implementation preserves the C001 through C005 evidence and adds the
-candidate 0.6 assurance slice. Together they include:
+normative C006 assurance slice. Together they include:
 
 - Algorithm W for literals, variables, lambdas, application, polymorphic
   `let`, tuples, and signatures;

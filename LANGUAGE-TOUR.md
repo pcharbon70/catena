@@ -218,7 +218,7 @@ for capability identity, effect rows, evaluation order, and CPS lowering.
 
 ## Specifications and governance
 
-Catena 0.6 explores an optional assurance layer without making organizational
+Catena 0.6 defines an optional assurance layer without making organizational
 governance a prerequisite for ordinary programs. A rule names a typed,
 effect-free verification definition and attaches it to a resolved language
 subject. Exact examples invoke that checker under a fixed deterministic
@@ -238,9 +238,9 @@ sidecar records what was checked and which exact BEAM/interface bytes were
 admitted. The compiler emits a canonical signing payload for an external
 Ed25519 signer and never reads a private key.
 
-This is a candidate semantic JSON contract, not final Catena source
+This is a normative semantic JSON contract, not final Catena source
 punctuation. Read the
-[candidate specification and governance chapters](https://github.com/pcharbon70/catena-research/tree/main/60-specification/specifications-and-governance)
+[normative specification and governance chapters](https://github.com/pcharbon70/catena-research/tree/main/60-specification/specifications-and-governance)
 for the exact formats, policy algebra, lifecycle, diagnostics, and promotion
 gate.
 
@@ -351,3 +351,6 @@ scope semantics, exception boundary, foreign-term validation, or finalized
 surface grammar. The compiler is valuable today as a deterministic executable
 model of the completed specification slices—not yet as a general-purpose
 language toolchain.
+
+Continue with the [Catena Guides](guides/README.md) for detailed user tasks,
+governance operations, BEAM boundaries, and compiler development.
