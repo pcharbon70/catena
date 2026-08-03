@@ -1,5 +1,5 @@
 defmodule Catena.Backend.ErlangAbstract do
-  @moduledoc "Lower verified Catena typed core to Erlang/OTP 29 Abstract Format."
+  @moduledoc "Lower verified Catena C001-C005 typed core to Erlang/OTP 29 Abstract Format."
 
   alias Catena.Diagnostic
 
@@ -14,6 +14,11 @@ defmodule Catena.Backend.ErlangAbstract do
       |> Map.new(&{&1.name, length(&1.parameters)})
       |> Map.merge(imported_condition_globals(core))
       |> Map.put(:condition_lowering, Keyword.get(options, :condition_lowering, :auto))
+      |> Map.put(:effect_handlers, get_in(core, [:effects, :handlers]) || %{})
+      |> Map.put(
+        :effect_definitions,
+        Map.new(core.definitions, &{&1.name, effect_definition?(&1)})
+      )
 
     exports =
       core.definitions
@@ -22,15 +27,41 @@ defmodule Catena.Backend.ErlangAbstract do
         {safe_atom(definition.name), length(definition.parameters)}
       end)
 
-    functions = Enum.map(core.definitions, &lower_definition(&1, globals, annotation, layout))
+    handler_exports =
+      core.effects.exported_handlers
+      |> Enum.flat_map(fn handler ->
+        arity = length(handler.parameters)
 
-    [
-      {:attribute, annotation, :file,
-       {String.to_charlist(Map.get(core, :source, "<catena-json>")), 1}},
-      {:attribute, annotation, :module, module},
-      {:attribute, annotation, :export, exports}
-      | functions
-    ]
+        [
+          {handler_dispatch_atom(handler.name), arity + 1},
+          {handler_return_atom(handler.name), arity + 2}
+        ]
+      end)
+
+    exports = exports ++ handler_exports
+
+    functions =
+      Enum.flat_map(core.definitions, fn definition ->
+        definition
+        |> lower_definition(globals, annotation, layout)
+        |> List.wrap()
+      end)
+
+    handler_functions =
+      Enum.flat_map(
+        core.effects.exported_handlers,
+        &lower_handler_helpers(&1, globals, annotation, layout)
+      )
+
+    attributes =
+      [
+        {:attribute, annotation, :file,
+         {String.to_charlist(Map.get(core, :source, "<catena-json>")), 1}},
+        {:attribute, annotation, :module, module},
+        {:attribute, annotation, :export, exports}
+      ] ++ unused_effect_wrapper_attribute(core, annotation)
+
+    attributes ++ functions ++ handler_functions
   end
 
   @doc "Lowers already typed clauses through the selective-receive condition harness."
@@ -146,13 +177,118 @@ defmodule Catena.Backend.ErlangAbstract do
     {:function, annotation, safe_atom(definition.name), length(arguments), [clause]}
   end
 
+  defp lower_definition(%{generated?: false} = definition, globals, annotation, layout) do
+    if effect_definition?(definition) do
+      {parameters, body} = unwrap_parameters(definition.expression, definition.parameters, [])
+      environment = Map.new(parameters, fn name -> {name, variable_atom(name)} end)
+      arguments = Enum.map(parameters, &{:var, annotation, variable_atom(&1)})
+      handlers_variable = :__Catena_Effect_Handlers
+      continuation_variable = :__Catena_Effect_Continuation
+      handlers = {:var, annotation, handlers_variable}
+      continuation = {:var, annotation, continuation_variable}
+
+      worker_expression =
+        lower_cps(body, environment, handlers, globals, annotation, layout, continuation)
+
+      worker_arguments =
+        arguments ++
+          [
+            {:var, annotation, handlers_variable},
+            {:var, annotation, continuation_variable}
+          ]
+
+      worker_clause = {:clause, annotation, worker_arguments, [], [worker_expression]}
+
+      worker =
+        {:function, annotation, cps_worker_atom(definition.name), length(worker_arguments),
+         [worker_clause]}
+
+      identity = cps_identity(annotation)
+
+      wrapper_expression =
+        {:call, annotation, {:atom, annotation, cps_worker_atom(definition.name)},
+         arguments ++ [{:map, annotation, []}, identity]}
+
+      wrapper_clause = {:clause, annotation, arguments, [], [wrapper_expression]}
+
+      wrapper =
+        {:function, annotation, safe_atom(definition.name), length(arguments), [wrapper_clause]}
+
+      [wrapper, worker]
+    else
+      lower_direct_definition(definition, globals, annotation, layout)
+    end
+  end
+
   defp lower_definition(definition, globals, annotation, layout) do
+    lower_direct_definition(definition, globals, annotation, layout)
+  end
+
+  defp lower_direct_definition(definition, globals, annotation, layout) do
     {parameters, body} = unwrap_parameters(definition.expression, definition.parameters, [])
     environment = Map.new(parameters, fn name -> {name, variable_atom(name)} end)
     arguments = Enum.map(parameters, &{:var, annotation, variable_atom(&1)})
     expression = lower_expression(body, environment, globals, annotation, layout)
     clause = {:clause, annotation, arguments, [], [expression]}
     {:function, annotation, safe_atom(definition.name), length(parameters), [clause]}
+  end
+
+  defp lower_handler_helpers(handler, globals, annotation, layout) do
+    parameter_variables =
+      handler.parameters
+      |> Enum.with_index()
+      |> Enum.map(fn {_parameter, index} ->
+        cps_variable(handler.path, "abi_parameter_#{index}")
+      end)
+
+    parameter_environment =
+      Enum.zip(handler.parameters, parameter_variables)
+      |> Enum.reduce(%{}, fn {parameter, variable}, current ->
+        Map.put(current, parameter.name, variable)
+      end)
+
+    outer_handlers_variable = cps_variable(handler.path, "abi_outer_handlers")
+    outer_handlers = {:var, annotation, outer_handlers_variable}
+
+    dispatch =
+      cps_handler_dispatch(
+        handler,
+        parameter_environment,
+        outer_handlers,
+        globals,
+        annotation,
+        layout,
+        {:exported_handler, handler.id}
+      )
+
+    dispatch_arguments =
+      Enum.map(parameter_variables, &{:var, annotation, &1}) ++ [outer_handlers]
+
+    dispatch_function =
+      {:function, annotation, handler_dispatch_atom(handler.name), length(dispatch_arguments),
+       [{:clause, annotation, dispatch_arguments, [], [dispatch]}]}
+
+    return_variable = cps_variable(handler.path, "abi_return")
+
+    return_body =
+      lower_cps(
+        handler.return_clause.body,
+        Map.put(parameter_environment, handler.return_clause.parameter, return_variable),
+        outer_handlers,
+        globals,
+        annotation,
+        layout,
+        cps_identity(annotation)
+      )
+
+    return_arguments =
+      dispatch_arguments ++ [{:var, annotation, return_variable}]
+
+    return_function =
+      {:function, annotation, handler_return_atom(handler.name), length(return_arguments),
+       [{:clause, annotation, return_arguments, [], [return_body]}]}
+
+    [dispatch_function, return_function]
   end
 
   defp lower_derived_capability(%{capability: "Equatable"}, [left, right], annotation, _layout) do
@@ -474,6 +610,906 @@ defmodule Catena.Backend.ErlangAbstract do
 
     {:block, annotation,
      [{:match, annotation, {:var, annotation, variable}, scrutinee}, decision]}
+  end
+
+  defp lower_cps(
+         %{tag: tag} = expression,
+         environment,
+         _handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       )
+       when tag in [:integer, :boolean, :variable] do
+    apply_cps_continuation(
+      continuation,
+      lower_expression(expression, environment, globals, annotation, layout),
+      annotation
+    )
+  end
+
+  defp lower_cps(
+         %{tag: :unary, operator: operator, operand: operand},
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    lower_cps_values([operand], environment, handlers, globals, annotation, layout, fn [value] ->
+      apply_cps_continuation(
+        continuation,
+        {:op, annotation, erlang_operator(operator), value},
+        annotation
+      )
+    end)
+  end
+
+  defp lower_cps(
+         %{tag: :binary, operator: :and, left: left, right: right, path: path},
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    variable = cps_variable(path, "and_left")
+
+    branch =
+      {:case, annotation, {:var, annotation, variable},
+       [
+         {:clause, annotation, [{:atom, annotation, false}], [],
+          [apply_cps_continuation(continuation, {:atom, annotation, false}, annotation)]},
+         {:clause, annotation, [{:atom, annotation, true}], [],
+          [lower_cps(right, environment, handlers, globals, annotation, layout, continuation)]}
+       ]}
+
+    lower_cps(
+      left,
+      environment,
+      handlers,
+      globals,
+      annotation,
+      layout,
+      cps_function([variable], branch, annotation)
+    )
+  end
+
+  defp lower_cps(
+         %{tag: :binary, operator: :or, left: left, right: right, path: path},
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    variable = cps_variable(path, "or_left")
+
+    branch =
+      {:case, annotation, {:var, annotation, variable},
+       [
+         {:clause, annotation, [{:atom, annotation, true}], [],
+          [apply_cps_continuation(continuation, {:atom, annotation, true}, annotation)]},
+         {:clause, annotation, [{:atom, annotation, false}], [],
+          [lower_cps(right, environment, handlers, globals, annotation, layout, continuation)]}
+       ]}
+
+    lower_cps(
+      left,
+      environment,
+      handlers,
+      globals,
+      annotation,
+      layout,
+      cps_function([variable], branch, annotation)
+    )
+  end
+
+  defp lower_cps(
+         %{tag: :binary, operator: operator, left: left, right: right},
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    lower_cps_values(
+      [left, right],
+      environment,
+      handlers,
+      globals,
+      annotation,
+      layout,
+      fn [left_value, right_value] ->
+        apply_cps_continuation(
+          continuation,
+          {:op, annotation, erlang_operator(operator), left_value, right_value},
+          annotation
+        )
+      end
+    )
+  end
+
+  defp lower_cps(
+         %{tag: :tuple, elements: elements},
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    lower_cps_values(elements, environment, handlers, globals, annotation, layout, fn values ->
+      apply_cps_continuation(continuation, {:tuple, annotation, values}, annotation)
+    end)
+  end
+
+  defp lower_cps(
+         %{tag: :let, name: name, value: value, body: body},
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    variable = variable_atom(name)
+
+    next =
+      cps_function(
+        [variable],
+        lower_cps(
+          body,
+          Map.put(environment, name, variable),
+          handlers,
+          globals,
+          annotation,
+          layout,
+          continuation
+        ),
+        annotation
+      )
+
+    lower_cps(value, environment, handlers, globals, annotation, layout, next)
+  end
+
+  defp lower_cps(
+         %{tag: :call, callee: %{tag: :variable, name: name}, arguments: arguments} = expression,
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    local? = Map.has_key?(environment, name)
+    arity = Map.get(globals, name)
+    effectful? = get_in(globals, [:effect_definitions, name]) == true
+
+    if not local? and effectful? and is_integer(arity) and arity == length(arguments) do
+      lower_cps_values(
+        arguments,
+        environment,
+        handlers,
+        globals,
+        annotation,
+        layout,
+        fn argument_values ->
+          call_handlers =
+            alias_handlers(
+              handlers,
+              Map.get(expression, :effect_bindings, []),
+              annotation
+            )
+
+          {:call, annotation, {:atom, annotation, cps_worker_atom(name)},
+           argument_values ++ [call_handlers, continuation]}
+        end
+      )
+    else
+      lower_cps_call(
+        expression,
+        environment,
+        handlers,
+        globals,
+        annotation,
+        layout,
+        continuation
+      )
+    end
+  end
+
+  defp lower_cps(
+         %{tag: :call, callee: callee, arguments: arguments},
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    lower_cps_call(
+      %{tag: :call, callee: callee, arguments: arguments},
+      environment,
+      handlers,
+      globals,
+      annotation,
+      layout,
+      continuation
+    )
+  end
+
+  defp lower_cps(
+         %{tag: :annotate, expression: expression},
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ),
+       do: lower_cps(expression, environment, handlers, globals, annotation, layout, continuation)
+
+  defp lower_cps(
+         %{tag: :request} = expression,
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    lower_cps_values(
+      expression.arguments,
+      environment,
+      handlers,
+      globals,
+      annotation,
+      layout,
+      fn values ->
+        capability = expression.selected_capability
+
+        remote_call(
+          Catena.Effect.Runtime,
+          :request,
+          [
+            handlers,
+            abstract_term(capability.capability),
+            abstract_term(capability.family),
+            {:atom, annotation, safe_atom(expression.operation)},
+            list_ast(values, annotation),
+            continuation
+          ],
+          annotation
+        )
+      end
+    )
+  end
+
+  defp lower_cps(
+         %{tag: :resume, resumption: resumption, value: value},
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    lower_cps_values([value], environment, handlers, globals, annotation, layout, fn [reply] ->
+      resumed =
+        remote_call(
+          Catena.Effect.Runtime,
+          :resume,
+          [{:var, annotation, Map.fetch!(environment, resumption)}, reply],
+          annotation
+        )
+
+      apply_cps_continuation(continuation, resumed, annotation)
+    end)
+  end
+
+  defp lower_cps(
+         %{tag: :handle} = expression,
+         environment,
+         outer_handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    handler = Map.fetch!(globals.effect_handlers, expression.handler)
+
+    lower_cps_values(
+      expression.arguments,
+      environment,
+      outer_handlers,
+      globals,
+      annotation,
+      layout,
+      fn handler_values ->
+        handler_outer_handlers =
+          alias_handlers(
+            outer_handlers,
+            Map.get(expression, :handler_effect_bindings, []),
+            annotation
+          )
+
+        parameter_environment =
+          Enum.zip(handler.parameters, handler_values)
+          |> Enum.reduce(environment, fn {parameter, {:var, _, variable}}, current ->
+            Map.put(current, parameter.name, variable)
+          end)
+
+        dispatch =
+          if Map.get(handler, :imported?, false) do
+            remote_call(
+              safe_atom(handler.module),
+              handler_dispatch_atom(handler.name),
+              handler_values ++ [handler_outer_handlers],
+              annotation
+            )
+          else
+            cps_handler_dispatch(
+              handler,
+              parameter_environment,
+              handler_outer_handlers,
+              globals,
+              annotation,
+              layout,
+              expression.path
+            )
+          end
+
+        inner_handlers =
+          remote_call(
+            Map,
+            :put,
+            [
+              handler_outer_handlers,
+              abstract_term(expression.selected_capability.capability),
+              dispatch
+            ],
+            annotation
+          )
+
+        return_variable = cps_variable(expression.path, "return")
+
+        return_body =
+          if Map.get(handler, :imported?, false) do
+            remote_call(
+              safe_atom(handler.module),
+              handler_return_atom(handler.name),
+              handler_values ++
+                [handler_outer_handlers, {:var, annotation, return_variable}],
+              annotation
+            )
+          else
+            lower_cps(
+              handler.return_clause.body,
+              Map.put(parameter_environment, handler.return_clause.parameter, return_variable),
+              handler_outer_handlers,
+              globals,
+              annotation,
+              layout,
+              cps_identity(annotation)
+            )
+          end
+
+        return_continuation =
+          cps_function(
+            [return_variable],
+            {:block, annotation,
+             [
+               runtime_trace({:return, handler.id}, annotation),
+               return_body
+             ]},
+            annotation
+          )
+
+        handled_result =
+          {:block, annotation,
+           [
+             runtime_trace(
+               {:handle, handler.id, expression.selected_capability.capability},
+               annotation
+             ),
+             lower_cps(
+               expression.expression,
+               environment,
+               inner_handlers,
+               globals,
+               annotation,
+               layout,
+               return_continuation
+             )
+           ]}
+
+        apply_cps_continuation(continuation, handled_result, annotation)
+      end
+    )
+  end
+
+  defp lower_cps(
+         %{tag: :construct} = expression,
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    arguments = Enum.map(expression.arguments, &Map.get(&1, :expression, &1))
+
+    lower_cps_values(arguments, environment, handlers, globals, annotation, layout, fn values ->
+      ordered_values =
+        expression.arguments
+        |> Enum.zip(values)
+        |> Enum.sort_by(fn {argument, _value} -> argument.field_index end)
+        |> Enum.map(&elem(&1, 1))
+
+      apply_cps_continuation(
+        continuation,
+        constructor_value(expression.constructor, ordered_values, annotation, layout),
+        annotation
+      )
+    end)
+  end
+
+  defp lower_cps(
+         %{tag: :match, scrutinee: scrutinee, clauses: clauses, path: path},
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    variable = match_variable(path)
+
+    decision =
+      lower_cps_clause_chain(
+        variable,
+        clauses,
+        environment,
+        handlers,
+        globals,
+        annotation,
+        layout,
+        continuation,
+        0
+      )
+
+    lower_cps(
+      scrutinee,
+      environment,
+      handlers,
+      globals,
+      annotation,
+      layout,
+      cps_function([variable], decision, annotation)
+    )
+  end
+
+  defp lower_cps(
+         %{tag: :function} = expression,
+         environment,
+         _handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    if effect_control?(expression.body) do
+      cps_fail("effectful anonymous functions are outside the 0.5 bootstrap corpus")
+    end
+
+    apply_cps_continuation(
+      continuation,
+      lower_expression(expression, environment, globals, annotation, layout),
+      annotation
+    )
+  end
+
+  defp lower_cps(expression, environment, _handlers, globals, annotation, layout, continuation) do
+    if effect_control?(expression) do
+      cps_fail("unsupported effectful expression #{inspect(expression.tag)}")
+    end
+
+    apply_cps_continuation(
+      continuation,
+      lower_expression(expression, environment, globals, annotation, layout),
+      annotation
+    )
+  end
+
+  defp lower_cps_call(
+         %{callee: callee, arguments: arguments},
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
+    lower_cps_values(
+      [callee | arguments],
+      environment,
+      handlers,
+      globals,
+      annotation,
+      layout,
+      fn [callee_value | argument_values] ->
+        result = Enum.reduce(argument_values, callee_value, &{:call, annotation, &2, [&1]})
+        apply_cps_continuation(continuation, result, annotation)
+      end
+    )
+  end
+
+  defp lower_cps_values(
+         expressions,
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         callback
+       ) do
+    do_lower_cps_values(
+      expressions,
+      environment,
+      handlers,
+      globals,
+      annotation,
+      layout,
+      callback,
+      [],
+      0
+    )
+  end
+
+  defp do_lower_cps_values(
+         [],
+         _environment,
+         _handlers,
+         _globals,
+         _annotation,
+         _layout,
+         callback,
+         values,
+         _index
+       ),
+       do: callback.(Enum.reverse(values))
+
+  defp do_lower_cps_values(
+         [expression | rest],
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         callback,
+         values,
+         index
+       ) do
+    variable = cps_variable(Map.get(expression, :path, "cps"), "value_#{index}")
+
+    next =
+      cps_function(
+        [variable],
+        do_lower_cps_values(
+          rest,
+          environment,
+          handlers,
+          globals,
+          annotation,
+          layout,
+          callback,
+          [{:var, annotation, variable} | values],
+          index + 1
+        ),
+        annotation
+      )
+
+    lower_cps(expression, environment, handlers, globals, annotation, layout, next)
+  end
+
+  defp cps_handler_dispatch(
+         handler,
+         environment,
+         outer_handlers,
+         globals,
+         annotation,
+         layout,
+         scope
+       ) do
+    continuation_variable = cps_variable({scope, handler.path}, "continuation")
+
+    clauses =
+      Enum.map(handler.operation_clauses, fn clause ->
+        parameter_variables =
+          clause.parameters
+          |> Enum.with_index()
+          |> Enum.map(fn {_name, index} ->
+            cps_variable({scope, clause.path}, "parameter_#{index}")
+          end)
+
+        resumption_variable = cps_variable({scope, clause.path}, "resumption")
+
+        clause_environment =
+          Enum.zip(clause.parameters, parameter_variables)
+          |> Enum.reduce(environment, fn {name, variable}, current ->
+            Map.put(current, name, variable)
+          end)
+          |> Map.put(clause.resumption, resumption_variable)
+
+        create_resumption =
+          remote_call(
+            Catena.Effect.Runtime,
+            :new_resumption,
+            [{:var, annotation, continuation_variable}],
+            annotation
+          )
+
+        body =
+          lower_cps(
+            clause.body,
+            clause_environment,
+            outer_handlers,
+            globals,
+            annotation,
+            layout,
+            cps_identity(annotation)
+          )
+
+        block =
+          {:block, annotation,
+           [
+             runtime_trace({:clause, handler.id, clause.operation}, annotation),
+             {:match, annotation, {:var, annotation, resumption_variable}, create_resumption},
+             if(contains_resume?(clause.body, clause.resumption),
+               do: {:atom, annotation, :ok},
+               else: runtime_trace({:abort, handler.id, clause.operation}, annotation)
+             ),
+             body
+           ]}
+
+        {:clause, annotation,
+         [
+           {:atom, annotation, safe_atom(clause.operation)},
+           list_pattern(parameter_variables, annotation),
+           {:var, annotation, continuation_variable}
+         ], [], [block]}
+      end)
+
+    {:fun, annotation, {:clauses, clauses}}
+  end
+
+  defp effect_definition?(definition) do
+    uses = get_in(definition, [:uses, :row])
+
+    match?(%Catena.Effect.Row{entries: [_ | _]}, uses) or
+      (match?(%Catena.Effect.Row{}, uses) and not is_nil(uses.tail)) or
+      effect_control?(definition.expression)
+  end
+
+  defp effect_control?(%{tag: tag}) when tag in [:request, :handle, :resume], do: true
+  defp effect_control?(%{tag: :function, body: body}), do: effect_control?(body)
+
+  defp effect_control?(%{tag: :call, callee: callee, arguments: arguments}),
+    do: effect_control?(callee) or Enum.any?(arguments, &effect_control?/1)
+
+  defp effect_control?(%{tag: :let, value: value, body: body}),
+    do: effect_control?(value) or effect_control?(body)
+
+  defp effect_control?(%{tag: :tuple, elements: elements}),
+    do: Enum.any?(elements, &effect_control?/1)
+
+  defp effect_control?(%{tag: :annotate, expression: expression}), do: effect_control?(expression)
+  defp effect_control?(%{tag: :unary, operand: operand}), do: effect_control?(operand)
+
+  defp effect_control?(%{tag: :binary, left: left, right: right}),
+    do: effect_control?(left) or effect_control?(right)
+
+  defp effect_control?(%{tag: :construct, arguments: arguments}),
+    do: Enum.any?(arguments, &effect_control?(Map.get(&1, :expression, &1)))
+
+  defp effect_control?(%{tag: :match, scrutinee: scrutinee, clauses: clauses}),
+    do:
+      effect_control?(scrutinee) or
+        Enum.any?(clauses, fn clause ->
+          (not is_nil(clause.guard) and effect_control?(clause.guard)) or
+            effect_control?(clause.body)
+        end)
+
+  defp effect_control?(_expression), do: false
+
+  defp cps_identity(annotation) do
+    variable = :__catena_cps_identity
+    cps_function([variable], {:var, annotation, variable}, annotation)
+  end
+
+  defp cps_worker_atom(name), do: safe_atom("__catena_cps_#{name}")
+  defp handler_dispatch_atom(name), do: safe_atom("__catena_handler_dispatch_#{name}")
+  defp handler_return_atom(name), do: safe_atom("__catena_handler_return_#{name}")
+
+  defp unused_effect_wrapper_attribute(core, annotation) do
+    unused =
+      core.definitions
+      |> Enum.filter(&(effect_definition?(&1) and &1.name not in core.exports))
+      |> Enum.map(&{safe_atom(&1.name), length(&1.parameters)})
+
+    if unused == [],
+      do: [],
+      else: [{:attribute, annotation, :compile, {:nowarn_unused_function, unused}}]
+  end
+
+  defp alias_handlers(handlers, bindings, annotation) do
+    Enum.reduce(bindings, handlers, fn binding, current ->
+      selected =
+        remote_call(
+          Map,
+          :fetch!,
+          [handlers, abstract_term(binding.selected)],
+          annotation
+        )
+
+      remote_call(
+        Map,
+        :put,
+        [current, abstract_term(binding.declared), selected],
+        annotation
+      )
+    end)
+  end
+
+  defp runtime_trace(event, annotation),
+    do: remote_call(Catena.Effect.Runtime, :trace, [abstract_term(event)], annotation)
+
+  defp contains_resume?(%{tag: :resume, resumption: name}, name), do: true
+
+  defp contains_resume?(%{} = expression, name) do
+    expression
+    |> Map.drop([:path, :tag, :type, :effects, :resumption_evidence])
+    |> Map.values()
+    |> Enum.any?(&contains_resume?(&1, name))
+  end
+
+  defp contains_resume?(values, name) when is_list(values),
+    do: Enum.any?(values, &contains_resume?(&1, name))
+
+  defp contains_resume?(_value, _name), do: false
+
+  defp cps_fail(message) do
+    raise Catena.TypeError, diagnostic: Diagnostic.new("CPS001", message)
+  end
+
+  defp cps_function(variables, body, annotation) do
+    {:fun, annotation,
+     {:clauses,
+      [
+        {:clause, annotation, Enum.map(variables, &{:var, annotation, &1}), [], [body]}
+      ]}}
+  end
+
+  defp apply_cps_continuation(continuation, value, annotation),
+    do: {:call, annotation, continuation, [value]}
+
+  defp remote_call(module, function, arguments, annotation) do
+    {:call, annotation,
+     {:remote, annotation, {:atom, annotation, module}, {:atom, annotation, function}}, arguments}
+  end
+
+  defp abstract_term(term), do: :erl_parse.abstract(term)
+
+  defp list_ast(values, annotation),
+    do: Enum.reduce(Enum.reverse(values), {nil, annotation}, &{:cons, annotation, &1, &2})
+
+  defp list_pattern(variables, annotation) do
+    variables
+    |> Enum.map(&{:var, annotation, &1})
+    |> list_ast(annotation)
+  end
+
+  defp cps_variable(path, suffix),
+    do: String.to_atom("__CPS_#{:erlang.phash2({path, suffix})}_#{suffix}")
+
+  defp lower_cps_clause_chain(
+         _variable,
+         [],
+         _environment,
+         _handlers,
+         _globals,
+         annotation,
+         _layout,
+         _continuation,
+         _depth
+       ) do
+    {:call, annotation,
+     {:remote, annotation, {:atom, annotation, :erlang}, {:atom, annotation, :error}},
+     [{:atom, annotation, :catena_invalid_typed_value}]}
+  end
+
+  defp lower_cps_clause_chain(
+         variable,
+         [clause | rest],
+         environment,
+         handlers,
+         globals,
+         annotation,
+         layout,
+         continuation,
+         depth
+       ) do
+    fallback =
+      lower_cps_clause_chain(
+        variable,
+        rest,
+        environment,
+        handlers,
+        globals,
+        annotation,
+        layout,
+        continuation,
+        depth + 1
+      )
+
+    alternatives = expand_pattern(clause.pattern)
+    {_first_pattern, first_bindings} = lower_pattern(hd(alternatives), annotation, layout, %{})
+    binding_names = first_bindings |> Map.keys() |> Enum.sort()
+    branch_environment = Map.merge(environment, first_bindings)
+
+    body =
+      lower_cps(
+        clause.body,
+        branch_environment,
+        handlers,
+        globals,
+        annotation,
+        layout,
+        continuation
+      )
+
+    continuation_variable = String.to_atom("#{variable}_CPS_Clause_#{depth}")
+
+    continuation_arguments =
+      Enum.map(binding_names, &{:var, annotation, Map.fetch!(first_bindings, &1)})
+
+    continuation_clauses =
+      continuation_clauses(
+        clause,
+        continuation_arguments,
+        body,
+        fallback,
+        branch_environment,
+        globals,
+        annotation,
+        layout
+      )
+
+    pattern_continuation = {:fun, annotation, {:clauses, continuation_clauses}}
+
+    pattern_clauses =
+      Enum.map(alternatives, fn alternative ->
+        {pattern, bindings} = lower_pattern(alternative, annotation, layout, %{})
+        arguments = Enum.map(binding_names, &{:var, annotation, Map.fetch!(bindings, &1)})
+        call = {:call, annotation, {:var, annotation, continuation_variable}, arguments}
+        {:clause, annotation, [pattern], [], [call]}
+      end)
+
+    decision =
+      {:case, annotation, {:var, annotation, variable},
+       pattern_clauses ++ [{:clause, annotation, [{:var, annotation, :_}], [], [fallback]}]}
+
+    {:block, annotation,
+     [
+       {:match, annotation, {:var, annotation, continuation_variable}, pattern_continuation},
+       decision
+     ]}
   end
 
   defp lower_clause_chain(

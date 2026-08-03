@@ -32,8 +32,9 @@ git switch rewrite
 ## Current status
 
 The clean rewrite now contains executable type-system, data-and-pattern,
-clause-condition, and trait/categorical-operation slices. The bootstrap toolchain is written in Elixir 1.20.2
-on Erlang/OTP 29.0.4 and targets only the BEAM VM. It does not reuse the
+clause-condition, trait/categorical-operation, and normative effect-handler
+slices. The bootstrap toolchain is written in Elixir 1.20.2 on Erlang/OTP
+29.0.4 and targets only the BEAM VM. It does not reuse the
 historical proof-of-concept's compiler or language design.
 
 The normative language definition belongs to the separate
@@ -41,18 +42,25 @@ The normative language definition belongs to the separate
 This repository provides the executable model and conformance evidence for
 that specification.
 
+To explore the language as a programmer, begin with the
+[Catena Language Tour](LANGUAGE-TOUR.md). It introduces the language model,
+shows how to run the current JSON-AST prototype, and routes into the
+authoritative `catena-research` documents.
+
 ## Compiler path
 
 ```mermaid
 flowchart LR
-    JSON[Versioned JSON AST 0.1 through 0.4] --> D[Nominal data elaboration]
+    JSON[Versioned JSON AST 0.1 through 0.5] --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
     C --> T[Kinded traits and coherent evidence]
-    T --> G[Pattern coverage and ordered guard tree]
+    T --> FX[Lexical effects and named handlers]
+    FX --> G[Pattern coverage and ordered guard tree]
     G --> TC[Typed core]
     TC --> V[Independent core verifier]
-    V --> EAF[Erlang Abstract Format]
+    V --> CPS[Effect-directed CPS or pure direct path]
+    CPS --> EAF[Erlang Abstract Format]
     EAF --> OTP[OTP 29 compile:noenv_forms/2]
     OTP --> BEAM[Module .beam]
     I[Digest-bound 0.4 interfaces] --> L[Manifest-directed specialization]
@@ -65,8 +73,8 @@ surface syntax. A later parser will feed the same typed pipeline. The backend
 does not emit Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
 
-The implementation preserves the C001 through C003 evidence and adds the
-candidate C004 trait slice. Together they include:
+The implementation preserves the C001 through C004 evidence and adds the
+normative 0.5 effect-handler slice. Together they include:
 
 - Algorithm W for literals, variables, lambdas, application, polymorphic
   `let`, tuples, and signatures;
@@ -127,11 +135,25 @@ candidate C004 trait slice. Together they include:
   specialization boundary that emits one companion BEAM containing direct
   calls and no runtime dictionaries; and
 - tested standard `List` mapping and reduction whose ordinary-library
-  implementations remain stack safe on inputs of at least 250,000 elements.
+  implementations remain stack safe on inputs of at least 250,000 elements;
+- nominal generic effect families with first-order operations, behavior-first
+  `uses` rows, and static selection of named or uniquely inferred lexical
+  capabilities;
+- named module-level deep handlers with mandatory return and complete
+  operation clauses, strict outer-scope handler arguments, abort, forwarding,
+  and exact capability-identity subtraction;
+- affine clause-scoped resumptions with static escape and duplicate-use checks
+  plus a runtime consumed token that traps before duplicate continuation entry;
+- identity-aware open effect rows, effect signatures in version 0.5 module
+  interfaces, and independent typed-core effect-row verification; and
+- effect-directed CPS workers that pass lexical handler state across effectful
+  calls while leaving proven-pure C001-C004 definitions on the direct calling
+  convention, with reference/BEAM trace-agreement tests.
 
-This is not yet a Catena source parser or a complete implementation of effects,
-handlers, structural variants, programmable patterns, package distribution,
-or foreign-term validation. The JSON AST remains the bootstrap boundary.
+This is not yet a Catena source parser or a complete implementation of resource
+scopes, exception boundaries, top-level host effects, scoped or multi-shot
+control, structural variants, programmable patterns, package distribution, or
+foreign-term validation. The JSON AST remains the bootstrap boundary.
 
 ## Build and test
 
@@ -165,7 +187,9 @@ requires a monomorphic first-order signature ending in `Bool`. AST 0.4 adds
 kinded traits, coherent instances, law status, explicit structural derivation,
 and verified specialization templates. `compile-package-ir` consumes only the
 modules, interfaces, roots, and outputs explicitly named by its toolchain
-manifest; it is not a package manager.
+manifest; it is not a package manager. AST 0.5 adds nominal effect families,
+`uses` rows, requests, named handlers, and affine resumptions while retaining
+the 0.4 categorical interface payload.
 
 ## Intended evolution
 

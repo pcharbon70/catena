@@ -1,5 +1,5 @@
 defmodule Catena.Categorical do
-  @moduledoc "Elaboration boundary for Catena 0.4 traits, instances, laws, and templates."
+  @moduledoc "Elaboration boundary for Catena 0.4+ traits, instances, laws, and templates."
 
   alias Catena.Categorical.{Standard, TypeTerm}
   alias Catena.{Diagnostic, Kind}
@@ -8,8 +8,9 @@ defmodule Catena.Categorical do
   @law_statuses %{"promised" => :promised, "tested" => :tested, "derived" => :derived}
 
   @spec prepare!(map(), map(), [map()]) :: map()
-  def prepare!(%{frontend_version: version}, _data, _interfaces) when version != "0.4",
-    do: empty()
+  def prepare!(%{frontend_version: version}, _data, _interfaces)
+      when version not in ~w(0.4 0.5),
+      do: empty()
 
   def prepare!(ast, data, interfaces) do
     standard = Standard.interface!()

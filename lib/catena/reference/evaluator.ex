@@ -1,8 +1,13 @@
 defmodule Catena.Reference.Evaluator do
-  @moduledoc "Pure reference evaluator for the executable C001-C004 core."
+  @moduledoc "Reference evaluator dispatcher for the executable C001-C005 core."
 
   @spec run(map(), String.t(), [term()]) :: {:ok, term()} | {:error, term()}
-  def run(core, name, arguments \\ []) do
+  def run(core, name, arguments \\ [])
+
+  def run(%{frontend_version: "0.5"} = core, name, arguments),
+    do: Catena.Effect.Reference.run(core, name, arguments)
+
+  def run(core, name, arguments) do
     definitions = Map.new(core.definitions, &{&1.name, &1})
 
     with {:ok, definition} <- Map.fetch(definitions, name) do

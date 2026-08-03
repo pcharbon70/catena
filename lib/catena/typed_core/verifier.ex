@@ -1,7 +1,8 @@
 defmodule Catena.TypedCore.Verifier do
-  @moduledoc "An inference-independent structural verifier for C001-C004 typed core."
+  @moduledoc "An inference-independent structural verifier for C001-C005 typed core."
 
   alias Catena.Condition
+  alias Catena.Effect.Row
   alias Catena.Pattern.Coverage
   alias Catena.Type
   alias Catena.Type.Scheme
@@ -14,15 +15,19 @@ defmodule Catena.TypedCore.Verifier do
       |> Map.new(&{&1.name, &1.scheme})
       |> Map.merge(get_in(module, [:conditions, :schemes]) || %{})
 
-    Enum.reduce_while(module.definitions, {:ok, initial_globals}, fn definition, {:ok, globals} ->
-      case verify_definition(definition, globals, Map.get(module, :data, empty_data())) do
-        :ok -> {:cont, {:ok, Map.put(globals, definition.name, definition.scheme)}}
-        {:error, reason} -> {:halt, {:error, "#{definition.name}: #{reason}"}}
+    with :ok <-
+           verify_effect_declarations(Map.get(module, :effects, %{families: %{}, handlers: %{}})) do
+      Enum.reduce_while(module.definitions, {:ok, initial_globals}, fn definition,
+                                                                       {:ok, globals} ->
+        case verify_definition(definition, globals, Map.get(module, :data, empty_data())) do
+          :ok -> {:cont, {:ok, Map.put(globals, definition.name, definition.scheme)}}
+          {:error, reason} -> {:halt, {:error, "#{definition.name}: #{reason}"}}
+        end
+      end)
+      |> case do
+        {:ok, _globals} -> :ok
+        error -> error
       end
-    end)
-    |> case do
-      {:ok, _globals} -> :ok
-      error -> error
     end
   rescue
     error in Catena.TypeError ->
@@ -140,6 +145,9 @@ defmodule Catena.TypedCore.Verifier do
 
   defp verify_definition(definition, globals, data) do
     with :ok <- verify_condition_definition(definition),
+         {:ok, effect_row} <- verify_effect_tree(definition.expression),
+         true <- Row.equal?(effect_row, definition.effect_row),
+         true <- Row.matches_declaration?(effect_row, definition.verified_uses_row),
          result <- verify_expression(definition.expression, globals, data) do
       case result do
         {:ok, type} ->
@@ -150,6 +158,9 @@ defmodule Catena.TypedCore.Verifier do
         error ->
           error
       end
+    else
+      false -> {:error, "definition effect evidence is inconsistent"}
+      {:error, _} = error -> error
     end
   end
 
@@ -317,6 +328,71 @@ defmodule Catena.TypedCore.Verifier do
   end
 
   defp verify_expression(
+         %{
+           tag: :request,
+           arguments: arguments,
+           selected_capability: capability,
+           operation_evidence: operation,
+           type: result_type,
+           effects: %Row{} = effects
+         },
+         environment,
+         data
+       ) do
+    with true <- operation.result == result_type,
+         true <- length(arguments) == length(operation.parameters),
+         :ok <- verify_typed_expressions(arguments, operation.parameters, environment, data),
+         true <- Row.member?(effects, capability.capability) do
+      {:ok, result_type}
+    else
+      false -> {:error, "request evidence or effect row is inconsistent"}
+      {:error, _} = error -> error
+    end
+  end
+
+  defp verify_expression(
+         %{
+           tag: :handle,
+           expression: expression,
+           arguments: arguments,
+           handler_evidence: handler,
+           selected_capability: capability,
+           type: result_type,
+           effects: %Row{}
+         },
+         environment,
+         data
+       ) do
+    parameter_types = Enum.map(handler.parameters, & &1.parsed_type)
+
+    with true <- handler.output == result_type,
+         true <- handler.family == capability.family,
+         true <- length(arguments) == length(parameter_types),
+         :ok <- verify_typed_expressions(arguments, parameter_types, environment, data),
+         {:ok, subject_type} <- verify_expression(expression, environment, data),
+         true <- subject_type == handler.input do
+      {:ok, result_type}
+    else
+      false -> {:error, "handler evidence is inconsistent"}
+      {:error, _} = error -> error
+    end
+  end
+
+  defp verify_expression(
+         %{
+           tag: :resume,
+           value: value,
+           resumption_evidence: %{reply: reply, output: output, affine?: true},
+           type: output,
+           effects: %Row{}
+         },
+         environment,
+         data
+       ) do
+    with {:ok, ^reply} <- verify_expression(value, environment, data), do: {:ok, output}
+  end
+
+  defp verify_expression(
          %{tag: :construct, constructor: constructor, arguments: arguments, type: type},
          environment,
          data
@@ -378,6 +454,292 @@ defmodule Catena.TypedCore.Verifier do
        do: true
 
   defp valid_decision?(_decision, _clauses), do: false
+
+  defp verify_effect_declarations(%{families: families, handlers: handlers}) do
+    valid_families? =
+      Enum.all?(families, fn {_name, family} ->
+        map_size(family.operations) > 0 and family.arity == length(family.parameters)
+      end)
+
+    valid_handlers? =
+      Enum.all?(handlers, fn {_name, handler} ->
+        family = Enum.find(Map.values(families), &(&1.id == handler.family))
+
+        if Map.get(handler, :imported?, false) do
+          not is_nil(family) and is_binary(handler.module) and handler.family_name == family.name
+        else
+          not is_nil(family) and not is_nil(handler.return_clause) and
+            Enum.sort(Enum.map(handler.operation_clauses, & &1.operation)) ==
+              Enum.sort(Map.keys(family.operations)) and valid_handler_effects?(handler)
+        end
+      end)
+
+    if valid_families? and valid_handlers?,
+      do: :ok,
+      else: {:error, "effect declarations are inconsistent"}
+  end
+
+  defp verify_effect_declarations(_effects), do: {:error, "effect metadata is malformed"}
+
+  defp valid_handler_effects?(handler) do
+    expected = Map.get(handler, :uses_row, Row.empty())
+
+    with {:ok, return_row} <- verify_effect_tree(handler.return_clause.body),
+         true <- Row.subset?(return_row, expected),
+         {:ok, clause_rows} <- verify_handler_clause_rows(handler.operation_clauses, expected),
+         true <- Row.matches_declaration?(Row.union_all([return_row | clause_rows]), expected) do
+      true
+    else
+      _other -> false
+    end
+  end
+
+  defp verify_handler_clause_rows(clauses, expected) do
+    Enum.reduce_while(clauses, {:ok, []}, fn clause, {:ok, rows} ->
+      with true <- valid_affine_resumption?(clause.body, clause.resumption),
+           {:ok, row} <- verify_effect_tree(clause.body),
+           true <- Row.subset?(row, expected) do
+        {:cont, {:ok, [row | rows]}}
+      else
+        _other -> {:halt, {:error, "handler clause effect or resumption evidence is invalid"}}
+      end
+    end)
+  end
+
+  defp valid_affine_resumption?(expression, name) do
+    {count, escaped?} = resumption_evidence(expression, name, false)
+    count <= 1 and not escaped?
+  end
+
+  defp resumption_evidence(%{tag: :resume, resumption: name, value: value}, name, nested?) do
+    {count, escaped?} = resumption_evidence(value, name, nested?)
+    {count + 1, escaped? or nested?}
+  end
+
+  defp resumption_evidence(%{tag: :variable, name: name}, name, _nested?), do: {0, true}
+
+  defp resumption_evidence(%{tag: :function, body: body}, name, _nested?),
+    do: resumption_evidence(body, name, true)
+
+  defp resumption_evidence(
+         %{tag: :match, scrutinee: scrutinee, clauses: clauses},
+         name,
+         nested?
+       ) do
+    {scrutinee_count, scrutinee_escaped?} =
+      resumption_evidence(scrutinee, name, nested?)
+
+    {branch_count, branch_escaped?} =
+      clauses
+      |> Enum.map(fn clause ->
+        {guard_count, guard_escaped?} =
+          resumption_evidence(Map.get(clause, :guard), name, nested?)
+
+        {body_count, body_escaped?} = resumption_evidence(clause.body, name, nested?)
+        {guard_count + body_count, guard_escaped? or body_escaped?}
+      end)
+      |> Enum.reduce({0, false}, fn {count, escaped?}, {maximum, any_escaped?} ->
+        {max(maximum, count), any_escaped? or escaped?}
+      end)
+
+    {scrutinee_count + branch_count, scrutinee_escaped? or branch_escaped?}
+  end
+
+  defp resumption_evidence(%{} = expression, name, nested?) do
+    expression
+    |> Map.drop([:path, :tag, :type, :effects, :resumption_evidence])
+    |> Map.values()
+    |> Enum.reduce({0, false}, fn value, {count, escaped?} ->
+      {child_count, child_escaped?} = resumption_evidence(value, name, nested?)
+      {count + child_count, escaped? or child_escaped?}
+    end)
+  end
+
+  defp resumption_evidence(values, name, nested?) when is_list(values) do
+    Enum.reduce(values, {0, false}, fn value, {count, escaped?} ->
+      {child_count, child_escaped?} = resumption_evidence(value, name, nested?)
+      {count + child_count, escaped? or child_escaped?}
+    end)
+  end
+
+  defp resumption_evidence(_value, _name, _nested?), do: {0, false}
+
+  defp verify_effect_tree(%{tag: tag, effects: %Row{} = annotated})
+       when tag in [:integer, :boolean, :variable] do
+    verify_row(annotated, Row.empty())
+  end
+
+  defp verify_effect_tree(%{tag: :unary, operand: operand, effects: %Row{} = annotated}) do
+    with {:ok, row} <- verify_effect_tree(operand), do: verify_row(annotated, row)
+  end
+
+  defp verify_effect_tree(%{
+         tag: :binary,
+         left: left,
+         right: right,
+         effects: %Row{} = annotated
+       }) do
+    with {:ok, left_row} <- verify_effect_tree(left),
+         {:ok, right_row} <- verify_effect_tree(right) do
+      verify_row(annotated, Row.union(left_row, right_row))
+    end
+  end
+
+  defp verify_effect_tree(%{
+         tag: :function,
+         body: body,
+         latent_effects: %Row{} = latent,
+         effects: %Row{} = annotated
+       }) do
+    with {:ok, body_row} <- verify_effect_tree(body),
+         true <- Row.equal?(body_row, latent),
+         true <- Row.equal?(annotated, Row.empty()) do
+      {:ok, Row.empty()}
+    else
+      false -> {:error, "function latent effect evidence is inconsistent"}
+      {:error, _} = error -> error
+    end
+  end
+
+  defp verify_effect_tree(
+         %{
+           tag: :call,
+           callee: callee,
+           arguments: arguments,
+           effects: %Row{} = annotated
+         } = expression
+       ) do
+    with {:ok, callee_row} <- verify_effect_tree(callee),
+         {:ok, argument_rows} <- verify_effect_trees(arguments) do
+      latent = Map.get(callee, :latent_effects, Row.empty())
+      call_row = rebind_row(latent, Map.get(expression, :effect_bindings, []))
+      verify_row(annotated, Row.union_all([callee_row, call_row | argument_rows]))
+    end
+  end
+
+  defp verify_effect_tree(%{
+         tag: :let,
+         value: value,
+         body: body,
+         effects: %Row{} = annotated
+       }) do
+    with {:ok, value_row} <- verify_effect_tree(value),
+         {:ok, body_row} <- verify_effect_tree(body) do
+      verify_row(annotated, Row.union(value_row, body_row))
+    end
+  end
+
+  defp verify_effect_tree(%{tag: :tuple, elements: elements, effects: %Row{} = annotated}) do
+    with {:ok, rows} <- verify_effect_trees(elements),
+         do: verify_row(annotated, Row.union_all(rows))
+  end
+
+  defp verify_effect_tree(%{
+         tag: :annotate,
+         expression: expression,
+         effects: %Row{} = annotated
+       }) do
+    with {:ok, row} <- verify_effect_tree(expression), do: verify_row(annotated, row)
+  end
+
+  defp verify_effect_tree(%{
+         tag: :request,
+         arguments: arguments,
+         selected_capability: capability,
+         effects: %Row{} = annotated
+       }) do
+    request_row = Row.new([capability])
+
+    with {:ok, rows} <- verify_effect_trees(arguments),
+         do: verify_row(annotated, Row.union(Row.union_all(rows), request_row))
+  end
+
+  defp verify_effect_tree(
+         %{
+           tag: :handle,
+           expression: expression,
+           arguments: arguments,
+           handler_evidence: handler,
+           selected_capability: capability,
+           effects: %Row{} = annotated
+         } = handled
+       ) do
+    with {:ok, subject_row} <- verify_effect_tree(expression),
+         {:ok, argument_rows} <- verify_effect_trees(arguments) do
+      clause_row =
+        handler
+        |> Map.get(:uses_row, Row.empty())
+        |> rebind_row(Map.get(handled, :handler_effect_bindings, []))
+
+      expected =
+        Row.union_all([
+          Row.union_all(argument_rows),
+          Row.subtract(subject_row, capability.capability),
+          clause_row
+        ])
+
+      verify_row(annotated, expected)
+    end
+  end
+
+  defp verify_effect_tree(%{tag: :resume, value: value, effects: %Row{} = annotated}) do
+    with {:ok, row} <- verify_effect_tree(value), do: verify_row(annotated, row)
+  end
+
+  defp verify_effect_tree(%{tag: :construct, arguments: arguments, effects: %Row{} = annotated}) do
+    expressions = Enum.map(arguments, &Map.get(&1, :expression, &1))
+
+    with {:ok, rows} <- verify_effect_trees(expressions),
+         do: verify_row(annotated, Row.union_all(rows))
+  end
+
+  defp verify_effect_tree(%{
+         tag: :match,
+         scrutinee: scrutinee,
+         clauses: clauses,
+         effects: %Row{} = annotated
+       }) do
+    branches =
+      clauses
+      |> Enum.flat_map(&[&1.guard, &1.body])
+      |> Enum.reject(&is_nil/1)
+
+    with {:ok, scrutinee_row} <- verify_effect_tree(scrutinee),
+         {:ok, branch_rows} <- verify_effect_trees(branches) do
+      verify_row(annotated, Row.union(scrutinee_row, Row.union_all(branch_rows)))
+    end
+  end
+
+  defp verify_effect_tree(_expression), do: {:error, "effect metadata is missing or malformed"}
+
+  defp verify_effect_trees(expressions) do
+    Enum.reduce_while(expressions, {:ok, []}, fn expression, {:ok, rows} ->
+      case verify_effect_tree(expression) do
+        {:ok, row} -> {:cont, {:ok, [row | rows]}}
+        {:error, _} = error -> {:halt, error}
+      end
+    end)
+  end
+
+  defp verify_row(annotated, expected) do
+    if Row.equal?(annotated, expected),
+      do: {:ok, expected},
+      else: {:error, "effect-row annotation is inconsistent"}
+  end
+
+  defp rebind_row(%Row{} = row, bindings) do
+    replacements = Map.new(bindings, &{&1.declared, &1.selected})
+
+    entries =
+      Enum.map(row.entries, fn entry ->
+        case Map.fetch(replacements, entry.capability) do
+          {:ok, selected} -> %{entry | capability: selected}
+          :error -> entry
+        end
+      end)
+
+    Row.new(entries, row.tail)
+  end
 
   defp verify_construct_arguments(arguments, fields, environment, data) do
     ordered = Enum.sort_by(arguments, &Map.get(&1, :field_index, 0))

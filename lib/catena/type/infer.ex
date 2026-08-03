@@ -1,7 +1,8 @@
 defmodule Catena.Type.Infer do
-  @moduledoc "Algorithm W plus the annotation-directed C002 datatype boundary."
+  @moduledoc "Algorithm W with C002-C005 data, condition, trait, and effect elaboration."
 
-  alias Catena.{Categorical, Condition, Data, Derive, Diagnostic, Type}
+  alias Catena.Effect.Row
+  alias Catena.{Categorical, Condition, Data, Derive, Diagnostic, Effect, Type}
   alias Catena.Pattern.Coverage
   alias Catena.Type.{Advanced, Parser, Scheme, Unify}
 
@@ -19,7 +20,14 @@ defmodule Catena.Type.Infer do
     data = Data.elaborate(ast, Keyword.get(options, :interfaces, []))
     conditions = Condition.prepare!(ast, data, options)
     categorical = Categorical.prepare!(ast, data, Keyword.get(options, :interfaces, []))
+    effects = Effect.prepare!(ast, data, Keyword.get(options, :interfaces, []))
     derived = Derive.folds(data) ++ Derive.capabilities(data, categorical.derivations)
+
+    definition_effects =
+      Map.new(ast.definitions, fn definition ->
+        {definition.name,
+         Effect.uses!(effects, definition.signature, data, definition.name, definition.path)}
+      end)
 
     initial_environment =
       derived
@@ -49,8 +57,16 @@ defmodule Catena.Type.Infer do
           |> Keyword.take([:coverage_budget, :fact_budget])
           |> Keyword.put(
             :conditions,
-            if(ast.frontend_version in ~w(0.3 0.4), do: conditions, else: nil)
+            if(ast.frontend_version in ~w(0.3 0.4 0.5), do: conditions, else: nil)
           )
+
+        uses = Map.fetch!(definition_effects, definition.name)
+
+        inference_options =
+          inference_options
+          |> Keyword.put(:effects, effects)
+          |> Keyword.put(:capabilities, uses.capabilities)
+          |> Keyword.put(:global_effects, definition_effects)
 
         {typed, scheme, state} =
           if match? and not is_nil(definition.signature) do
@@ -68,14 +84,39 @@ defmodule Catena.Type.Infer do
           condition: Condition.definition_evidence(conditions, definition.name),
           clause_definition?: definition.clause_definition?,
           generated?: false,
+          uses: uses,
+          effect_row: apply_row_substitution(body_effects(typed), state.substitution),
+          verified_uses_row: apply_row_substitution(uses.row, state.substitution),
           path: definition.path
         }
+
+        unless Row.matches_declaration?(
+                 core_definition.effect_row,
+                 core_definition.verified_uses_row
+               ) do
+          fail(
+            "EFX008",
+            "definition #{definition.name} effects do not match its uses row",
+            definition.path
+          )
+        end
 
         {[core_definition | definitions], Map.put(environment, definition.name, scheme), state}
       end)
 
     definitions = Enum.reverse(definitions) ++ derived
     environment = Enum.reduce(derived, environment, &Map.put(&2, &1.name, &1.scheme))
+
+    {typed_handlers, state} =
+      infer_handlers(effects, environment, state, data, definition_effects)
+
+    typed_handler_map = Map.new(typed_handlers, &{&1.name, &1})
+    handlers = Map.merge(effects.handlers, typed_handler_map)
+
+    exported_handlers =
+      Enum.map(effects.exported_handlers, &Map.fetch!(handlers, &1.name))
+
+    effects = %{effects | handlers: handlers, exported_handlers: exported_handlers}
 
     derived_exports =
       derived |> Enum.reject(&Map.get(&1, :linker_only?, false)) |> Enum.map(& &1.name)
@@ -92,6 +133,7 @@ defmodule Catena.Type.Infer do
       data: data,
       conditions: conditions,
       categorical: categorical,
+      effects: effects,
       profile:
         if(
           Enum.any?(
@@ -112,7 +154,13 @@ defmodule Catena.Type.Infer do
       infer(expression, environment, state, %{
         data: data,
         coverage_options: options,
-        conditions: Keyword.get(options, :conditions)
+        conditions: Keyword.get(options, :conditions),
+        effects: Keyword.get(options, :effects),
+        capabilities: Keyword.get(options, :capabilities, []),
+        global_effects: Keyword.get(options, :global_effects, %{}),
+        effect_values: %{},
+        resumptions: %{},
+        top_level_parameters: length(definition.parameters)
       })
 
     inferred_type = Type.apply(inferred_type, state.substitution)
@@ -155,8 +203,14 @@ defmodule Catena.Type.Infer do
         data: data,
         coverage_options: options,
         conditions: Keyword.get(options, :conditions),
+        effects: Keyword.get(options, :effects),
+        capabilities: Keyword.get(options, :capabilities, []),
+        global_effects: Keyword.get(options, :global_effects, %{}),
+        effect_values: %{},
+        resumptions: %{},
         expected: result_type,
-        signed?: true
+        signed?: true,
+        top_level_parameters: 0
       })
 
     substitution = Unify.unify(body_type, result_type, state.substitution, definition.path)
@@ -170,6 +224,8 @@ defmodule Catena.Type.Infer do
           parameter: parameter,
           body: body,
           type: {:function, parameter_type, body.type},
+          latent_effects: effects_of(body),
+          effects: Row.empty(),
           path: definition.path
         }
       end)
@@ -192,10 +248,10 @@ defmodule Catena.Type.Infer do
     do: infer(expression, environment, state, %{data: empty_data()})
 
   defp infer(%{tag: :integer} = expression, _environment, state, _context),
-    do: {Map.put(expression, :type, :integer), :integer, state}
+    do: {expression |> Map.put(:type, :integer) |> put_effects(Row.empty()), :integer, state}
 
   defp infer(%{tag: :boolean} = expression, _environment, state, _context),
-    do: {Map.put(expression, :type, :boolean), :boolean, state}
+    do: {expression |> Map.put(:type, :boolean) |> put_effects(Row.empty()), :boolean, state}
 
   defp infer(
          %{tag: :unary, operator: operator, operand: operand, path: path} = expression,
@@ -210,7 +266,12 @@ defmodule Catena.Type.Infer do
     result = expected
     substitution = Unify.unify(operand_type, expected, state.substitution, path)
 
-    typed = expression |> Map.put(:operand, typed_operand) |> Map.put(:type, result)
+    typed =
+      expression
+      |> Map.put(:operand, typed_operand)
+      |> Map.put(:type, result)
+      |> put_effects(effects_of(typed_operand))
+
     {typed, result, %{state | substitution: substitution}}
   end
 
@@ -263,6 +324,7 @@ defmodule Catena.Type.Infer do
       |> Map.put(:right, typed_right)
       |> Map.put(:operand_type, operand_type)
       |> Map.put(:type, result_type)
+      |> put_effects(Row.union(effects_of(typed_left), effects_of(typed_right)))
 
     {typed, result_type, state}
   end
@@ -270,9 +332,21 @@ defmodule Catena.Type.Infer do
   defp infer(%{tag: :variable, name: name, path: path} = expression, environment, state, context) do
     case Map.fetch(environment, name) do
       {:ok, scheme} ->
-        {type, state} = instantiate(scheme, state)
+        {type, replacements, state} = instantiate_with_substitution(scheme, state)
         type = Type.refine(type, Map.get(context, :refinements, %{}))
-        {Map.put(expression, :type, type), type, state}
+
+        latent =
+          (Map.get(Map.get(context, :effect_values, %{}), name) ||
+             get_in(Map.get(context, :global_effects, %{}), [name, :row]) || Row.empty())
+          |> apply_row_substitution(replacements)
+
+        typed =
+          expression
+          |> Map.put(:type, type)
+          |> Map.put(:latent_effects, latent)
+          |> put_effects(Row.empty())
+
+        {typed, type, state}
 
       :error ->
         fail("T001", "unbound value #{name}", path)
@@ -285,14 +359,55 @@ defmodule Catena.Type.Infer do
          state,
          context
        ) do
+    remaining_top_level_parameters = Map.get(context, :top_level_parameters, 0)
     {parameter_type, state} = fresh(state)
     local_environment = Map.put(environment, parameter, Scheme.mono(parameter_type))
 
     {typed_body, body_type, state} =
-      infer(body, local_environment, state, Map.delete(context, :expected))
+      infer(
+        body,
+        local_environment,
+        state,
+        context
+        |> Map.delete(:expected)
+        |> Map.put(:top_level_parameters, max(remaining_top_level_parameters - 1, 0))
+        |> Map.update(
+          :effect_values,
+          %{parameter => Row.empty()},
+          &Map.put(&1, parameter, Row.empty())
+        )
+      )
+
+    body_row = effects_of(typed_body)
+
+    if remaining_top_level_parameters == 0 and not Row.equal?(body_row, Row.empty()) do
+      local_capabilities =
+        context
+        |> Map.get(:capabilities, [])
+        |> Enum.reject(&Map.get(&1, :abstract?, false))
+        |> MapSet.new(& &1.capability)
+
+      if Enum.any?(body_row.entries, &MapSet.member?(local_capabilities, &1.capability)) do
+        fail(
+          "EFX003",
+          "a locally handled capability escapes in a function value",
+          expression.path
+        )
+      else
+        fail("CPS001", "effectful anonymous functions are outside Catena 0.5", expression.path)
+      end
+    end
 
     type = {:function, Type.apply(parameter_type, state.substitution), body_type}
-    {expression |> Map.put(:body, typed_body) |> Map.put(:type, type), type, state}
+
+    typed =
+      expression
+      |> Map.put(:body, typed_body)
+      |> Map.put(:type, type)
+      |> Map.put(:latent_effects, effects_of(typed_body))
+      |> put_effects(Row.empty())
+
+    {typed, type, state}
   end
 
   defp infer(
@@ -319,11 +434,34 @@ defmodule Catena.Type.Infer do
          %{state | substitution: substitution}}
       end)
 
+    state =
+      case Map.get(context, :expected) do
+        nil ->
+          state
+
+        expected ->
+          %{state | substitution: Unify.unify(result_type, expected, state.substitution, path)}
+      end
+
+    result_type = Type.apply(result_type, state.substitution)
+
     typed =
       expression
       |> Map.put(:callee, typed_callee)
       |> Map.put(:arguments, Enum.reverse(typed_arguments))
       |> Map.put(:type, result_type)
+
+    {call_effect, effect_bindings} =
+      callee_effects!(typed_callee, context, path, state.substitution)
+
+    evaluation_effects =
+      [effects_of(typed_callee), call_effect | Enum.map(typed.arguments, &effects_of/1)]
+      |> Row.union_all()
+
+    typed =
+      typed
+      |> Map.put(:effect_bindings, effect_bindings)
+      |> put_effects(evaluation_effects)
 
     {typed, result_type, state}
   end
@@ -338,8 +476,20 @@ defmodule Catena.Type.Infer do
     {typed_value, value_type, state} = infer(value, environment, state, child_context)
     scheme = Type.generalize(environment, value_type, state.substitution)
 
+    effect_values =
+      Map.put(
+        Map.get(context, :effect_values, %{}),
+        name,
+        Map.get(typed_value, :latent_effects, Row.empty())
+      )
+
     {typed_body, body_type, state} =
-      infer(body, Map.put(environment, name, scheme), state, context)
+      infer(
+        body,
+        Map.put(environment, name, scheme),
+        state,
+        Map.put(context, :effect_values, effect_values)
+      )
 
     typed =
       expression
@@ -347,6 +497,7 @@ defmodule Catena.Type.Infer do
       |> Map.put(:body, typed_body)
       |> Map.put(:scheme, scheme)
       |> Map.put(:type, body_type)
+      |> put_effects(Row.union(effects_of(typed_value), effects_of(typed_body)))
 
     {typed, body_type, state}
   end
@@ -362,8 +513,15 @@ defmodule Catena.Type.Infer do
 
     type = {:tuple, Enum.reverse(types)}
 
-    {expression |> Map.put(:elements, Enum.reverse(typed_elements)) |> Map.put(:type, type), type,
-     state}
+    typed_elements = Enum.reverse(typed_elements)
+
+    typed =
+      expression
+      |> Map.put(:elements, typed_elements)
+      |> Map.put(:type, type)
+      |> put_effects(typed_elements |> Enum.map(&effects_of/1) |> Row.union_all())
+
+    {typed, type, state}
   end
 
   defp infer(
@@ -381,8 +539,162 @@ defmodule Catena.Type.Infer do
     substitution = Unify.unify(inferred, expected, state.substitution, path)
     type = Type.apply(expected, substitution)
 
-    {expression |> Map.put(:expression, typed) |> Map.put(:type, type), type,
-     %{state | substitution: substitution}}
+    {expression
+     |> Map.put(:expression, typed)
+     |> Map.put(:type, type)
+     |> put_effects(effects_of(typed)), type, %{state | substitution: substitution}}
+  end
+
+  defp infer(%{tag: :request, path: path} = expression, environment, state, context) do
+    effects = Map.get(context, :effects) || fail("EFX001", "request requires AST 0.5", path)
+
+    {capability, operation} =
+      Effect.resolve_request!(effects, expression, Map.get(context, :capabilities, []))
+
+    if length(expression.arguments) != length(operation.parameters) do
+      fail("EFX007", "request #{expression.operation} has the wrong arity", path)
+    end
+
+    {typed_arguments, state} =
+      Enum.zip(expression.arguments, operation.parameters)
+      |> Enum.map_reduce(state, fn {argument, expected}, current ->
+        {typed, inferred, next} =
+          infer(argument, environment, current, Map.delete(context, :expected))
+
+        if match?({:function, _, _}, expected) and
+             not Row.equal?(Map.get(typed, :latent_effects, Row.empty()), Row.empty()) do
+          fail("EFX002", "operation function arguments must be effect free", argument.path)
+        end
+
+        substitution = effect_unify!(inferred, expected, next.substitution, argument.path)
+        {typed, %{next | substitution: substitution}}
+      end)
+
+    request_effect =
+      Row.new([
+        %{
+          family: capability.family,
+          family_name: capability.family_name,
+          arguments: capability.arguments,
+          capability: capability.capability,
+          name: capability.name,
+          abstract?: Map.get(capability, :abstract?, false)
+        }
+      ])
+
+    row = Row.union(Row.union_all(Enum.map(typed_arguments, &effects_of/1)), request_effect)
+
+    typed =
+      expression
+      |> Map.put(:arguments, typed_arguments)
+      |> Map.put(:selected_capability, capability)
+      |> Map.put(:operation_evidence, operation)
+      |> Map.put(:type, operation.result)
+      |> put_effects(row)
+
+    {typed, operation.result, state}
+  end
+
+  defp infer(%{tag: :handle, path: path} = expression, environment, state, context) do
+    effects = Map.get(context, :effects) || fail("EFX001", "handler requires AST 0.5", path)
+    handler = Effect.handler!(effects, expression.handler, path)
+
+    {fresh_variables, state} = fresh_many(length(handler.variables), state)
+    replacements = Enum.zip(handler.variables, fresh_variables) |> Map.new()
+    handler = instantiate_handler(handler, replacements)
+
+    {handler_clause_row, handler_effect_bindings} =
+      instantiate_call_row!(
+        Map.get(handler, :uses_row, Row.empty()),
+        Map.get(context, :capabilities, []),
+        path
+      )
+
+    if length(expression.arguments) != length(handler.parameters) do
+      fail("EFX007", "handler #{handler.name} has the wrong argument count", path)
+    end
+
+    {typed_arguments, state} =
+      Enum.zip(expression.arguments, handler.parameters)
+      |> Enum.map_reduce(state, fn {argument, parameter}, current ->
+        {typed, inferred, next} =
+          infer(argument, environment, current, Map.delete(context, :expected))
+
+        substitution =
+          effect_unify!(inferred, parameter.parsed_type, next.substitution, argument.path)
+
+        {typed, %{next | substitution: substitution}}
+      end)
+
+    capability = %{
+      family: handler.family,
+      family_name: handler.family_name,
+      arguments: handler.arguments,
+      capability: "local://#{path}",
+      name: expression.capability,
+      abstract?: false,
+      path: path
+    }
+
+    inner_context =
+      Map.update(context, :capabilities, [capability], &(&1 ++ [capability]))
+
+    {typed_expression, inferred, state} =
+      infer(
+        expression.expression,
+        environment,
+        state,
+        Map.put(inner_context, :expected, handler.input)
+      )
+
+    substitution = effect_unify!(inferred, handler.input, state.substitution, path)
+    output = Type.apply(handler.output, substitution)
+
+    row =
+      [
+        Row.union_all(Enum.map(typed_arguments, &effects_of/1)),
+        Row.subtract(effects_of(typed_expression), capability.capability),
+        handler_clause_row
+      ]
+      |> Row.union_all()
+
+    typed =
+      expression
+      |> Map.put(:expression, typed_expression)
+      |> Map.put(:arguments, typed_arguments)
+      |> Map.put(:handler_evidence, handler)
+      |> Map.put(:handler_effect_bindings, handler_effect_bindings)
+      |> Map.put(:selected_capability, capability)
+      |> Map.put(:type, output)
+      |> put_effects(row)
+
+    {typed, output, %{state | substitution: substitution}}
+  end
+
+  defp infer(
+         %{tag: :resume, resumption: name, path: path} = expression,
+         environment,
+         state,
+         context
+       ) do
+    resumption =
+      Map.get(Map.get(context, :resumptions, %{}), name) ||
+        fail("RES001", "unknown resumption #{name}", path)
+
+    {typed_value, inferred, state} =
+      infer(expression.value, environment, state, Map.delete(context, :expected))
+
+    substitution = effect_unify!(inferred, resumption.reply, state.substitution, path)
+    output = Type.apply(resumption.output, substitution)
+
+    typed =
+      expression
+      |> Map.put(:value, typed_value)
+      |> Map.put(:resumption_evidence, resumption)
+      |> Map.put(:type, output)
+      |> put_effects(effects_of(typed_value))
+
+    {typed, output, %{state | substitution: substitution}}
   end
 
   defp infer(%{tag: :construct} = expression, environment, state, context) do
@@ -397,6 +709,12 @@ defmodule Catena.Type.Infer do
       |> Map.put(:constructor, constructor)
       |> Map.put(:arguments, typed_arguments)
       |> Map.put(:type, constructor.result)
+      |> put_effects(
+        typed_arguments
+        |> Enum.map(&Map.get(&1, :expression, &1))
+        |> Enum.map(&effects_of/1)
+        |> Row.union_all()
+      )
 
     {typed, constructor.result, state}
   end
@@ -526,6 +844,16 @@ defmodule Catena.Type.Infer do
         clauses: coverage.clauses
       })
       |> Map.put(:type, result_type)
+      |> put_effects(
+        Row.union(
+          effects_of(typed_scrutinee),
+          typed_clauses
+          |> Enum.flat_map(fn clause -> [clause.guard, clause.body] end)
+          |> Enum.reject(&is_nil/1)
+          |> Enum.map(&effects_of/1)
+          |> Row.union_all()
+        )
+      )
 
     {typed, typed.type, state}
   end
@@ -740,6 +1068,231 @@ defmodule Catena.Type.Infer do
     |> then(fn {typed, bindings, state, refs} -> {Enum.reverse(typed), bindings, state, refs} end)
   end
 
+  defp infer_handlers(effects, environment, state, data, global_effects) do
+    effects.handlers
+    |> Map.values()
+    |> Enum.reject(&Map.get(&1, :imported?, false))
+    |> Enum.sort_by(& &1.name)
+    |> Enum.map_reduce(state, fn handler, current_state ->
+      {fresh_variables, current_state} = fresh_many(length(handler.variables), current_state)
+      replacements = Enum.zip(handler.variables, fresh_variables) |> Map.new()
+      instantiated = instantiate_handler(handler, replacements)
+
+      handler_environment =
+        Enum.reduce(instantiated.parameters, environment, fn parameter, current ->
+          Map.put(current, parameter.name, Scheme.mono(parameter.parsed_type))
+        end)
+
+      base_context = %{
+        data: data,
+        coverage_options: [],
+        conditions: nil,
+        effects: effects,
+        capabilities: Map.get(instantiated, :uses_capabilities, []),
+        global_effects: global_effects,
+        effect_values: %{},
+        resumptions: %{}
+      }
+
+      return_environment =
+        Map.put(
+          handler_environment,
+          instantiated.return_clause.parameter,
+          Scheme.mono(instantiated.input)
+        )
+
+      {typed_return, return_type, current_state} =
+        infer(
+          instantiated.return_clause.body,
+          return_environment,
+          current_state,
+          Map.put(base_context, :expected, instantiated.output)
+        )
+
+      substitution =
+        effect_unify!(
+          return_type,
+          instantiated.output,
+          current_state.substitution,
+          instantiated.return_clause.path
+        )
+
+      current_state = %{current_state | substitution: substitution}
+
+      {typed_clauses, current_state} =
+        Enum.map_reduce(instantiated.operation_clauses, current_state, fn clause, clause_state ->
+          family = Enum.find(Map.values(effects.families), &(&1.id == instantiated.family))
+          operation = Map.fetch!(family.operations, clause.operation)
+          operation = instantiate_operation(operation, family, instantiated.arguments)
+
+          clause_environment =
+            Enum.zip(clause.parameters, operation.parameters)
+            |> Enum.reduce(handler_environment, fn {name, type}, current ->
+              Map.put(current, name, Scheme.mono(type))
+            end)
+
+          resumption = %{
+            id: "resumption://#{clause.path}",
+            name: clause.resumption,
+            reply: operation.result,
+            output: instantiated.output,
+            affine?: true
+          }
+
+          clause_context =
+            base_context
+            |> Map.put(:expected, instantiated.output)
+            |> Map.put(:resumptions, %{clause.resumption => resumption})
+
+          {typed_body, body_type, clause_state} =
+            infer(clause.body, clause_environment, clause_state, clause_context)
+
+          substitution =
+            effect_unify!(body_type, instantiated.output, clause_state.substitution, clause.path)
+
+          expected_row = Map.get(instantiated, :uses_row, Row.empty())
+
+          unless Row.subset?(effects_of(typed_body), expected_row) do
+            fail("EFX008", "handler clause effects do not match its uses row", clause.path)
+          end
+
+          {Map.merge(clause, %{
+             body: typed_body,
+             operation_evidence: operation,
+             resumption_evidence: resumption
+           }), %{clause_state | substitution: substitution}}
+        end)
+
+      expected_row = Map.get(instantiated, :uses_row, Row.empty())
+
+      unless Row.subset?(effects_of(typed_return), expected_row) do
+        fail(
+          "EFX008",
+          "handler return effects do not match its uses row",
+          instantiated.return_clause.path
+        )
+      end
+
+      observed_row =
+        [effects_of(typed_return) | Enum.map(typed_clauses, &effects_of(&1.body))]
+        |> Row.union_all()
+
+      unless Row.matches_declaration?(observed_row, expected_row) do
+        fail("EFX008", "handler effects do not match its uses row", instantiated.path)
+      end
+
+      typed_handler = %{
+        instantiated
+        | return_clause: %{instantiated.return_clause | body: typed_return},
+          operation_clauses: typed_clauses
+      }
+
+      {typed_handler, current_state}
+    end)
+  end
+
+  defp instantiate_operation(operation, family, arguments) do
+    replacements = Enum.zip(family.parameter_ids, arguments) |> Map.new()
+
+    %{
+      operation
+      | parameters:
+          Enum.map(operation.parameters, &Effect.substitute_parameters(&1, replacements)),
+        result: Effect.substitute_parameters(operation.result, replacements)
+    }
+  end
+
+  defp instantiate_handler(handler, replacements) do
+    %{
+      handler
+      | arguments: Enum.map(handler.arguments, &Type.apply(&1, replacements)),
+        input: Type.apply(handler.input, replacements),
+        output: Type.apply(handler.output, replacements),
+        parameters:
+          Enum.map(handler.parameters, fn parameter ->
+            %{parameter | parsed_type: Type.apply(parameter.parsed_type, replacements)}
+          end),
+        uses_row:
+          handler
+          |> Map.get(:uses_row, Row.empty())
+          |> apply_row_substitution(replacements)
+    }
+  end
+
+  defp apply_row_substitution(%Row{} = row, substitution) do
+    entries =
+      Enum.map(row.entries, fn entry ->
+        %{entry | arguments: Enum.map(entry.arguments, &Type.apply(&1, substitution))}
+      end)
+
+    Row.new(entries, row.tail)
+  end
+
+  defp callee_effects!(callee, context, path, substitution) do
+    row =
+      callee
+      |> Map.get(:latent_effects, Row.empty())
+      |> apply_row_substitution(substitution)
+
+    instantiate_call_row!(row, Map.get(context, :capabilities, []), path)
+  end
+
+  defp instantiate_call_row!(%Row{} = row, capabilities, path) do
+    {entries, bindings} =
+      Enum.map_reduce(row.entries, [], fn entry, bindings ->
+        candidates =
+          Enum.filter(capabilities, fn capability ->
+            capability.family == entry.family and
+              Enum.map(capability.arguments, &Type.normalize/1) ==
+                Enum.map(entry.arguments, &Type.normalize/1)
+          end)
+
+        candidates =
+          case Map.get(entry, :name) do
+            nil -> candidates
+            name -> Enum.filter(candidates, &(Map.get(&1, :name) == name))
+          end
+
+        case candidates do
+          [capability] ->
+            {capability,
+             [
+               %{declared: entry.capability, selected: capability.capability}
+               | bindings
+             ]}
+
+          [] ->
+            fail("EFX004", "call requires an unavailable #{entry.family_name} capability", path)
+
+          many ->
+            names = Enum.map_join(many, ", ", &(Map.get(&1, :name) || &1.capability))
+            fail("EFX005", "call has ambiguous #{entry.family_name} capabilities: #{names}", path)
+        end
+      end)
+
+    {Row.new(entries, row.tail), Enum.reverse(bindings)}
+  end
+
+  defp put_effects(expression, %Row{} = row),
+    do: Map.put(expression, :effects, Row.normalize(row))
+
+  defp effects_of(nil), do: Row.empty()
+  defp effects_of(expression), do: Map.get(expression, :effects, Row.empty())
+
+  defp body_effects(%{tag: :function, body: body}), do: body_effects(body)
+  defp body_effects(expression), do: effects_of(expression)
+
+  defp effect_unify!(left, right, substitution, path) do
+    Unify.unify(left, right, substitution, path)
+  rescue
+    _error in Catena.TypeError ->
+      fail(
+        "EFX007",
+        "effect request, handler, or resumption types are inconsistent",
+        path
+      )
+  end
+
   defp normalize_pattern_fields!(pattern, constructor) do
     case {pattern.field_style, constructor.field_style} do
       {:positional, :positional} ->
@@ -849,13 +1402,20 @@ defmodule Catena.Type.Infer do
 
   @spec instantiate(Scheme.t(), state()) :: {Type.t(), state()}
   def instantiate(%Scheme{variables: variables, type: type}, state) do
+    {instantiated, _replacements, state} =
+      instantiate_with_substitution(%Scheme{variables: variables, type: type}, state)
+
+    {instantiated, state}
+  end
+
+  defp instantiate_with_substitution(%Scheme{variables: variables, type: type}, state) do
     {replacements, state} =
       Enum.reduce(variables, {%{}, state}, fn variable, {replacements, state} ->
         {fresh, state} = fresh(state)
         {Map.put(replacements, variable, fresh), state}
       end)
 
-    {Type.apply(type, replacements), state}
+    {Type.apply(type, replacements), replacements, state}
   end
 
   defp skolemize(%Scheme{variables: variables, type: type}, state) do
@@ -920,6 +1480,17 @@ defmodule Catena.Type.Infer do
   defp contains_gadt_match?(%{tag: :binary, left: left, right: right}, data),
     do: contains_gadt_match?(left, data) or contains_gadt_match?(right, data)
 
+  defp contains_gadt_match?(%{tag: :request, arguments: arguments}, data),
+    do: Enum.any?(arguments, &contains_gadt_match?(&1, data))
+
+  defp contains_gadt_match?(%{tag: :handle, expression: expression, arguments: arguments}, data),
+    do:
+      contains_gadt_match?(expression, data) or
+        Enum.any?(arguments, &contains_gadt_match?(&1, data))
+
+  defp contains_gadt_match?(%{tag: :resume, value: value}, data),
+    do: contains_gadt_match?(value, data)
+
   defp contains_gadt_match?(_expression, _data), do: false
 
   defp contains_match?(%{tag: :match}), do: true
@@ -939,6 +1510,14 @@ defmodule Catena.Type.Infer do
 
   defp contains_match?(%{tag: :binary, left: left, right: right}),
     do: contains_match?(left) or contains_match?(right)
+
+  defp contains_match?(%{tag: :request, arguments: arguments}),
+    do: Enum.any?(arguments, &contains_match?/1)
+
+  defp contains_match?(%{tag: :handle, expression: expression, arguments: arguments}),
+    do: contains_match?(expression) or Enum.any?(arguments, &contains_match?/1)
+
+  defp contains_match?(%{tag: :resume, value: value}), do: contains_match?(value)
 
   defp contains_match?(_expression), do: false
 

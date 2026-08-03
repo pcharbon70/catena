@@ -3,11 +3,11 @@ defmodule Catena.AST.Decoder do
 
   alias Catena.Diagnostic
 
-  @versions ~w(0.1 0.2 0.3 0.4)
+  @versions ~w(0.1 0.2 0.3 0.4 0.5)
   @module_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @type_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @value_name ~r/^[a-z][a-zA-Z0-9_]*$/
-  @expression_tags ~w(integer boolean variable function call let tuple annotate construct match unary binary)
+  @expression_tags ~w(integer boolean variable function call let tuple annotate construct match unary binary request handle resume)
   @pattern_tags ~w(wildcard bind integer boolean tuple constructor as or)
 
   @spec decode(binary()) :: {:ok, map()} | {:error, Diagnostic.t()}
@@ -22,7 +22,8 @@ defmodule Catena.AST.Decoder do
          {:ok, type_groups} <- type_groups(value, frontend_version),
          {:ok, imports} <- imports(value, frontend_version),
          {:ok, definitions} <- definitions(value, frontend_version),
-         {:ok, categorical} <- categorical_sections(value, frontend_version) do
+         {:ok, categorical} <- categorical_sections(value, frontend_version),
+         {:ok, effects} <- effect_sections(value, frontend_version) do
       {:ok,
        Map.merge(
          %{
@@ -37,7 +38,7 @@ defmodule Catena.AST.Decoder do
            definitions: definitions,
            source: Map.get(value, "source", "<catena-json>")
          },
-         categorical
+         Map.merge(categorical, effects)
        )}
     else
       {:error, %Diagnostic{} = diagnostic} -> {:error, diagnostic}
@@ -49,7 +50,7 @@ defmodule Catena.AST.Decoder do
 
   defp version(%{"version" => version}) do
     error(
-      "unsupported AST version #{inspect(version)}; expected 0.1, 0.2, 0.3, or 0.4",
+      "unsupported AST version #{inspect(version)}; expected 0.1 through 0.5",
       "$.version"
     )
   end
@@ -58,7 +59,7 @@ defmodule Catena.AST.Decoder do
 
   defp origin(_value, "0.1"), do: {:ok, "legacy://json-ast-0.1"}
 
-  defp origin(value, version) when version in ~w(0.2 0.3 0.4) do
+  defp origin(value, version) when version in ~w(0.2 0.3 0.4 0.5) do
     case Map.get(value, "origin") do
       origin when is_binary(origin) and byte_size(origin) > 0 -> {:ok, origin}
       _ -> error("AST 0.2 requires a non-empty origin", "$.origin")
@@ -78,7 +79,7 @@ defmodule Catena.AST.Decoder do
 
   defp type_exports(_value, "0.1"), do: {:ok, []}
 
-  defp type_exports(value, version) when version in ~w(0.2 0.3 0.4) do
+  defp type_exports(value, version) when version in ~w(0.2 0.3 0.4 0.5) do
     exports = Map.get(value, "type_exports", [])
 
     with true <- is_list(exports),
@@ -116,7 +117,7 @@ defmodule Catena.AST.Decoder do
 
   defp type_groups(_value, "0.1"), do: {:ok, []}
 
-  defp type_groups(value, version) when version in ~w(0.2 0.3 0.4) do
+  defp type_groups(value, version) when version in ~w(0.2 0.3 0.4 0.5) do
     groups = Map.get(value, "type_groups", [])
 
     if is_list(groups) do
@@ -271,14 +272,14 @@ defmodule Catena.AST.Decoder do
 
   defp imports(_value, "0.1"), do: {:ok, []}
 
-  defp imports(value, version) when version in ~w(0.2 0.3 0.4) do
+  defp imports(value, version) when version in ~w(0.2 0.3 0.4 0.5) do
     imports = Map.get(value, "imports", [])
 
     cond do
       not is_list(imports) ->
         error("imports must be a list", "$.imports")
 
-      version not in ~w(0.3 0.4) and
+      version not in ~w(0.3 0.4 0.5) and
           Enum.any?(imports, &(is_map(&1) and Map.get(&1, "kind") == "condition")) ->
         semantic_error("CND001", "condition imports require AST 0.3", "$.imports")
 
@@ -288,16 +289,20 @@ defmodule Catena.AST.Decoder do
   end
 
   defp definitions(%{"definitions" => definitions}, version) when is_list(definitions) do
-    with {:ok, decoded} <- map_ok(definitions, &definition(&1, &2, version)),
-         true <- unique_by?(decoded, & &1.name),
-         true <- version in ~w(0.3 0.4) or Enum.all?(decoded, &(not condition_operator?(&1.body))) do
-      {:ok, decoded}
-    else
-      false ->
-        if unique_by?(definitions, &Map.get(&1, "name")) do
-          semantic_error("CND001", "condition operators require AST 0.3", "$.definitions")
-        else
-          error("definition names must be unique", "$.definitions")
+    case map_ok(definitions, &definition(&1, &2, version)) do
+      {:ok, decoded} ->
+        cond do
+          not unique_by?(decoded, & &1.name) ->
+            error("definition names must be unique", "$.definitions")
+
+          version != "0.5" and Enum.any?(decoded, &effect_control?(&1.body)) ->
+            semantic_error("EFX001", "effect control forms require AST 0.5", "$.definitions")
+
+          version not in ~w(0.3 0.4 0.5) and Enum.any?(decoded, &condition_operator?(&1.body)) ->
+            semantic_error("CND001", "condition operators require AST 0.3", "$.definitions")
+
+          true ->
+            {:ok, decoded}
         end
 
       {:error, _} = result ->
@@ -329,7 +334,7 @@ defmodule Catena.AST.Decoder do
   end
 
   defp definition_kind("value", _version, _path), do: :ok
-  defp definition_kind("condition", version, _path) when version in ~w(0.3 0.4), do: :ok
+  defp definition_kind("condition", version, _path) when version in ~w(0.3 0.4 0.5), do: :ok
 
   defp definition_kind("condition", _version, path),
     do: semantic_result("CND001", "condition declarations require AST 0.3", path <> ".kind")
@@ -338,7 +343,7 @@ defmodule Catena.AST.Decoder do
     do: semantic_result("CND001", "definition kind must be value or condition", path <> ".kind")
 
   defp definition_body(%{"clauses" => clauses} = value, version, path)
-       when version in ~w(0.3 0.4) and is_list(clauses) do
+       when version in ~w(0.3 0.4 0.5) and is_list(clauses) do
     if Map.has_key?(value, "body") or Map.has_key?(value, "parameters") do
       semantic_error(
         "CND001",
@@ -462,6 +467,9 @@ defmodule Catena.AST.Decoder do
       "match" -> match_expression(value, path)
       "unary" -> unary(value, path)
       "binary" -> binary(value, path)
+      "request" -> request_expression(value, path)
+      "handle" -> handle_expression(value, path)
+      "resume" -> resume_expression(value, path)
     end
   end
 
@@ -501,6 +509,59 @@ defmodule Catena.AST.Decoder do
     else
       false -> error("call arguments must be a list", path <> ".arguments")
       {:error, _} = result -> result
+    end
+  end
+
+  defp request_expression(value, path) do
+    arguments = Map.get(value, "arguments", [])
+
+    with {:ok, effect} <- name(value, "effect", @type_name, path),
+         {:ok, operation} <- name(value, "operation", @value_name, path),
+         true <- is_list(arguments),
+         {:ok, decoded} <- map_ok(arguments, &expression(&1, "#{path}.arguments[#{&2}]")),
+         {:ok, capability} <- optional_name(Map.get(value, "capability"), @value_name, path) do
+      {:ok,
+       %{
+         tag: :request,
+         effect: effect,
+         operation: operation,
+         capability: capability,
+         arguments: decoded,
+         path: path
+       }}
+    else
+      false -> error("request arguments must be a list", path <> ".arguments")
+      {:error, _} = result -> result
+    end
+  end
+
+  defp handle_expression(value, path) do
+    arguments = Map.get(value, "arguments", [])
+
+    with {:ok, handled} <- expression(Map.get(value, "expression"), path <> ".expression"),
+         {:ok, handler} <- name(value, "handler", @type_name, path),
+         true <- is_list(arguments),
+         {:ok, decoded} <- map_ok(arguments, &expression(&1, "#{path}.arguments[#{&2}]")),
+         {:ok, capability} <- optional_name(Map.get(value, "capability"), @value_name, path) do
+      {:ok,
+       %{
+         tag: :handle,
+         expression: handled,
+         handler: handler,
+         arguments: decoded,
+         capability: capability,
+         path: path
+       }}
+    else
+      false -> error("handler arguments must be a list", path <> ".arguments")
+      {:error, _} = result -> result
+    end
+  end
+
+  defp resume_expression(value, path) do
+    with {:ok, resumption} <- name(value, "resumption", @value_name, path),
+         {:ok, reply} <- expression(Map.get(value, "value"), path <> ".value") do
+      {:ok, %{tag: :resume, resumption: resumption, value: reply, path: path}}
     end
   end
 
@@ -677,6 +738,37 @@ defmodule Catena.AST.Decoder do
 
   defp condition_operator?(_expression), do: false
 
+  defp effect_control?(%{tag: tag}) when tag in [:request, :handle, :resume], do: true
+  defp effect_control?(%{tag: :function, body: body}), do: effect_control?(body)
+
+  defp effect_control?(%{tag: :call, callee: callee, arguments: arguments}),
+    do: effect_control?(callee) or Enum.any?(arguments, &effect_control?/1)
+
+  defp effect_control?(%{tag: :let, value: value, body: body}),
+    do: effect_control?(value) or effect_control?(body)
+
+  defp effect_control?(%{tag: :tuple, elements: elements}),
+    do: Enum.any?(elements, &effect_control?/1)
+
+  defp effect_control?(%{tag: :annotate, expression: expression}), do: effect_control?(expression)
+  defp effect_control?(%{tag: :unary, operand: operand}), do: effect_control?(operand)
+
+  defp effect_control?(%{tag: :binary, left: left, right: right}),
+    do: effect_control?(left) or effect_control?(right)
+
+  defp effect_control?(%{tag: :construct, arguments: arguments}),
+    do: Enum.any?(arguments, &effect_control?(Map.get(&1, :expression, &1)))
+
+  defp effect_control?(%{tag: :match, scrutinee: scrutinee, clauses: clauses}),
+    do:
+      effect_control?(scrutinee) or
+        Enum.any?(clauses, fn clause ->
+          (not is_nil(clause.guard) and effect_control?(clause.guard)) or
+            effect_control?(clause.body)
+        end)
+
+  defp effect_control?(_expression), do: false
+
   defp pattern(%{"tag" => tag} = value, path) when tag in @pattern_tags do
     case tag do
       "wildcard" -> {:ok, %{tag: :wildcard, path: path}}
@@ -780,10 +872,10 @@ defmodule Catena.AST.Decoder do
     end
   end
 
-  defp derivations(values, version, path) when version != "0.4",
+  defp derivations(values, version, path) when version not in ~w(0.4 0.5),
     do: string_list(values, path <> ".derivations")
 
-  defp derivations(values, "0.4", path) when is_list(values) do
+  defp derivations(values, version, path) when version in ~w(0.4 0.5) and is_list(values) do
     values
     |> Enum.with_index()
     |> Enum.reduce_while({:ok, []}, fn
@@ -815,10 +907,10 @@ defmodule Catena.AST.Decoder do
     end
   end
 
-  defp derivations(_, "0.4", path),
+  defp derivations(_, version, path) when version in ~w(0.4 0.5),
     do: error("derivations must be a list", path <> ".derivations")
 
-  defp categorical_sections(value, "0.4") do
+  defp categorical_sections(value, version) when version in ~w(0.4 0.5) do
     with {:ok, traits} <- record_list(value, "traits"),
          {:ok, instances} <- record_list(value, "instances"),
          {:ok, templates} <- record_list(value, "templates") do
@@ -831,6 +923,120 @@ defmodule Catena.AST.Decoder do
       semantic_error("TRT001", "traits, instances, and templates require AST 0.4", "$")
     else
       {:ok, %{traits: [], instances: [], templates: []}}
+    end
+  end
+
+  defp effect_sections(value, "0.5") do
+    with {:ok, effects} <- record_list(value, "effects"),
+         {:ok, handlers} <- handler_list(Map.get(value, "handlers", [])) do
+      {:ok, %{effects: effects, handlers: handlers}}
+    end
+  end
+
+  defp effect_sections(value, _version) do
+    if Enum.any?(~w(effects handlers), &Map.has_key?(value, &1)) do
+      semantic_error("EFX001", "effects and handlers require AST 0.5", "$")
+    else
+      {:ok, %{effects: [], handlers: []}}
+    end
+  end
+
+  defp handler_list(handlers) when is_list(handlers) do
+    map_ok(handlers, &handler_declaration/2)
+  end
+
+  defp handler_list(_handlers), do: error("handlers must be a list", "$.handlers")
+
+  defp handler_declaration(value, index) do
+    path = "$.handlers[#{index}]"
+    operations = if is_map(value), do: Map.get(value, "operations"), else: nil
+
+    with :ok <- require_map(value, path),
+         {:ok, name} <- name(value, "name", @type_name, path),
+         {:ok, effect} <- name(value, "effect", @type_name, path),
+         {:ok, parameters} <- handler_parameters(Map.get(value, "parameters", []), path),
+         {:ok, return_clause} <- handler_return(Map.get(value, "return"), path),
+         true <- is_list(operations),
+         {:ok, operations} <- map_ok(operations, &handler_operation(&1, &2, path)) do
+      {:ok,
+       value
+       |> Map.put(:name, name)
+       |> Map.put(:effect, effect)
+       |> Map.put(:parameters, parameters)
+       |> Map.put(:return_clause, return_clause)
+       |> Map.put(:operation_clauses, operations)
+       |> Map.put(:path, path)}
+    else
+      false -> error("handler operations must be a list", path <> ".operations")
+      {:error, _} = result -> result
+    end
+  end
+
+  defp handler_parameters(parameters, path) when is_list(parameters) do
+    with {:ok, decoded} <-
+           map_ok(parameters, fn parameter, index ->
+             parameter_path = "#{path}.parameters[#{index}]"
+
+             with :ok <- require_map(parameter, parameter_path),
+                  {:ok, name} <- name(parameter, "name", @value_name, parameter_path),
+                  type when is_map(type) <- Map.get(parameter, "type") do
+               {:ok, %{name: name, type: type, path: parameter_path}}
+             else
+               nil -> error("handler parameter requires a type", parameter_path <> ".type")
+               {:error, _} = result -> result
+             end
+           end),
+         true <- unique_by?(decoded, & &1.name) do
+      {:ok, decoded}
+    else
+      false ->
+        semantic_error("EFX006", "handler parameters must be unique", path <> ".parameters")
+
+      {:error, _} = result ->
+        result
+    end
+  end
+
+  defp handler_parameters(_parameters, path),
+    do: error("handler parameters must be a list", path <> ".parameters")
+
+  defp handler_return(nil, path),
+    do: semantic_error("EFX006", "handler requires a return clause", path <> ".return")
+
+  defp handler_return(value, path) do
+    clause_path = path <> ".return"
+
+    with :ok <- require_map(value, clause_path),
+         {:ok, parameter} <- name(value, "parameter", @value_name, clause_path),
+         {:ok, body} <- expression(Map.get(value, "body"), clause_path <> ".body") do
+      {:ok, %{parameter: parameter, body: body, path: clause_path}}
+    end
+  end
+
+  defp handler_operation(value, index, path) do
+    clause_path = "#{path}.operations[#{index}]"
+    parameters = if is_map(value), do: Map.get(value, "parameters"), else: nil
+
+    with :ok <- require_map(value, clause_path),
+         {:ok, operation} <- name(value, "operation", @value_name, clause_path),
+         true <- is_list(parameters),
+         true <-
+           Enum.all?(parameters, &(is_binary(&1) and Regex.match?(@value_name, &1))) and
+             length(parameters) == length(Enum.uniq(parameters)),
+         {:ok, resumption} <- name(value, "resumption", @value_name, clause_path),
+         true <- resumption not in parameters,
+         {:ok, body} <- expression(Map.get(value, "body"), clause_path <> ".body") do
+      {:ok,
+       %{
+         operation: operation,
+         parameters: parameters,
+         resumption: resumption,
+         body: body,
+         path: clause_path
+       }}
+    else
+      false -> semantic_error("EFX006", "handler clause binders must be unique", clause_path)
+      {:error, _} = result -> result
     end
   end
 
@@ -867,6 +1073,17 @@ defmodule Catena.AST.Decoder do
         error("missing or invalid #{key}", path <> "." <> key)
     end
   end
+
+  defp optional_name(nil, _regex, _path), do: {:ok, nil}
+
+  defp optional_name(name, regex, path) when is_binary(name) do
+    if Regex.match?(regex, name),
+      do: {:ok, name},
+      else: error("invalid capability #{inspect(name)}", path <> ".capability")
+  end
+
+  defp optional_name(_name, _regex, path),
+    do: error("capability must be a value name", path <> ".capability")
 
   defp require_map(value, _path) when is_map(value), do: :ok
   defp require_map(_, path), do: error("expected an object", path)
