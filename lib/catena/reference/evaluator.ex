@@ -1,13 +1,51 @@
 defmodule Catena.Reference.Evaluator do
-  @moduledoc "Reference evaluator dispatcher for the executable C001-C005 core."
+  @moduledoc "Reference evaluator dispatcher for the executable C001-C006 core."
+
+  @budget_key {__MODULE__, :budget}
+  @steps_key {__MODULE__, :steps}
 
   @spec run(map(), String.t(), [term()]) :: {:ok, term()} | {:error, term()}
   def run(core, name, arguments \\ [])
 
-  def run(%{frontend_version: "0.5"} = core, name, arguments),
+  def run(%{frontend_version: version} = core, name, arguments) when version in ~w(0.5 0.6),
     do: Catena.Effect.Reference.run(core, name, arguments)
 
   def run(core, name, arguments) do
+    definitions = Map.new(core.definitions, &{&1.name, &1})
+
+    with {:ok, definition} <- Map.fetch(definitions, name) do
+      value = evaluate_definition(definition, definitions)
+      {:ok, Enum.reduce(arguments, value, &apply_value(&2, &1))}
+    else
+      :error -> {:error, {:unknown_definition, name}}
+    end
+  rescue
+    error -> {:error, {error.__struct__, Exception.message(error)}}
+  end
+
+  @spec run_bounded(map(), String.t(), [term()], pos_integer()) ::
+          {:ok, term(), non_neg_integer()}
+          | {:error, term(), non_neg_integer()}
+          | {:budget_exhausted, non_neg_integer()}
+  def run_bounded(core, name, arguments, budget) when is_integer(budget) and budget > 0 do
+    Process.put(@budget_key, budget)
+    Process.put(@steps_key, 0)
+
+    try do
+      case run_standard(core, name, arguments) do
+        {:ok, value} -> {:ok, value, Process.get(@steps_key)}
+        {:error, reason} -> {:error, reason, Process.get(@steps_key)}
+      end
+    catch
+      :throw, :catena_specification_budget_exhausted ->
+        {:budget_exhausted, Process.get(@steps_key)}
+    after
+      Process.delete(@budget_key)
+      Process.delete(@steps_key)
+    end
+  end
+
+  defp run_standard(core, name, arguments) do
     definitions = Map.new(core.definitions, &{&1.name, &1})
 
     with {:ok, definition} <- Map.fetch(definitions, name) do
@@ -35,16 +73,21 @@ defmodule Catena.Reference.Evaluator do
   defp evaluate_definition(definition, definitions),
     do: evaluate(definition.expression, %{}, definitions)
 
-  defp evaluate(%{tag: :integer, value: value}, _environment, _definitions), do: value
-  defp evaluate(%{tag: :boolean, value: value}, _environment, _definitions), do: value
+  defp evaluate(expression, environment, definitions) do
+    spend!()
+    do_evaluate(expression, environment, definitions)
+  end
 
-  defp evaluate(%{tag: :unary, operator: :not, operand: operand}, environment, definitions),
+  defp do_evaluate(%{tag: :integer, value: value}, _environment, _definitions), do: value
+  defp do_evaluate(%{tag: :boolean, value: value}, _environment, _definitions), do: value
+
+  defp do_evaluate(%{tag: :unary, operator: :not, operand: operand}, environment, definitions),
     do: not evaluate(operand, environment, definitions)
 
-  defp evaluate(%{tag: :unary, operator: :negate, operand: operand}, environment, definitions),
+  defp do_evaluate(%{tag: :unary, operator: :negate, operand: operand}, environment, definitions),
     do: -evaluate(operand, environment, definitions)
 
-  defp evaluate(
+  defp do_evaluate(
          %{tag: :binary, operator: :and, left: left, right: right},
          environment,
          definitions
@@ -52,7 +95,7 @@ defmodule Catena.Reference.Evaluator do
     evaluate(left, environment, definitions) and evaluate(right, environment, definitions)
   end
 
-  defp evaluate(
+  defp do_evaluate(
          %{tag: :binary, operator: :or, left: left, right: right},
          environment,
          definitions
@@ -60,7 +103,7 @@ defmodule Catena.Reference.Evaluator do
     evaluate(left, environment, definitions) or evaluate(right, environment, definitions)
   end
 
-  defp evaluate(
+  defp do_evaluate(
          %{tag: :binary, operator: operator, left: left, right: right},
          environment,
          definitions
@@ -81,36 +124,36 @@ defmodule Catena.Reference.Evaluator do
     end
   end
 
-  defp evaluate(%{tag: :variable, name: name}, environment, definitions) do
+  defp do_evaluate(%{tag: :variable, name: name}, environment, definitions) do
     case Map.fetch(environment, name) do
       {:ok, value} -> value
       :error -> definitions |> Map.fetch!(name) |> evaluate_definition(definitions)
     end
   end
 
-  defp evaluate(%{tag: :function, parameter: parameter, body: body}, environment, definitions),
+  defp do_evaluate(%{tag: :function, parameter: parameter, body: body}, environment, definitions),
     do:
       {:closure,
        fn value -> evaluate(body, Map.put(environment, parameter, value), definitions) end}
 
-  defp evaluate(%{tag: :call, callee: callee, arguments: arguments}, environment, definitions) do
+  defp do_evaluate(%{tag: :call, callee: callee, arguments: arguments}, environment, definitions) do
     Enum.reduce(arguments, evaluate(callee, environment, definitions), fn argument, function ->
       apply_value(function, evaluate(argument, environment, definitions))
     end)
   end
 
-  defp evaluate(%{tag: :let, name: name, value: value, body: body}, environment, definitions) do
+  defp do_evaluate(%{tag: :let, name: name, value: value, body: body}, environment, definitions) do
     bound = evaluate(value, environment, definitions)
     evaluate(body, Map.put(environment, name, bound), definitions)
   end
 
-  defp evaluate(%{tag: :tuple, elements: elements}, environment, definitions),
+  defp do_evaluate(%{tag: :tuple, elements: elements}, environment, definitions),
     do: elements |> Enum.map(&evaluate(&1, environment, definitions)) |> List.to_tuple()
 
-  defp evaluate(%{tag: :annotate, expression: expression}, environment, definitions),
+  defp do_evaluate(%{tag: :annotate, expression: expression}, environment, definitions),
     do: evaluate(expression, environment, definitions)
 
-  defp evaluate(
+  defp do_evaluate(
          %{tag: :construct, constructor: constructor, arguments: arguments},
          environment,
          definitions
@@ -127,7 +170,11 @@ defmodule Catena.Reference.Evaluator do
     {:catena_value, constructor.id, payload}
   end
 
-  defp evaluate(%{tag: :match, scrutinee: scrutinee, clauses: clauses}, environment, definitions) do
+  defp do_evaluate(
+         %{tag: :match, scrutinee: scrutinee, clauses: clauses},
+         environment,
+         definitions
+       ) do
     value = evaluate(scrutinee, environment, definitions)
     evaluate_clauses(value, clauses, environment, definitions)
   end
@@ -266,4 +313,20 @@ defmodule Catena.Reference.Evaluator do
     do: {:closure, fn value -> curry(arity - 1, function, [value | arguments]) end}
 
   defp apply_value({:closure, function}, argument), do: function.(argument)
+
+  defp spend! do
+    case Process.get(@budget_key) do
+      nil ->
+        :ok
+
+      budget ->
+        steps = Process.get(@steps_key, 0)
+
+        if steps >= budget do
+          throw(:catena_specification_budget_exhausted)
+        else
+          Process.put(@steps_key, steps + 1)
+        end
+    end
+  end
 end

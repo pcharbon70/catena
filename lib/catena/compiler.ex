@@ -1,7 +1,7 @@
 defmodule Catena.Compiler do
-  @moduledoc "The C001-C005 compiler pipeline and its typed-core verification gate."
+  @moduledoc "The C001-C006 compiler pipeline and its typed-core and assurance gates."
 
-  alias Catena.{Backend.ErlangAbstract, Diagnostic, Interface, Type.Infer}
+  alias Catena.{Backend.ErlangAbstract, Diagnostic, Interface, Specification, Type.Infer}
   alias Catena.OTP.Compiler, as: OTPCompiler
   alias Catena.TypedCore.Verifier
 
@@ -9,6 +9,8 @@ defmodule Catena.Compiler do
   def check(ast, options \\ []) do
     protect(fn ->
       core = Infer.module(ast, options) |> Map.put(:source, ast.source)
+      specifications = Specification.elaborate!(ast, core)
+      core = Map.put(core, :specifications, specifications)
 
       case Verifier.verify(core) do
         :ok ->

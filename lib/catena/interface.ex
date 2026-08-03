@@ -1,12 +1,13 @@
 defmodule Catena.Interface do
-  @moduledoc "Deterministic, layout-free C002-C005 module interfaces."
+  @moduledoc "Deterministic, layout-free C002-C006 module interfaces."
 
   alias Catena.Categorical.TypeTerm
   alias Catena.Effect.Row
-  alias Catena.{CanonicalJSON, Condition, Diagnostic, Kind}
+  alias Catena.{CanonicalJSON, Condition, Diagnostic, Kind, Specification}
   alias Catena.Type.Scheme
 
-  @versions ~w(0.2 0.3 0.4 0.5)
+  @versions ~w(0.2 0.3 0.4 0.5 0.6)
+  @claim_subject_kinds ~w(value datatype trait instance effect handler module output interface action profile)
 
   @spec build(map()) :: map()
   def build(core) do
@@ -46,6 +47,7 @@ defmodule Catena.Interface do
       }
       |> categorical_payload(core)
       |> effect_payload(core)
+      |> specification_payload(core)
 
     Map.put(payload, "digest", digest(payload))
   end
@@ -65,7 +67,8 @@ defmodule Catena.Interface do
          {:ok, types} <- decode_types(Map.get(value, "types"), value),
          {:ok, values} <- decode_values(Map.get(value, "values"), types),
          {:ok, categorical} <- decode_categorical(value, version),
-         {:ok, effects} <- decode_effects(value, version) do
+         {:ok, effects} <- decode_effects(value, version),
+         {:ok, specifications} <- decode_specifications(value, version) do
       {:ok,
        Map.merge(
          %{
@@ -76,7 +79,7 @@ defmodule Catena.Interface do
            types: types,
            values: values
          },
-         Map.merge(categorical, effects)
+         categorical |> Map.merge(effects) |> Map.merge(specifications)
        )}
     else
       false -> error("interface digest does not match its contents")
@@ -110,7 +113,7 @@ defmodule Catena.Interface do
   end
 
   defp categorical_payload(payload, %{frontend_version: version, categorical: categorical})
-       when version in ~w(0.4 0.5) do
+       when version in ~w(0.4 0.5 0.6) do
     Map.merge(payload, %{
       "standard_digest" => categorical.standard_digest,
       "traits" => Enum.map(categorical.traits, &encode_trait/1),
@@ -121,7 +124,8 @@ defmodule Catena.Interface do
 
   defp categorical_payload(payload, _core), do: payload
 
-  defp effect_payload(payload, %{frontend_version: "0.5", effects: effects}) do
+  defp effect_payload(payload, %{frontend_version: version, effects: effects})
+       when version in ~w(0.5 0.6) do
     Map.merge(payload, %{
       "effects" =>
         effects.exported_families
@@ -135,6 +139,15 @@ defmodule Catena.Interface do
   end
 
   defp effect_payload(payload, _core), do: payload
+
+  defp specification_payload(payload, %{frontend_version: "0.6", specifications: specifications}) do
+    Map.merge(payload, %{
+      "claims" => Specification.interface_payload(specifications),
+      "specification_digest" => specifications.digest
+    })
+  end
+
+  defp specification_payload(payload, _core), do: payload
 
   defp encode_effect_family(family) do
     %{
@@ -383,7 +396,7 @@ defmodule Catena.Interface do
   defp decode_categorical(_value, version) when version in ~w(0.2 0.3),
     do: {:ok, %{traits: [], instances: [], templates: [], standard_digest: nil}}
 
-  defp decode_categorical(value, version) when version in ~w(0.4 0.5) do
+  defp decode_categorical(value, version) when version in ~w(0.4 0.5 0.6) do
     traits = Map.get(value, "traits")
     instances = Map.get(value, "instances")
     templates = Map.get(value, "templates")
@@ -416,7 +429,7 @@ defmodule Catena.Interface do
   defp decode_effects(_value, version) when version in ~w(0.2 0.3 0.4),
     do: {:ok, %{effects: [], handlers: []}}
 
-  defp decode_effects(value, "0.5") do
+  defp decode_effects(value, version) when version in ~w(0.5 0.6) do
     effects = Map.get(value, "effects")
     handlers = Map.get(value, "handlers")
 
@@ -434,6 +447,50 @@ defmodule Catena.Interface do
       error("interface effects and handlers must be lists of objects")
     end
   end
+
+  defp decode_specifications(_value, version) when version in ~w(0.2 0.3 0.4 0.5),
+    do: {:ok, %{claims: [], specification_digest: nil}}
+
+  defp decode_specifications(value, "0.6") do
+    claims = Map.get(value, "claims")
+    digest = Map.get(value, "specification_digest")
+
+    if is_list(claims) and Enum.all?(claims, &valid_claim_summary?/1) and digest?(digest) and
+         length(claims) == length(Enum.uniq_by(claims, & &1["id"])) do
+      {:ok, %{claims: claims, specification_digest: digest}}
+    else
+      error("interface claims must be unique well-formed summaries")
+    end
+  end
+
+  defp valid_claim_summary?(claim) when is_map(claim) do
+    subject = Map.get(claim, "subject")
+    examples = Map.get(claim, "examples")
+
+    is_binary(Map.get(claim, "id")) and
+      Regex.match?(~r/^claim:sha256:[0-9a-f]{64}$/, claim["id"]) and
+      digest?(Map.get(claim, "semantic_digest")) and Map.get(claim, "kind") == "rule" and
+      is_map(subject) and subject["kind"] in @claim_subject_kinds and is_binary(subject["name"]) and
+      byte_size(subject["name"]) > 0 and is_list(examples) and
+      Enum.all?(examples, &valid_claim_example?/1)
+  end
+
+  defp valid_claim_summary?(_claim), do: false
+
+  defp valid_claim_example?(%{
+         "name" => name,
+         "arguments" => arguments,
+         "expected" => expected,
+         "outcome" => "supported",
+         "steps" => steps
+       }),
+       do:
+         is_binary(name) and is_list(arguments) and is_boolean(expected) and is_integer(steps) and
+           steps >= 0
+
+  defp valid_claim_example?(_example), do: false
+
+  defp digest?(value), do: is_binary(value) and Regex.match?(~r/^[0-9a-f]{64}$/, value)
 
   defp decode_effect_family(family) do
     parameters = Map.fetch!(family, "parameters")

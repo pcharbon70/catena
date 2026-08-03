@@ -31,10 +31,11 @@ git switch rewrite
 
 ## Current status
 
-The clean rewrite now contains executable type-system, data-and-pattern,
-clause-condition, trait/categorical-operation, and normative effect-handler
-slices. The bootstrap toolchain is written in Elixir 1.20.2 on Erlang/OTP
-29.0.4 and targets only the BEAM VM. It does not reuse the
+The clean rewrite now contains executable normative type-system,
+data-and-pattern, clause-condition, trait/categorical-operation,
+effect-handler, and 0.6 specification-and-governance slices. The
+bootstrap toolchain is written in Elixir 1.20.2 on Erlang/OTP 29.0.4 and
+targets only the BEAM VM. It does not reuse the
 historical proof-of-concept's compiler or language design.
 
 The normative language definition belongs to the separate
@@ -47,25 +48,35 @@ To explore the language as a programmer, begin with the
 shows how to run the current JSON-AST prototype, and routes into the
 authoritative `catena-research` documents.
 
+The [Catena Guides](guides/README.md) provide a detailed source-first learning
+path, task guides for each implemented language slice, governance operations,
+and compiler developer documentation. Contributors should also read
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Compiler path
 
 ```mermaid
 flowchart LR
-    JSON[Versioned JSON AST 0.1 through 0.5] --> D[Nominal data elaboration]
+    JSON[Versioned JSON AST 0.1 through 0.6] --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
     C --> T[Kinded traits and coherent evidence]
     T --> FX[Lexical effects and named handlers]
     FX --> G[Pattern coverage and ordered guard tree]
-    G --> TC[Typed core]
+    G --> S[Typed rules and bounded examples]
+    S --> TC[Typed core]
     TC --> V[Independent core verifier]
     V --> CPS[Effect-directed CPS or pure direct path]
     CPS --> EAF[Erlang Abstract Format]
     EAF --> OTP[OTP 29 compile:noenv_forms/2]
-    OTP --> BEAM[Module .beam]
-    I[Digest-bound 0.4 interfaces] --> L[Manifest-directed specialization]
+    OTP --> BEAM[Runtime-only module .beam]
+    I[Digest-bound 0.2 through 0.6 interfaces] --> L[Manifest-directed specialization]
     L --> OTP
     OTP --> CB[Companion .beam with direct calls]
+    BEAM --> A[Artifact digests]
+    CB --> A
+    A --> GOV[Offline trust, lifecycle, and additive policy]
+    GOV --> SIDE[Canonical assurance sidecar and signing payload]
 ```
 
 The JSON AST is a temporary versioned toolchain input, not a proposed Catena
@@ -73,8 +84,8 @@ surface syntax. A later parser will feed the same typed pipeline. The backend
 does not emit Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
 
-The implementation preserves the C001 through C004 evidence and adds the
-normative 0.5 effect-handler slice. Together they include:
+The implementation preserves the C001 through C005 evidence and adds the
+normative C006 assurance slice. Together they include:
 
 - Algorithm W for literals, variables, lambdas, application, polymorphic
   `let`, tuples, and signatures;
@@ -145,15 +156,37 @@ normative 0.5 effect-handler slice. Together they include:
 - affine clause-scoped resumptions with static escape and duplicate-use checks
   plus a runtime consumed token that traps before duplicate continuation entry;
 - identity-aware open effect rows, effect signatures in version 0.5 module
-  interfaces, and independent typed-core effect-row verification; and
+  interfaces, and independent typed-core effect-row verification;
 - effect-directed CPS workers that pass lexical handler state across effectful
   calls while leaving proven-pure C001-C004 definitions on the direct calling
-  convention, with reference/BEAM trace-agreement tests.
+  convention, with reference/BEAM trace-agreement tests;
+- AST 0.6 typed parameterized rules attached to resolved language subjects,
+  exact executable examples, stable claim IDs, and formatting-insensitive
+  semantic digests;
+- verification-only definitions checked by the ordinary type-and-effect
+  system, evaluated under a deterministic 20,000-step budget, rejected when
+  reachable from runtime code, and removed before Abstract Format lowering;
+- module interfaces carrying claim summaries without exporting verification
+  checkers as callable values;
+- strict RFC 8785 canonical JSON with safe integers, SHA-256 digests, RFC 8032
+  Ed25519 verification, domain-separated payloads, and independent vectors;
+- offline normal and recovery roots, distinct-key thresholds, scoped
+  delegation, logical sequence windows, revocation, old-plus-new rotation,
+  and predeclared recovery;
+- an immutable Draft-to-Superseded lifecycle, exact approval and evidence
+  binding, and a closed additive policy algebra with an independent oracle;
+- transactional 0.6 package staging, path and symlink containment, failed-gate
+  no-output behavior, exact BEAM/interface binding, and canonical assurance
+  sidecars; and
+- an external-signer workflow: the compiler emits canonical payload bytes and
+  their digest, verifies supplied signatures, and never handles private keys.
 
 This is not yet a Catena source parser or a complete implementation of resource
 scopes, exception boundaries, top-level host effects, scoped or multi-shot
-control, structural variants, programmable patterns, package distribution, or
-foreign-term validation. The JSON AST remains the bootstrap boundary.
+control, structural variants, programmable patterns, runtime assurance
+monitors, stronger proof methods, long-term governance migration, package
+distribution, or foreign-term validation. The JSON AST remains the bootstrap
+boundary.
 
 ## Build and test
 
@@ -165,7 +198,7 @@ asdf exec mix test
 asdf exec mix escript.build
 ```
 
-The CLI accepts four commands:
+The CLI accepts five commands:
 
 ```bash
 ./catena check-ir program.json
@@ -174,7 +207,9 @@ The CLI accepts four commands:
 ./catena compile-ir --layout uniform program.json
 ./catena compile-ir --condition-lowering native program.json
 ./catena compile-ir --condition-lowering ordinary program.json
-./catena compile-package-ir package.catena-package.json
+./catena compile-package-ir --action build package.catena-package.json
+./catena compile-package-ir --action publish --trust-root trust-root.json package.catena-package.json
+./catena verify-assurance --trust-root trust-root.json assurance.json
 ```
 
 `compile-ir` writes an OTP-generated `.beam` and a deterministic `.cati.json`
@@ -189,7 +224,13 @@ and verified specialization templates. `compile-package-ir` consumes only the
 modules, interfaces, roots, and outputs explicitly named by its toolchain
 manifest; it is not a package manager. AST 0.5 adds nominal effect families,
 `uses` rows, requests, named handlers, and affine resumptions while retaining
-the 0.4 categorical interface payload.
+the 0.4 categorical interface payload. AST 0.6 adds semantic specification
+forms and verification-only definitions. A 0.6 package manifest names its
+profile and assurance output and may name a canonical governance bundle.
+Governed builds require an explicit action. Publication and activation require
+an external normal-root signature over the exact emitted assurance payload;
+the compiler reports that payload and digest for an external signer and
+verifies supplied signatures on the next invocation.
 
 ## Intended evolution
 

@@ -2,7 +2,7 @@ defmodule Catena do
   @moduledoc """
   The bootstrap Catena compiler API.
 
-  Versions 0.1 through 0.5 accept a versioned JSON AST, check and elaborate it,
+  Versions 0.1 through 0.6 accept a versioned JSON AST, check and elaborate it,
   verify the typed core, lower it to Erlang Abstract Format, and delegate BEAM
   generation to OTP 29.
   """
