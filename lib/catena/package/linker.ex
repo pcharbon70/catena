@@ -1,9 +1,19 @@
 defmodule Catena.Package.Linker do
-  @moduledoc "Deterministic Catena 0.4 package specialization and evidence-erasing BEAM linker."
+  @moduledoc "Deterministic C004 specialization and transactional C006 governed package linker."
 
   alias Catena.Categorical.TypeTerm
+  alias Catena.Governance.{Crypto, TrustRoot}
   alias Catena.Package.Manifest
-  alias Catena.{CanonicalJSON, Categorical, Diagnostic, Interface}
+
+  alias Catena.{
+    Assurance,
+    CanonicalJSON,
+    Categorical,
+    Diagnostic,
+    Governance,
+    Interface
+  }
+
   alias Catena.OTP.Compiler, as: OTPCompiler
   alias Catena.Type.Trait
 
@@ -14,21 +24,36 @@ defmodule Catena.Package.Linker do
     directory = Path.dirname(Path.expand(path))
 
     with {:ok, manifest} <- path |> File.read!() |> Manifest.decode(),
-         {:ok, interfaces} <- load_interfaces(manifest.interfaces, directory),
-         {:ok, interfaces, module_outputs} <-
-           compile_modules(manifest.modules, directory, interfaces, options),
-         {:ok, module, binary, metadata} <- link(manifest, interfaces, source: path) do
-      output = resolve(manifest.output, directory)
-      File.mkdir_p!(Path.dirname(output))
-      File.write!(output, binary)
+         :ok <- validate_paths(manifest, directory),
+         {:ok, imported_interfaces} <- load_interfaces(manifest.interfaces, directory),
+         {:ok, interfaces, prepared_modules} <-
+           compile_modules(manifest.modules, directory, imported_interfaces, options),
+         {:ok, module, companion_binary, metadata} <- link(manifest, interfaces, source: path),
+         {:ok, result} <-
+           finalize_package(
+             manifest,
+             module,
+             companion_binary,
+             metadata,
+             prepared_modules,
+             imported_interfaces,
+             directory,
+             options
+           ) do
+      :ok = commit_outputs(result.prepared_outputs)
 
       {:ok,
        %{
          module: module,
-         output: output,
-         module_outputs: module_outputs,
+         output: result.output,
+         module_outputs: result.module_outputs,
          specialization_keys: metadata.specialization_keys,
-         evidence_erased: true
+         evidence_erased: true,
+         assurance: result.assurance,
+         assurance_digest: result.assurance_digest,
+         signing_payload: result.signing_payload,
+         signing_payload_digest: result.signing_payload_digest,
+         governance: result.governance
        }}
     end
   rescue
@@ -62,8 +87,8 @@ defmodule Catena.Package.Linker do
 
       case OTPCompiler.compile(forms,
              source: Keyword.get(options, :source, "<package>"),
-             frontend_version: "0.4",
-             specification: "0.4"
+             frontend_version: Map.get(manifest, :version, "0.4"),
+             specification: Map.get(manifest, :version, "0.4")
            ) do
         {:ok, module, binary, warnings} ->
           {:ok, module, binary,
@@ -105,14 +130,21 @@ defmodule Catena.Package.Linker do
         {:ok, _module, binary, metadata} ->
           beam = resolve(declaration["beam"], directory)
           interface = resolve(declaration["interface"], directory)
-          File.mkdir_p!(Path.dirname(beam))
-          File.mkdir_p!(Path.dirname(interface))
-          File.write!(beam, binary)
-          File.write!(interface, metadata.interface_binary)
 
           {:cont,
            {:ok, available ++ [decoded_interface!(metadata.interface_binary)],
-            [%{beam: beam, interface: interface} | outputs]}}
+            [
+              %{
+                beam: beam,
+                beam_relative: declaration["beam"],
+                interface: interface,
+                interface_relative: declaration["interface"],
+                beam_binary: binary,
+                interface_binary: metadata.interface_binary,
+                core: metadata.core
+              }
+              | outputs
+            ]}}
 
         {:error, diagnostic} ->
           {:halt, {:error, diagnostic}}
@@ -124,6 +156,420 @@ defmodule Catena.Package.Linker do
     end
   rescue
     error in File.Error -> {:error, Diagnostic.new("LNK001", Exception.message(error))}
+  end
+
+  defp finalize_package(
+         %{version: "0.4"} = manifest,
+         _module,
+         companion_binary,
+         _metadata,
+         modules,
+         _interfaces,
+         directory,
+         _options
+       ) do
+    output = resolve(manifest.output, directory)
+
+    prepared =
+      module_prepared_outputs(modules) ++ [%{path: output, binary: companion_binary}]
+
+    {:ok,
+     %{
+       output: output,
+       module_outputs: module_output_records(modules),
+       prepared_outputs: prepared,
+       assurance: nil,
+       assurance_digest: nil,
+       signing_payload: nil,
+       signing_payload_digest: nil,
+       governance: nil
+     }}
+  end
+
+  defp finalize_package(
+         %{version: "0.6"} = manifest,
+         _module,
+         companion_binary,
+         _metadata,
+         modules,
+         interfaces,
+         directory,
+         options
+       ) do
+    action = requested_action!(manifest, options)
+    output = resolve(manifest.output, directory)
+    assurance_output = resolve(manifest.assurance, directory)
+
+    artifacts =
+      Enum.flat_map(modules, fn module ->
+        [
+          %{path: module.beam_relative, kind: "beam", binary: module.beam_binary},
+          %{
+            path: module.interface_relative,
+            kind: "interface",
+            binary: module.interface_binary
+          }
+        ]
+      end) ++ [%{path: manifest.output, kind: "companion_beam", binary: companion_binary}]
+
+    cores = Enum.map(modules, & &1.core)
+
+    local_claims =
+      cores
+      |> Enum.flat_map(&get_in(&1, [:specifications, :claims]))
+      |> then(&Catena.Specification.interface_payload(%{claims: &1}))
+
+    inherited_claims = Enum.flat_map(interfaces, & &1.claims)
+    claims = (local_claims ++ inherited_claims) |> Enum.uniq_by(& &1["id"])
+    compiler_evidence = Enum.flat_map(cores, &Governance.compiler_evidence(&1.specifications))
+
+    claim_digests = Enum.map(claims, & &1["semantic_digest"])
+
+    dependency_digests = interfaces |> Enum.map(& &1.digest) |> Enum.uniq()
+
+    artifact_digests =
+      artifacts
+      |> Enum.map(&(:crypto.hash(:sha256, &1.binary) |> Base.encode16(case: :lower)))
+      |> Kernel.++(dependency_digests)
+
+    compiler_evidence =
+      Enum.map(compiler_evidence, &Map.put(&1, "artifact_digests", Enum.sort(artifact_digests)))
+
+    context = %{
+      action: action,
+      package: manifest.package,
+      profile: manifest.profile,
+      modules: Enum.map(cores, & &1.module),
+      subjects:
+        [%{"kind" => "output", "name" => manifest.output}] ++
+          Enum.map(modules, &%{"kind" => "interface", "name" => &1.interface_relative}) ++
+          (claims |> Enum.map(& &1["subject"]) |> Enum.uniq()),
+      compiler_evidence: compiler_evidence,
+      claims: claims,
+      claim_digests: claim_digests,
+      artifact_digests: artifact_digests
+    }
+
+    with :ok <- validate_package_claim_subjects(local_claims, manifest, modules),
+         {:ok, bundle, root, governance_result} <-
+           evaluate_governance(manifest, context, directory, options),
+         signatures <- if(bundle, do: bundle.manifest_signatures, else: []),
+         assurance <-
+           Assurance.build(
+             %{
+               package: manifest.package,
+               profile: manifest.profile,
+               action: action,
+               claims: claims,
+               dependency_digests: dependency_digests
+             },
+             artifacts,
+             cores,
+             governance_result,
+             signatures
+           ),
+         :ok <- verify_assurance_signature(action, assurance, signatures, root, governance_result) do
+      prepared =
+        module_prepared_outputs(modules) ++
+          [
+            %{path: output, binary: companion_binary},
+            %{path: assurance_output, binary: assurance.binary}
+          ]
+
+      {:ok,
+       %{
+         output: output,
+         module_outputs: module_output_records(modules),
+         prepared_outputs: prepared,
+         assurance: assurance_output,
+         assurance_digest: assurance.digest,
+         signing_payload: assurance.payload,
+         signing_payload_digest: assurance.payload_digest,
+         governance: governance_result
+       }}
+    end
+  end
+
+  defp validate_package_claim_subjects(claims, manifest, modules) do
+    output_names = [manifest.output | Enum.map(modules, & &1.beam_relative)]
+    interface_names = Enum.map(modules, & &1.interface_relative)
+
+    Enum.reduce_while(claims, :ok, fn claim, :ok ->
+      subject = claim["subject"]
+
+      valid? =
+        case subject do
+          %{"kind" => "output", "name" => name} -> name in output_names
+          %{"kind" => "interface", "name" => name} -> name in interface_names
+          %{"kind" => "action", "name" => name} -> name in ~w(build publish activate)
+          %{"kind" => "profile", "name" => name} -> name == manifest.profile
+          _ -> true
+        end
+
+      if valid? do
+        {:cont, :ok}
+      else
+        {:halt,
+         {:error,
+          Diagnostic.new(
+            "SPC001",
+            "claim #{claim["id"]} names unknown package subject #{inspect(subject)}",
+            path: "$.specifications"
+          )}}
+      end
+    end)
+  end
+
+  defp evaluate_governance(%{governed?: false}, %{action: "build"}, _directory, _options),
+    do: {:ok, nil, nil, nil}
+
+  defp evaluate_governance(%{governed?: false}, _context, _directory, _options),
+    do:
+      {:error,
+       Diagnostic.new("GOV001", "an ungoverned 0.6 package supports only the build action",
+         path: "$"
+       )}
+
+  defp evaluate_governance(manifest, context, directory, options) do
+    governance_path = resolve(manifest.governance, directory)
+    trust_path = Keyword.get(options, :trust_root)
+
+    with {:ok, bundle} <- governance_path |> File.read!() |> Governance.decode_bundle(),
+         true <- bundle.profile == manifest.profile,
+         {:ok, root} <- load_trust_root(trust_path),
+         {:ok, result} <- Governance.evaluate(bundle, root, context) do
+      {:ok, bundle, root, result}
+    else
+      false ->
+        {:error,
+         Diagnostic.new("GOV001", "governance profile does not match the package manifest",
+           path: "$.profile"
+         )}
+
+      {:error, _} = result ->
+        result
+    end
+  end
+
+  defp load_trust_root(nil), do: {:ok, nil}
+  defp load_trust_root(path), do: path |> File.read!() |> TrustRoot.decode()
+
+  defp verify_assurance_signature("build", _assurance, [], _root, _governance), do: :ok
+
+  defp verify_assurance_signature(action, assurance, signatures, root, governance)
+       when action in ~w(build publish activate) do
+    cond do
+      signatures == [] and action == "build" ->
+        :ok
+
+      is_nil(root) ->
+        {:error,
+         signing_diagnostic(
+           "manifest signatures require an explicit trust root",
+           assurance
+         )}
+
+      true ->
+        sequence = if(governance, do: governance.sequence, else: root.sequence)
+
+        case Crypto.verify_threshold(
+               root,
+               "normal",
+               "manifest",
+               assurance.document["signed"],
+               signatures,
+               sequence
+             ) do
+          {:ok, _signers} ->
+            :ok
+
+          {:error, reason} ->
+            {:error, signing_diagnostic("manifest signature rejected: #{reason}", assurance)}
+        end
+    end
+  end
+
+  defp signing_diagnostic(message, assurance) do
+    Diagnostic.new("GOV003", message,
+      path: "$",
+      details: %{
+        signing_payload: assurance.payload,
+        signing_payload_digest: assurance.payload_digest
+      }
+    )
+  end
+
+  defp normalize_action(action) when action in [:build, :publish, :activate],
+    do: Atom.to_string(action)
+
+  defp normalize_action(action) when action in ~w(build publish activate), do: action
+
+  defp normalize_action(action),
+    do: fail("GOV001", "unknown governed action #{inspect(action)}", "$.action")
+
+  defp requested_action!(%{governed?: true}, options) do
+    if Keyword.has_key?(options, :action) do
+      normalize_action(Keyword.fetch!(options, :action))
+    else
+      fail("GOV001", "a governed package requires --action build|publish|activate", "$.action")
+    end
+  end
+
+  defp requested_action!(_manifest, options),
+    do: normalize_action(Keyword.get(options, :action, "build"))
+
+  defp module_prepared_outputs(modules) do
+    Enum.flat_map(modules, fn module ->
+      [
+        %{path: module.beam, binary: module.beam_binary},
+        %{path: module.interface, binary: module.interface_binary}
+      ]
+    end)
+  end
+
+  defp module_output_records(modules),
+    do: Enum.map(modules, &%{beam: &1.beam, interface: &1.interface})
+
+  defp commit_outputs(outputs) do
+    nonce = System.unique_integer([:positive, :monotonic])
+
+    temporary =
+      Enum.with_index(outputs)
+      |> Enum.map(fn {%{path: path, binary: binary}, index} ->
+        File.mkdir_p!(Path.dirname(path))
+        temp = path <> ".catena-#{nonce}-#{index}.tmp"
+        File.write!(temp, binary, [:binary, :exclusive])
+        %{temporary: temp, final: path}
+      end)
+
+    backups =
+      Enum.with_index(temporary)
+      |> Enum.map(fn {%{final: final}, index} ->
+        %{final: final, backup: final <> ".catena-#{nonce}-#{index}.bak"}
+      end)
+
+    try do
+      Enum.each(backups, fn item ->
+        if File.exists?(item.final), do: File.rename!(item.final, item.backup)
+      end)
+
+      Enum.each(temporary, fn item -> File.rename!(item.temporary, item.final) end)
+      Enum.each(backups, &File.rm(&1.backup))
+      :ok
+    rescue
+      error ->
+        Enum.each(Enum.zip(temporary, backups), fn {item, backup} ->
+          cond do
+            File.exists?(backup.backup) ->
+              File.rm(item.final)
+              File.rename(backup.backup, backup.final)
+
+            not File.exists?(item.temporary) ->
+              File.rm(item.final)
+
+            true ->
+              :ok
+          end
+        end)
+
+        reraise error, __STACKTRACE__
+    after
+      Enum.each(temporary, &File.rm(&1.temporary))
+      Enum.each(backups, &File.rm(&1.backup))
+    end
+  end
+
+  defp validate_paths(%{version: "0.4"}, _directory), do: :ok
+
+  defp validate_paths(%{version: "0.6"} = manifest, directory) do
+    input_paths =
+      manifest.interfaces ++
+        Enum.map(manifest.modules, & &1["source"]) ++
+        List.wrap(manifest.governance)
+
+    output_paths =
+      [manifest.output, manifest.assurance] ++
+        Enum.flat_map(manifest.modules, &[&1["beam"], &1["interface"]])
+
+    all_paths = input_paths ++ output_paths
+
+    cond do
+      Enum.any?(all_paths, &(not safe_relative_path?(&1, directory))) ->
+        {:error,
+         Diagnostic.new("ART001", "0.6 package paths must remain inside the manifest directory",
+           path: "$"
+         )}
+
+      length(output_paths) != length(Enum.uniq(output_paths)) ->
+        {:error, Diagnostic.new("ART001", "package output paths must be unique", path: "$")}
+
+      Enum.any?(output_paths, &(&1 in input_paths)) ->
+        {:error, Diagnostic.new("ART001", "package output may not overwrite an input", path: "$")}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp safe_relative_path?(path, directory) when is_binary(path) do
+    root = Path.expand(directory)
+    expanded = Path.expand(path, root)
+
+    lexical? =
+      Path.type(path) == :relative and ".." not in Path.split(path) and
+        String.starts_with?(expanded, root <> "/")
+
+    with true <- lexical?,
+         {:ok, root_real} <- real_existing_path(root),
+         ancestor <- existing_ancestor(expanded, root),
+         {:ok, ancestor_real} <- real_existing_path(ancestor) do
+      ancestor_real == root_real or String.starts_with?(ancestor_real, root_real <> "/")
+    else
+      _ -> false
+    end
+  end
+
+  defp safe_relative_path?(_path, _directory), do: false
+
+  defp existing_ancestor(path, root) do
+    cond do
+      File.exists?(path) -> path
+      path == root -> root
+      true -> existing_ancestor(Path.dirname(path), root)
+    end
+  end
+
+  defp real_existing_path(path), do: real_existing_path(path, MapSet.new())
+
+  defp real_existing_path(path, visited) do
+    path = Path.expand(path)
+
+    if MapSet.member?(visited, path) do
+      {:error, :symlink_cycle}
+    else
+      path
+      |> Path.split()
+      |> Enum.reduce_while({:ok, ""}, fn component, {:ok, current} ->
+        candidate = if current == "", do: component, else: Path.join(current, component)
+
+        case File.lstat(candidate) do
+          {:ok, %File.Stat{type: :symlink}} ->
+            with {:ok, target} <- File.read_link(candidate),
+                 target <- Path.expand(target, Path.dirname(candidate)),
+                 {:ok, resolved} <- real_existing_path(target, MapSet.put(visited, path)) do
+              {:cont, {:ok, resolved}}
+            else
+              _ -> {:halt, {:error, :invalid_symlink}}
+            end
+
+          {:ok, _stat} ->
+            {:cont, {:ok, candidate}}
+
+          {:error, reason} ->
+            {:halt, {:error, reason}}
+        end
+      end)
+    end
   end
 
   defp specialize_root!(root, templates, registry, budget, companion_module) do

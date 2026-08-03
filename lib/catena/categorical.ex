@@ -9,7 +9,7 @@ defmodule Catena.Categorical do
 
   @spec prepare!(map(), map(), [map()]) :: map()
   def prepare!(%{frontend_version: version}, _data, _interfaces)
-      when version not in ~w(0.4 0.5),
+      when version not in ~w(0.4 0.5 0.6),
       do: empty()
 
   def prepare!(ast, data, interfaces) do

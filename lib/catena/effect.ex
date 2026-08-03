@@ -9,7 +9,8 @@ defmodule Catena.Effect do
   @value_name ~r/^[a-z][A-Za-z0-9_]*$/
 
   @spec prepare!(map(), map(), [map()]) :: map()
-  def prepare!(%{frontend_version: version}, _data, _interfaces) when version != "0.5" do
+  def prepare!(%{frontend_version: version}, _data, _interfaces)
+      when version not in ~w(0.5 0.6) do
     %{families: %{}, handlers: %{}, exported_families: [], exported_handlers: []}
   end
 

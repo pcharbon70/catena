@@ -1,5 +1,5 @@
 defmodule Catena.Backend.ErlangAbstract do
-  @moduledoc "Lower verified Catena C001-C005 typed core to Erlang/OTP 29 Abstract Format."
+  @moduledoc "Lower verified Catena C001-C006 runtime core to Erlang/OTP 29 Abstract Format."
 
   alias Catena.Diagnostic
 
@@ -9,19 +9,21 @@ defmodule Catena.Backend.ErlangAbstract do
     module = safe_atom(core.module)
     layout = Keyword.get(options, :layout, :compact)
 
+    runtime_definitions = Enum.reject(core.definitions, &Map.get(&1, :verification_only?, false))
+
     globals =
-      core.definitions
+      runtime_definitions
       |> Map.new(&{&1.name, length(&1.parameters)})
       |> Map.merge(imported_condition_globals(core))
       |> Map.put(:condition_lowering, Keyword.get(options, :condition_lowering, :auto))
       |> Map.put(:effect_handlers, get_in(core, [:effects, :handlers]) || %{})
       |> Map.put(
         :effect_definitions,
-        Map.new(core.definitions, &{&1.name, effect_definition?(&1)})
+        Map.new(runtime_definitions, &{&1.name, effect_definition?(&1)})
       )
 
     exports =
-      core.definitions
+      runtime_definitions
       |> Enum.filter(&(&1.name in core.exports or Map.get(&1, :linker_only?, false)))
       |> Enum.map(fn definition ->
         {safe_atom(definition.name), length(definition.parameters)}
@@ -41,7 +43,7 @@ defmodule Catena.Backend.ErlangAbstract do
     exports = exports ++ handler_exports
 
     functions =
-      Enum.flat_map(core.definitions, fn definition ->
+      Enum.flat_map(runtime_definitions, fn definition ->
         definition
         |> lower_definition(globals, annotation, layout)
         |> List.wrap()
@@ -1340,6 +1342,7 @@ defmodule Catena.Backend.ErlangAbstract do
   defp unused_effect_wrapper_attribute(core, annotation) do
     unused =
       core.definitions
+      |> Enum.reject(&Map.get(&1, :verification_only?, false))
       |> Enum.filter(&(effect_definition?(&1) and &1.name not in core.exports))
       |> Enum.map(&{safe_atom(&1.name), length(&1.parameters)})
 

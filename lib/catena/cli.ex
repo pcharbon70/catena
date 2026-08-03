@@ -1,13 +1,20 @@
 defmodule Catena.CLI do
   @moduledoc "Command-line entry point for the versioned JSON AST compiler."
 
-  alias Catena.{Interface, Report}
+  alias Catena.{Assurance, Interface, Report}
+  alias Catena.Governance.TrustRoot
   alias Catena.Package.Linker
 
   def main(arguments) do
     {options, positional, invalid} =
       OptionParser.parse(arguments,
-        strict: [interface: :keep, layout: :string, condition_lowering: :string],
+        strict: [
+          interface: :keep,
+          layout: :string,
+          condition_lowering: :string,
+          action: :string,
+          trust_root: :string
+        ],
         aliases: [i: :interface]
       )
 
@@ -17,17 +24,21 @@ defmodule Catena.CLI do
          {:ok, layout} <- layout(Keyword.get(options, :layout, "compact")),
          {:ok, condition_lowering} <-
            condition_lowering(Keyword.get(options, :condition_lowering, "auto")) do
-      compiler_options = [
-        interfaces: interfaces,
-        layout: layout,
-        condition_lowering: condition_lowering
-      ]
+      compiler_options =
+        [
+          interfaces: interfaces,
+          layout: layout,
+          condition_lowering: condition_lowering
+        ]
+        |> put_option(:action, Keyword.get(options, :action))
+        |> put_option(:trust_root, Keyword.get(options, :trust_root))
 
       case positional do
         ["check-ir", path] -> check(path, compiler_options)
         ["elaborate-ir", path] -> check(path, compiler_options)
         ["compile-ir", path] -> compile(path, compiler_options)
         ["compile-package-ir", path] -> compile_package(path, compiler_options)
+        ["verify-assurance", path] -> verify_assurance(path, compiler_options)
         _ -> halt_with(usage(), 64)
       end
     else
@@ -78,8 +89,37 @@ defmodule Catena.CLI do
           output: result.output,
           module_outputs: result.module_outputs,
           specialization_keys: result.specialization_keys,
-          evidence_erased: result.evidence_erased
+          evidence_erased: result.evidence_erased,
+          assurance: result.assurance,
+          assurance_digest: result.assurance_digest,
+          signing_payload: result.signing_payload,
+          signing_payload_digest: result.signing_payload_digest
         })
+
+      {:error, diagnostic} ->
+        diagnostic(diagnostic)
+    end
+  end
+
+  defp verify_assurance(path, options) do
+    with trust_path when is_binary(trust_path) <- Keyword.get(options, :trust_root),
+         {:ok, root} <- trust_path |> File.read!() |> TrustRoot.decode(),
+         {:ok, result} <- path |> File.read!() |> Assurance.verify(Path.dirname(path), root) do
+      print(%{
+        status: "ok",
+        package: result.package,
+        action: result.action,
+        state: result.state,
+        digest: result.digest,
+        signing_payload_digest: result.payload_digest
+      })
+    else
+      nil ->
+        diagnostic(
+          Catena.Diagnostic.new("GOV003", "verify-assurance requires --trust-root FILE",
+            path: "$"
+          )
+        )
 
       {:error, diagnostic} ->
         diagnostic(diagnostic)
@@ -119,6 +159,9 @@ defmodule Catena.CLI do
 
   defp print(value), do: IO.puts(JSON.encode!(value))
 
+  defp put_option(options, _key, nil), do: options
+  defp put_option(options, key, value), do: Keyword.put(options, key, value)
+
   defp halt_with(message, status) do
     IO.puts(:stderr, message)
     System.halt(status)
@@ -127,6 +170,7 @@ defmodule Catena.CLI do
   defp usage do
     "usage: catena [--interface FILE.cati.json] [--layout compact|uniform] " <>
       "[--condition-lowering auto|native|ordinary] " <>
-      "{check-ir|elaborate-ir|compile-ir|compile-package-ir} FILE.json"
+      "[--action build|publish|activate] [--trust-root FILE] " <>
+      "{check-ir|elaborate-ir|compile-ir|compile-package-ir|verify-assurance} FILE.json"
   end
 end

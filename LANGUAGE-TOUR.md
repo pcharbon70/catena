@@ -29,7 +29,7 @@ chapter.
 
 ## The language in one view
 
-Catena's initial model has six connected parts:
+Catena's initial model has seven connected parts:
 
 1. **Functions and inference** — ordinary code receives principal
    Hindley–Milner types where possible; advanced features require explicit
@@ -42,7 +42,9 @@ Catena's initial model has six connected parts:
    `combine`, and `and_then` under names that describe what programmers do.
 5. **Effects and handlers** — `uses`, `request`, and `handle` make nonlocal
    behavior explicit and select handlers through lexical capability identity.
-6. **BEAM execution** — verified typed core lowers to Erlang Abstract Format,
+6. **Specifications and governance** — optional typed rules and exact examples
+   become strict, artifact-bound package gates once a project adopts them.
+7. **BEAM execution** — verified typed core lowers to Erlang Abstract Format,
    which OTP 29 compiles into `.beam` modules.
 
 The language is expression-oriented, strict, and immutable by default.
@@ -214,6 +216,34 @@ Read the
 [effect and handler specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/effects-and-handlers)
 for capability identity, effect rows, evaluation order, and CPS lowering.
 
+## Specifications and governance
+
+Catena 0.6 explores an optional assurance layer without making organizational
+governance a prerequisite for ordinary programs. A rule names a typed,
+effect-free verification definition and attaches it to a resolved language
+subject. Exact examples invoke that checker under a fixed deterministic
+budget. Compiler evidence, signed external attestations, and explicit
+assumptions retain different meanings.
+
+Once a package names a governance bundle, every matching package, module,
+action, output, interface, and profile policy is combined additively. A local
+`build` may be permitted while `publish` or `activate` remains blocked.
+Approvals and lifecycle transitions bind exact claim, policy, evidence, and
+artifact digests; signatures prove who signed canonical bytes, not that the
+statement is mathematically true.
+
+All 0.6 specification and governance material is build-time only. Verification
+definitions disappear before Erlang Abstract Format lowering, and the package
+sidecar records what was checked and which exact BEAM/interface bytes were
+admitted. The compiler emits a canonical signing payload for an external
+Ed25519 signer and never reads a private key.
+
+This is a candidate semantic JSON contract, not final Catena source
+punctuation. Read the
+[candidate specification and governance chapters](https://github.com/pcharbon70/catena-research/tree/main/60-specification/specifications-and-governance)
+for the exact formats, policy algebra, lifecycle, diagnostics, and promotion
+gate.
+
 ## From Catena to BEAM
 
 The compiler path is:
@@ -225,6 +255,8 @@ versioned JSON AST (the current input)
         ↓
 inference and elaboration
         ↓
+typed rules and bounded build-time evidence
+        ↓
 verified typed core
         ↓
 pure direct lowering or effect-directed CPS
@@ -232,6 +264,8 @@ pure direct lowering or effect-directed CPS
 Erlang Abstract Format
         ↓  compile:noenv_forms/2
 BEAM module
+        ↓
+artifact-bound assurance sidecar (not runtime state)
 ```
 
 The bootstrap compiler is written in Elixir, but Elixir is not Catena's target
@@ -287,6 +321,10 @@ Elixir, so read them for semantics and diagnostics rather than surface syntax:
    traits, derivation, law evidence, specialization, and erased direct calls.
 5. [`c005_effects_test.exs`](test/catena/c005_effects_test.exs) — lexical
    capabilities, deep handlers, affine resumptions, and reference/BEAM traces.
+6. [`c006_specification_governance_test.exs`](test/catena/c006_specification_governance_test.exs)
+   — typed rules, exact examples, canonical signatures, trust rotation,
+   additive policy, lifecycle replay, package staging, artifact binding, and
+   complete BEAM erasure.
 
 ## Continue in catena-research
 

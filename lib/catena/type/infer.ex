@@ -1,5 +1,5 @@
 defmodule Catena.Type.Infer do
-  @moduledoc "Algorithm W with C002-C005 data, condition, trait, and effect elaboration."
+  @moduledoc "Algorithm W with C002-C006 data, condition, trait, effect, and assurance elaboration."
 
   alias Catena.Effect.Row
   alias Catena.{Categorical, Condition, Data, Derive, Diagnostic, Effect, Type}
@@ -57,7 +57,7 @@ defmodule Catena.Type.Infer do
           |> Keyword.take([:coverage_budget, :fact_budget])
           |> Keyword.put(
             :conditions,
-            if(ast.frontend_version in ~w(0.3 0.4 0.5), do: conditions, else: nil)
+            if(ast.frontend_version in ~w(0.3 0.4 0.5 0.6), do: conditions, else: nil)
           )
 
         uses = Map.fetch!(definition_effects, definition.name)
@@ -84,6 +84,7 @@ defmodule Catena.Type.Infer do
           condition: Condition.definition_evidence(conditions, definition.name),
           clause_definition?: definition.clause_definition?,
           generated?: false,
+          verification_only?: Map.get(definition, :verification_only?, false),
           uses: uses,
           effect_row: apply_row_substitution(body_effects(typed), state.substitution),
           verified_uses_row: apply_row_substitution(uses.row, state.substitution),
