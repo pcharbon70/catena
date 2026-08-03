@@ -1,7 +1,7 @@
 # Catena Language Tour
 
 Catena is a strict functional language for the BEAM VM. Its design combines
-type inference, algebraic data, exhaustive pattern matching, approachable
+type inference, variant data, exhaustive pattern matching, approachable
 composition operations, and explicit effect handling. The aim is to give
 ordinary programmers useful guarantees without requiring category-theory
 terminology as a prerequisite.
@@ -34,7 +34,7 @@ Catena's initial model has seven connected parts:
 1. **Functions and inference** — ordinary code receives principal
    Hindley–Milner types where possible; advanced features require explicit
    annotations.
-2. **Data and patterns** — nominal algebraic data types are consumed through
+2. **Data and patterns** — nominal variant types are consumed through
    ordered, exhaustively checked pattern matches.
 3. **Clause conditions** — a deliberately small, pure, total condition
    language can refine clause selection without hiding arbitrary execution.
@@ -78,11 +78,13 @@ Read the
 [normative type-system specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/type-system)
 for the exact type language and checking profiles.
 
-## Algebraic data and patterns
+## Variant data and patterns
 
 Types have nominal identity: two declarations with the same shape are still
-different types. A declaration can expose its constructors or keep them
-abstract across a module boundary.
+different types. A declaration can expose its variants or keep them abstract
+across a module boundary. The compiler specification also uses the terms
+algebraic datatype and constructor; `variant type`, `variant`, and `payload`
+are the reader-facing vocabulary.
 
 The canonical datatype notation is:
 
@@ -96,7 +98,7 @@ type DeliveryStatus =
   | InTransit { tracking_id: TrackingId }
 ```
 
-Construction qualifies the constructor:
+Construction qualifies the variant:
 
 ```catena
 Option.Some(7)
@@ -109,7 +111,7 @@ exhaustiveness. Missing alternatives receive concrete witnesses such as
 retained.
 
 The initial pattern language includes wildcards, binders, integer and Boolean
-literals, tuples, constructors, `as` patterns, and `or` patterns. It does not
+literals, tuples, variants, `as` patterns, and `or` patterns. It does not
 yet include list, map, binary, view, or pattern-synonym forms.
 
 Read the
@@ -157,10 +159,11 @@ reference metadata, not required source vocabulary.
 | Compose transformations | `Composable`, `IdentityComposer`, `TransformRouter` | `compose`, `identity`, `from_transform` |
 | Read contextual structures | `ContextualMapper`, `FocusReader` | `map_with_context`, `read_focus` |
 
-Instances are globally coherent: import order and local preference cannot
-silently change which behavior is selected. Trait evidence is checked during
-compilation, specialized to direct calls, and erased from the resulting BEAM
-code. Laws are explicit promises or test evidence; they do not authorize
+Implementations are globally coherent: import order and local preference
+cannot silently change which behavior is selected. The semantic ledger calls
+their records instances and evidence. That data is checked during compilation,
+specialized to direct calls, and erased from the resulting BEAM code.
+Guarantees are explicit promises or test evidence; they do not authorize
 silent compiler rewrites.
 
 Read the
@@ -199,9 +202,9 @@ around one expression:
 handle ask_name() using TestPrompt(responses) as prompt
 ```
 
-Initial handlers are deep: resuming reinstalls the same handler around the
-remaining computation. A clause may discard its resumption or invoke it once,
-using the dedicated form:
+Resuming reinstalls the same handler around the remaining computation; the
+semantic ledger calls this deep handling. A clause may discard its resumption
+or invoke it once, using the dedicated form:
 
 ```text
 resume continuation with reply
@@ -219,11 +222,14 @@ for capability identity, effect rows, evaluation order, and CPS lowering.
 ## Specifications and governance
 
 Catena 0.6 defines an optional assurance layer without making organizational
-governance a prerequisite for ordinary programs. A rule names a typed,
-effect-free verification definition and attaches it to a resolved language
-subject. Exact examples invoke that checker under a fixed deterministic
-budget. Compiler evidence, signed external attestations, and explicit
-assumptions retain different meanings.
+governance a prerequisite for ordinary programs. The proposed source
+vocabulary says what a boundary `needs`, what an implementation `promises`,
+which exact `example` should hold, and what broader `property` or `always`
+statement may be investigated later. The implemented 0.6 spine is smaller: a
+`rule` names a typed, effect-free verification definition and an exact
+`example` invokes it under a fixed deterministic budget. Compiler evidence,
+signed external attestations, and explicit assumptions retain different
+meanings.
 
 Once a package names a governance bundle, every matching package, module,
 action, output, interface, and profile policy is combined additively. A local
@@ -231,6 +237,12 @@ action, output, interface, and profile policy is combined additively. A local
 Approvals and lifecycle transitions bind exact claim, policy, evidence, and
 artifact digests; signatures prove who signed canonical bytes, not that the
 statement is mathematically true.
+
+The governance words remain action-oriented: an `owner` defines policy,
+authorized people `approve` an exact proposal, and the gate distinguishes
+`build`, `publish`, `activate`, and later lifecycle replacement. The canonical
+protocol represents those words with principals, roles, signatures, and
+immutable transitions.
 
 All 0.6 specification and governance material is build-time only. Verification
 definitions disappear before Erlang Abstract Format lowering, and the package

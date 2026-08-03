@@ -8,6 +8,23 @@ Code in this guide is illustrative source notation. The supported pattern
 forms and their behavior are normative even though final parser punctuation is
 not.
 
+## Use the matching vocabulary
+
+| Public word | What it means in Catena |
+| --- | --- |
+| `match` | inspect one value and select the first applicable clause |
+| `pattern` | describe a value shape without running arbitrary code |
+| `clause` | one pattern, optional condition, and result expression |
+| `binder` | give part or all of the matched value a local name |
+| `condition` | ask a small pure question after a pattern matches |
+| `witness` | one concrete shape that is missing or newly covered |
+| `exhaustive` | every possible visible value has a clause |
+| `redundant` | a clause can never be selected because earlier clauses cover it |
+
+Catena uses **condition** in reader-facing code and diagnostics. “Guard” may
+appear in BEAM/compiler explanations, but it is not a second public word the
+programmer must learn.
+
 ## Match every possible value
 
 ```catena
@@ -18,9 +35,13 @@ describe(value) =
   | Option.Some item -> show_int(item)
 ```
 
-The compiler knows that `Option` has two visible constructors and rejects a
+The compiler knows that `Option` has two visible variants and rejects a
 match that forgets one. A diagnostic includes a concrete missing witness when
 possible, such as `Option.Some(_)`.
+
+Read the second clause as: match the `Some` variant, bind its payload to
+`item`, then run `show_int(item)`. The pattern itself performs no work and the
+body runs only if that clause is selected.
 
 ## Runtime selection is ordered
 
@@ -57,9 +78,9 @@ item                                   -- binder
 0                                      -- integer literal
 true                                   -- Boolean literal
 (left, right)                          -- tuple
-Option.Some(item)                      -- positional constructor
-Delivery.InTransit { tracking_id: id } -- named constructor
-Delivery.InTransit { carrier, .. }     -- named constructor with omitted fields
+Option.Some(item)                      -- positional variant
+Delivery.InTransit { tracking_id: id } -- named-payload variant
+Delivery.InTransit { carrier, .. }     -- named payload with omitted fields
 pattern as complete                    -- bind part and whole
 first | second                         -- alternatives within one clause
 ```
@@ -98,9 +119,9 @@ types and establish the same GADT refinements:
 If the alternatives bind different names, the body would not have one stable
 environment, so the compiler rejects the pattern.
 
-## Exact named patterns
+## Exact named-variant patterns
 
-A named constructor pattern without `..` names every field exactly once:
+A named-payload variant pattern without `..` names every field exactly once:
 
 ```catena
 | Delivery.InTransit { tracking_id: id, carrier } -> ...
@@ -129,8 +150,8 @@ match option with
 | Option.Some item -> use(item) -- rejected: unreachable
 ```
 
-Coverage understands visible nominal constructors, Booleans, tuples, integer
-literals, abstract imported types, and compatible GADT constructors. Integers
+Coverage understands visible nominal variants, Booleans, tuples, integer
+literals, abstract imported types, and compatible GADT variants. Integers
 form an infinite domain, so finitely many integer literals cannot close a
 match without a wildcard or binder.
 
@@ -212,9 +233,9 @@ a type.
 
 ## Advanced GADT branches
 
-Selecting a GADT constructor may introduce equality evidence local to that
+Selecting a GADT variant may introduce equality evidence local to that
 branch. The branch body can use the refined type, but the evidence cannot
-escape or affect sibling branches. Coverage discards constructors whose
+escape or affect sibling branches. Coverage discards variants whose
 refined result cannot inhabit the scrutinee indices.
 
 ## Current boundaries

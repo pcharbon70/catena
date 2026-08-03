@@ -25,6 +25,34 @@ flowchart LR
 Only Erlang Abstract Format is the OTP-facing compiler representation. Core
 Erlang is not part of the normative backend route.
 
+## Follow one public idea through the representations
+
+Suppose source-oriented documentation says:
+
+```catena
+match option with
+| Option.None -> 0
+| Option.Some value -> value
+```
+
+The programmer needs only `match`, `variant`, and `payload`. Each compiler
+representation adds the facts required by its job:
+
+```mermaid
+flowchart LR
+    Public[match Some and bind its payload]
+    Public --> JSON[constructor-pattern tag and names]
+    JSON --> Decoded[normalized declaration references]
+    Decoded --> Core[nominal IDs, payload type, ordered clauses, coverage evidence]
+    Core --> EAF[Erlang Abstract Format case forms]
+    EAF --> Beam[OTP-generated BEAM instructions]
+```
+
+Do not make a public guide teach “constructor-pattern tag” or “coverage
+evidence” before it can explain matching. Conversely, do not name an internal
+field only `variant` when the verifier needs to distinguish declaration,
+constructor, representation, and branch identity.
+
 ## Versioned JSON AST
 
 The current frontend consumes JSON objects with versions 0.1 through 0.6. This

@@ -5,6 +5,28 @@ over exact package artifacts. It does not decide whether a technical claim is
 true, and it does not apply to ordinary packages unless they adopt a
 governance bundle.
 
+## Use the accepted governance vocabulary
+
+The public words describe responsibility and action before protocol machinery:
+
+| Public word | What it means |
+| --- | --- |
+| `owner` | the person or role responsible for a governed subject |
+| `policy` | the declared conditions for allowing a protected action |
+| `evidence` | technical support for an exact rule and artifact |
+| `approve` | give signed permission for an exact proposal |
+| `build` | check and stage exact package artifacts |
+| `publish` | permit those exact artifacts to be made available |
+| `activate` | permit an accepted artifact to become active |
+| `replace` | move from an older governed subject to its recorded successor |
+| `decision` | the explained `allow` or `deny` result of applying policy |
+
+The canonical 0.6 protocol represents an `owner` through exact principals,
+roles, and thresholds. It represents `replace` through the immutable
+`Deprecated -> Superseded` lifecycle rather than a mutable status field or a
+separate protected action. Those protocol terms make signatures and replay
+precise; the behavior-first words remain the entry vocabulary.
+
 ## Keep three questions separate
 
 ```mermaid

@@ -20,6 +20,32 @@ The repository contains an Elixir bootstrap compiler that can:
 It does not yet contain a Catena source parser, formatter, REPL, package
 manager, stable Erlang FFI, or complete standard library.
 
+## Learn Catena's words from behavior
+
+The current public vocabulary describes programming tasks first:
+
+| Catena word | Read it as |
+| --- | --- |
+| `value` | data available to a program |
+| `transform` | a pure function that changes a value |
+| `variant type` | a type with a closed set of named alternatives |
+| `variant` | one alternative of a variant type |
+| `payload` | the data carried by a variant |
+| `match` | choose behavior from a value's variant and payload |
+| `trait` | a reusable capability a type may provide |
+| `implementation` | how one type provides a trait |
+| `requirement` | a capability generic code needs |
+| `guarantee` | behavior an implementation promises to preserve |
+| `effect` | a named external ability |
+| `operation` | one request that ability provides |
+| `handle` | supply behavior for effect operations |
+| `resume` | continue the handled computation with a value |
+
+These words are the learning interface, not nicknames that must later be
+replaced with mathematical terminology. Exact parser punctuation is still
+open, and individual guides identify proposed words whose semantics have not
+yet entered the executable prototype.
+
 ## Install the pinned toolchain
 
 The repository pins Erlang/OTP and Elixir in `.tool-versions`. With
@@ -56,11 +82,12 @@ describe(status) =
 
 This example demonstrates the intended programming model:
 
-- `DeliveryStatus` has nominal identity; another declaration with the same
-  variants is still another type.
-- Constructors are qualified, so the origin of a value remains visible.
-- Matching is ordered and the compiler requires every possible variant to be
-  covered.
+- `DeliveryStatus` is a **variant type** with four possible states.
+- `InTransit`, `Delivered`, and `Failed` are **variants** carrying named
+  **payloads**.
+- Constructing a value qualifies its variant, so its origin remains visible.
+- `match` reads the variant and makes its payload available; the compiler
+  requires every possible variant to be covered.
 - Each exported function has a written signature.
 - Values are immutable and evaluation is strict.
 
@@ -127,7 +154,7 @@ identity(value) = value
 
 Advanced features such as GADT refinement, existential values, nested
 `forall`, and polymorphic recursion require annotations. The compiler rejects
-ambiguity instead of guessing a default type or trait instance.
+ambiguity instead of guessing a default type or trait implementation.
 
 Functions that may leave an external request to their caller expose that fact
 with `uses`:
@@ -181,8 +208,8 @@ not a dependency resolver or package manager.
 
 Continue in this order:
 
-1. [Algebraic Data Types](language/algebraic-data-types.md) when you need to
-   define possible states.
+1. [Variant Types and Structured Data](language/algebraic-data-types.md) when
+   you need to define possible states and their payloads.
 2. [Pattern Matching](language/pattern-matching.md) when you need to consume
    those states safely.
 3. [Traits and Composition](language/traits-and-composition.md) when the same
