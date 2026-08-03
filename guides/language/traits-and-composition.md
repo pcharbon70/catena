@@ -7,6 +7,31 @@ mathematical lineage remains metadata for specification and advanced study.
 The public names and minimal methods below are normative ABI. Source examples
 remain illustrative until the parser is implemented.
 
+## Use the shared-behavior vocabulary
+
+| Public word | What it means in Catena |
+| --- | --- |
+| `trait` | a named capability that more than one type can provide |
+| `implementation` | the unique way a concrete type provides that trait |
+| `requirement` | the trait behavior a generic transform needs |
+| `operation` | an action supplied by the trait, such as `map` or `combine` |
+| `guarantee` | a behavior-preserving promise every implementation must keep |
+| `derive` | ask the compiler to construct a valid implementation from a type declaration |
+
+This vocabulary keeps the programming decision visible. For example:
+
+```catena
+normalize_optional(value) = Option.map(normalize_name, value)
+
+normalize_all : Mapper Container -> Container Text -> Container Text
+normalize_all(values) = map(normalize_name, values)
+```
+
+The first line uses one concrete operation. The signature on `normalize_all`
+then states a reusable **requirement**: whatever `Container` is, its
+**implementation** must provide the `Mapper` operation. The guide does not
+require a second mathematical name for that capability.
+
 ## Begin with the operation you need
 
 Use a concrete operation before reaching for a trait constraint:
@@ -135,27 +160,27 @@ An arrow means the child requires the parent's behavior. Parent evidence is
 resolved explicitly; implementations do not copy or silently override parent
 methods.
 
-## Instances are coherent
+## Implementations are coherent
 
 For one trait and one concrete type combination, Catena selects at most one
-instance. Selection cannot vary with import order, local preference, or
-runtime state.
+implementation. The semantic ledger calls this record an `instance`, but
+selection cannot vary with import order, local preference, or runtime state.
 
 The initial coherence rules require:
 
 - the trait or a participating nominal type to be owned by the declaring
   package;
-- instance heads not to overlap globally;
-- recursive instance requirements to decrease structurally;
+- implementation heads not to overlap globally;
+- recursive implementation requirements to decrease structurally;
 - functional dependencies and associated types to agree; and
 - imported interfaces to carry digest-bound evidence.
 
-Ambiguity is an error. Catena does not choose the “closest” instance or apply
-type defaulting.
+Ambiguity is an error. Catena does not choose the “closest” implementation or
+apply type defaulting.
 
 ## Minimal methods are exact
 
-An instance supplies exactly the minimal methods declared by its trait. A
+An implementation supplies exactly the minimal methods declared by its trait. A
 missing method is incomplete; an extra method pretending to override a
 derived or parent operation is also rejected. This keeps the ABI small and
 prevents two implementations from assigning different meanings to supposedly
@@ -167,7 +192,7 @@ second sequencing operation.
 
 ## Guarantees are evidence, not optimizer permission
 
-Traits may declare laws or behavioral guarantees. An instance records whether
+Traits may declare behavioral guarantees. An implementation records whether
 those guarantees are promised, tested, or compiler-derived. Those statuses
 remain distinct:
 
@@ -182,7 +207,7 @@ promised a law. Optimization requires its own trusted justification.
 ## Structural derivation
 
 Catena can derive a bounded set of capabilities for suitable transparent
-algebraic data:
+variant types:
 
 - `Equatable`;
 - `Orderable`;
@@ -199,8 +224,8 @@ a datatype looks structurally convenient.
 ## Specialization and erasure
 
 Trait selection is compile-time work. Package specialization resolves
-instances, substitutes their minimal methods, and emits ordinary direct calls
-in a companion BEAM module:
+implementations, substitutes their minimal methods, and emits ordinary direct
+calls in a companion BEAM module:
 
 ```mermaid
 flowchart LR
@@ -229,7 +254,7 @@ a concrete type must still state:
 
 The standard `List` mapping and reduction implementations are tested for
 stack safety on large inputs, but that does not make every user-defined
-instance stack safe.
+implementation stack safe.
 
 Continue with [Effects and Handlers](effects-and-handlers.md). The exact ABI,
 coherence, derivation, and specialization rules are in the

@@ -38,6 +38,25 @@ The research archive keeps source claims, synthesis, inquiry, map, normative
 chapters, and conformance journal distinct. Compiler code should link to the
 applicable specification rather than embed rationale as accidental behavior.
 
+## Design the public words with the semantics
+
+A semantic design is incomplete if its only usable names come from a paper or
+compiler implementation. For every new public concept:
+
+1. name the programmer action or role before the internal mechanism;
+2. show one concrete type or task before a generic abstraction;
+3. state what the word predicts about dependency, effects, order, and cost;
+4. map it one-to-one to the normative semantic object;
+5. write one successful example and one diagnostic with a repair; and
+6. mark whether the word is normative ABI, proposed vocabulary, or an internal
+   ledger term.
+
+For example, Catena teaches a clause **condition** as “after this pattern
+matches, should this clause run?” The compiler may lower it to an Erlang guard
+and record certified condition facts, but neither internal term becomes a
+second source keyword. A feature proposal that cannot maintain such a mapping
+needs more design work before parser or ABI names are frozen.
+
 ## Decide whether the frontend version changes
 
 A version change is normally required when adding:

@@ -4,13 +4,80 @@ Catena specifications attach typed, executable statements to exact language
 subjects. They are optional to adopt, mandatory to interpret once declared,
 and completely erased from runtime BEAM code in version 0.6.
 
-This guide teaches the semantic feature. The JSON AST is normative for 0.6;
-the source-shaped notation is illustrative because public punctuation remains
-open.
+This guide uses Catena's accepted behavior-first vocabulary. The words and
+their meanings are part of the language design; their final parser punctuation
+is not. The JSON AST is the normative executable form for 0.6.
 
-## Start with a rule and an example
+## Use the accepted vocabulary
 
-Imagine an exported function that returns a retry count:
+Catena describes obligations in words that say who must do what. It does not
+make programmers begin with terms such as precondition, postcondition,
+invariant calculus, proof obligation, or model checker.
+
+| Public word | What it tells a programmer | Current status |
+| --- | --- | --- |
+| `spec` | group related statements about one typed subject | accepted source vocabulary; parser form remains open |
+| `describes` | name the function, type, module, effect, or other subject being described | accepted source vocabulary; represented by a typed `subject` in 0.6 |
+| `rule` | name a behavior that Catena must check honestly | implemented by the 0.6 specification graph |
+| `needs` | state what a caller must provide before using a boundary | accepted vocabulary; general contract checking is later work |
+| `promises` | state what an implementation or result must provide | accepted vocabulary; 0.6 can represent a bounded pure rule, not a general runtime contract |
+| `example` | give one exact input and expected observation | implemented and evaluated in 0.6 |
+| `property` | challenge a behavior with generated cases | accepted vocabulary; generation and shrinking are later work |
+| `always` | state an invariant or temporal obligation | accepted vocabulary; temporal checking is later work |
+| `check` | say which concrete observation an example or property makes | accepted source vocabulary; represented by the rule checker and expected result in 0.6 |
+
+The words used to explain support and trust are equally deliberate:
+
+| Public word | Meaning |
+| --- | --- |
+| `evidence` | a typed record of what supported an exact rule and artifact |
+| `attestation` | an external statement signed by an authorized identity |
+| `assumption` | an explicitly unverified premise that policy chose to admit |
+| `approve` | authorize an exact proposal; it does not prove a technical rule |
+| `activate` | authorize an accepted artifact to become active |
+| `replace` | supersede an older governed subject through recorded lifecycle history |
+
+The compiler's semantic ledger still uses precise terms such as `claim`,
+`subject`, `checker`, `conformance`, `principal`, and `transition`. Those terms
+keep implementation and protocol records unambiguous, but they do not replace
+the behavior-first words in source-oriented explanations.
+
+## Read a rule and an example
+
+The intended source reading is:
+
+```catena
+spec RetryCount describes retry_count {
+  rule retry_count_is_nonnegative(value : Int) {
+    promises value >= 0
+  }
+
+  example zero_is_valid {
+    check retry_count_is_nonnegative(0) == true
+  }
+}
+```
+
+This is a vocabulary example, not frozen grammar and not source accepted by
+the current bootstrap compiler. It says:
+
+- `spec` groups statements about `retry_count`;
+- `describes` attaches them to that resolved function rather than a text
+  label;
+- the `rule` names the required behavior;
+- `promises` assigns that behavior to the implementation;
+- the `example` records one exact case; and
+- `check` names the observation and expected result.
+
+Version 0.6 elaborates the implemented part of this reading into a named pure,
+verification-only Boolean checker and an exact example. General `needs` and
+`promises` contracts, generated `property` checks, and temporal `always`
+statements require later semantic versions.
+
+## See the 0.6 semantic form
+
+Until the source parser is specified, an equivalent implementation model uses
+a verification-only definition and an explicit specification entry:
 
 ```catena
 retry_count : Job -> Int
@@ -29,8 +96,8 @@ specification RetryCountRules {
 }
 ```
 
-This notation expresses the selected model but does not propose final
-keywords. Semantically:
+This source-shaped form exposes the current compiler concepts rather than the
+preferred public spelling. Semantically:
 
 - the **subject** resolves to a real exported language entity;
 - the **rule** names a typed Boolean checker;

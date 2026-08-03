@@ -9,6 +9,31 @@ does not define a stable Erlang FFI, foreign-term conversion system, or direct
 `.beam` ABI for arbitrary external callers; those language facilities remain
 open.
 
+## Keep source and runtime vocabulary separate
+
+Programmers describe source behavior with `value`, `transform`, `variant`,
+`match`, `trait`, `effect`, `request`, and `handle`. Compiler developers then
+describe lowering with typed core, CPS workers, Erlang Abstract Format, and
+BEAM modules. The latter are implementation representations, not extra source
+concepts.
+
+The proposed concurrency vocabulary also remains distinct:
+
+| Public word | Runtime relationship |
+| --- | --- |
+| `process` | one isolated concurrent computation |
+| `link` | propagate abnormal process termination |
+| `monitor` | observe another process's termination without linking fate |
+| `supervise` | apply a restart policy to child processes |
+| `restart` | start a failed child again according to that policy |
+
+For example, a domain function may return `Result Quote QuoteProblem`, a
+transform may `use` `RateLookup`, and the process running it may terminate.
+Those are three different events: an expected value, an external ability, and
+a concurrency failure. Catena should not rename all three “errors” merely
+because BEAM can carry each one at runtime. Process syntax and supervision are
+still research work; this example fixes the vocabulary boundary, not grammar.
+
 ## One supported backend path
 
 ```mermaid

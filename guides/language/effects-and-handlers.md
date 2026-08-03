@@ -8,6 +8,34 @@ search.
 Source examples are illustrative. The effect identity, selection, handler,
 evaluation, and resumption semantics are normative in version 0.5.
 
+## Use the external-ability vocabulary
+
+| Public word | What it means in Catena |
+| --- | --- |
+| `effect` | a named external ability a transform may need |
+| `operation` | one typed request offered by an effect |
+| `uses` | expose which abilities may remain for the caller to provide |
+| `request` | ask one lexical capability to perform an operation |
+| `handle` | supply behavior for requests around one expression |
+| `resume` | continue the handled computation with the operation's reply |
+
+Read the following example from its boundary inward:
+
+```catena
+current_greeting : Unit -> Text uses clock: Clock
+current_greeting() =
+  hour = request clock.hour()
+  greeting_for(hour)
+
+test_greeting =
+  handle current_greeting() using FixedClock(9) as clock
+```
+
+`current_greeting` **uses** the external `Clock` ability. It **requests** the
+`hour` operation through the lexical `clock` capability. The test **handles**
+that request with `FixedClock`. None of those words implies an ordinary
+`Result` value or a process failure.
+
 ## Separate domain outcomes from external abilities
 
 A function returning `Result Error Value` describes an ordinary value that
@@ -90,7 +118,7 @@ arguments or in the handler declaration's clauses.
 Handlers are named module-level declarations, not first-class values. They
 cannot be stored, returned, pattern matched, or selected dynamically.
 
-## Understand deep handling
+## Resume under the same handler
 
 ```mermaid
 sequenceDiagram
@@ -106,15 +134,16 @@ sequenceDiagram
     Handler-->>Program: final handled result
 ```
 
-Catena 0.5 handlers are **deep**. Resuming the captured computation reinstalls
-the same handler around the remainder. A later request to the same capability
-returns to the handler again.
+Resuming the captured computation reinstalls the same handler around the
+remainder. A later request to the same capability returns to the handler
+again. The semantic ledger calls this a **deep handler**; a programmer can
+predict it from the observable “same handler remains active” rule.
 
 A request made directly by an operation clause uses only outer capabilities.
 The current handler is not implicitly installed around its own clause body.
 Requests for other capability identities forward outward unchanged.
 
-## Resume zero or one time
+## Resume at most once
 
 An operation clause receives a dedicated continuation binder:
 
@@ -122,7 +151,8 @@ An operation clause receives a dedicated continuation binder:
 resume continuation with reply
 ```
 
-The continuation is affine: the clause may use it zero or one time.
+The continuation is one-use: the clause may use it zero or one time. The
+compiler's internal term for that restriction is **affine**.
 
 - Zero uses aborts the captured remainder; the clause result becomes the
   result of the complete `handle` expression.

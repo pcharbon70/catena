@@ -1,11 +1,31 @@
-# Algebraic Data Types
+# Variant Types and Structured Data
 
-Algebraic data types let a program name every valid shape of a domain value.
-Catena uses closed, nominal datatype declarations: the declaration establishes
-identity, and its constructors establish the possible values.
+Variant types let a program name every valid shape of a domain value. Catena
+uses closed, nominal declarations: the declaration establishes identity, and
+its variants establish the possible values. The specification and compiler
+also call these algebraic data types and constructors, but ordinary code can
+be learned through variants and their payloads.
 
 Code in this guide uses illustrative source notation. The normative 0.2 model
 is implemented through JSON AST today; final parser punctuation remains open.
+
+## Use the data vocabulary
+
+| Public word | What it means in Catena |
+| --- | --- |
+| `variant type` | a closed type whose values come from named alternatives |
+| `variant` | one named alternative, such as `Queued` or `Failed` |
+| `payload` | positional or named data carried by a variant |
+| `construct` | create a value by naming its type and variant |
+| `match` | select behavior from the variant and expose its payload |
+| `record` | a value or payload with named fields |
+| `tuple` | a value or payload with positional fields |
+
+For example, read
+`DeliveryStatus.InTransit { tracking_id: id }` as: construct the `InTransit`
+variant of `DeliveryStatus` with a named `tracking_id` payload. A later
+`match` can select that variant and bind `tracking_id` without knowing its
+private BEAM representation.
 
 ## Model states, not flag combinations
 
@@ -21,13 +41,13 @@ type JobState Result Error =
   | Failed Error
 ```
 
-Each constructor says exactly what information exists in that state. Code
+Each variant says exactly what information exists in that state. Code
 handling `Complete result` receives a `Result`; code handling `Waiting` cannot
 pretend that a result already exists.
 
 ## Declaration forms
 
-Catena 0.2 supports three constructor shapes.
+Catena 0.2 supports three variant payload shapes.
 
 ### No payload
 
@@ -38,7 +58,7 @@ type Light =
   | Green
 ```
 
-Nullary constructors represent alternatives that carry no additional data.
+Payload-free variants represent alternatives that carry no additional data.
 
 ### Positional payload
 
@@ -64,11 +84,11 @@ type DeliveryStatus =
 ```
 
 Named fields make larger payloads self-describing. A declaration cannot mix
-named and positional fields within one constructor.
+named and positional fields within one variant.
 
-## Construct values explicitly
+## Construct variants explicitly
 
-Constructor use is qualified by its type:
+Variant construction is qualified by its type:
 
 ```catena
 Option.Some(7)
@@ -87,7 +107,7 @@ For named construction:
 - the semantic payload is ordered by the declaration, independent of physical
   BEAM layout.
 
-Qualification prevents unrelated types with a constructor called `Failed`
+Qualification prevents unrelated types with a variant called `Failed`
 from becoming ambiguous.
 
 ## Nominal identity matters
@@ -117,10 +137,10 @@ type Result Error Value =
   | Ok Value
 ```
 
-Ordinary datatype construction and matching remain in Catena's principal
-rank-1 inference profile. The compiler freshly instantiates constructor types
-at each use, so `Result.Ok(1)` and `Result.Ok(true)` need not share a concrete
-`Value` type.
+Ordinary variant construction and matching remain in Catena's principal
+rank-1 inference profile. The compiler freshly instantiates its internal
+constructor types at each use, so `Result.Ok(1)` and `Result.Ok(true)` need not
+share a concrete `Value` type.
 
 Parameters have explicit kinds in the semantic model. The initial kinds are
 `Type`, `Type -> Type`, and `Type -> Type -> Type`; arbitrary type-level
@@ -227,9 +247,9 @@ representation promise or foreign data format.
 When introducing a datatype, ask:
 
 1. Are the alternatives truly closed and known here?
-2. Does each constructor carry only data available in that state?
+2. Does each variant carry only data available in that state?
 3. Would named fields prevent positional mistakes?
-4. Should clients see constructors or only the abstract type?
+4. Should clients see variants or only the abstract type?
 5. Is generic behavior better provided through a trait or derived operation?
 6. Does recursive processing need an explicit stack-safety or cost contract?
 

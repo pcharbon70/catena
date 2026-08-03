@@ -51,6 +51,33 @@ Use the exact identifiers reserved by the applicable normative diagnostics
 chapter. Do not reuse an existing ID for a different repair action merely
 because it has the same prefix.
 
+## Explain failures in the public vocabulary
+
+The diagnostic ID belongs to the compiler contract; the default message
+belongs to the programmer's task. Lead with `variant`, `match`, `condition`,
+`implementation`, `requirement`, `effect`, `request`, `promise`, `evidence`,
+or `approval` when that is the concept the source author used. Put terms such
+as constructor provenance, evidence dictionary, effect row, semantic digest,
+and transition payload in optional technical details.
+
+For example:
+
+```text
+`map2` needs `Report` to provide `MultiMapper`
+
+You are combining two independent `Report` values, but `Report` only has an
+implementation for changing one existing result with `map`.
+
+Provide a `MultiMapper` implementation, or use `and_then` if the second report
+depends on the first result.
+
+Technical details: no coherent instance evidence for MultiMapper Report.
+```
+
+The headline names the operation and requirement. The explanation names the
+dependency choice. The final line preserves the exact internal fact without
+making it prerequisite vocabulary.
+
 ## A useful diagnostic answers four questions
 
 1. What source or governed action is blocked?

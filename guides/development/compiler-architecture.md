@@ -19,6 +19,27 @@ Implementation convenience does not amend the specification. When a new
 language choice is needed, settle and version it in the research repository
 before treating compiler behavior as normative.
 
+## Preserve the vocabulary boundary
+
+The compiler necessarily uses more exact internal terms than an introductory
+guide. Keep the mapping explicit so diagnostics and documentation return to
+the programmer's words:
+
+| Public language | Compiler ledger |
+| --- | --- |
+| variant type, variant, payload | nominal datatype, constructor identity, ordered fields |
+| match, clause, condition, witness | pattern matrix, usefulness, condition facts, coverage witness |
+| trait, implementation, requirement, guarantee | trait declaration, instance evidence, predicate, law record |
+| effect, operation, `uses`, `request`, `handle`, `resume` | effect row, capability identity, request core, handler table, affine continuation |
+| rule, example, promise, evidence | claim graph, checker definition, semantic digest, evidence record |
+| owner, approve, activate, replace | principal/role, signed approval, governed action, lifecycle transition |
+
+For example, a programmer writes a `match` over the `Some` variant and receives
+a missing-variant diagnostic. Internally, the decoder resolves a constructor
+ID, coverage runs a usefulness matrix, typed core stores the selected nominal
+identity, and the backend lowers the verified decision. Only a technical
+detail view should require the programmer to know those intermediate names.
+
 ## Pipeline at a glance
 
 ```mermaid

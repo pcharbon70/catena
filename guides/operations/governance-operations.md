@@ -9,6 +9,35 @@ Read [Governance](../language/governance.md) first for the language model.
 This document is operational guidance for the current bootstrap compiler, not
 a replacement for organizational security policy.
 
+## Follow the governance words through one release
+
+The approachable vocabulary describes the operator's task; canonical records
+make that task exact:
+
+```mermaid
+flowchart LR
+    Owner[Owner defines policy] --> Build[Build exact artifacts]
+    Build --> Evidence[Collect evidence]
+    Evidence --> Approve[Authorized actors approve]
+    Approve --> Publish[Publish exact artifacts]
+    Publish --> Activate[Activate accepted release]
+    Activate --> Replace[Later replace through lifecycle history]
+```
+
+- An **owner** is the person or role responsible for the governed subject; the
+  trust root represents that responsibility as principals, roles, and
+  thresholds.
+- A **policy** says what evidence and approvals a protected action needs.
+- **Evidence** supports a technical rule; it is not permission to release.
+- To **approve** is to sign permission for the exact proposal and artifact
+  digests; it is not to prove the code correct.
+- `build`, `publish`, and `activate` are distinct protected actions.
+- To **replace** a release is to append the lifecycle path toward
+  `Superseded`; it is never an in-place edit of history.
+
+The JSON fields and cryptographic terminology in the rest of this guide are
+the precise protocol encoding of those words, not a competing user model.
+
 ## Know the trust boundary
 
 The Catena compiler:

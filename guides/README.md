@@ -9,13 +9,20 @@ Catena does not yet have a source parser. Code in a `catena` fence is
 does not freeze punctuation, layout, or every keyword. Commands and JSON-AST
 examples are executable against the current compiler.
 
+The reader-facing guides use Catena's current behavior-first vocabulary:
+`variant`, `payload`, `match`, `Mapper`, `uses`, `request`, `promises`, and
+similar words describe what a programmer does. Formal and compiler-internal
+terms remain available where precision requires them, especially in the
+developer path. Each guide marks vocabulary that is proposed but not yet
+accepted by the source parser or implemented semantic slice.
+
 ## Choose a path
 
 ```mermaid
 flowchart TD
     Start[Start here] --> Tour[Language Tour]
     Tour --> First[Getting Started]
-    First --> Data[Data Types]
+    First --> Data[Variant Types]
     Data --> Match[Pattern Matching]
     Match --> Traits[Traits and Composition]
     Traits --> Effects[Effects and Handlers]
@@ -38,8 +45,9 @@ flowchart TD
    language direction.
 2. [Getting Started](getting-started.md) — install the toolchain, understand a
    source-first example, and run the executable model.
-3. [Algebraic Data Types](language/algebraic-data-types.md) — model a domain
-   with nominal variants and controlled module boundaries.
+3. [Variant Types and Structured Data](language/algebraic-data-types.md) —
+   model a domain with nominal variants, explicit payloads, and controlled
+   module boundaries.
 4. [Pattern Matching](language/pattern-matching.md) — consume data with
    ordered, exhaustive clauses and safe conditions.
 5. [Traits and Composition](language/traits-and-composition.md) — use shared
@@ -81,6 +89,11 @@ secure key generation, custody, approval collection, and transport.
   workflow.
 - [Contributing](../CONTRIBUTING.md) — repository setup, change discipline,
   review expectations, and pull-request checklist.
+
+Developer guides deliberately show both sides of the vocabulary boundary—for
+example, public `variant` and `implementation` alongside internal constructor
+identity and instance evidence—so implementation terminology never leaks into
+the beginner path by accident.
 
 ## Authority and status
 
