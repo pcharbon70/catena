@@ -37,8 +37,8 @@ defmodule Catena.C003ClauseConditionTest do
         assert {:ok, {:ConditionPartitions, [compile_info: compile_info]}} =
                  :beam_lib.chunks(binary, [:compile_info])
 
-        assert Keyword.get(compile_info, :catena_specification) == ~c"0.3"
-        assert Keyword.get(compile_info, :catena_frontend) == ~c"json-ast-0.3"
+        assert Keyword.get(compile_info, :catena_specification) == ~c"0.1.3"
+        assert Keyword.get(compile_info, :catena_frontend) == ~c"json-ast-0.1.3"
         {lowering, metadata.forms}
       end
 
@@ -131,7 +131,7 @@ defmodule Catena.C003ClauseConditionTest do
     assert {:ok, :PredicateSource, producer_binary, metadata} =
              Catena.compile_json(JSON.encode!(producer))
 
-    assert metadata.interface["version"] == "0.3"
+    assert metadata.interface["version"] == "0.1.3"
     assert get_in(metadata.interface, ["values", Access.at(0), "condition", "expanded_core"])
     assert {:ok, interface} = Interface.decode(metadata.interface_binary)
     assert hd(interface.values).condition.id == "PredicateSource.positive"
@@ -249,7 +249,7 @@ defmodule Catena.C003ClauseConditionTest do
 
     assert {:error, %{id: "CND001"}} = Catena.check_json(JSON.encode!(malformed))
 
-    old_ast = %{partition_program("OldConditionOperator") | "version" => "0.2"}
+    old_ast = %{partition_program("OldConditionOperator") | "version" => "0.1.2"}
     assert {:error, %{id: "CND001"}} = Catena.check_json(JSON.encode!(old_ast))
   end
 
@@ -286,7 +286,7 @@ defmodule Catena.C003ClauseConditionTest do
 
   defp module_03(module, exports, definitions) do
     %{
-      "version" => "0.3",
+      "version" => "0.1.3",
       "origin" => "test://c003",
       "module" => module,
       "type_groups" => [],

@@ -37,11 +37,11 @@ defmodule Catena.C002DataTest do
     refute metadata.interface_binary =~ "uniform"
   end
 
-  test "normalizes AST 0.1 into the 0.2 compiler representation" do
+  test "normalizes AST 0.1.1 into the 0.1.2 compiler representation" do
     json = JSON.encode!(module_01("Legacy", [], []))
     assert {:ok, ast} = Decoder.decode(json)
-    assert ast.version == "0.2"
-    assert ast.frontend_version == "0.1"
+    assert ast.version == "0.1.2"
+    assert ast.frontend_version == "0.1.1"
     assert ast.type_groups == []
   end
 
@@ -535,7 +535,7 @@ defmodule Catena.C002DataTest do
 
   defp module_01(name, exports, definitions),
     do: %{
-      "version" => "0.1",
+      "version" => "0.1.1",
       "module" => name,
       "exports" => exports,
       "definitions" => definitions
@@ -543,7 +543,7 @@ defmodule Catena.C002DataTest do
 
   defp module_02(name, groups, type_exports, exports, definitions) do
     %{
-      "version" => "0.2",
+      "version" => "0.1.2",
       "origin" => "test://c002",
       "module" => name,
       "type_groups" => groups,

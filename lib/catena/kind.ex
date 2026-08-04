@@ -1,5 +1,5 @@
 defmodule Catena.Kind do
-  @moduledoc "Kind parsing and checking for the bounded Catena 0.4 constructor hierarchy."
+  @moduledoc "Kind parsing and checking for the bounded Catena 0.1.4 constructor hierarchy."
 
   alias Catena.Diagnostic
 

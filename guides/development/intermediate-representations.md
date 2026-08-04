@@ -55,7 +55,7 @@ constructor, representation, and branch identity.
 
 ## Versioned JSON AST
 
-The current frontend consumes JSON objects with versions 0.1 through 0.6. This
+The current frontend consumes JSON objects with versions 0.1.1 through 0.1.6. This
 is a temporary, explicit toolchain input used to test semantics before Catena
 source syntax is frozen.
 
@@ -74,9 +74,9 @@ Properties:
 - JSON names and tagged unions are frontend protocol, not user syntax.
 - Each version has a closed set of sections and tags.
 - Decoding rejects unknown or malformed values.
-- AST 0.1 has a legacy origin and normalizes into the internal 0.2-capable
+- AST 0.1.1 has a legacy origin and normalizes into the internal 0.1.2-capable
   shape.
-- Versions 0.2 through 0.6 require a package/build origin.
+- Versions 0.1.2 through 0.1.6 require a package/build origin.
 
 The decoder adds paths such as `$.definitions[0].body` so later diagnostics can
 identify their protocol location.
@@ -124,7 +124,7 @@ input only after the independent verifier accepts it.
 
 ## Specification graph
 
-For AST 0.6, `Catena.Specification` adds a separate typed graph containing:
+For AST 0.1.6, `Catena.Specification` adds a separate typed graph containing:
 
 - stable claim ID;
 - formatting-insensitive semantic digest;
@@ -203,11 +203,11 @@ Interface evolution is additive by implemented slice:
 
 | Version | Added interface content |
 | --- | --- |
-| 0.2 | nominal datatypes, constructors according to visibility, values |
-| 0.3 | condition definitions and normalized evidence |
-| 0.4 | traits, instances, laws, templates, standard hierarchy digest |
-| 0.5 | effects, handlers, and normalized `uses` rows |
-| 0.6 | claim summaries, specification digest, inherited obligations |
+| 0.1.2 | nominal datatypes, constructors according to visibility, values |
+| 0.1.3 | condition definitions and normalized evidence |
+| 0.1.4 | traits, instances, laws, templates, standard hierarchy digest |
+| 0.1.5 | effects, handlers, and normalized `uses` rows |
+| 0.1.6 | claim summaries, specification digest, inherited obligations |
 
 Decoders retain compatibility with valid earlier interfaces. Never infer
 missing newer evidence from an older version.
@@ -221,7 +221,7 @@ package-manager lockfile. It names:
 - explicit dependency interfaces;
 - verified template roots and concrete types;
 - companion module and output;
-- 0.6 package/profile/assurance identity; and
+- 0.1.6 package/profile/assurance identity; and
 - optional governance bundle.
 
 The linker operates only on those named inputs and a fixed deterministic
@@ -229,7 +229,7 @@ specialization budget.
 
 ## Canonical governance records
 
-Three 0.6 protocol formats use strict JCS canonical bytes:
+Three 0.1.6 protocol formats use strict JCS canonical bytes:
 
 - `catena-trust-root`;
 - `catena-governance-bundle`; and

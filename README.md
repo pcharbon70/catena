@@ -33,7 +33,7 @@ git switch rewrite
 
 The clean rewrite now contains executable normative type-system,
 data-and-pattern, clause-condition, trait/categorical-operation,
-effect-handler, and 0.6 specification-and-governance slices. The
+effect-handler, and 0.1.6 specification-and-governance slices. The
 bootstrap toolchain is written in Elixir 1.20.2 on Erlang/OTP 29.0.4 and
 targets only the BEAM VM. It does not reuse the
 historical proof-of-concept's compiler or language design.
@@ -55,11 +55,25 @@ path, task guides for each implemented language slice, governance operations,
 and compiler developer documentation. Contributors should also read
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Prototype language versions
+
+Catena's current language line is `0.1`. Completed semantic slices increment
+its patch component: C001 through C006 are therefore `0.1.1` through `0.1.6`.
+`Catena.LanguageVersion` is the executable registry for that sequence. The
+Mix application version remains `0.1.0`; it identifies the compiler package,
+not the language accepted by a particular input.
+
+The former two-component prototype identifiers are retired and are not input
+aliases. Update unsigned JSON AST inputs mechanically, then rebuild interfaces
+and BEAM artifacts. Governance roots, bundles, transitions, approvals, and
+assurance manifests must be regenerated and re-signed because `0.1.6` is part
+of their canonical signature domains.
+
 ## Compiler path
 
 ```mermaid
 flowchart LR
-    JSON[Versioned JSON AST 0.1 through 0.6] --> D[Nominal data elaboration]
+    JSON[Versioned JSON AST 0.1.1 through 0.1.6] --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
     C --> T[Kinded traits and coherent evidence]
@@ -72,7 +86,7 @@ flowchart LR
     CPS --> EAF[Erlang Abstract Format]
     EAF --> OTP[OTP 29 compile:noenv_forms/2]
     OTP --> BEAM[Runtime-only module .beam]
-    I[Digest-bound 0.2 through 0.6 interfaces] --> L[Manifest-directed specialization]
+    I[Digest-bound 0.1.2 through 0.1.6 interfaces] --> L[Manifest-directed specialization]
     L --> OTP
     OTP --> CB[Companion .beam with direct calls]
     BEAM --> A[Artifact digests]
@@ -114,7 +128,7 @@ normative C006 assurance slice. Together they include:
 - uniform reference and compact BEAM representations checked against a pure
   semantic evaluator; and
 - independently rejected corrupted constructor and decision-tree metadata;
-- AST 0.3 multi-clause definitions and a closed, first-order `condition`
+- AST 0.1.3 multi-clause definitions and a closed, first-order `condition`
   declaration form with explicit `Int`/`Bool` signatures;
 - lazy Boolean operations, exact equality, integer order, negation, addition,
   subtraction, and multiplication, with ordinary calls, recursion, effects,
@@ -125,7 +139,7 @@ normative C006 assurance slice. Together they include:
 - conservative, deterministic coverage facts for Boolean formulas over integer
   difference constraints, including rechecked typed-core evidence;
 - explicit condition imports backed by canonical normalized bodies,
-  dependencies, and SHA-256 evidence in version 0.3 `.cati.json` interfaces;
+  dependencies, and SHA-256 evidence in version 0.1.3 `.cati.json` interfaces;
 - selectable `auto`, `native`, and `ordinary` lowering for differential tests,
   with native conditions emitted as Erlang guards; and
 - a typed selective-receive lowering harness that requires one closed message
@@ -141,9 +155,9 @@ normative C006 assurance slice. Together they include:
 - explicit-target structural derivation for `Equatable`, `Orderable`,
   `Mapper`, `TwoSlotMapper`, `Reducible`, and `CollectingMapper`, including
   type-qualified operations and independent verifier checks;
-- version 0.4 module interfaces carrying traits, instances, derivation
+- version 0.1.4 module interfaces carrying traits, instances, derivation
   provenance, verified templates, helper closure, and the standard digest
-  while retaining 0.2 and 0.3 decoding;
+  while retaining 0.1.2 and 0.1.3 decoding;
 - an explicit package build manifest and deterministic 20,000-step
   specialization boundary that emits one companion BEAM containing direct
   calls and no runtime dictionaries; and
@@ -157,12 +171,12 @@ normative C006 assurance slice. Together they include:
   and exact capability-identity subtraction;
 - affine clause-scoped resumptions with static escape and duplicate-use checks
   plus a runtime consumed token that traps before duplicate continuation entry;
-- identity-aware open effect rows, effect signatures in version 0.5 module
+- identity-aware open effect rows, effect signatures in version 0.1.5 module
   interfaces, and independent typed-core effect-row verification;
 - effect-directed CPS workers that pass lexical handler state across effectful
   calls while leaving proven-pure C001-C004 definitions on the direct calling
   convention, with reference/BEAM trace-agreement tests;
-- AST 0.6 typed parameterized rules attached to resolved language subjects,
+- AST 0.1.6 typed parameterized rules attached to resolved language subjects,
   exact executable examples, stable claim IDs, and formatting-insensitive
   semantic digests;
 - verification-only definitions checked by the ordinary type-and-effect
@@ -177,7 +191,7 @@ normative C006 assurance slice. Together they include:
   and predeclared recovery;
 - an immutable Draft-to-Superseded lifecycle, exact approval and evidence
   binding, and a closed additive policy algebra with an independent oracle;
-- transactional 0.6 package staging, path and symlink containment, failed-gate
+- transactional 0.1.6 package staging, path and symlink containment, failed-gate
   no-output behavior, exact BEAM/interface binding, and canonical assurance
   sidecars; and
 - an external-signer workflow: the compiler emits canonical payload bytes and
@@ -215,19 +229,19 @@ The CLI accepts five commands:
 ```
 
 `compile-ir` writes an OTP-generated `.beam` and a deterministic `.cati.json`
-interface beside the input. `--interface` is repeatable. AST 0.1 programs are
-normalized into the AST 0.2 compiler representation; new datatype programs
-use AST 0.2 and supply a canonical package/build origin. AST 0.3 adds clause
+interface beside the input. `--interface` is repeatable. AST 0.1.1 programs are
+normalized into the AST 0.1.2 compiler representation; new datatype programs
+use AST 0.1.2 and supply a canonical package/build origin. AST 0.1.3 adds clause
 conditions, explicit condition imports, and multi-clause definitions. Every
 exported value still requires a signature, and every condition declaration
-requires a monomorphic first-order signature ending in `Bool`. AST 0.4 adds
+requires a monomorphic first-order signature ending in `Bool`. AST 0.1.4 adds
 kinded traits, coherent instances, law status, explicit structural derivation,
 and verified specialization templates. `compile-package-ir` consumes only the
 modules, interfaces, roots, and outputs explicitly named by its toolchain
-manifest; it is not a package manager. AST 0.5 adds nominal effect families,
+manifest; it is not a package manager. AST 0.1.5 adds nominal effect families,
 `uses` rows, requests, named handlers, and affine resumptions while retaining
-the 0.4 categorical interface payload. AST 0.6 adds semantic specification
-forms and verification-only definitions. A 0.6 package manifest names its
+the 0.1.4 categorical interface payload. AST 0.1.6 adds semantic specification
+forms and verification-only definitions. A 0.1.6 package manifest names its
 profile and assurance output and may name a canonical governance bundle.
 Governed builds require an explicit action. Publication and activation require
 an external normal-root signature over the exact emitted assurance payload;

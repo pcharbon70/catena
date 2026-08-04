@@ -1107,7 +1107,7 @@ defmodule Catena.Backend.ErlangAbstract do
          continuation
        ) do
     if effect_control?(expression.body) do
-      cps_fail("effectful anonymous functions are outside the 0.5 bootstrap corpus")
+      cps_fail("effectful anonymous functions are outside the 0.1.5 bootstrap corpus")
     end
 
     apply_cps_continuation(

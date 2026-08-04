@@ -1,5 +1,5 @@
 defmodule Catena.Governance.Crypto do
-  @moduledoc "Offline Ed25519 verification for Catena 0.6 governance records."
+  @moduledoc "Offline Ed25519 verification for Catena 0.1.6 governance records."
 
   alias Catena.CanonicalJCS
 

@@ -1,8 +1,10 @@
 defmodule Catena.Package.Manifest do
-  @moduledoc "Strict decoder for Catena 0.4 and governed 0.6 package manifests."
+  @moduledoc "Strict decoder for Catena 0.1.4 and governed 0.1.6 package manifests."
 
-  alias Catena.Diagnostic
+  alias Catena.{Diagnostic, LanguageVersion}
 
+  @categorical_version LanguageVersion.introduced(:traits_and_categories)
+  @governance_version LanguageVersion.introduced(:specifications_and_governance)
   @module_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @value_name ~r/^[a-z][A-Za-z0-9_]*$/
 
@@ -17,7 +19,7 @@ defmodule Catena.Package.Manifest do
     end
   end
 
-  defp decode_version(%{"version" => "0.4"} = value) do
+  defp decode_version(%{"version" => @categorical_version} = value) do
     with module when is_binary(module) <- Map.get(value, "companion_module"),
          true <- Regex.match?(@module_name, module),
          modules when is_list(modules) <- Map.get(value, "modules", []),
@@ -29,7 +31,7 @@ defmodule Catena.Package.Manifest do
          output when is_binary(output) <- Map.get(value, "output") do
       {:ok,
        %{
-         version: "0.4",
+         version: @categorical_version,
          governed?: false,
          package: nil,
          profile: nil,
@@ -44,12 +46,12 @@ defmodule Catena.Package.Manifest do
     else
       _ ->
         malformed(
-          "malformed Catena 0.4 package manifest; explicit modules, interfaces, roots, companion_module, and output are required"
+          "malformed Catena 0.1.4 package manifest; explicit modules, interfaces, roots, companion_module, and output are required"
         )
     end
   end
 
-  defp decode_version(%{"version" => "0.6"} = value) do
+  defp decode_version(%{"version" => @governance_version} = value) do
     with package when is_binary(package) and byte_size(package) > 0 <- Map.get(value, "package"),
          module when is_binary(module) <- Map.get(value, "companion_module"),
          true <- Regex.match?(@module_name, module),
@@ -67,7 +69,7 @@ defmodule Catena.Package.Manifest do
          true <- is_nil(governance) or is_binary(governance) do
       {:ok,
        %{
-         version: "0.6",
+         version: @governance_version,
          governed?: is_binary(governance),
          package: package,
          profile: profile,
@@ -82,7 +84,7 @@ defmodule Catena.Package.Manifest do
     else
       _ ->
         malformed(
-          "malformed Catena 0.6 package manifest; package, modules, interfaces, companion_module, output, assurance, and profile are required"
+          "malformed Catena 0.1.6 package manifest; package, modules, interfaces, companion_module, output, assurance, and profile are required"
         )
     end
   end

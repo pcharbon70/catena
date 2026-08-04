@@ -1,5 +1,5 @@
 defmodule Catena.Standard.List do
-  @moduledoc "Stack-safe standard List operations used by Catena 0.4 trait evidence."
+  @moduledoc "Stack-safe standard List operations used by Catena 0.1.4 trait evidence."
 
   @spec map((term() -> term()), list()) :: list()
   def map(callback, subject) when is_function(callback, 1) and is_list(subject) do

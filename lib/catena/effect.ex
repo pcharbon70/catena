@@ -1,16 +1,17 @@
 defmodule Catena.Effect do
-  @moduledoc "Elaboration and lexical selection for Catena 0.5 effects and handlers."
+  @moduledoc "Elaboration and lexical selection for Catena 0.1.5 effects and handlers."
 
   alias Catena.Effect.Row
   alias Catena.Type.Parser
-  alias Catena.{Diagnostic, Type}
+  alias Catena.{Diagnostic, LanguageVersion, Type}
 
   @effect_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @value_name ~r/^[a-z][A-Za-z0-9_]*$/
+  @effect_versions LanguageVersion.from(:effects_and_handlers)
 
   @spec prepare!(map(), map(), [map()]) :: map()
   def prepare!(%{frontend_version: version}, _data, _interfaces)
-      when version not in ~w(0.5 0.6) do
+      when version not in @effect_versions do
     %{families: %{}, handlers: %{}, exported_families: [], exported_handlers: []}
   end
 

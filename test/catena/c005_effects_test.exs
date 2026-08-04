@@ -44,7 +44,7 @@ defmodule Catena.C005EffectsTest do
 
     unload(:C005Resume)
 
-    assert metadata.interface["version"] == "0.5"
+    assert metadata.interface["version"] == "0.1.5"
     assert length(metadata.interface["effects"]) == 1
     assert length(metadata.interface["handlers"]) == 1
     assert {:ok, interface} = Catena.Interface.decode(metadata.interface_binary)
@@ -680,7 +680,7 @@ defmodule Catena.C005EffectsTest do
     unload(:C005DistinctCapabilities)
   end
 
-  test "version 0.5 interfaces reject duplicate nominal effect identities" do
+  test "version 0.1.5 interfaces reject duplicate nominal effect identities" do
     assert {:ok, :C005MalformedInterface, _binary, metadata} =
              resumptive_program("C005MalformedInterface")
              |> JSON.encode!()
@@ -795,7 +795,7 @@ defmodule Catena.C005EffectsTest do
 
   defp resumptive_program(module) do
     %{
-      "version" => "0.5",
+      "version" => "0.1.5",
       "origin" => "pkg://c005/#{module}",
       "module" => module,
       "exports" => ["main"],

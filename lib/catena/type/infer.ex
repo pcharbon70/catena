@@ -2,11 +2,12 @@ defmodule Catena.Type.Infer do
   @moduledoc "Algorithm W with C002-C006 data, condition, trait, effect, and assurance elaboration."
 
   alias Catena.Effect.Row
-  alias Catena.{Categorical, Condition, Data, Derive, Diagnostic, Effect, Type}
+  alias Catena.{Categorical, Condition, Data, Derive, Diagnostic, Effect, LanguageVersion, Type}
   alias Catena.Pattern.Coverage
   alias Catena.Type.{Advanced, Parser, Scheme, Unify}
 
   @type state :: %{next: non_neg_integer(), substitution: map()}
+  @condition_versions LanguageVersion.from(:clause_conditions)
 
   @spec module(map(), keyword()) :: map()
   def module(ast, options \\ []) do
@@ -57,7 +58,7 @@ defmodule Catena.Type.Infer do
           |> Keyword.take([:coverage_budget, :fact_budget])
           |> Keyword.put(
             :conditions,
-            if(ast.frontend_version in ~w(0.3 0.4 0.5 0.6), do: conditions, else: nil)
+            if(ast.frontend_version in @condition_versions, do: conditions, else: nil)
           )
 
         uses = Map.fetch!(definition_effects, definition.name)
@@ -395,7 +396,7 @@ defmodule Catena.Type.Infer do
           expression.path
         )
       else
-        fail("CPS001", "effectful anonymous functions are outside Catena 0.5", expression.path)
+        fail("CPS001", "effectful anonymous functions are outside Catena 0.1.5", expression.path)
       end
     end
 
@@ -547,7 +548,7 @@ defmodule Catena.Type.Infer do
   end
 
   defp infer(%{tag: :request, path: path} = expression, environment, state, context) do
-    effects = Map.get(context, :effects) || fail("EFX001", "request requires AST 0.5", path)
+    effects = Map.get(context, :effects) || fail("EFX001", "request requires AST 0.1.5", path)
 
     {capability, operation} =
       Effect.resolve_request!(effects, expression, Map.get(context, :capabilities, []))
@@ -597,7 +598,7 @@ defmodule Catena.Type.Infer do
   end
 
   defp infer(%{tag: :handle, path: path} = expression, environment, state, context) do
-    effects = Map.get(context, :effects) || fail("EFX001", "handler requires AST 0.5", path)
+    effects = Map.get(context, :effects) || fail("EFX001", "handler requires AST 0.1.5", path)
     handler = Effect.handler!(effects, expression.handler, path)
 
     {fresh_variables, state} = fresh_many(length(handler.variables), state)

@@ -8,14 +8,14 @@ general-purpose source-language distribution.
 
 The repository contains an Elixir bootstrap compiler that can:
 
-- decode versioned Catena JSON AST 0.1 through 0.6;
+- decode versioned Catena JSON AST 0.1.1 through 0.1.6;
 - infer and check types, data, patterns, conditions, traits, effects, and
   typed specifications;
 - independently verify its typed core;
 - lower accepted programs to Erlang Abstract Format;
 - ask Erlang/OTP 29 to produce deterministic `.beam` modules;
 - emit digest-bound `.cati.json` module interfaces; and
-- build artifact-bound assurance manifests for 0.6 packages.
+- build artifact-bound assurance manifests for 0.1.6 packages.
 
 It does not yet contain a Catena source parser, formatter, REPL, package
 manager, stable Erlang FFI, or complete standard library.
@@ -230,7 +230,7 @@ Do not infer unspecified facilities from familiar syntax. In particular:
 - list, map, binary, view, and pattern-synonym patterns are not implemented;
 - list comprehensions remain research work;
 - handlers do not yet promise resource cleanup or multi-shot resumptions;
-- specifications have no runtime-monitoring profile in 0.6;
+- specifications have no runtime-monitoring profile in 0.1.6;
 - governance uses logical sequence windows, not wall-clock expiry; and
 - calling arbitrary Erlang functions or validating arbitrary Erlang terms is
   not yet a stable Catena language feature.

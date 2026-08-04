@@ -1,5 +1,5 @@
 defmodule Catena.Type.Trait do
-  @moduledoc "Kind-aware, terminating Catena 0.4 trait registry and compile-time evidence solver."
+  @moduledoc "Kind-aware, terminating Catena 0.1.4 trait registry and compile-time evidence solver."
 
   alias Catena.{Diagnostic, Kind}
 
@@ -406,7 +406,11 @@ defmodule Catena.Type.Trait do
     end
 
     unless instance.law_status in [:promised, :tested, :derived] do
-      fail("TRT005", "Catena 0.4 law status must be promised, tested, or derived", instance.path)
+      fail(
+        "TRT005",
+        "Catena 0.1.4 law status must be promised, tested, or derived",
+        instance.path
+      )
     end
   end
 

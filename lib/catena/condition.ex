@@ -1,10 +1,11 @@
 defmodule Catena.Condition do
   @moduledoc "Clause-condition safety checking, normalization, and portable evidence."
 
-  alias Catena.{CanonicalJSON, Diagnostic}
+  alias Catena.{CanonicalJSON, Diagnostic, LanguageVersion}
   alias Catena.Type.{Parser, Scheme}
 
   @default_budget 20_000
+  @version LanguageVersion.introduced(:clause_conditions)
   @binary_operators ~w(and or equal not_equal less less_equal greater greater_equal add subtract multiply)a
   @unary_operators ~w(not negate)a
 
@@ -98,7 +99,7 @@ defmodule Catena.Condition do
     expanded = bounded_expand!(core, catalog.by_id, catalog.budget, path)
 
     payload = %{
-      version: "0.3",
+      version: @version,
       core: core,
       expanded_core: expanded,
       dependencies: Enum.sort(dependencies),
@@ -116,7 +117,7 @@ defmodule Catena.Condition do
 
       record ->
         payload = %{
-          version: "0.3",
+          version: @version,
           id: record.id,
           parameters: record.parameters,
           core: record.expanded_core,
@@ -140,7 +141,7 @@ defmodule Catena.Condition do
       payload = Map.delete(evidence, :digest)
 
       cond do
-        evidence.version != "0.3" ->
+        evidence.version != @version ->
           condition_error("unsupported condition evidence version", path)
 
         not is_binary(evidence.id) ->
@@ -190,7 +191,7 @@ defmodule Catena.Condition do
       end
 
     is_binary(digest_value) and digest(payload) == digest_value and
-      Map.get(evidence, :version) == "0.3" and body_valid? and
+      Map.get(evidence, :version) == @version and body_valid? and
       (kind == :guard or
          (is_binary(Map.get(evidence, :id)) and is_list(Map.get(evidence, :parameters))))
   end
@@ -330,7 +331,7 @@ defmodule Catena.Condition do
 
   defp evidence(id, parameters, core, dependencies) do
     payload = %{
-      version: "0.3",
+      version: @version,
       id: id,
       parameters: parameters,
       core: core,

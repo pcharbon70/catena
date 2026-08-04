@@ -48,15 +48,15 @@ defmodule Catena.C004CategoricalTest do
   test "standard List mapping and reduction stay stack safe on large inputs" do
     list_type =
       constructor(
-        "catena://standard/0.4/List",
+        "catena://standard/0.1.4/List",
         "Type -> Type",
-        "catena://standard/0.4"
+        "catena://standard/0.1.4"
       )
 
     categorical =
       Catena.Categorical.prepare!(
         %{
-          frontend_version: "0.4",
+          frontend_version: "0.1.4",
           origin: "pkg://list-stack-safety",
           traits: [],
           instances: [],
@@ -95,7 +95,7 @@ defmodule Catena.C004CategoricalTest do
     assert total == div(250_000 * 250_001, 2)
   end
 
-  test "AST 0.4 derives implicit instances and executable type-qualified operations" do
+  test "AST 0.1.4 derives implicit instances and executable type-qualified operations" do
     json = JSON.encode!(derived_module())
     assert {:ok, module, binary, metadata} = Catena.compile_json(json)
     assert {:module, ^module} = :code.load_binary(module, ~c"c004-derived.beam", binary)
@@ -243,7 +243,7 @@ defmodule Catena.C004CategoricalTest do
     categorical =
       Catena.Categorical.prepare!(
         %{
-          frontend_version: "0.4",
+          frontend_version: "0.1.4",
           origin: "pkg://corpus",
           traits: [],
           instances: [],
@@ -312,7 +312,7 @@ defmodule Catena.C004CategoricalTest do
     categorical =
       Catena.Categorical.prepare!(
         %{
-          frontend_version: "0.4",
+          frontend_version: "0.1.4",
           origin: "pkg://laws",
           traits: [],
           instances: [],
@@ -390,7 +390,7 @@ defmodule Catena.C004CategoricalTest do
 
     manifest = %{
       "format" => "catena-package-manifest",
-      "version" => "0.4",
+      "version" => "0.1.4",
       "companion_module" => "ManifestCompanion",
       "modules" => [],
       "interfaces" => ["source.cati.json"],
@@ -419,7 +419,7 @@ defmodule Catena.C004CategoricalTest do
     assert result.evidence_erased
   end
 
-  test "0.4 rejects reserved law trust and incomplete template closure" do
+  test "0.1.4 rejects reserved law trust and incomplete template closure" do
     invalid_law =
       template_module()
       |> put_in(["instances", Access.at(0), "law_status"], "trusted")
@@ -447,7 +447,7 @@ defmodule Catena.C004CategoricalTest do
 
   defp derived_module do
     %{
-      "version" => "0.4",
+      "version" => "0.1.4",
       "origin" => "pkg://derived",
       "module" => "Derived",
       "exports" => [],
@@ -513,7 +513,7 @@ defmodule Catena.C004CategoricalTest do
     type = constructor("Int", "Type", "pkg://template")
 
     %{
-      "version" => "0.4",
+      "version" => "0.1.4",
       "origin" => "pkg://template",
       "module" => "TemplateSource",
       "exports" => [],
@@ -611,7 +611,7 @@ defmodule Catena.C004CategoricalTest do
   end
 
   defp constructor_for_kind(kind, name),
-    do: {:constructor, "corpus://#{name}", kind, "catena://standard/0.4"}
+    do: {:constructor, "corpus://#{name}", kind, "catena://standard/0.1.4"}
 
   defp instance_for(trait, head) do
     %{

@@ -1,5 +1,5 @@
 defmodule Catena.Effect.Reference do
-  @moduledoc "Executable free-request reference semantics for Catena 0.5."
+  @moduledoc "Executable free-request reference semantics for Catena 0.1.5."
 
   alias Catena.Effect.Runtime
 

@@ -99,6 +99,7 @@ and warnings in structured details.
 
 | File | Primary coverage |
 | --- | --- |
+| `language_version_test.exs` | canonical slice registry, hard-cutover rejection, format identities, and signature domains |
 | `compiler_test.exs` | principal core, signatures, deterministic compile/load/execute |
 | `type_conformance_test.exs` | unification, rows, traits, advanced typing, verifier rejection |
 | `ast_decoder_test.exs` | strict versioned protocol decoding |
@@ -186,7 +187,7 @@ Inspect generated Erlang forms, BEAM exports/chunks, `.cati.json`, companion
 modules, and assurance manifests. Assert both required presence and forbidden
 retention.
 
-For 0.6 erasure, check that verification definitions, claims, evidence,
+For 0.1.6 erasure, check that verification definitions, claims, evidence,
 policies, signatures, keys, and assurance digests do not appear in any BEAM
 chunk or runtime export.
 

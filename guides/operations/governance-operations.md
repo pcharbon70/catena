@@ -1,6 +1,6 @@
 # Governance Operations
 
-This guide is for people operating Catena 0.6 package gates. It covers the
+This guide is for people operating Catena 0.1.6 package gates. It covers the
 offline trust root, canonical governance documents, external signing,
 build/publish/activate workflows, assurance verification, rotation,
 revocation, and recovery.
@@ -67,12 +67,12 @@ line, shell history, governance bundle, and assurance manifest.
 
 ```mermaid
 flowchart LR
-    Root[catena-trust-root 0.6] --> Gate[Package gate]
-    Bundle[catena-governance-bundle 0.6] --> Gate
-    Package[catena-package-manifest 0.6] --> Gate
+    Root[catena-trust-root 0.1.6] --> Gate[Package gate]
+    Bundle[catena-governance-bundle 0.1.6] --> Gate
+    Package[catena-package-manifest 0.1.6] --> Gate
     Sources[JSON AST modules and dependency interfaces] --> Gate
     Gate --> Runtime[BEAM and interfaces]
-    Gate --> Assurance[catena-assurance-manifest 0.6]
+    Gate --> Assurance[catena-assurance-manifest 0.1.6]
     Assurance --> Verify[Offline verification]
     Root --> Verify
     Runtime --> Verify
@@ -114,7 +114,7 @@ delegations, revocations, and a positive logical sequence:
 ```json
 {
   "format": "catena-trust-root",
-  "version": "0.6",
+  "version": "0.1.6",
   "namespace": "demo",
   "initial": {
     "sequence": 1,
@@ -174,7 +174,7 @@ conformance evidence:
 ```json
 {
   "format": "catena-governance-bundle",
-  "version": "0.6",
+  "version": "0.1.6",
   "package": "demo",
   "profile": "static",
   "policies": [
@@ -212,7 +212,7 @@ are security-sensitive:
 ```json
 {
   "format": "catena-package-manifest",
-  "version": "0.6",
+  "version": "0.1.6",
   "package": "demo",
   "profile": "static",
   "companion_module": "DemoCompanion",
@@ -290,7 +290,7 @@ IO.puts(details["signing_payload_digest"])
 
 Confirm the displayed digest through an independent approved tool before
 signing. The payload already contains the domain prefix
-`catena:manifest:0.6\n`; sign the exact bytes as emitted. Do not prepend another
+`catena:manifest:0.1.6\n`; sign the exact bytes as emitted. Do not prepend another
 domain string or sign the hexadecimal digest instead of the payload unless
 your signing protocol is explicitly designed to reproduce Catena's required
 signature.
@@ -476,7 +476,7 @@ old-plus-new rotation authorization unless recovery is being used. Include a
 replacement authority set when removal would otherwise make a role threshold
 impossible.
 
-Version 0.6 has logical sequence windows only. Do not describe them as
+Version 0.1.6 has logical sequence windows only. Do not describe them as
 wall-clock expiration, certificate validity dates, or online revocation.
 
 ## Use recovery only from predeclared authority
@@ -517,6 +517,6 @@ When a gate fails:
 
 Relevant failure families are `EVD001`, `GOV001` through `GOV005`, `ART001`,
 and `ERS001`. The exact protocol is the
-[normative 0.6 specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/specifications-and-governance),
+[normative 0.1.6 specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/specifications-and-governance),
 and the adversarial examples are in
 [`c006_specification_governance_test.exs`](../../test/catena/c006_specification_governance_test.exs).

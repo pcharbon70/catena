@@ -1,9 +1,10 @@
 defmodule Catena.Categorical.Standard do
-  @moduledoc "Loads and verifies the ordinary-library Catena 0.4 categorical hierarchy."
+  @moduledoc "Loads and verifies the ordinary-library Catena 0.1.4 categorical hierarchy."
 
-  alias Catena.{CanonicalJSON, Diagnostic}
+  alias Catena.{CanonicalJSON, Diagnostic, LanguageVersion}
 
-  @path Application.app_dir(:catena, "priv/stdlib/catena-standard-0.4.json")
+  @version LanguageVersion.introduced(:traits_and_categories)
+  @path Application.app_dir(:catena, "priv/stdlib/catena-standard-#{@version}.json")
 
   @spec interface!() :: map()
   def interface! do
@@ -13,7 +14,7 @@ defmodule Catena.Categorical.Standard do
     actual = digest(payload)
 
     unless Map.get(value, "format") == "catena-standard-interface" and
-             Map.get(value, "version") == "0.4" and digest == actual do
+             Map.get(value, "version") == @version and digest == actual do
       raise Catena.TypeError,
         diagnostic:
           Diagnostic.new(

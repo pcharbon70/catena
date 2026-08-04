@@ -11,13 +11,16 @@ defmodule Catena.Package.Linker do
     Categorical,
     Diagnostic,
     Governance,
-    Interface
+    Interface,
+    LanguageVersion
   }
 
   alias Catena.OTP.Compiler, as: OTPCompiler
   alias Catena.Type.Trait
 
   @budget 20_000
+  @categorical_version LanguageVersion.introduced(:traits_and_categories)
+  @governance_version LanguageVersion.introduced(:specifications_and_governance)
 
   @spec compile_manifest(Path.t(), keyword()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def compile_manifest(path, options \\ []) do
@@ -87,8 +90,8 @@ defmodule Catena.Package.Linker do
 
       case OTPCompiler.compile(forms,
              source: Keyword.get(options, :source, "<package>"),
-             frontend_version: Map.get(manifest, :version, "0.4"),
-             specification: Map.get(manifest, :version, "0.4")
+             frontend_version: Map.get(manifest, :version, @categorical_version),
+             specification: Map.get(manifest, :version, @categorical_version)
            ) do
         {:ok, module, binary, warnings} ->
           {:ok, module, binary,
@@ -159,7 +162,7 @@ defmodule Catena.Package.Linker do
   end
 
   defp finalize_package(
-         %{version: "0.4"} = manifest,
+         %{version: @categorical_version} = manifest,
          _module,
          companion_binary,
          _metadata,
@@ -187,7 +190,7 @@ defmodule Catena.Package.Linker do
   end
 
   defp finalize_package(
-         %{version: "0.6"} = manifest,
+         %{version: @governance_version} = manifest,
          _module,
          companion_binary,
          _metadata,
@@ -326,7 +329,7 @@ defmodule Catena.Package.Linker do
   defp evaluate_governance(%{governed?: false}, _context, _directory, _options),
     do:
       {:error,
-       Diagnostic.new("GOV001", "an ungoverned 0.6 package supports only the build action",
+       Diagnostic.new("GOV001", "an ungoverned 0.1.6 package supports only the build action",
          path: "$"
        )}
 
@@ -479,9 +482,9 @@ defmodule Catena.Package.Linker do
     end
   end
 
-  defp validate_paths(%{version: "0.4"}, _directory), do: :ok
+  defp validate_paths(%{version: @categorical_version}, _directory), do: :ok
 
-  defp validate_paths(%{version: "0.6"} = manifest, directory) do
+  defp validate_paths(%{version: @governance_version} = manifest, directory) do
     input_paths =
       manifest.interfaces ++
         Enum.map(manifest.modules, & &1["source"]) ++
@@ -496,7 +499,7 @@ defmodule Catena.Package.Linker do
     cond do
       Enum.any?(all_paths, &(not safe_relative_path?(&1, directory))) ->
         {:error,
-         Diagnostic.new("ART001", "0.6 package paths must remain inside the manifest directory",
+         Diagnostic.new("ART001", "0.1.6 package paths must remain inside the manifest directory",
            path: "$"
          )}
 
@@ -808,7 +811,7 @@ defmodule Catena.Package.Linker do
 
   defp registry!(interfaces) do
     ast = %{
-      frontend_version: "0.4",
+      frontend_version: @categorical_version,
       origin: "catena://package/linker",
       traits: [],
       instances: [],
@@ -1041,7 +1044,7 @@ defmodule Catena.Package.Linker do
       types: Enum.map(types, &TypeTerm.encode/1),
       instances: Enum.map(evidence, & &1.digest),
       compiler: Application.spec(:catena, :vsn) |> to_string(),
-      specification: "0.4",
+      specification: @categorical_version,
       standard: Categorical.Standard.interface!()["digest"]
     }
 

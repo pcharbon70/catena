@@ -58,6 +58,12 @@ approve the versioned rule in `catena-research` before treating compiler code
 as normative. Do not use a pull request to smuggle an unresolved syntax or
 semantic decision into the executable model.
 
+New prototype slices use the next unused `0.1.n` patch in
+`Catena.LanguageVersion`. Update every AST, interface, package, artifact,
+signature-domain, guide, and conformance boundary that the slice changes.
+Do not infer ordering or replacement from the number alone; the normative
+specification must still state applicability explicitly.
+
 ### Internal refactor
 
 Runtime output, diagnostics, typed-core evidence, interfaces, and assurance

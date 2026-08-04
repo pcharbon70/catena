@@ -95,8 +95,8 @@ defmodule Catena.CompilerTest do
              _ -> false
            end)
 
-    assert Keyword.get(compile_info, :catena_specification) == ~c"0.1"
-    assert Keyword.get(compile_info, :catena_frontend) == ~c"json-ast-0.1"
+    assert Keyword.get(compile_info, :catena_specification) == ~c"0.1.1"
+    assert Keyword.get(compile_info, :catena_frontend) == ~c"json-ast-0.1.1"
   end
 
   test "preserves curried top-level functions when used as values" do
@@ -139,7 +139,7 @@ defmodule Catena.CompilerTest do
 
   defp module_json(name, exports, definitions, source \\ "fixture.catena.json") do
     JSON.encode!(%{
-      "version" => "0.1",
+      "version" => "0.1.1",
       "module" => name,
       "source" => source,
       "exports" => exports,

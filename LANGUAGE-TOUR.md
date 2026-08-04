@@ -221,11 +221,11 @@ for capability identity, effect rows, evaluation order, and CPS lowering.
 
 ## Specifications and governance
 
-Catena 0.6 defines an optional assurance layer without making organizational
+Catena 0.1.6 defines an optional assurance layer without making organizational
 governance a prerequisite for ordinary programs. The proposed source
 vocabulary says what a boundary `needs`, what an implementation `promises`,
 which exact `example` should hold, and what broader `property` or `always`
-statement may be investigated later. The implemented 0.6 spine is smaller: a
+statement may be investigated later. The implemented 0.1.6 spine is smaller: a
 `rule` names a typed, effect-free verification definition and an exact
 `example` invokes it under a fixed deterministic budget. Compiler evidence,
 signed external attestations, and explicit assumptions retain different
@@ -244,7 +244,7 @@ authorized people `approve` an exact proposal, and the gate distinguishes
 protocol represents those words with principals, roles, signatures, and
 immutable transitions.
 
-All 0.6 specification and governance material is build-time only. Verification
+All 0.1.6 specification and governance material is build-time only. Verification
 definitions disappear before Erlang Abstract Format lowering, and the package
 sidecar records what was checked and which exact BEAM/interface bytes were
 admitted. The compiler emits a canonical signing payload for an external

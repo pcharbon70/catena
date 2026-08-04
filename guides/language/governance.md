@@ -21,7 +21,7 @@ The public words describe responsibility and action before protocol machinery:
 | `replace` | move from an older governed subject to its recorded successor |
 | `decision` | the explained `allow` or `deny` result of applying policy |
 
-The canonical 0.6 protocol represents an `owner` through exact principals,
+The canonical 0.1.6 protocol represents an `owner` through exact principals,
 roles, and thresholds. It represents `replace` through the immutable
 `Deprecated -> Superseded` lifecycle rather than a mutable status field or a
 separate protected action. Those protocol terms make signatures and replay
@@ -51,7 +51,7 @@ authorized the action, and whether the artifact changed afterward.
 
 There are two independent boundaries:
 
-1. declaring 0.6 specifications adopts typed rules and an assurance sidecar;
+1. declaring 0.1.6 specifications adopts typed rules and an assurance sidecar;
 2. naming a governance bundle in the package manifest adopts policy and
    organizational authority.
 
@@ -65,7 +65,7 @@ export; a consuming package may strengthen but not discard them.
 
 ## Protected actions
 
-Version 0.6 has three actions:
+Version 0.1.6 has three actions:
 
 | Action | Meaning |
 | --- | --- |
@@ -142,12 +142,12 @@ compiler conformance record is present:
   ],
   "profile": "static",
   "transitions": [],
-  "version": "0.6"
+  "version": "0.1.6"
 }
 ```
 
 Canonicalize the complete document before passing it to the compiler. Signed
-0.6 documents must use Catena's strict canonical JSON profile. Do not
+0.1.6 documents must use Catena's strict canonical JSON profile. Do not
 pretty-print or reorder a signed payload and assume the signature remains
 valid; sign the exact domain-separated bytes emitted by the compiler.
 
@@ -240,4 +240,4 @@ later verification or governed distribution.
 Operational procedures are in
 [Governance Operations](../operations/governance-operations.md). Exact policy,
 trust, lifecycle, and artifact rules are in the
-[normative 0.6 specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/specifications-and-governance).
+[normative 0.1.6 specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/specifications-and-governance).

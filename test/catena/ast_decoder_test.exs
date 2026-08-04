@@ -16,7 +16,7 @@ defmodule Catena.ASTDecoderTest do
   test "rejects unknown expression tags" do
     json =
       JSON.encode!(%{
-        "version" => "0.1",
+        "version" => "0.1.1",
         "module" => "Example",
         "exports" => [],
         "definitions" => [%{"name" => "bad", "body" => %{"tag" => "future"}}]
