@@ -97,18 +97,23 @@ the beginner path by accident.
 
 ## Authority and status
 
-Use this order when documents disagree:
+The research repository's
+[Specification Authority](https://github.com/pcharbon70/catena-research/blob/main/SPECIFICATION-AUTHORITY.md)
+defines which documents control. Only an applicable `status: normative`
+specification chapter defines the language. A version number does not select a
+winner unless normative text explicitly states applicability or replacement.
 
-1. the newest applicable normative chapter in `catena-research`;
-2. its published conformance requirements and immutable implementation
-   evidence;
-3. executable compiler tests;
-4. these guides and the language tour; and
-5. exploratory research notes.
+Conformance requirements, executable reference paths, compiler tests,
+immutable implementation records, and compiler behavior are evidence against
+that specification. They do not amend it, resolve its silence, or outrank one
+another. Guides, the language tour, and exploratory research are explanatory.
 
-A guide bug does not amend the language. If a guide and the specification
-conflict, fix the guide and add a regression test when the mistake could also
-appear in the compiler.
+When artifacts disagree, cite the normative document and heading, suspend the
+affected conformance claim, and repair the non-normative artifact. If the
+normative chapters themselves conflict or remain ambiguous, resolve the
+language text explicitly before changing compiler behavior. A guide bug does
+not amend the language; add a regression test when the same misunderstanding
+could also appear in the compiler.
 
 ## Versioned implementation slices
 

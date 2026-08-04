@@ -15,6 +15,11 @@ Before changing code, read:
 5. the applicable
    [normative specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification).
 
+The research repository's
+[Specification Authority](https://github.com/pcharbon70/catena-research/blob/main/SPECIFICATION-AUTHORITY.md)
+defines document status, rendered labels, exact rule citations, and conflict
+handling.
+
 For a new semantic feature, follow
 [Adding a Language Feature](guides/development/adding-a-language-feature.md).
 
@@ -35,9 +40,10 @@ are OTP applications.
 
 ### Compiler bug
 
-The implementation disagrees with an applicable normative chapter or its
-conformance evidence. Fix the implementation and add the smallest regression
-test that demonstrates the discrepancy.
+The implementation disagrees with an applicable normative chapter's stated
+rule. Cite the document and heading, fix the implementation, and add the
+smallest regression test that demonstrates the discrepancy. Conformance
+evidence helps expose the bug but does not define a fallback rule.
 
 ### Documentation bug
 
@@ -57,6 +63,22 @@ semantic decision into the executable model.
 Runtime output, diagnostics, typed-core evidence, interfaces, and assurance
 artifacts should remain unchanged unless the change explicitly says otherwise.
 Use byte and canonical-artifact comparisons where relevant.
+
+## Resolve disagreements explicitly
+
+When the compiler, a test, an executable reference, or a guide disagrees:
+
+1. identify the applicable normative document and heading;
+2. suspend the affected conformance claim;
+3. compare each artifact with that rule rather than ranking the executable
+   artifacts against one another;
+4. repair the non-normative artifact and add regression evidence; or
+5. if normative chapters conflict or remain silent, resolve the language text
+   before implementing a new behavior.
+
+A larger specification version does not win by itself. Normative text must
+explicitly state an applicability or replacement relationship. Compiler
+behavior, even when tested and released, never silently amends Catena.
 
 ## Keep changes focused
 
@@ -176,7 +198,8 @@ before disclosure.
 
 ## Review checklist
 
-- [ ] Behavior matches the newest applicable normative chapter.
+- [ ] Behavior matches the explicitly applicable normative chapter and the PR
+      cites its governing heading.
 - [ ] Older JSON AST and interface versions remain deliberately supported.
 - [ ] Every implicit semantic choice is explicit in typed core.
 - [ ] Independent verification rejects forged evidence.

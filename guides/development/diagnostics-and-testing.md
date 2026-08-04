@@ -4,6 +4,11 @@ Catena's tests are executable conformance evidence, not only regression checks.
 They compare independent semantic paths, inspect generated artifacts, execute
 BEAM modules, and exercise adversarial governance inputs.
 
+Tests are not language authority. The research repository's
+[Specification Authority](https://github.com/pcharbon70/catena-research/blob/main/SPECIFICATION-AUTHORITY.md)
+requires each disputed or conformance-sensitive expectation to cite the
+applicable normative document and heading.
+
 ## Diagnostic contract
 
 Every public failure is a `Catena.Diagnostic` with:
@@ -126,8 +131,8 @@ asdf exec mix test test/catena/c005_effects_test.exs --trace
 ```
 
 Always run the complete suite before handoff. A new slice must leave older
-conformance cases green unless a newer normative version explicitly replaces
-their behavior.
+conformance cases green unless applicable normative text explicitly replaces
+their behavior. A version number alone does not establish that replacement.
 
 ## Layers of evidence
 
@@ -160,6 +165,10 @@ semantics with generated BEAM:
 
 Do not implement the reference path by calling the production dispatch or
 policy helper. Shared implementation would let one bug make both answers agree.
+
+Reference and production disagreement blocks the affected conformance claim.
+Compare both paths with the exact normative heading; neither the reference nor
+the compiler is a fallback definition when the specification is silent.
 
 ### Determinism and byte identity
 
@@ -225,7 +234,8 @@ match is non-exhaustive, a rule is false, or a policy explicitly denied.
 
 ## Adding a diagnostic
 
-1. Identify the normative failure and repair action.
+1. Identify and cite the normative document, heading, failure, and repair
+   action.
 2. Reuse an existing ID only when both meaning and repair are the same.
 3. Attach the most precise stable path available.
 4. Put structured observations in `details`.
