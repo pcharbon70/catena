@@ -3,10 +3,19 @@ defmodule Catena.Interface do
 
   alias Catena.Categorical.TypeTerm
   alias Catena.Effect.Row
-  alias Catena.{CanonicalJSON, Condition, Diagnostic, Kind, Specification}
+  alias Catena.{CanonicalJSON, Condition, Diagnostic, Kind, LanguageVersion, Specification}
   alias Catena.Type.Scheme
 
-  @versions ~w(0.2 0.3 0.4 0.5 0.6)
+  @versions LanguageVersion.interface_versions()
+  @categorical_versions LanguageVersion.from(:traits_and_categories)
+  @effect_versions LanguageVersion.from(:effects_and_handlers)
+  @pre_categorical_versions LanguageVersion.before(:traits_and_categories) --
+                              [LanguageVersion.introduced(:type_system)]
+  @pre_effect_versions LanguageVersion.before(:effects_and_handlers) --
+                         [LanguageVersion.introduced(:type_system)]
+  @pre_specification_versions LanguageVersion.before(:specifications_and_governance) --
+                                [LanguageVersion.introduced(:type_system)]
+  @specification_version LanguageVersion.introduced(:specifications_and_governance)
   @claim_subject_kinds ~w(value datatype trait instance effect handler module output interface action profile)
 
   @spec build(map()) :: map()
@@ -39,7 +48,7 @@ defmodule Catena.Interface do
     payload =
       %{
         "format" => "catena-interface",
-        "version" => if(core.frontend_version == "0.1", do: "0.2", else: core.frontend_version),
+        "version" => LanguageVersion.internal_representation(core.frontend_version),
         "origin" => core.origin,
         "module" => core.module,
         "types" => types,
@@ -113,7 +122,7 @@ defmodule Catena.Interface do
   end
 
   defp categorical_payload(payload, %{frontend_version: version, categorical: categorical})
-       when version in ~w(0.4 0.5 0.6) do
+       when version in @categorical_versions do
     Map.merge(payload, %{
       "standard_digest" => categorical.standard_digest,
       "traits" => Enum.map(categorical.traits, &encode_trait/1),
@@ -125,7 +134,7 @@ defmodule Catena.Interface do
   defp categorical_payload(payload, _core), do: payload
 
   defp effect_payload(payload, %{frontend_version: version, effects: effects})
-       when version in ~w(0.5 0.6) do
+       when version in @effect_versions do
     Map.merge(payload, %{
       "effects" =>
         effects.exported_families
@@ -140,7 +149,10 @@ defmodule Catena.Interface do
 
   defp effect_payload(payload, _core), do: payload
 
-  defp specification_payload(payload, %{frontend_version: "0.6", specifications: specifications}) do
+  defp specification_payload(payload, %{
+         frontend_version: @specification_version,
+         specifications: specifications
+       }) do
     Map.merge(payload, %{
       "claims" => Specification.interface_payload(specifications),
       "specification_digest" => specifications.digest
@@ -393,10 +405,10 @@ defmodule Catena.Interface do
 
   defp decode_values(_, _types), do: error("interface values must be a list")
 
-  defp decode_categorical(_value, version) when version in ~w(0.2 0.3),
+  defp decode_categorical(_value, version) when version in @pre_categorical_versions,
     do: {:ok, %{traits: [], instances: [], templates: [], standard_digest: nil}}
 
-  defp decode_categorical(value, version) when version in ~w(0.4 0.5 0.6) do
+  defp decode_categorical(value, version) when version in @categorical_versions do
     traits = Map.get(value, "traits")
     instances = Map.get(value, "instances")
     templates = Map.get(value, "templates")
@@ -426,10 +438,10 @@ defmodule Catena.Interface do
     end
   end
 
-  defp decode_effects(_value, version) when version in ~w(0.2 0.3 0.4),
+  defp decode_effects(_value, version) when version in @pre_effect_versions,
     do: {:ok, %{effects: [], handlers: []}}
 
-  defp decode_effects(value, version) when version in ~w(0.5 0.6) do
+  defp decode_effects(value, version) when version in @effect_versions do
     effects = Map.get(value, "effects")
     handlers = Map.get(value, "handlers")
 
@@ -448,10 +460,10 @@ defmodule Catena.Interface do
     end
   end
 
-  defp decode_specifications(_value, version) when version in ~w(0.2 0.3 0.4 0.5),
+  defp decode_specifications(_value, version) when version in @pre_specification_versions,
     do: {:ok, %{claims: [], specification_digest: nil}}
 
-  defp decode_specifications(value, "0.6") do
+  defp decode_specifications(value, @specification_version) do
     claims = Map.get(value, "claims")
     digest = Map.get(value, "specification_digest")
 

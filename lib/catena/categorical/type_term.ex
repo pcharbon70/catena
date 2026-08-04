@@ -1,5 +1,5 @@
 defmodule Catena.Categorical.TypeTerm do
-  @moduledoc "Codec for the kinded type terms used by Catena 0.4 trait evidence."
+  @moduledoc "Codec for the kinded type terms used by Catena 0.1.4 trait evidence."
 
   alias Catena.{Diagnostic, Kind}
 

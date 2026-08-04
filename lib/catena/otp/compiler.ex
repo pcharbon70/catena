@@ -1,17 +1,21 @@
 defmodule Catena.OTP.Compiler do
   @moduledoc "The sole `.beam` production boundary: OTP 29 `compile:noenv_forms/2`."
 
-  alias Catena.Diagnostic
+  alias Catena.{Diagnostic, LanguageVersion}
+
+  @default_version LanguageVersion.introduced(:data_and_patterns)
 
   @spec compile([term()], keyword()) ::
           {:ok, module(), binary(), [term()]} | {:error, Diagnostic.t()}
   def compile(forms, options \\ []) do
     source = Keyword.get(options, :source, "<catena-json>")
-    specification = options |> Keyword.get(:specification, "0.2") |> String.to_charlist()
+
+    specification =
+      options |> Keyword.get(:specification, @default_version) |> String.to_charlist()
 
     frontend =
       options
-      |> Keyword.get(:frontend_version, "0.2")
+      |> Keyword.get(:frontend_version, @default_version)
       |> then(&("json-ast-" <> &1))
       |> String.to_charlist()
 

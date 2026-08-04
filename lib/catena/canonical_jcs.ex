@@ -1,7 +1,9 @@
 defmodule Catena.CanonicalJCS do
-  @moduledoc "RFC 8785 canonical JSON with Catena 0.6's integer-only signed profile."
+  @moduledoc "RFC 8785 canonical JSON with Catena 0.1.6's integer-only signed profile."
 
-  alias Catena.Diagnostic
+  alias Catena.{Diagnostic, LanguageVersion}
+
+  @governance_version LanguageVersion.introduced(:specifications_and_governance)
 
   @safe_integer 9_007_199_254_740_991
 
@@ -108,7 +110,7 @@ defmodule Catena.CanonicalJCS do
   @spec payload(String.t(), term()) :: binary()
   def payload(kind, value)
       when kind in ~w(root delegation evidence approval transition manifest) do
-    "catena:#{kind}:0.6\n" <> encode(value)
+    "catena:#{kind}:#{@governance_version}\n" <> encode(value)
   end
 
   defp ensure_unique_keys!(entries) do

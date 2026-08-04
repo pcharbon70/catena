@@ -78,6 +78,12 @@ Keep decoder support for valid earlier versions unless the specification
 explicitly defines migration or removal. Do not infer new evidence when
 decoding an old interface.
 
+During the current `0.1` prototype line, each accepted semantic slice receives
+the next unused patch from `Catena.LanguageVersion`. The three-component value
+must move together across every affected frontend, interface, package,
+artifact, compile-metadata, and signature-domain boundary. The Mix application
+version is independent and does not select language semantics.
+
 ## Map the implementation surface
 
 ```mermaid

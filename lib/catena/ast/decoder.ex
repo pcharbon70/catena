@@ -1,9 +1,15 @@
 defmodule Catena.AST.Decoder do
   @moduledoc "Strict decoder for the temporary, versioned Catena JSON AST."
 
-  alias Catena.{Diagnostic, Specification}
+  alias Catena.{Diagnostic, LanguageVersion, Specification}
 
-  @versions ~w(0.1 0.2 0.3 0.4 0.5 0.6)
+  @versions LanguageVersion.all()
+  @type_system_version LanguageVersion.introduced(:type_system)
+  @data_versions LanguageVersion.from(:data_and_patterns)
+  @condition_versions LanguageVersion.from(:clause_conditions)
+  @categorical_versions LanguageVersion.from(:traits_and_categories)
+  @effect_versions LanguageVersion.from(:effects_and_handlers)
+  @specification_version LanguageVersion.introduced(:specifications_and_governance)
   @module_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @type_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @value_name ~r/^[a-z][a-zA-Z0-9_]*$/
@@ -28,7 +34,7 @@ defmodule Catena.AST.Decoder do
       {:ok,
        Map.merge(
          %{
-           version: if(frontend_version == "0.1", do: "0.2", else: frontend_version),
+           version: LanguageVersion.internal_representation(frontend_version),
            frontend_version: frontend_version,
            origin: origin,
            module: module_name,
@@ -51,19 +57,19 @@ defmodule Catena.AST.Decoder do
 
   defp version(%{"version" => version}) do
     error(
-      "unsupported AST version #{inspect(version)}; expected 0.1 through 0.6",
+      "unsupported AST version #{inspect(version)}; expected 0.1.1 through 0.1.6",
       "$.version"
     )
   end
 
   defp version(_), do: error("missing AST version", "$.version")
 
-  defp origin(_value, "0.1"), do: {:ok, "legacy://json-ast-0.1"}
+  defp origin(_value, @type_system_version), do: {:ok, "legacy://json-ast-0.1.1"}
 
-  defp origin(value, version) when version in ~w(0.2 0.3 0.4 0.5 0.6) do
+  defp origin(value, version) when version in @data_versions do
     case Map.get(value, "origin") do
       origin when is_binary(origin) and byte_size(origin) > 0 -> {:ok, origin}
-      _ -> error("AST 0.2 requires a non-empty origin", "$.origin")
+      _ -> error("AST 0.1.2 requires a non-empty origin", "$.origin")
     end
   end
 
@@ -78,9 +84,9 @@ defmodule Catena.AST.Decoder do
 
   defp exports(_), do: error("exports must be a list", "$.exports")
 
-  defp type_exports(_value, "0.1"), do: {:ok, []}
+  defp type_exports(_value, @type_system_version), do: {:ok, []}
 
-  defp type_exports(value, version) when version in ~w(0.2 0.3 0.4 0.5 0.6) do
+  defp type_exports(value, version) when version in @data_versions do
     exports = Map.get(value, "type_exports", [])
 
     with true <- is_list(exports),
@@ -116,9 +122,9 @@ defmodule Catena.AST.Decoder do
     end
   end
 
-  defp type_groups(_value, "0.1"), do: {:ok, []}
+  defp type_groups(_value, @type_system_version), do: {:ok, []}
 
-  defp type_groups(value, version) when version in ~w(0.2 0.3 0.4 0.5 0.6) do
+  defp type_groups(value, version) when version in @data_versions do
     groups = Map.get(value, "type_groups", [])
 
     if is_list(groups) do
@@ -271,18 +277,18 @@ defmodule Catena.AST.Decoder do
     end
   end
 
-  defp imports(_value, "0.1"), do: {:ok, []}
+  defp imports(_value, @type_system_version), do: {:ok, []}
 
-  defp imports(value, version) when version in ~w(0.2 0.3 0.4 0.5 0.6) do
+  defp imports(value, version) when version in @data_versions do
     imports = Map.get(value, "imports", [])
 
     cond do
       not is_list(imports) ->
         error("imports must be a list", "$.imports")
 
-      version not in ~w(0.3 0.4 0.5 0.6) and
+      version not in @condition_versions and
           Enum.any?(imports, &(is_map(&1) and Map.get(&1, "kind") == "condition")) ->
-        semantic_error("CND001", "condition imports require AST 0.3", "$.imports")
+        semantic_error("CND001", "condition imports require AST 0.1.3", "$.imports")
 
       true ->
         {:ok, imports}
@@ -296,11 +302,11 @@ defmodule Catena.AST.Decoder do
           not unique_by?(decoded, & &1.name) ->
             error("definition names must be unique", "$.definitions")
 
-          version not in ~w(0.5 0.6) and Enum.any?(decoded, &effect_control?(&1.body)) ->
-            semantic_error("EFX001", "effect control forms require AST 0.5", "$.definitions")
+          version not in @effect_versions and Enum.any?(decoded, &effect_control?(&1.body)) ->
+            semantic_error("EFX001", "effect control forms require AST 0.1.5", "$.definitions")
 
-          version not in ~w(0.3 0.4 0.5 0.6) and Enum.any?(decoded, &condition_operator?(&1.body)) ->
-            semantic_error("CND001", "condition operators require AST 0.3", "$.definitions")
+          version not in @condition_versions and Enum.any?(decoded, &condition_operator?(&1.body)) ->
+            semantic_error("CND001", "condition operators require AST 0.1.3", "$.definitions")
 
           true ->
             {:ok, decoded}
@@ -337,16 +343,18 @@ defmodule Catena.AST.Decoder do
   end
 
   defp definition_kind("value", _version, _path), do: :ok
-  defp definition_kind("condition", version, _path) when version in ~w(0.3 0.4 0.5 0.6), do: :ok
+
+  defp definition_kind("condition", version, _path) when version in @condition_versions,
+    do: :ok
 
   defp definition_kind("condition", _version, path),
-    do: semantic_result("CND001", "condition declarations require AST 0.3", path <> ".kind")
+    do: semantic_result("CND001", "condition declarations require AST 0.1.3", path <> ".kind")
 
   defp definition_kind(_kind, _version, path),
     do: semantic_result("CND001", "definition kind must be value or condition", path <> ".kind")
 
   defp definition_body(%{"clauses" => clauses} = value, version, path)
-       when version in ~w(0.3 0.4 0.5 0.6) and is_list(clauses) do
+       when version in @condition_versions and is_list(clauses) do
     if Map.has_key?(value, "body") or Map.has_key?(value, "parameters") do
       semantic_error(
         "CND001",
@@ -416,7 +424,7 @@ defmodule Catena.AST.Decoder do
   end
 
   defp definition_body(%{"clauses" => _clauses}, _version, path),
-    do: semantic_error("CND001", "multi-clause definitions require AST 0.3", path <> ".clauses")
+    do: semantic_error("CND001", "multi-clause definitions require AST 0.1.3", path <> ".clauses")
 
   defp definition_body(value, _version, path) do
     with {:ok, parameters} <- parameters(value, path),
@@ -425,7 +433,7 @@ defmodule Catena.AST.Decoder do
     end
   end
 
-  defp verification_only(value, "0.6", path) do
+  defp verification_only(value, @specification_version, path) do
     case Map.get(value, "verification_only", false) do
       flag when is_boolean(flag) -> {:ok, flag}
       _ -> error("verification_only must be Boolean", path <> ".verification_only")
@@ -434,7 +442,7 @@ defmodule Catena.AST.Decoder do
 
   defp verification_only(value, _version, path) do
     if Map.has_key?(value, "verification_only") do
-      semantic_error("SPC003", "verification-only definitions require AST 0.6", path)
+      semantic_error("SPC003", "verification-only definitions require AST 0.1.6", path)
     else
       {:ok, false}
     end
@@ -890,10 +898,11 @@ defmodule Catena.AST.Decoder do
     end
   end
 
-  defp derivations(values, version, path) when version not in ~w(0.4 0.5 0.6),
+  defp derivations(values, version, path) when version not in @categorical_versions,
     do: string_list(values, path <> ".derivations")
 
-  defp derivations(values, version, path) when version in ~w(0.4 0.5 0.6) and is_list(values) do
+  defp derivations(values, version, path)
+       when version in @categorical_versions and is_list(values) do
     values
     |> Enum.with_index()
     |> Enum.reduce_while({:ok, []}, fn
@@ -915,7 +924,7 @@ defmodule Catena.AST.Decoder do
       {_value, index}, _acc ->
         {:halt,
          error(
-           "AST 0.4 derivations require fold or a capability with explicit targets",
+           "AST 0.1.4 derivations require fold or a capability with explicit targets",
            "#{path}.derivations[#{index}]"
          )}
     end)
@@ -925,10 +934,10 @@ defmodule Catena.AST.Decoder do
     end
   end
 
-  defp derivations(_, version, path) when version in ~w(0.4 0.5 0.6),
+  defp derivations(_, version, path) when version in @categorical_versions,
     do: error("derivations must be a list", path <> ".derivations")
 
-  defp categorical_sections(value, version) when version in ~w(0.4 0.5 0.6) do
+  defp categorical_sections(value, version) when version in @categorical_versions do
     with {:ok, traits} <- record_list(value, "traits"),
          {:ok, instances} <- record_list(value, "instances"),
          {:ok, templates} <- record_list(value, "templates") do
@@ -938,13 +947,13 @@ defmodule Catena.AST.Decoder do
 
   defp categorical_sections(value, _version) do
     if Enum.any?(~w(traits instances templates), &Map.has_key?(value, &1)) do
-      semantic_error("TRT001", "traits, instances, and templates require AST 0.4", "$")
+      semantic_error("TRT001", "traits, instances, and templates require AST 0.1.4", "$")
     else
       {:ok, %{traits: [], instances: [], templates: []}}
     end
   end
 
-  defp effect_sections(value, version) when version in ~w(0.5 0.6) do
+  defp effect_sections(value, version) when version in @effect_versions do
     with {:ok, effects} <- record_list(value, "effects"),
          {:ok, handlers} <- handler_list(Map.get(value, "handlers", [])) do
       {:ok, %{effects: effects, handlers: handlers}}
@@ -953,7 +962,7 @@ defmodule Catena.AST.Decoder do
 
   defp effect_sections(value, _version) do
     if Enum.any?(~w(effects handlers), &Map.has_key?(value, &1)) do
-      semantic_error("EFX001", "effects and handlers require AST 0.5", "$")
+      semantic_error("EFX001", "effects and handlers require AST 0.1.5", "$")
     else
       {:ok, %{effects: [], handlers: []}}
     end

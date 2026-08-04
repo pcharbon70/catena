@@ -1,17 +1,18 @@
 defmodule Catena.Governance do
-  @moduledoc "Catena 0.6 governance bundle validation, evidence admission, and package gate."
+  @moduledoc "Catena 0.1.6 governance bundle validation, evidence admission, and package gate."
 
-  alias Catena.{CanonicalJCS, Diagnostic}
+  alias Catena.{CanonicalJCS, Diagnostic, LanguageVersion}
   alias Catena.Governance.{Crypto, Lifecycle, Policy}
 
   @actions ~w(build publish activate)
   @scope_kinds ~w(package module subject action output interface profile)
+  @version LanguageVersion.introduced(:specifications_and_governance)
 
   @spec decode_bundle(binary()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def decode_bundle(binary) when is_binary(binary) do
     with {:ok, value} <- CanonicalJCS.decode(binary, canonical: true),
          "catena-governance-bundle" <- Map.get(value, "format"),
-         "0.6" <- Map.get(value, "version"),
+         @version <- Map.get(value, "version"),
          package when is_binary(package) and byte_size(package) > 0 <- Map.get(value, "package"),
          profile when is_binary(profile) and byte_size(profile) > 0 <-
            Map.get(value, "profile", "static"),
@@ -40,7 +41,7 @@ defmodule Catena.Governance do
        }}
     else
       {:error, %Diagnostic{} = diagnostic} -> {:error, diagnostic}
-      _ -> error("GOV001", "malformed catena-governance-bundle 0.6 document", "$")
+      _ -> error("GOV001", "malformed catena-governance-bundle 0.1.6 document", "$")
     end
   end
 

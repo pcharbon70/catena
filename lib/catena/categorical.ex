@@ -1,15 +1,16 @@
 defmodule Catena.Categorical do
-  @moduledoc "Elaboration boundary for Catena 0.4+ traits, instances, laws, and templates."
+  @moduledoc "Elaboration boundary for Catena 0.1.4+ traits, instances, laws, and templates."
 
   alias Catena.Categorical.{Standard, TypeTerm}
-  alias Catena.{Diagnostic, Kind}
+  alias Catena.{Diagnostic, Kind, LanguageVersion}
   alias Catena.Type.Trait
 
   @law_statuses %{"promised" => :promised, "tested" => :tested, "derived" => :derived}
+  @categorical_versions LanguageVersion.from(:traits_and_categories)
 
   @spec prepare!(map(), map(), [map()]) :: map()
   def prepare!(%{frontend_version: version}, _data, _interfaces)
-      when version not in ~w(0.4 0.5 0.6),
+      when version not in @categorical_versions,
       do: empty()
 
   def prepare!(ast, data, interfaces) do
@@ -337,7 +338,7 @@ defmodule Catena.Categorical do
              not direct_target?(field.type, indexes) do
           fail(
             "DRV001",
-            "Catena 0.4 structural derivation requires target parameters to occupy whole fields",
+            "Catena 0.1.4 structural derivation requires target parameters to occupy whole fields",
             type.path
           )
         end

@@ -166,7 +166,7 @@ match amount with
 | value -> positive(value)
 ```
 
-The 0.3 condition language is a closed, pure, total `Bool`/`Int` fragment. It
+The 0.1.3 condition language is a closed, pure, total `Bool`/`Int` fragment. It
 supports Boolean logic, exact equality, integer ordering, total integer
 arithmetic, variables, and direct calls to verified nonrecursive condition
 predicates. It excludes ordinary calls, recursion, effects, trait dispatch,

@@ -31,7 +31,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     refute Crypto.verify("changed", @rfc8032_public, @rfc8032_empty_signature)
   end
 
-  test "AST 0.6 type-checks exact rules, exports claim summaries, and erases checkers" do
+  test "AST 0.1.6 type-checks exact rules, exports claim summaries, and erases checkers" do
     json = specification_module_json("C006Rule", true)
 
     assert {:ok, core} = Catena.check_json(json)
@@ -111,7 +111,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:error, %{id: "EVD002"}} = Catena.check_json(counterexample)
   end
 
-  test "all 0.6 claim subject kinds resolve against the typed module and package graph" do
+  test "all 0.1.6 claim subject kinds resolve against the typed module and package graph" do
     subjects = [
       %{"kind" => "value", "name" => "main"},
       %{"kind" => "datatype", "name" => "Thing"},
@@ -230,7 +230,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
 
   test "the rule evaluator reports deterministic budget exhaustion separately" do
     core = %{
-      frontend_version: "0.6",
+      frontend_version: "0.1.6",
       definitions: [
         %{
           name: "loop",
@@ -442,7 +442,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
 
     document = %{
       "format" => "catena-trust-root",
-      "version" => "0.6",
+      "version" => "0.1.6",
       "namespace" => "demo",
       "initial" => initial,
       "history" => [event]
@@ -559,7 +559,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
 
     document = %{
       "format" => "catena-trust-root",
-      "version" => "0.6",
+      "version" => "0.1.6",
       "namespace" => "demo",
       "initial" => initial,
       "history" => [event]
@@ -964,7 +964,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:error, %{id: "GOV004"}} = Lifecycle.replay([accepted, proposed], root)
   end
 
-  test "0.6 package build stages outputs, emits a sidecar, and verifies exact artifacts" do
+  test "0.1.6 package build stages outputs, emits a sidecar, and verifies exact artifacts" do
     directory = temporary_directory!("package")
     module_path = Path.join(directory, "module.json")
     manifest_path = Path.join(directory, "package.json")
@@ -1326,7 +1326,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
 
   defp base_module(name, extra_definitions) do
     %{
-      "version" => "0.6",
+      "version" => "0.1.6",
       "origin" => "pkg://tests/#{name}",
       "module" => name,
       "source" => "module.json",
@@ -1355,7 +1355,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     Map.merge(
       %{
         "format" => "catena-governance-bundle",
-        "version" => "0.6",
+        "version" => "0.1.6",
         "package" => "demo",
         "profile" => "static",
         "policies" => [],
@@ -1442,7 +1442,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
   defp root_document(namespace, state) do
     %{
       "format" => "catena-trust-root",
-      "version" => "0.6",
+      "version" => "0.1.6",
       "namespace" => namespace,
       "initial" => state,
       "history" => []
@@ -1482,7 +1482,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
   defp package_manifest(package, source, governance, module \\ "C006Package") do
     %{
       "format" => "catena-package-manifest",
-      "version" => "0.6",
+      "version" => "0.1.6",
       "package" => package,
       "profile" => "static",
       "companion_module" => "C006Companion",

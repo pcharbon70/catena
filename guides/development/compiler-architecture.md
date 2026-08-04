@@ -112,7 +112,9 @@ error with a nonzero exit status.
 
 ## Frontend decoding
 
-`Catena.AST.Decoder` is a strict boundary for JSON AST 0.1 through 0.6. It
+`Catena.LanguageVersion` is the single executable registry for prototype slice
+identifiers and their ordered feature thresholds. `Catena.AST.Decoder` is a
+strict boundary for JSON AST 0.1.1 through 0.1.6. It
 validates:
 
 - version and required origin;
@@ -120,11 +122,11 @@ validates:
 - declaration shapes and uniqueness;
 - expression and pattern tags;
 - type syntax;
-- categorical sections from 0.4;
-- effects and handlers from 0.5; and
-- specifications and verification-only definitions from 0.6.
+- categorical sections from 0.1.4;
+- effects and handlers from 0.1.5; and
+- specifications and verification-only definitions from 0.1.6.
 
-Version 0.1 is normalized into the 0.2 internal data-capable form while its
+Version 0.1.1 is normalized into the 0.1.2 internal data-capable form while its
 frontend identity is preserved for compiler metadata. Newer inputs retain
 their versioned sections. Unknown versions or tags fail rather than becoming
 opaque extension nodes.
@@ -170,7 +172,7 @@ inference. It rechecks structural evidence including:
 - request identity, handler structure, and resumption discipline; and
 - equality evidence scope.
 
-Specification elaboration separately checks 0.6 checker purity, example
+Specification elaboration separately checks 0.1.6 checker purity, example
 execution, subject resolution, semantic digests, and runtime dependency
 closure.
 
@@ -219,7 +221,7 @@ semantic facts needed by later compilation while hiding runtime representation:
 - claims and inherited obligations.
 
 Decoding verifies the content digest before exposing any imported evidence.
-Backward decoding supports valid interface versions 0.2 through 0.6.
+Backward decoding supports valid interface versions 0.1.2 through 0.1.6.
 
 ## Package compilation
 
@@ -241,7 +243,7 @@ version solving, registry communication, or network access.
 
 ## Governance and assurance modules
 
-The 0.6 package gate is divided by responsibility:
+The 0.1.6 package gate is divided by responsibility:
 
 | Module | Responsibility |
 | --- | --- |
@@ -283,7 +285,7 @@ Every compiler change preserves these boundaries:
 7. **Representation independence:** interfaces do not expose ADT layout.
 8. **Determinism:** identical bounded inputs produce identical semantic
    digests, forms, and BEAM bytes where specified.
-9. **Total assurance erasure:** no 0.6 rule or governance payload reaches BEAM.
+9. **Total assurance erasure:** no 0.1.6 rule or governance payload reaches BEAM.
 10. **Fail closed and transactional:** malformed governance denies and failed
     gates leave no new final output.
 11. **No private keys:** the compiler emits payloads and verifies signatures.

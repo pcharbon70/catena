@@ -69,7 +69,7 @@ A module compilation produces two different artifacts:
 | `Module.cati.json` | digest-bound Catena module interface for later compilation |
 
 A package specialization can also produce a companion `.beam` containing
-direct specialized operations. A 0.6 package produces an assurance sidecar
+direct specialized operations. A 0.1.6 package produces an assurance sidecar
 that binds the exact BEAM and interface bytes.
 
 ```mermaid
@@ -192,11 +192,11 @@ needs:
 - condition evidence;
 - traits, instances, laws, templates, and standard hierarchy digest;
 - effect families, handlers, and normalized `uses` rows; and
-- 0.6 claim summaries and inherited obligations.
+- 0.1.6 claim summaries and inherited obligations.
 
 The interface is deterministic and protected by SHA-256. A content mismatch
 is rejected before dependent checking or linking. It is content binding, not
-publisher identity; publisher authorization appears only in 0.6 governance.
+publisher identity; publisher authorization appears only in 0.1.6 governance.
 
 Use one or more interfaces when checking a dependent module:
 
@@ -223,7 +223,7 @@ in the package manifest.
 
 ## Assurance metadata stays outside BEAM
 
-Version 0.6 removes rules, examples, checkers, evidence, policies, approvals,
+Version 0.1.6 removes rules, examples, checkers, evidence, policies, approvals,
 keys, signatures, histories, and assurance digests before Abstract Format.
 The assurance manifest records them beside the runtime artifacts.
 

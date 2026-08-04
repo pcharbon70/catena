@@ -1,8 +1,10 @@
 defmodule Catena.Assurance do
-  @moduledoc "Build and independently inspect Catena 0.6 artifact-bound assurance manifests."
+  @moduledoc "Build and independently inspect Catena 0.1.6 artifact-bound assurance manifests."
 
-  alias Catena.{CanonicalJCS, Diagnostic, Governance}
+  alias Catena.{CanonicalJCS, Diagnostic, Governance, LanguageVersion}
   alias Catena.Governance.Crypto
+
+  @version LanguageVersion.introduced(:specifications_and_governance)
 
   @spec build(map(), [map()], [map()], map() | nil, [map()]) :: map()
   def build(package, artifacts, cores, governance_result, signatures \\ []) do
@@ -35,8 +37,8 @@ defmodule Catena.Assurance do
       "modules" => cores |> Enum.map(& &1.module) |> Enum.sort(),
       "dependency_digests" => Map.get(package, :dependency_digests, []) |> Enum.sort(),
       "compiler" => Application.spec(:catena, :vsn) |> to_string(),
-      "frontend" => "json-ast-0.6",
-      "specification" => "0.6",
+      "frontend" => "json-ast-#{@version}",
+      "specification" => @version,
       "otp" => :erlang.system_info(:otp_release) |> to_string(),
       "canonicalization" => "RFC8785/catena-safe-integer",
       "artifacts" => artifact_records,
@@ -53,7 +55,7 @@ defmodule Catena.Assurance do
 
     document = %{
       "format" => "catena-assurance-manifest",
-      "version" => "0.6",
+      "version" => @version,
       "signed" => signed,
       "signatures" => signatures
     }
@@ -73,7 +75,7 @@ defmodule Catena.Assurance do
   def verify(binary, directory, root) do
     with {:ok, document} <- CanonicalJCS.decode(binary, canonical: true),
          "catena-assurance-manifest" <- Map.get(document, "format"),
-         "0.6" <- Map.get(document, "version"),
+         @version <- Map.get(document, "version"),
          signed when is_map(signed) <- Map.get(document, "signed"),
          signatures when is_list(signatures) <- Map.get(document, "signatures"),
          :ok <- verify_manifest_shape(signed),
@@ -94,7 +96,7 @@ defmodule Catena.Assurance do
        }}
     else
       {:error, %Diagnostic{} = diagnostic} -> {:error, diagnostic}
-      _ -> error("malformed catena-assurance-manifest 0.6 document")
+      _ -> error("malformed catena-assurance-manifest 0.1.6 document")
     end
   end
 
@@ -128,8 +130,8 @@ defmodule Catena.Assurance do
     valid? =
       is_binary(signed["package"]) and byte_size(signed["package"]) > 0 and
         is_binary(signed["profile"]) and signed["action"] in ~w(build publish activate) and
-        is_binary(signed["compiler"]) and signed["frontend"] == "json-ast-0.6" and
-        signed["specification"] == "0.6" and is_binary(signed["otp"]) and
+        is_binary(signed["compiler"]) and signed["frontend"] == "json-ast-#{@version}" and
+        signed["specification"] == @version and is_binary(signed["otp"]) and
         signed["canonicalization"] == "RFC8785/catena-safe-integer" and
         string_list?(modules) and digest_list?(dependencies) and is_list(claims) and
         ordered_unique_ids?(claims) and Enum.all?(claims, &valid_claim_record?/1) and

@@ -3,12 +3,14 @@ defmodule Catena.Reference.Evaluator do
 
   @budget_key {__MODULE__, :budget}
   @steps_key {__MODULE__, :steps}
+  @effect_versions Catena.LanguageVersion.from(:effects_and_handlers)
 
   @spec run(map(), String.t(), [term()]) :: {:ok, term()} | {:error, term()}
   def run(core, name, arguments \\ [])
 
-  def run(%{frontend_version: version} = core, name, arguments) when version in ~w(0.5 0.6),
-    do: Catena.Effect.Reference.run(core, name, arguments)
+  def run(%{frontend_version: version} = core, name, arguments)
+      when version in @effect_versions,
+      do: Catena.Effect.Reference.run(core, name, arguments)
 
   def run(core, name, arguments) do
     definitions = Map.new(core.definitions, &{&1.name, &1})

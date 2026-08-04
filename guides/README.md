@@ -119,13 +119,16 @@ could also appear in the compiler.
 
 | Version | Implemented slice |
 | --- | --- |
-| 0.1 | principal type inference and annotation-directed advanced checking |
-| 0.2 | nominal algebraic data, patterns, coverage, folds, and interfaces |
-| 0.3 | safe clause conditions and condition-aware coverage |
-| 0.4 | coherent traits, structural derivation, specialization, and erasure |
-| 0.5 | lexical effects, deep handlers, affine resumptions, and effect-directed CPS |
-| 0.6 | typed specifications, offline governance, assurance artifacts, and total erasure |
+| 0.1.1 | principal type inference and annotation-directed advanced checking |
+| 0.1.2 | nominal algebraic data, patterns, coverage, folds, and interfaces |
+| 0.1.3 | safe clause conditions and condition-aware coverage |
+| 0.1.4 | coherent traits, structural derivation, specialization, and erasure |
+| 0.1.5 | lexical effects, deep handlers, affine resumptions, and effect-directed CPS |
+| 0.1.6 | typed specifications, offline governance, assurance artifacts, and total erasure |
 
 These versions identify additive semantic slices of the prototype. They are
 not end-user language editions or promises that all ordinary language
-facilities are complete.
+facilities are complete. The compiler package has its own release version;
+`mix.exs` therefore remains `0.1.0`. Retired two-component slice identifiers
+are rejected rather than normalized because they also occurred in digests and
+signed protocol domains.

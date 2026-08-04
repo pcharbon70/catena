@@ -1,5 +1,5 @@
 defmodule Catena.Governance.Policy do
-  @moduledoc "Closed, bounded, explanation-producing Catena 0.6 policy algebra."
+  @moduledoc "Closed, bounded, explanation-producing Catena 0.1.6 policy algebra."
 
   alias Catena.Diagnostic
   alias Catena.Governance.Crypto

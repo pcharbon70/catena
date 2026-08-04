@@ -2,11 +2,11 @@
 
 Catena specifications attach typed, executable statements to exact language
 subjects. They are optional to adopt, mandatory to interpret once declared,
-and completely erased from runtime BEAM code in version 0.6.
+and completely erased from runtime BEAM code in version 0.1.6.
 
 This guide uses Catena's accepted behavior-first vocabulary. The words and
 their meanings are part of the language design; their final parser punctuation
-is not. The JSON AST is the normative executable form for 0.6.
+is not. The JSON AST is the normative executable form for 0.1.6.
 
 ## Use the accepted vocabulary
 
@@ -17,14 +17,14 @@ invariant calculus, proof obligation, or model checker.
 | Public word | What it tells a programmer | Current status |
 | --- | --- | --- |
 | `spec` | group related statements about one typed subject | accepted source vocabulary; parser form remains open |
-| `describes` | name the function, type, module, effect, or other subject being described | accepted source vocabulary; represented by a typed `subject` in 0.6 |
-| `rule` | name a behavior that Catena must check honestly | implemented by the 0.6 specification graph |
+| `describes` | name the function, type, module, effect, or other subject being described | accepted source vocabulary; represented by a typed `subject` in 0.1.6 |
+| `rule` | name a behavior that Catena must check honestly | implemented by the 0.1.6 specification graph |
 | `needs` | state what a caller must provide before using a boundary | accepted vocabulary; general contract checking is later work |
-| `promises` | state what an implementation or result must provide | accepted vocabulary; 0.6 can represent a bounded pure rule, not a general runtime contract |
-| `example` | give one exact input and expected observation | implemented and evaluated in 0.6 |
+| `promises` | state what an implementation or result must provide | accepted vocabulary; 0.1.6 can represent a bounded pure rule, not a general runtime contract |
+| `example` | give one exact input and expected observation | implemented and evaluated in 0.1.6 |
 | `property` | challenge a behavior with generated cases | accepted vocabulary; generation and shrinking are later work |
 | `always` | state an invariant or temporal obligation | accepted vocabulary; temporal checking is later work |
-| `check` | say which concrete observation an example or property makes | accepted source vocabulary; represented by the rule checker and expected result in 0.6 |
+| `check` | say which concrete observation an example or property makes | accepted source vocabulary; represented by the rule checker and expected result in 0.1.6 |
 
 The words used to explain support and trust are equally deliberate:
 
@@ -69,12 +69,12 @@ the current bootstrap compiler. It says:
 - the `example` records one exact case; and
 - `check` names the observation and expected result.
 
-Version 0.6 elaborates the implemented part of this reading into a named pure,
+Version 0.1.6 elaborates the implemented part of this reading into a named pure,
 verification-only Boolean checker and an exact example. General `needs` and
 `promises` contracts, generated `property` checks, and temporal `always`
 statements require later semantic versions.
 
-## See the 0.6 semantic form
+## See the 0.1.6 semantic form
 
 Until the source parser is specified, an equivalent implementation model uses
 a verification-only definition and an explicit specification entry:
@@ -107,7 +107,7 @@ preferred public spelling. Semantically:
 
 ## The normative JSON shape
 
-Inside a complete JSON AST 0.6 module, the corresponding sections resemble:
+Inside a complete JSON AST 0.1.6 module, the corresponding sections resemble:
 
 ```json
 {
@@ -163,12 +163,12 @@ metadata.
 
 ## Rule checkers are deliberately restricted
 
-A 0.6 checker must:
+A 0.1.6 checker must:
 
 - have an explicit function signature ending in `Bool`;
 - accept every parameter declared by the rule;
 - infer an empty effect row;
-- use only pure 0.6 expressions and pure helper definitions;
+- use only pure 0.1.6 expressions and pure helper definitions;
 - exclude `request`, `handle`, and `resume`; and
 - remain unreachable from every runtime definition.
 
@@ -183,7 +183,7 @@ which machine happens to compile the package.
 ## Examples are exact witnesses
 
 An example calls the checker with a finite input and expected Boolean. Version
-0.6 admits JSON integers, Booleans, and recursively nested tuples compatible
+0.1.6 admits JSON integers, Booleans, and recursively nested tuples compatible
 with the checker's parameters.
 
 It excludes floats, constructors, opaque host terms, functions, processes,
@@ -223,7 +223,7 @@ the previous digest.
 
 ## Keep evidence kinds honest
 
-Version 0.6 distinguishes:
+Version 0.1.6 distinguishes:
 
 - **conformance evidence**, emitted by the compiler for a named successful
   checker or artifact audit;
@@ -267,13 +267,13 @@ functions, exports, literals, custom chunks, attributes, compile information,
 and companion specialization functions. Fully discharged specifications must
 leave identical runtime input byte-identical at the BEAM level.
 
-Version 0.6 has no monitor-retaining profile. A declaration that genuinely
+Version 0.1.6 has no monitor-retaining profile. A declaration that genuinely
 needs runtime enforcement belongs to future work with an explicit semantics,
 effect, and cost contract.
 
 ## Use the assurance manifest
 
-A 0.6 package build produces ordinary runtime artifacts plus a canonical
+A 0.1.6 package build produces ordinary runtime artifacts plus a canonical
 `catena-assurance-manifest`. The sidecar records claims, evidence, assumptions,
 artifact hashes, compiler identity, dependencies, and the erasure audit.
 
@@ -299,9 +299,9 @@ governed `publish` or `activate` result.
 | `SPC003` | provide a typed, pure, verification-only checker |
 | `SPC004` | make example arguments and expectation compatible |
 | `EVD002` | inspect the counterexample or runtime fault |
-| `EVD003` | simplify the checker; the fixed budget is part of 0.6 |
+| `EVD003` | simplify the checker; the fixed budget is part of 0.1.6 |
 | `ERS001` | remove runtime reachability or retained assurance material |
 
 Continue with [Governance](governance.md) when checked evidence must gate an
 organizational action. Exact rules are in the
-[normative 0.6 specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/specifications-and-governance).
+[normative 0.1.6 specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/specifications-and-governance).

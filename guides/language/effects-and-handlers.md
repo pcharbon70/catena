@@ -6,7 +6,7 @@ and resolves it through lexical capability identity rather than runtime label
 search.
 
 Source examples are illustrative. The effect identity, selection, handler,
-evaluation, and resumption semantics are normative in version 0.5.
+evaluation, and resumption semantics are normative in version 0.1.5.
 
 ## Use the external-ability vocabulary
 
@@ -60,7 +60,7 @@ effect Prompt {
 
 An effect family has nominal identity derived from its package origin and
 name. Its operations have ordered parameters and one reply type. Operation
-arguments may contain ordinary data and pure function values, but the 0.5
+arguments may contain ordinary data and pure function values, but the 0.1.5
 boundary excludes effectful function arguments, capabilities, handlers, and
 resumptions.
 
@@ -221,7 +221,7 @@ compatible capabilities are in scope.
 
 ### Assuming abort performs cleanup
 
-Version 0.5 specifies discarded control, not finalization, cancellation,
+Version 0.1.5 specifies discarded control, not finalization, cancellation,
 resource unwinding, or exception cleanup. Resource scopes need a later
 language contract.
 

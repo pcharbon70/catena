@@ -1,7 +1,7 @@
 {
   "format": "catena-standard-interface",
-  "version": "0.4",
-  "origin": "catena://standard/0.4",
+  "version": "0.1.4",
+  "origin": "catena://standard/0.1.4",
   "module": "CatenaStandard",
   "traits": [
     {"name":"Equatable","formal_name":"Setoid","parameters":[{"name":"a","kind":"Type"}],"parents":[],"methods":[{"name":"equals","arity":2,"order":["left","right"]}],"laws":[{"id":"equivalence","domain":"pure-total-finite"}]},
@@ -23,11 +23,11 @@
     {"name":"FocusReader","formal_name":"Comonad","parameters":[{"name":"w","kind":"Type -> Type"}],"parents":[{"trait":"ContextualMapper","arguments":[{"tag":"variable","name":"w","kind":"Type -> Type"}]}],"methods":[{"name":"read_focus","arity":1,"order":["subject"]}],"laws":[{"id":"left-identity","domain":"pure-total-finite"},{"id":"right-identity","domain":"pure-total-finite"}]}
   ],
   "instances": [
-    {"trait":"Mapper","arguments":[{"tag":"constructor","id":"catena://standard/0.4/List","kind":"Type -> Type","owner":"catena://standard/0.4"}],"owner":"catena://standard/0.4","methods":{"map":"Elixir.Catena.Standard.List.map"},"law_status":"tested"},
-    {"trait":"Reducible","arguments":[{"tag":"constructor","id":"catena://standard/0.4/List","kind":"Type -> Type","owner":"catena://standard/0.4"}],"owner":"catena://standard/0.4","methods":{"summarize":"Elixir.Catena.Standard.List.summarize"},"law_status":"tested"}
+    {"trait":"Mapper","arguments":[{"tag":"constructor","id":"catena://standard/0.1.4/List","kind":"Type -> Type","owner":"catena://standard/0.1.4"}],"owner":"catena://standard/0.1.4","methods":{"map":"Elixir.Catena.Standard.List.map"},"law_status":"tested"},
+    {"trait":"Reducible","arguments":[{"tag":"constructor","id":"catena://standard/0.1.4/List","kind":"Type -> Type","owner":"catena://standard/0.1.4"}],"owner":"catena://standard/0.1.4","methods":{"summarize":"Elixir.Catena.Standard.List.summarize"},"law_status":"tested"}
   ],
   "templates": [],
   "law_evidence": ["promised", "tested", "derived"],
   "execution": {"callback_order":"left-to-right","subject_position":"last","visit_multiplicity":"once-in-declaration-order","law_concurrency":false},
-  "digest": "3560f37789072adbfe52911721b56eb25027877a291c91671f4ed87ea9db91a6"
+  "digest": "c841bf5b4cbdbf8969ccf5375bc327ae106eb222671595b29ea49acd5b2f1013"
 }

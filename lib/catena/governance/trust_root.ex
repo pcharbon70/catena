@@ -1,17 +1,18 @@
 defmodule Catena.Governance.TrustRoot do
-  @moduledoc "Canonical offline trust-root decoding and hash-chained Catena 0.6 rotation."
+  @moduledoc "Canonical offline trust-root decoding and hash-chained Catena 0.1.6 rotation."
 
-  alias Catena.{CanonicalJCS, Diagnostic}
+  alias Catena.{CanonicalJCS, Diagnostic, LanguageVersion}
   alias Catena.Governance.Crypto
 
   @hex_key ~r/^[0-9a-f]{64}$/
   @hex_digest ~r/^[0-9a-f]{64}$/
+  @version LanguageVersion.introduced(:specifications_and_governance)
 
   @spec decode(binary()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def decode(binary) when is_binary(binary) do
     with {:ok, value} <- CanonicalJCS.decode(binary, canonical: true),
          "catena-trust-root" <- Map.get(value, "format"),
-         "0.6" <- Map.get(value, "version"),
+         @version <- Map.get(value, "version"),
          namespace when is_binary(namespace) and byte_size(namespace) > 0 <-
            Map.get(value, "namespace"),
          initial when is_map(initial) <- Map.get(value, "initial"),
@@ -22,7 +23,7 @@ defmodule Catena.Governance.TrustRoot do
       {:ok, Map.put(current, :history, history)}
     else
       {:error, %Diagnostic{} = diagnostic} -> {:error, diagnostic}
-      _ -> error("malformed catena-trust-root 0.6 document")
+      _ -> error("malformed catena-trust-root 0.1.6 document")
     end
   end
 

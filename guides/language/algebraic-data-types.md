@@ -6,7 +6,7 @@ its variants establish the possible values. The specification and compiler
 also call these algebraic data types and constructors, but ordinary code can
 be learned through variants and their payloads.
 
-Code in this guide uses illustrative source notation. The normative 0.2 model
+Code in this guide uses illustrative source notation. The normative 0.1.2 model
 is implemented through JSON AST today; final parser punctuation remains open.
 
 ## Use the data vocabulary
@@ -47,7 +47,7 @@ pretend that a result already exists.
 
 ## Declaration forms
 
-Catena 0.2 supports three variant payload shapes.
+Catena 0.1.2 supports three variant payload shapes.
 
 ### No payload
 
@@ -184,7 +184,7 @@ boundary but constructors do not. Abstract clients must use exported
 functions, and coverage treats the imported type as an open domain that needs
 a wildcard or binder.
 
-Catena 0.2 does not split construction permission from matching permission.
+Catena 0.1.2 does not split construction permission from matching permission.
 That finer capability would require a later specification.
 
 ## Derive a complete fold deliberately
@@ -255,7 +255,7 @@ When introducing a datatype, ask:
 
 ## Current boundaries
 
-Catena 0.2 does not define structural variants, structural records, open
+Catena 0.1.2 does not define structural variants, structural records, open
 datatypes, stable foreign/wire layout, automatic serialization, or validation
 of arbitrary Erlang terms. List syntax and collection literals also remain
 separate language work.

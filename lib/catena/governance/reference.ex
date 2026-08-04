@@ -1,5 +1,5 @@
 defmodule Catena.Governance.Reference do
-  @moduledoc "Separately structured oracle for Catena 0.6 policy decisions."
+  @moduledoc "Separately structured oracle for Catena 0.1.6 policy decisions."
 
   alias Catena.CanonicalJCS
   alias Catena.Governance.{Crypto, Lifecycle}

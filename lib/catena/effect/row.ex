@@ -1,5 +1,5 @@
 defmodule Catena.Effect.Row do
-  @moduledoc "Identity-aware effect rows for the Catena 0.5 bootstrap boundary."
+  @moduledoc "Identity-aware effect rows for the Catena 0.1.5 bootstrap boundary."
 
   alias Catena.Type
 

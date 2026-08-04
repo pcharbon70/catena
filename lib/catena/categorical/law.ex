@@ -1,5 +1,5 @@
 defmodule Catena.Categorical.Law do
-  @moduledoc "Bounded Catena 0.4 law checks; results are test evidence, never optimizer proofs."
+  @moduledoc "Bounded Catena 0.1.4 law checks; results are test evidence, never optimizer proofs."
 
   alias Catena.Type.Trait
 
