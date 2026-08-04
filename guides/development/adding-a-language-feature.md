@@ -19,6 +19,9 @@ Determine whether the request:
 
 Do not silently reinterpret an older normative slice because a new feature is
 convenient. Add a versioned rule with explicit compatibility behavior.
+Follow the research repository's
+[Specification Authority](https://github.com/pcharbon70/catena-research/blob/main/SPECIFICATION-AUTHORITY.md):
+a larger version number is not an implicit replacement.
 
 ## Research and specify first
 
@@ -37,6 +40,9 @@ For a new semantic feature:
 The research archive keeps source claims, synthesis, inquiry, map, normative
 chapters, and conformance journal distinct. Compiler code should link to the
 applicable specification rather than embed rationale as accidental behavior.
+Every implementation obligation and conflict report should cite the exact
+normative document and heading. Reference evaluators, tests, and existing
+compiler behavior cannot fill a gap or ambiguity in that text.
 
 ## Design the public words with the semantics
 
@@ -160,6 +166,11 @@ Current examples include:
 Published external vectors should supplement local round trips for protocol
 standards such as canonicalization and signatures.
 
+Agreement is evidence, not authority. When reference and production paths
+disagree, compare both with the cited normative heading. Neither executable
+path wins on its own, and neither supplies semantics that the specification
+leaves silent.
+
 ## Lower only verified meaning
 
 Extend `Catena.Backend.ErlangAbstract` after the core and verifier are stable.
@@ -254,7 +265,9 @@ developer architecture, and current-boundary lists. Examples must distinguish:
 - research proposals that remain unsettled.
 
 Do not let a guide casually close a completeness gap that the specification
-still marks partial or open.
+still marks partial or open. Use the visible normative and non-normative labels
+defined by the Specification Authority when adding or revising specification
+material.
 
 ## Freeze and promote implementation evidence
 

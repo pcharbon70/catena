@@ -41,7 +41,9 @@ historical proof-of-concept's compiler or language design.
 The normative language definition belongs to the separate
 [Catena research specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification).
 This repository provides the executable model and conformance evidence for
-that specification.
+that specification. The research repository's
+[Specification Authority](https://github.com/pcharbon70/catena-research/blob/main/SPECIFICATION-AUTHORITY.md)
+defines document status, content labels, rule citations, and conflict handling.
 
 To explore the language as a programmer, begin with the
 [Catena Language Tour](LANGUAGE-TOUR.md). It introduces the language model,
