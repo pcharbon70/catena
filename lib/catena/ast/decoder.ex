@@ -1,7 +1,7 @@
 defmodule Catena.AST.Decoder do
   @moduledoc "Strict decoder for the temporary, versioned Catena JSON AST."
 
-  alias Catena.{Diagnostic, LanguageVersion, Specification}
+  alias Catena.{Diagnostic, LanguageSelection, LanguageVersion, Specification}
 
   @versions LanguageVersion.all()
   @type_system_version LanguageVersion.introduced(:type_system)
@@ -9,33 +9,44 @@ defmodule Catena.AST.Decoder do
   @condition_versions LanguageVersion.from(:clause_conditions)
   @categorical_versions LanguageVersion.from(:traits_and_categories)
   @effect_versions LanguageVersion.from(:effects_and_handlers)
-  @specification_version LanguageVersion.introduced(:specifications_and_governance)
+  @specification_versions LanguageVersion.from(:specifications_and_governance)
   @module_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @type_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @value_name ~r/^[a-z][a-zA-Z0-9_]*$/
   @expression_tags ~w(integer boolean variable function call let tuple annotate construct match unary binary request handle resume)
   @pattern_tags ~w(wildcard bind integer boolean tuple constructor as or)
 
-  @spec decode(binary()) :: {:ok, map()} | {:error, Diagnostic.t()}
-  def decode(json) when is_binary(json) do
+  @spec decode(binary(), keyword()) :: {:ok, map()} | {:error, Diagnostic.t()}
+  def decode(json, options \\ []) when is_binary(json) do
     with {:ok, value} <- JSON.decode(json),
          :ok <- require_map(value, "$"),
-         {:ok, frontend_version} <- version(value),
+         {:ok, frontend_format} <- version(value),
+         {:ok, selection, diagnostics, explicit_selection?} <-
+           selection(value, frontend_format, options),
+         language_revision = selection.language_revision,
+         :ok <- validate_applicability(value, selection, explicit_selection?),
          {:ok, module_name} <- name(value, "module", @module_name, "$"),
-         {:ok, origin} <- origin(value, frontend_version),
+         {:ok, origin} <- origin(value, frontend_format),
          {:ok, exports} <- exports(value),
-         {:ok, type_exports} <- type_exports(value, frontend_version),
-         {:ok, type_groups} <- type_groups(value, frontend_version),
-         {:ok, imports} <- imports(value, frontend_version),
-         {:ok, definitions} <- definitions(value, frontend_version),
-         {:ok, categorical} <- categorical_sections(value, frontend_version),
-         {:ok, effects} <- effect_sections(value, frontend_version),
-         {:ok, specifications} <- Specification.decode_sections(value, frontend_version) do
+         {:ok, type_exports} <- type_exports(value, language_revision),
+         {:ok, type_groups} <- type_groups(value, language_revision),
+         {:ok, imports} <- imports(value, language_revision),
+         {:ok, definitions} <- definitions(value, language_revision),
+         {:ok, categorical} <- categorical_sections(value, language_revision),
+         {:ok, effects} <- effect_sections(value, language_revision),
+         {:ok, specifications} <- Specification.decode_sections(value, language_revision) do
       {:ok,
        Map.merge(
          %{
-           version: LanguageVersion.internal_representation(frontend_version),
-           frontend_version: frontend_version,
+           version: LanguageVersion.internal_representation(language_revision),
+           frontend_format: frontend_format,
+           frontend_version: language_revision,
+           edition: selection.edition,
+           language_revision: language_revision,
+           previews: selection.previews,
+           selection_explicit?: explicit_selection?,
+           required_previews: [],
+           diagnostics: diagnostics,
            origin: origin,
            module: module_name,
            exports: exports,
@@ -57,12 +68,204 @@ defmodule Catena.AST.Decoder do
 
   defp version(%{"version" => version}) do
     error(
-      "unsupported AST version #{inspect(version)}; expected 0.1.1 through 0.1.6",
+      "unsupported AST version #{inspect(version)}; expected one of #{Enum.join(@versions, ", ")}",
       "$.version"
     )
   end
 
   defp version(_), do: error("missing AST version", "$.version")
+
+  defp selection(value, frontend_format, options) do
+    case Keyword.fetch(options, :language_selection) do
+      {:ok, requested} ->
+        with {:ok, selection} <- LanguageVersion.resolve_selection(requested),
+             :ok <- validate_embedded_selection(value, selection) do
+          {:ok, selection, [], true}
+        end
+
+      :error ->
+        embedded_selection(value, frontend_format)
+    end
+  end
+
+  defp validate_embedded_selection(value, selected) do
+    if Enum.any?(~w(edition language_revision previews), &Map.has_key?(value, &1)) do
+      with {:ok, embedded} <- LanguageVersion.resolve_selection(value),
+           true <- embedded == selected do
+        :ok
+      else
+        {:error, %Diagnostic{} = diagnostic} ->
+          {:error, diagnostic}
+
+        false ->
+          {:error,
+           Diagnostic.new(
+             "EDN001",
+             "module language selection does not match the package or invocation selection",
+             path: "$",
+             details: %{
+               module: LanguageSelection.to_map(embedded_selection!(value)),
+               selected: LanguageSelection.to_map(selected)
+             }
+           )}
+      end
+    else
+      :ok
+    end
+  end
+
+  defp embedded_selection!(value) do
+    {:ok, selection} = LanguageVersion.resolve_selection(value)
+    selection
+  end
+
+  defp embedded_selection(value, frontend_format) do
+    if Enum.any?(~w(edition language_revision previews), &Map.has_key?(value, &1)) do
+      case LanguageVersion.resolve_selection(value) do
+        {:ok, selection} -> {:ok, selection, [], true}
+        {:error, _} = error -> error
+      end
+    else
+      inferred_selection(frontend_format)
+    end
+  end
+
+  defp inferred_selection(frontend_format) do
+    if frontend_format == LanguageVersion.latest() do
+      {:ok, LanguageVersion.current_selection(), [], false}
+    else
+      inferred = LanguageVersion.legacy_selection(frontend_format)
+
+      {:ok, inferred,
+       [
+         Diagnostic.new(
+           "EDN002",
+           "legacy frontend implies edition 0.1 and language revision #{frontend_format}",
+           severity: :warning,
+           path: "$.version",
+           details: LanguageSelection.to_map(inferred),
+           fixes: [
+             json_add("$.edition", "0.1"),
+             json_add("$.language_revision", frontend_format),
+             json_add("$.previews", [])
+           ]
+         )
+       ], false}
+    end
+  end
+
+  defp validate_applicability(_value, _selection, false), do: :ok
+
+  defp validate_applicability(value, selection, true) do
+    requirements = [
+      {:data_and_patterns, &uses_data_and_patterns?/1},
+      {:clause_conditions, &uses_clause_conditions?/1},
+      {:traits_and_categories, &uses_categories?/1},
+      {:effects_and_handlers, &uses_effects?/1},
+      {:specifications_and_governance, &uses_specifications?/1}
+    ]
+
+    case Enum.find(requirements, fn {feature, used?} ->
+           introduced = LanguageVersion.introduced(feature)
+
+           used?.(value) and
+             not LanguageVersion.at_or_after?(selection.language_revision, introduced)
+         end) do
+      nil ->
+        :ok
+
+      {feature, _used?} ->
+        introduced = LanguageVersion.introduced(feature)
+
+        {:error,
+         Diagnostic.new(
+           "EDN001",
+           "#{feature_name(feature)} requires language revision #{introduced} or later",
+           path: "$",
+           details: %{
+             feature: Atom.to_string(feature),
+             introduced: introduced,
+             selected: selection.language_revision
+           }
+         )}
+    end
+  end
+
+  defp uses_data_and_patterns?(value) do
+    meaningful_field?(value, ~w(type_exports type_groups imports)) or
+      nested_match?(value, fn node -> Map.get(node, "tag") in ~w(construct match) end)
+  end
+
+  defp uses_clause_conditions?(value) do
+    clause_definition? =
+      case Map.get(value, "definitions", []) do
+        definitions when is_list(definitions) ->
+          Enum.any?(definitions, &(is_map(&1) and meaningful_field?(&1, ["clauses"])))
+
+        _other ->
+          false
+      end
+
+    clause_definition? or
+      nested_match?(value, fn node ->
+        Map.get(node, "kind") == "condition" or meaningful_field?(node, ["guard"]) or
+          Map.get(node, "tag") in ~w(unary binary)
+      end)
+  end
+
+  defp uses_categories?(value) do
+    meaningful_field?(value, ~w(traits instances templates)) or
+      nested_match?(value, fn node ->
+        case Map.get(node, "derivations") do
+          values when is_list(values) -> Enum.any?(values, &is_map/1)
+          _ -> false
+        end
+      end)
+  end
+
+  defp uses_effects?(value) do
+    meaningful_field?(value, ~w(effects handlers)) or
+      nested_match?(value, fn node -> Map.get(node, "tag") in ~w(request handle resume) end)
+  end
+
+  defp uses_specifications?(value) do
+    meaningful_field?(value, ["specifications"]) or
+      nested_match?(value, &(Map.get(&1, "verification_only", false) == true))
+  end
+
+  defp meaningful_field?(value, fields) when is_map(value) do
+    Enum.any?(fields, fn field ->
+      case Map.fetch(value, field) do
+        {:ok, nil} -> false
+        {:ok, false} -> false
+        {:ok, []} -> false
+        {:ok, _value} -> true
+        :error -> false
+      end
+    end)
+  end
+
+  defp meaningful_field?(_value, _fields), do: false
+
+  defp nested_match?(value, predicate) when is_map(value),
+    do: predicate.(value) or Enum.any?(Map.values(value), &nested_match?(&1, predicate))
+
+  defp nested_match?(value, predicate) when is_list(value),
+    do: Enum.any?(value, &nested_match?(&1, predicate))
+
+  defp nested_match?(_value, _predicate), do: false
+
+  defp feature_name(feature), do: feature |> Atom.to_string() |> String.replace("_", " ")
+
+  defp json_add(path, value) do
+    %{
+      "kind" => "json-edit",
+      "operation" => "add",
+      "path" => path,
+      "value" => value,
+      "applicability" => "machine-applicable"
+    }
+  end
 
   defp origin(_value, @type_system_version), do: {:ok, "legacy://json-ast-0.1.1"}
 
@@ -433,7 +636,7 @@ defmodule Catena.AST.Decoder do
     end
   end
 
-  defp verification_only(value, @specification_version, path) do
+  defp verification_only(value, version, path) when version in @specification_versions do
     case Map.get(value, "verification_only", false) do
       flag when is_boolean(flag) -> {:ok, flag}
       _ -> error("verification_only must be Boolean", path <> ".verification_only")
@@ -441,10 +644,18 @@ defmodule Catena.AST.Decoder do
   end
 
   defp verification_only(value, _version, path) do
-    if Map.has_key?(value, "verification_only") do
-      semantic_error("SPC003", "verification-only definitions require AST 0.1.6", path)
-    else
-      {:ok, false}
+    case Map.fetch(value, "verification_only") do
+      :error ->
+        {:ok, false}
+
+      {:ok, false} ->
+        {:ok, false}
+
+      {:ok, true} ->
+        semantic_error("SPC003", "verification-only definitions require AST 0.1.6", path)
+
+      {:ok, _value} ->
+        error("verification_only must be Boolean", path <> ".verification_only")
     end
   end
 
@@ -946,7 +1157,7 @@ defmodule Catena.AST.Decoder do
   end
 
   defp categorical_sections(value, _version) do
-    if Enum.any?(~w(traits instances templates), &Map.has_key?(value, &1)) do
+    if meaningful_field?(value, ~w(traits instances templates)) do
       semantic_error("TRT001", "traits, instances, and templates require AST 0.1.4", "$")
     else
       {:ok, %{traits: [], instances: [], templates: []}}
@@ -961,7 +1172,7 @@ defmodule Catena.AST.Decoder do
   end
 
   defp effect_sections(value, _version) do
-    if Enum.any?(~w(effects handlers), &Map.has_key?(value, &1)) do
+    if meaningful_field?(value, ~w(effects handlers)) do
       semantic_error("EFX001", "effects and handlers require AST 0.1.5", "$")
     else
       {:ok, %{effects: [], handlers: []}}

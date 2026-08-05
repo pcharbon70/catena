@@ -70,7 +70,9 @@ A module compilation produces two different artifacts:
 
 A package specialization can also produce a companion `.beam` containing
 direct specialized operations. A 0.1.6 package produces an assurance sidecar
-that binds the exact BEAM and interface bytes.
+that binds the exact BEAM and interface bytes. A 0.1.7 package additionally
+binds its edition, exact language revision, previews, and diagnostics across
+those artifacts.
 
 ```mermaid
 flowchart TD
@@ -192,11 +194,13 @@ needs:
 - condition evidence;
 - traits, instances, laws, templates, and standard hierarchy digest;
 - effect families, handlers, and normalized `uses` rows; and
-- 0.1.6 claim summaries and inherited obligations.
+- 0.1.6 claim summaries and inherited obligations; and
+- for a 0.1.7 interface, edition, exact revision, enabled previews, and public
+  preview requirements.
 
 The interface is deterministic and protected by SHA-256. A content mismatch
 is rejected before dependent checking or linking. It is content binding, not
-publisher identity; publisher authorization appears only in 0.1.6 governance.
+publisher identity; publisher authorization appears only in governance.
 
 Use one or more interfaces when checking a dependent module:
 
@@ -211,7 +215,8 @@ Use one or more interfaces when checking a dependent module:
 The manifest-driven package linker resolves verified trait templates for
 concrete types and emits one companion BEAM. Specialization keys bind template
 content, concrete types, evidence digests, compiler/specification versions,
-and the standard hierarchy digest.
+the standard hierarchy digest, and—under artifact format 0.1.7—the exact
+language selection.
 
 The output contains direct calls. Trait dictionaries, law statuses, instance
 identity, proof objects, and template graphs are erased. The companion still
@@ -228,8 +233,10 @@ keys, signatures, histories, and assurance digests before Abstract Format.
 The assurance manifest records them beside the runtime artifacts.
 
 Ordinary OTP compile information may contain the Catena specification and
-JSON-frontend version. That compiler provenance is not a retained claim,
-policy, or signature. The erasure audit requires
+JSON-frontend version. Version 0.1.7 also records edition, exact revision, and
+previews there so assurance verification can reject selection substitution.
+That compiler provenance is not runtime dispatch, a retained claim, policy,
+or signature. The erasure audit requires
 `assurance_metadata_in_beam: false` and no runtime monitors.
 
 ## Inspect generated artifacts

@@ -5,6 +5,11 @@ over exact package artifacts. It does not decide whether a technical claim is
 true, and it does not apply to ordinary packages unless they adopt a
 governance bundle.
 
+The historical 0.1.6 protocol remains supported. A new 0.1.7 governed package
+uses 0.1.7 package, governance, trust-root, and assurance formats together and
+binds its edition, exact language revision, previews, and diagnostic IDs into
+the decision.
+
 ## Use the accepted governance vocabulary
 
 The public words describe responsibility and action before protocol machinery:
@@ -110,6 +115,10 @@ functions:
 | `profile` | does the exact assurance profile match? |
 | `sequence` | is the logical sequence inside the inclusive window? |
 | `deny` | deny explicitly with a stable reason |
+| `edition` | is the package edition in the allowed set? (0.1.7) |
+| `language_revision` | is the exact revision inside the inclusive registered range? (0.1.7) |
+| `previews` | is every selected preview explicitly allowed? (0.1.7) |
+| `diagnostics` | are the named diagnostics absent from this build? (0.1.7) |
 
 The evaluator has no recursion, I/O, network access, randomness, wall clock,
 dynamic code, or regular expressions. Every node consumes one unit from a
@@ -150,6 +159,11 @@ Canonicalize the complete document before passing it to the compiler. Signed
 0.1.6 documents must use Catena's strict canonical JSON profile. Do not
 pretty-print or reorder a signed payload and assume the signature remains
 valid; sign the exact domain-separated bytes emitted by the compiler.
+
+For a 0.1.7 bundle, change the document version to `0.1.7`, use matching 0.1.7
+root and package documents, and add selection requirements only when the
+organization intends to narrow the package's already valid language choice.
+Ordinary packages still need no governance.
 
 ## Decisions explain themselves
 
@@ -211,6 +225,10 @@ An approval covers:
 - prior transition digest and sequence; and
 - every admitted evidence identifier and semantic record digest.
 
+Version 0.1.7 additionally binds edition, exact language revision, enabled
+previews, and diagnostic IDs. An approval for one revision cannot authorize a
+rebuild under another.
+
 Changing any field invalidates the approval. Copying approval from one build
 to a changed artifact cannot authorize the new bytes.
 
@@ -241,3 +259,5 @@ Operational procedures are in
 [Governance Operations](../operations/governance-operations.md). Exact policy,
 trust, lifecycle, and artifact rules are in the
 [normative 0.1.6 specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/specifications-and-governance).
+Candidate selection-aware additions are in the
+[0.1.7 editions and feature-lifecycle specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/editions-and-feature-lifecycle).

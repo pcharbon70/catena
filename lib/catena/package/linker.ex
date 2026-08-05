@@ -1,5 +1,5 @@
 defmodule Catena.Package.Linker do
-  @moduledoc "Deterministic C004 specialization and transactional C006 governed package linker."
+  @moduledoc "Deterministic specialization and transactional governed package linker."
 
   alias Catena.Categorical.TypeTerm
   alias Catena.Governance.{Crypto, TrustRoot}
@@ -12,6 +12,7 @@ defmodule Catena.Package.Linker do
     Diagnostic,
     Governance,
     Interface,
+    LanguageLifecycle,
     LanguageVersion
   }
 
@@ -21,6 +22,7 @@ defmodule Catena.Package.Linker do
   @budget 20_000
   @categorical_version LanguageVersion.introduced(:traits_and_categories)
   @governance_version LanguageVersion.introduced(:specifications_and_governance)
+  @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
 
   @spec compile_manifest(Path.t(), keyword()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def compile_manifest(path, options \\ []) do
@@ -29,9 +31,11 @@ defmodule Catena.Package.Linker do
     with {:ok, manifest} <- path |> File.read!() |> Manifest.decode(),
          :ok <- validate_paths(manifest, directory),
          {:ok, imported_interfaces} <- load_interfaces(manifest.interfaces, directory),
+         :ok <- LanguageLifecycle.validate_interfaces(manifest.selection, imported_interfaces),
          {:ok, interfaces, prepared_modules} <-
-           compile_modules(manifest.modules, directory, imported_interfaces, options),
-         {:ok, module, companion_binary, metadata} <- link(manifest, interfaces, source: path),
+           compile_modules(manifest, directory, imported_interfaces, options),
+         {:ok, module, companion_binary, metadata} <-
+           link(manifest, interfaces, Keyword.put(options, :source, path)),
          {:ok, result} <-
            finalize_package(
              manifest,
@@ -51,6 +55,9 @@ defmodule Catena.Package.Linker do
          output: result.output,
          module_outputs: result.module_outputs,
          specialization_keys: metadata.specialization_keys,
+         selection: manifest.selection,
+         artifact_version: manifest.artifact_version,
+         diagnostics: manifest.advisories ++ Enum.flat_map(prepared_modules, & &1.diagnostics),
          evidence_erased: true,
          assurance: result.assurance,
          assurance_digest: result.assurance_digest,
@@ -71,13 +78,23 @@ defmodule Catena.Package.Linker do
           {:ok, module(), binary(), map()} | {:error, Diagnostic.t()}
   def link(manifest, interfaces, options \\ []) do
     protect(fn ->
+      manifest = normalize_manifest_selection(manifest)
+      :ok = lifecycle_check!(manifest.selection, interfaces)
       templates = template_index!(interfaces)
       registry = registry!(interfaces)
 
       {functions, keys, _remaining} =
         Enum.map_reduce(manifest.roots, {[], @budget}, fn root, {keys, remaining} ->
           {function, key, remaining} =
-            specialize_root!(root, templates, registry, remaining, manifest.companion_module)
+            specialize_root!(
+              root,
+              templates,
+              registry,
+              remaining,
+              manifest.companion_module,
+              manifest.selection,
+              manifest.artifact_version
+            )
 
           {function, {[key | keys], remaining}}
         end)
@@ -90,8 +107,10 @@ defmodule Catena.Package.Linker do
 
       case OTPCompiler.compile(forms,
              source: Keyword.get(options, :source, "<package>"),
-             frontend_version: Map.get(manifest, :version, @categorical_version),
-             specification: Map.get(manifest, :version, @categorical_version)
+             artifact_version: manifest.artifact_version,
+             frontend_version: manifest.artifact_version,
+             specification: manifest.selection.language_revision,
+             language_selection: manifest.selection
            ) do
         {:ok, module, binary, warnings} ->
           {:ok, module, binary,
@@ -106,6 +125,21 @@ defmodule Catena.Package.Linker do
           error
       end
     end)
+  end
+
+  defp normalize_manifest_selection(manifest) do
+    version = Map.get(manifest, :version, @categorical_version)
+
+    manifest
+    |> Map.put_new(:artifact_version, version)
+    |> Map.put_new(:selection, LanguageVersion.legacy_selection(version))
+  end
+
+  defp lifecycle_check!(selection, interfaces) do
+    case LanguageLifecycle.validate_interfaces(selection, interfaces) do
+      :ok -> :ok
+      {:error, diagnostic} -> raise Catena.TypeError, diagnostic: diagnostic
+    end
   end
 
   defp load_interfaces(paths, directory) do
@@ -123,13 +157,23 @@ defmodule Catena.Package.Linker do
     error in File.Error -> {:error, Diagnostic.new("LNK001", Exception.message(error))}
   end
 
-  defp compile_modules(modules, directory, interfaces, options) do
-    Enum.reduce_while(modules, {:ok, interfaces, []}, fn declaration, {:ok, available, outputs} ->
+  defp compile_modules(manifest, directory, interfaces, options) do
+    Enum.reduce_while(manifest.modules, {:ok, interfaces, []}, fn declaration,
+                                                                  {:ok, available, outputs} ->
       source = resolve(declaration["source"], directory)
+
+      compile_options =
+        Keyword.merge(options,
+          interfaces: available,
+          source: source,
+          language_selection: manifest.selection,
+          artifact_version: manifest.artifact_version,
+          denied_diagnostics: manifest.denied_diagnostics
+        )
 
       case source
            |> File.read!()
-           |> Catena.compile_json(Keyword.merge(options, interfaces: available, source: source)) do
+           |> Catena.compile_json(compile_options) do
         {:ok, _module, binary, metadata} ->
           beam = resolve(declaration["beam"], directory)
           interface = resolve(declaration["interface"], directory)
@@ -144,7 +188,8 @@ defmodule Catena.Package.Linker do
                 interface_relative: declaration["interface"],
                 beam_binary: binary,
                 interface_binary: metadata.interface_binary,
-                core: metadata.core
+                core: metadata.core,
+                diagnostics: metadata.diagnostics
               }
               | outputs
             ]}}
@@ -190,7 +235,7 @@ defmodule Catena.Package.Linker do
   end
 
   defp finalize_package(
-         %{version: @governance_version} = manifest,
+         %{version: version} = manifest,
          _module,
          companion_binary,
          _metadata,
@@ -198,7 +243,8 @@ defmodule Catena.Package.Linker do
          interfaces,
          directory,
          options
-       ) do
+       )
+       when version in [@governance_version, @edition_version] do
     action = requested_action!(manifest, options)
     output = resolve(manifest.output, directory)
     assurance_output = resolve(manifest.assurance, directory)
@@ -238,10 +284,17 @@ defmodule Catena.Package.Linker do
     compiler_evidence =
       Enum.map(compiler_evidence, &Map.put(&1, "artifact_digests", Enum.sort(artifact_digests)))
 
+    diagnostics = manifest.advisories ++ Enum.flat_map(modules, & &1.diagnostics)
+    diagnostic_ids = diagnostics |> Enum.map(& &1.id) |> Enum.uniq() |> Enum.sort()
+
     context = %{
       action: action,
       package: manifest.package,
       profile: manifest.profile,
+      edition: manifest.selection.edition,
+      language_revision: manifest.selection.language_revision,
+      previews: manifest.selection.previews,
+      diagnostics: diagnostic_ids,
       modules: Enum.map(cores, & &1.module),
       subjects:
         [%{"kind" => "output", "name" => manifest.output}] ++
@@ -264,7 +317,10 @@ defmodule Catena.Package.Linker do
                profile: manifest.profile,
                action: action,
                claims: claims,
-               dependency_digests: dependency_digests
+               dependency_digests: dependency_digests,
+               artifact_version: manifest.artifact_version,
+               selection: manifest.selection,
+               diagnostics: diagnostics
              },
              artifacts,
              cores,
@@ -329,9 +385,7 @@ defmodule Catena.Package.Linker do
   defp evaluate_governance(%{governed?: false}, _context, _directory, _options),
     do:
       {:error,
-       Diagnostic.new("GOV001", "an ungoverned 0.1.6 package supports only the build action",
-         path: "$"
-       )}
+       Diagnostic.new("GOV001", "an ungoverned package supports only the build action", path: "$")}
 
   defp evaluate_governance(manifest, context, directory, options) do
     governance_path = resolve(manifest.governance, directory)
@@ -484,7 +538,8 @@ defmodule Catena.Package.Linker do
 
   defp validate_paths(%{version: @categorical_version}, _directory), do: :ok
 
-  defp validate_paths(%{version: @governance_version} = manifest, directory) do
+  defp validate_paths(%{version: version} = manifest, directory)
+       when version in [@governance_version, @edition_version] do
     input_paths =
       manifest.interfaces ++
         Enum.map(manifest.modules, & &1["source"]) ++
@@ -499,7 +554,7 @@ defmodule Catena.Package.Linker do
     cond do
       Enum.any?(all_paths, &(not safe_relative_path?(&1, directory))) ->
         {:error,
-         Diagnostic.new("ART001", "0.1.6 package paths must remain inside the manifest directory",
+         Diagnostic.new("ART001", "package paths must remain inside the manifest directory",
            path: "$"
          )}
 
@@ -575,7 +630,15 @@ defmodule Catena.Package.Linker do
     end
   end
 
-  defp specialize_root!(root, templates, registry, budget, companion_module) do
+  defp specialize_root!(
+         root,
+         templates,
+         registry,
+         budget,
+         companion_module,
+         selection,
+         artifact_version
+       ) do
     template = fetch_template!(templates, root["template"])
     types = Enum.map(root["types"], &TypeTerm.decode!/1)
 
@@ -587,7 +650,7 @@ defmodule Catena.Package.Linker do
         {Trait.resolve!(registry, trait, arguments, budget: remaining), remaining - 1}
       end)
 
-    key = specialization_key(template, types, evidence)
+    key = specialization_key(template, types, evidence, selection, artifact_version)
     parameters = template["parameters"]
 
     environment =
@@ -1038,7 +1101,7 @@ defmodule Catena.Package.Linker do
   defp list_expression(elements),
     do: Enum.reduce(Enum.reverse(elements), {nil, 0}, &{:cons, 0, &1, &2})
 
-  defp specialization_key(template, types, evidence) do
+  defp specialization_key(template, types, evidence, selection, artifact_version) do
     payload = %{
       template: template,
       types: Enum.map(types, &TypeTerm.encode/1),
@@ -1047,6 +1110,18 @@ defmodule Catena.Package.Linker do
       specification: @categorical_version,
       standard: Categorical.Standard.interface!()["digest"]
     }
+
+    payload =
+      if artifact_version == @edition_version do
+        Map.merge(payload, %{
+          edition: selection.edition,
+          language_revision: selection.language_revision,
+          previews: selection.previews,
+          artifact_version: artifact_version
+        })
+      else
+        payload
+      end
 
     :crypto.hash(:sha256, CanonicalJSON.encode(payload)) |> Base.encode16(case: :lower)
   end

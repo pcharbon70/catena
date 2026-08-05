@@ -8,14 +8,16 @@ general-purpose source-language distribution.
 
 The repository contains an Elixir bootstrap compiler that can:
 
-- decode versioned Catena JSON AST 0.1.1 through 0.1.6;
+- decode versioned Catena JSON AST 0.1.1 through 0.1.7;
 - infer and check types, data, patterns, conditions, traits, effects, and
   typed specifications;
 - independently verify its typed core;
 - lower accepted programs to Erlang Abstract Format;
 - ask Erlang/OTP 29 to produce deterministic `.beam` modules;
 - emit digest-bound `.cati.json` module interfaces; and
-- build artifact-bound assurance manifests for 0.1.6 packages.
+- build artifact-bound assurance manifests for 0.1.6 and 0.1.7 packages; and
+- execute the normative 0.1.7 edition, exact-revision, preview-lifecycle, and
+  selection-binding contract.
 
 It does not yet contain a Catena source parser, formatter, REPL, package
 manager, stable Erlang FFI, or complete standard library.
@@ -58,6 +60,13 @@ asdf exec mix escript.build
 ```
 
 The last command creates the `catena` executable in the repository root.
+
+Inspect the compiler's current default, retained revisions, feature states,
+and migrations before compiling a package:
+
+```bash
+./catena language-info
+```
 
 ## A source-first example
 
@@ -197,6 +206,7 @@ catena compile-ir [--layout compact|uniform] PROGRAM.json
 catena compile-ir [--condition-lowering auto|native|ordinary] PROGRAM.json
 catena compile-package-ir [--action build|publish|activate] PACKAGE.json
 catena verify-assurance --trust-root ROOT.json ASSURANCE.json
+catena language-info
 ```
 
 `elaborate-ir` currently reports the same checked module summary as
@@ -204,23 +214,42 @@ catena verify-assurance --trust-root ROOT.json ASSURANCE.json
 typed core. `compile-package-ir` is a deterministic manifest-driven linker,
 not a dependency resolver or package manager.
 
+New package manifests pin an edition and exact language revision:
+
+```json
+{
+  "format": "catena-package-manifest",
+  "version": "0.1.7",
+  "edition": "0.1",
+  "language_revision": "0.1.7",
+  "previews": []
+}
+```
+
+The complete manifest still needs its package, module, interface, output,
+profile, and assurance fields. Standalone commands can select explicitly with
+`--edition`, `--language-revision`, and repeatable `--preview`; successful JSON
+output reports the resolved selection.
+
 ## Learn the language by decisions
 
 Continue in this order:
 
-1. [Variant Types and Structured Data](language/algebraic-data-types.md) when
+1. [Editions, Revisions, and Previews](language/editions-and-previews.md) when
+   you need a stable answer to which language contract a package uses.
+2. [Variant Types and Structured Data](language/algebraic-data-types.md) when
    you need to define possible states and their payloads.
-2. [Pattern Matching](language/pattern-matching.md) when you need to consume
+3. [Pattern Matching](language/pattern-matching.md) when you need to consume
    those states safely.
-3. [Traits and Composition](language/traits-and-composition.md) when the same
+4. [Traits and Composition](language/traits-and-composition.md) when the same
    operation should work across types.
-4. [Effects and Handlers](language/effects-and-handlers.md) when code needs an
+5. [Effects and Handlers](language/effects-and-handlers.md) when code needs an
    external ability.
-5. [Specifications](language/specifications.md) when a package needs checked
+6. [Specifications](language/specifications.md) when a package needs checked
    rules and durable evidence.
-6. [Governance](language/governance.md) when an organization needs to control
+7. [Governance](language/governance.md) when an organization needs to control
    build, publication, or activation.
-7. [Catena and BEAM](language/catena-and-beam.md) when you need to understand
+8. [Catena and BEAM](language/catena-and-beam.md) when you need to understand
    generated artifacts and runtime boundaries.
 
 ## Know the current boundary
@@ -231,6 +260,8 @@ Do not infer unspecified facilities from familiar syntax. In particular:
 - list comprehensions remain research work;
 - handlers do not yet promise resource cleanup or multi-shot resumptions;
 - specifications have no runtime-monitoring profile in 0.1.6;
+- 0.1.7 publishes no actual preview feature, despite defining how named
+  previews will work;
 - governance uses logical sequence windows, not wall-clock expiry; and
 - calling arbitrary Erlang functions or validating arbitrary Erlang terms is
   not yet a stable Catena language feature.

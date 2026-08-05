@@ -1,10 +1,10 @@
 # Compiler Architecture
 
 This guide explains the Elixir bootstrap compiler as an implementation of the
-C001 through C006 normative slices. The compiler is intentionally small and
-explicit: semantic checks occur before backend lowering, independently
-rechecked evidence protects important boundaries, and OTP 29 owns `.beam`
-generation.
+C001 through C006 and C008 normative slices. The compiler is
+intentionally small and explicit: semantic checks occur before backend
+lowering, independently rechecked evidence protects important boundaries,
+and OTP 29 owns `.beam` generation.
 
 ## Repository role
 
@@ -45,6 +45,7 @@ detail view should require the programmer to know those intermediate names.
 ```mermaid
 flowchart TD
     JSON[Versioned JSON AST] --> Decoder[Catena.AST.Decoder]
+    Selection[Catena.LanguageSelection] --> Decoder
     Decoder --> Infer[Catena.Type.Infer]
     Infer --> Data[Data and coverage evidence]
     Infer --> Cond[Condition evidence]
@@ -63,6 +64,8 @@ flowchart TD
 
     Beam --> Linker[Catena.Package.Linker]
     Interface --> Linker
+    Selection --> Interface
+    Selection --> Linker
     Linker --> Governance[Catena.Governance]
     Governance --> Assurance[Catena.Assurance]
 ```
@@ -93,7 +96,8 @@ Erlang Abstract Format passed to `:compile.noenv_forms/2`.
 ```
 
 Metadata includes typed core, Erlang forms, interface bytes, warnings, layout,
-and condition-lowering selection.
+condition-lowering selection, resolved language selection, diagnostics, and
+artifact version.
 
 ### CLI
 
@@ -105,6 +109,7 @@ elaborate-ir
 compile-ir
 compile-package-ir
 verify-assurance
+language-info
 ```
 
 The CLI prints one structured JSON result. Stable diagnostics go to standard
@@ -113,8 +118,10 @@ error with a nonzero exit status.
 ## Frontend decoding
 
 `Catena.LanguageVersion` is the single executable registry for prototype slice
-identifiers and their ordered feature thresholds. `Catena.AST.Decoder` is a
-strict boundary for JSON AST 0.1.1 through 0.1.6. It
+identifiers and their ordered feature thresholds. `Catena.LanguageLifecycle`
+owns feature histories and migration records, and `Catena.LanguageInfo`
+exposes both registries. `Catena.AST.Decoder` is a strict boundary for JSON AST
+0.1.1 through 0.1.7. It
 validates:
 
 - version and required origin;
@@ -124,7 +131,8 @@ validates:
 - type syntax;
 - categorical sections from 0.1.4;
 - effects and handlers from 0.1.5; and
-- specifications and verification-only definitions from 0.1.6.
+- specifications and verification-only definitions from 0.1.6; and
+- exact edition/revision applicability and preview selection in 0.1.7.
 
 Version 0.1.1 is normalized into the 0.1.2 internal data-capable form while its
 frontend identity is preserved for compiler metadata. Newer inputs retain
@@ -221,7 +229,9 @@ semantic facts needed by later compilation while hiding runtime representation:
 - claims and inherited obligations.
 
 Decoding verifies the content digest before exposing any imported evidence.
-Backward decoding supports valid interface versions 0.1.2 through 0.1.6.
+Backward decoding supports valid interface versions 0.1.2 through 0.1.7. A
+0.1.7 interface binds edition, exact revision, enabled previews, and public
+preview requirements while remaining neutral across package editions.
 
 ## Package compilation
 
@@ -243,7 +253,8 @@ version solving, registry communication, or network access.
 
 ## Governance and assurance modules
 
-The 0.1.6 package gate is divided by responsibility:
+The retained 0.1.6 and selection-aware 0.1.7 package gates are divided by
+responsibility:
 
 | Module | Responsibility |
 | --- | --- |
@@ -255,6 +266,11 @@ The 0.1.6 package gate is divided by responsibility:
 | `Catena.Governance.Reference` | separately structured decision oracle |
 | `Catena.Governance` | bundle decoding, evidence admission, policy/lifecycle coordination |
 | `Catena.Assurance` | manifest construction and independent artifact/governance verification |
+
+Version-aware payload construction preserves the complete 0.1.6 signing
+domain and uses the declared 0.1.7 artifact version exactly once. The 0.1.7
+policy algebra adds closed edition, revision, preview, and diagnostic leaves;
+the same leaves remain invalid in a historical 0.1.6 bundle.
 
 The reference evaluator must not call the production policy evaluator. Shared
 fixtures alone are not independent evidence; published canonicalization and
@@ -290,6 +306,12 @@ Every compiler change preserves these boundaries:
     gates leave no new final output.
 11. **No private keys:** the compiler emits payloads and verifies signatures.
 12. **Stable diagnostics:** known failures retain their family and machine path.
+13. **Exact selection:** interfaces, specialization, BEAM metadata, assurance,
+    approvals, and policy context bind one resolved selection.
+14. **No runtime edition dispatch:** selection metadata may remain in the
+    compile-information chunk but never controls generated function bodies.
 
 Continue with [Intermediate Representations](intermediate-representations.md)
-for the data passed between these stages.
+for the data passed between these stages, and
+[Versioning and Feature Lifecycle](versioning-and-feature-lifecycle.md) for the
+C008 implementation rules.

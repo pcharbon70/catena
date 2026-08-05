@@ -79,10 +79,12 @@ explicitly defines migration or removal. Do not infer new evidence when
 decoding an old interface.
 
 During the current `0.1` prototype line, each accepted semantic slice receives
-the next unused patch from `Catena.LanguageVersion`. The three-component value
-must move together across every affected frontend, interface, package,
-artifact, compile-metadata, and signature-domain boundary. The Mix application
-version is independent and does not select language semantics.
+the next unused patch from `Catena.LanguageVersion`. Since C008 revision 0.1.7,
+the exact language revision, edition, artifact format, and Mix application
+release are separate axes. Change each only when its own contract changes, and
+bind the resolved language selection into every new interface, cache key,
+compile-metadata, assurance, approval, and governance boundary. Historical
+artifact formats and signature domains remain byte-compatible.
 
 ## Map the implementation surface
 
@@ -258,6 +260,7 @@ At minimum, include:
 | resource limit | at-limit success and over-limit diagnostic |
 | erasure | forbidden metadata absence and byte identity where promised |
 | compatibility | all previous version tests remain green |
+| edition lifecycle | exact pins, migration record, feature-state transition, selection-bound artifacts |
 | security | substitution, replay, duplicates, path, and signature attacks when relevant |
 
 ## Update the learning path
@@ -310,3 +313,5 @@ changes.
 - immutable conformance identity is recorded when required.
 
 Repository mechanics continue in [Contributing](../../CONTRIBUTING.md).
+The detailed registry and artifact workflow is in
+[Versioning and Feature Lifecycle](versioning-and-feature-lifecycle.md).

@@ -55,9 +55,9 @@ constructor, representation, and branch identity.
 
 ## Versioned JSON AST
 
-The current frontend consumes JSON objects with versions 0.1.1 through 0.1.6. This
-is a temporary, explicit toolchain input used to test semantics before Catena
-source syntax is frozen.
+The current frontend consumes JSON objects with versions 0.1.1 through 0.1.7.
+This is a temporary, explicit toolchain input used to test semantics before
+Catena source syntax is frozen.
 
 Example expression node:
 
@@ -76,7 +76,9 @@ Properties:
 - Decoding rejects unknown or malformed values.
 - AST 0.1.1 has a legacy origin and normalizes into the internal 0.1.2-capable
   shape.
-- Versions 0.1.2 through 0.1.6 require a package/build origin.
+- Versions 0.1.2 through 0.1.7 require a package/build origin.
+- Frontend format and selected language revision are separate in 0.1.7; a
+  package selection controls semantic applicability.
 
 The decoder adds paths such as `$.definitions[0].body` so later diagnostics can
 identify their protocol location.
@@ -208,6 +210,7 @@ Interface evolution is additive by implemented slice:
 | 0.1.4 | traits, instances, laws, templates, standard hierarchy digest |
 | 0.1.5 | effects, handlers, and normalized `uses` rows |
 | 0.1.6 | claim summaries, specification digest, inherited obligations |
+| 0.1.7 | edition, exact language revision, enabled previews, public preview requirements |
 
 Decoders retain compatibility with valid earlier interfaces. Never infer
 missing newer evidence from an older version.
@@ -221,7 +224,8 @@ package-manager lockfile. It names:
 - explicit dependency interfaces;
 - verified template roots and concrete types;
 - companion module and output;
-- 0.1.6 package/profile/assurance identity; and
+- 0.1.6 package/profile/assurance identity;
+- 0.1.7 edition, exact language revision, previews, and diagnostic policy; and
 - optional governance bundle.
 
 The linker operates only on those named inputs and a fixed deterministic
@@ -229,7 +233,7 @@ specialization budget.
 
 ## Canonical governance records
 
-Three 0.1.6 protocol formats use strict JCS canonical bytes:
+Three retained 0.1.6 and 0.1.7 protocol formats use strict JCS canonical bytes:
 
 - `catena-trust-root`;
 - `catena-governance-bundle`; and
@@ -242,6 +246,10 @@ The governance bundle digest excludes `manifest_signatures`, allowing a
 two-pass external signing workflow over a stable candidate decision. Every
 other meaning-sensitive change alters the relevant digest and invalidates
 dependent signatures.
+
+The declared artifact version selects the signing domain. Historical 0.1.6
+payload bytes remain unchanged; 0.1.7 selection joins approvals and assurance
+identity without cross-version verification fallback.
 
 ## Assurance manifest
 

@@ -8,13 +8,16 @@ defmodule Catena.LanguageVersionTest do
 
   test "prototype slices use one ordered 0.1 patch sequence" do
     assert LanguageVersion.all() ==
-             ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6)
+             ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7)
 
     assert LanguageVersion.interface_versions() ==
-             ~w(0.1.2 0.1.3 0.1.4 0.1.5 0.1.6)
+             ~w(0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7)
 
-    assert LanguageVersion.latest() == "0.1.6"
+    assert LanguageVersion.latest() == "0.1.7"
     assert LanguageVersion.internal_representation("0.1.1") == "0.1.2"
+    assert LanguageVersion.default_artifact_version("0.1.1", "0.1.1") == "0.1.2"
+    assert LanguageVersion.default_artifact_version("0.1.6", "0.1.6") == "0.1.6"
+    assert LanguageVersion.default_artifact_version("0.1.7", "0.1.1") == "0.1.7"
     assert Enum.all?(LanguageVersion.all(), &LanguageVersion.valid_core_semver?/1)
     refute LanguageVersion.valid_core_semver?("0.6")
     refute LanguageVersion.valid_core_semver?("0.1.6-preview")
@@ -87,6 +90,7 @@ defmodule Catena.LanguageVersionTest do
 
     for kind <- ~w(root delegation evidence approval transition manifest) do
       assert CanonicalJCS.payload(kind, %{}) == "catena:#{kind}:0.1.6\n{}"
+      assert CanonicalJCS.payload(kind, "0.1.7", %{}) == "catena:#{kind}:0.1.7\n{}"
       refute CanonicalJCS.payload(kind, %{}) == "catena:#{kind}:0.6\n{}"
     end
   end

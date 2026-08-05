@@ -1,7 +1,9 @@
 defmodule Catena.Governance.Crypto do
-  @moduledoc "Offline Ed25519 verification for Catena 0.1.6 governance records."
+  @moduledoc "Offline Ed25519 verification for versioned Catena governance records."
 
-  alias Catena.CanonicalJCS
+  alias Catena.{CanonicalJCS, LanguageVersion}
+
+  @legacy_version LanguageVersion.introduced(:specifications_and_governance)
 
   @hex ~r/^[0-9a-f]+$/
 
@@ -65,7 +67,7 @@ defmodule Catena.Governance.Crypto do
 
   defp audit_signatures(root, role, kind, payload, signatures, sequence, scope) do
     revoked = MapSet.new(root.revocations.principals)
-    message = CanonicalJCS.payload(kind, payload)
+    message = CanonicalJCS.payload(kind, format_version(root), payload)
 
     groups = Enum.group_by(signatures, &Map.get(&1, "principal"))
 
@@ -114,4 +116,6 @@ defmodule Catena.Governance.Crypto do
   defp scope_match?([], _value), do: true
   defp scope_match?(_allowed, nil), do: false
   defp scope_match?(allowed, value), do: value in allowed
+
+  defp format_version(root), do: Map.get(root, :version, @legacy_version)
 end

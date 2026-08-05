@@ -1,5 +1,5 @@
 defmodule Catena.Specification do
-  @moduledoc "Catena 0.1.6 typed claims, bounded examples, semantic digests, and erasure checks."
+  @moduledoc "Catena typed claims, bounded examples, semantic digests, and erasure checks."
 
   alias Catena.{CanonicalJCS, Diagnostic, LanguageVersion}
   alias Catena.Effect.Row
@@ -9,10 +9,10 @@ defmodule Catena.Specification do
   @name ~r/^[a-z][A-Za-z0-9_]*$/
   @subject_kinds ~w(value datatype trait instance effect handler module output interface action profile)
   @budget 20_000
-  @version LanguageVersion.introduced(:specifications_and_governance)
+  @versions LanguageVersion.from(:specifications_and_governance)
 
   @spec decode_sections(map(), String.t()) :: {:ok, map()} | {:error, Diagnostic.t()}
-  def decode_sections(value, @version) do
+  def decode_sections(value, version) when version in @versions do
     specifications = Map.get(value, "specifications", [])
 
     with true <- is_list(specifications),
@@ -26,15 +26,15 @@ defmodule Catena.Specification do
   end
 
   def decode_sections(value, _version) do
-    if Map.has_key?(value, "specifications") do
-      error("SPC002", "specifications require AST 0.1.6", "$.specifications")
-    else
-      {:ok, %{specifications: []}}
+    case Map.fetch(value, "specifications") do
+      :error -> {:ok, %{specifications: []}}
+      {:ok, []} -> {:ok, %{specifications: []}}
+      {:ok, _value} -> error("SPC002", "specifications require AST 0.1.6", "$.specifications")
     end
   end
 
   @spec elaborate!(map(), map()) :: map()
-  def elaborate!(%{frontend_version: @version} = ast, core) do
+  def elaborate!(%{frontend_version: version} = ast, core) when version in @versions do
     definitions = Map.new(core.definitions, &{&1.name, &1})
 
     exported_verification =
@@ -415,7 +415,10 @@ defmodule Catena.Specification do
     }
 
     digest =
-      :crypto.hash(:sha256, "catena:claim-id:#{@version}\n" <> CanonicalJCS.encode(identity))
+      :crypto.hash(
+        :sha256,
+        "catena:claim-id:#{ast.language_revision}\n" <> CanonicalJCS.encode(identity)
+      )
       |> Base.encode16(case: :lower)
 
     "claim:sha256:" <> digest

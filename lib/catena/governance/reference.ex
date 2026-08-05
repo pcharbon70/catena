@@ -1,16 +1,21 @@
 defmodule Catena.Governance.Reference do
-  @moduledoc "Separately structured oracle for Catena 0.1.6 policy decisions."
+  @moduledoc "Separately structured oracle for versioned policy decisions."
 
-  alias Catena.CanonicalJCS
+  alias Catena.{CanonicalJCS, LanguageLifecycle, LanguageVersion}
   alias Catena.Governance.{Crypto, Lifecycle}
 
   @limit 20_000
+  @legacy_version LanguageVersion.introduced(:specifications_and_governance)
+  @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
 
   @spec evaluate(map(), map() | nil, map()) :: {:ok, map()} | {:error, atom()}
   def evaluate(bundle, root, context) do
+    context = Map.put(context, :format_version, bundle.version)
+
     with true <- context.action in ~w(build publish activate),
          true <- bundle.package == context.package,
          true <- is_nil(root) or root.namespace == context.package,
+         true <- is_nil(root) or Map.get(root, :version, @legacy_version) == bundle.version,
          {:ok, lifecycle} <- Lifecycle.replay(bundle.transitions, root),
          true <- context.action != "activate" or lifecycle.state == "Active",
          sequence <-
@@ -26,9 +31,14 @@ defmodule Catena.Governance.Reference do
          approval <- approval_payload(context, lifecycle, evidence, policy_digest, sequence),
          true <- assumptions_authorized?(evidence, policies),
          policy_context <- %{
+           format_version: bundle.version,
            action: context.action,
            state: lifecycle.state,
            profile: bundle.profile,
+           edition: Map.get(context, :edition),
+           language_revision: Map.get(context, :language_revision),
+           previews: Map.get(context, :previews, []),
+           diagnostics: Map.get(context, :diagnostics, []),
            sequence: sequence,
            root: root,
            evidence: evidence,
@@ -227,7 +237,7 @@ defmodule Catena.Governance.Reference do
         {lifecycle.state, lifecycle.state, lifecycle.digest}
       end
 
-    %{
+    payload = %{
       "action" => context.action,
       "package" => context.package,
       "profile" => context.profile,
@@ -244,6 +254,8 @@ defmodule Catena.Governance.Reference do
         |> Enum.map(&%{"id" => &1["id"], "digest" => CanonicalJCS.digest(&1)})
         |> Enum.sort_by(& &1["id"])
     }
+
+    selection_approval_payload(payload, context)
   end
 
   defp assumptions_authorized?(evidence, policies) do
@@ -452,6 +464,79 @@ defmodule Catena.Governance.Reference do
            fuel
          )
 
+  defp check(%{"op" => "edition", "allowed" => allowed} = node, context, fuel) do
+    known = Enum.map(LanguageVersion.editions(), & &1["id"])
+
+    if context.format_version == @edition_version and exact_fields?(node, ~w(op allowed)) and
+         known_list?(allowed, known) do
+      leaf(
+        "edition",
+        context.edition in allowed,
+        %{"selected" => context.edition, "allowed" => allowed},
+        fuel
+      )
+    else
+      {:error, :malformed_policy}
+    end
+  end
+
+  defp check(
+         %{"op" => "language_revision", "from" => first, "to" => last} = node,
+         context,
+         fuel
+       ) do
+    revisions = LanguageVersion.all()
+
+    if context.format_version == @edition_version and exact_fields?(node, ~w(op from to)) and
+         first in revisions and last in revisions and LanguageVersion.at_or_after?(last, first) do
+      decision =
+        context.language_revision in revisions and
+          LanguageVersion.between?(context.language_revision, first, last)
+
+      leaf(
+        "language_revision",
+        decision,
+        %{"selected" => context.language_revision, "from" => first, "to" => last},
+        fuel
+      )
+    else
+      {:error, :malformed_policy}
+    end
+  end
+
+  defp check(%{"op" => "previews", "allowed" => allowed} = node, context, fuel) do
+    if context.format_version == @edition_version and exact_fields?(node, ~w(op allowed)) and
+         known_list?(allowed, LanguageLifecycle.preview_ids(context.language_revision)) do
+      decision = is_list(context.previews) and Enum.all?(context.previews, &(&1 in allowed))
+
+      leaf(
+        "previews",
+        decision,
+        %{"selected" => context.previews, "allowed" => allowed},
+        fuel
+      )
+    else
+      {:error, :malformed_policy}
+    end
+  end
+
+  defp check(%{"op" => "diagnostics", "absent" => absent} = node, context, fuel) do
+    if context.format_version == @edition_version and exact_fields?(node, ~w(op absent)) and
+         known_list?(absent, LanguageLifecycle.warning_ids()) do
+      decision =
+        is_list(context.diagnostics) and Enum.all?(absent, &(&1 not in context.diagnostics))
+
+      leaf(
+        "diagnostics",
+        decision,
+        %{"present" => context.diagnostics, "absent" => absent},
+        fuel
+      )
+    else
+      {:error, :malformed_policy}
+    end
+  end
+
   defp check(%{"op" => "deny", "reason" => reason}, _context, fuel) when is_binary(reason),
     do: leaf("deny", false, %{"reason" => reason}, fuel)
 
@@ -474,4 +559,23 @@ defmodule Catena.Governance.Reference do
     do: {:ok, decision, trace(op, decision, details), fuel - 1}
 
   defp trace(op, decision, details), do: Map.merge(%{"op" => op, "decision" => decision}, details)
+
+  defp selection_approval_payload(payload, %{format_version: @edition_version} = context) do
+    Map.merge(payload, %{
+      "edition" => Map.get(context, :edition),
+      "language_revision" => Map.get(context, :language_revision),
+      "previews" => Map.get(context, :previews, []),
+      "diagnostics" => Map.get(context, :diagnostics, [])
+    })
+  end
+
+  defp selection_approval_payload(payload, %{format_version: @legacy_version}), do: payload
+
+  defp known_list?(values, known),
+    do:
+      is_list(values) and Enum.all?(values, &is_binary/1) and
+        values == values |> Enum.uniq() |> Enum.sort() and Enum.all?(values, &(&1 in known))
+
+  defp exact_fields?(value, fields),
+    do: MapSet.new(Map.keys(value)) == MapSet.new(fields)
 end

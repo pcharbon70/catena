@@ -2,13 +2,15 @@ defmodule Catena.Diagnostic do
   @moduledoc "A stable machine-readable compiler diagnostic."
 
   @enforce_keys [:id, :message]
-  defstruct [:id, :message, :path, details: %{}]
+  defstruct [:id, :message, :path, severity: :error, details: %{}, fixes: []]
 
   @type t :: %__MODULE__{
           id: String.t(),
           message: String.t(),
           path: String.t() | nil,
-          details: map()
+          severity: :error | :warning,
+          details: map(),
+          fixes: [map()]
         }
 
   @spec new(String.t(), String.t(), keyword()) :: t()
@@ -17,7 +19,9 @@ defmodule Catena.Diagnostic do
       id: id,
       message: message,
       path: Keyword.get(options, :path),
-      details: Map.new(Keyword.get(options, :details, %{}))
+      severity: Keyword.get(options, :severity, :error),
+      details: Map.new(Keyword.get(options, :details, %{})),
+      fixes: Keyword.get(options, :fixes, [])
     }
   end
 end
