@@ -1,6 +1,7 @@
 # Governance Operations
 
-This guide is for people operating Catena 0.1.6 package gates. It covers the
+This guide is for people operating retained Catena 0.1.6 package gates and the
+normative selection-aware 0.1.7 gate. It covers the
 offline trust root, canonical governance documents, external signing,
 build/publish/activate workflows, assurance verification, rotation,
 revocation, and recovery.
@@ -8,6 +9,11 @@ revocation, and recovery.
 Read [Governance](../language/governance.md) first for the language model.
 This document is operational guidance for the current bootstrap compiler, not
 a replacement for organizational security policy.
+
+Examples below use historical format 0.1.6 unless a section says otherwise.
+For a 0.1.7 package, the package manifest, governance bundle, trust root, and
+assurance manifest must all use 0.1.7. Never change only the printed version
+of a signed 0.1.6 document; regenerate and sign the 0.1.7 payload.
 
 ## Follow the governance words through one release
 
@@ -67,12 +73,12 @@ line, shell history, governance bundle, and assurance manifest.
 
 ```mermaid
 flowchart LR
-    Root[catena-trust-root 0.1.6] --> Gate[Package gate]
-    Bundle[catena-governance-bundle 0.1.6] --> Gate
-    Package[catena-package-manifest 0.1.6] --> Gate
+    Root[Matching trust root 0.1.6 or 0.1.7] --> Gate[Package gate]
+    Bundle[Matching governance bundle] --> Gate
+    Package[Matching package manifest] --> Gate
     Sources[JSON AST modules and dependency interfaces] --> Gate
     Gate --> Runtime[BEAM and interfaces]
-    Gate --> Assurance[catena-assurance-manifest 0.1.6]
+    Gate --> Assurance[Matching assurance manifest]
     Assurance --> Verify[Offline verification]
     Root --> Verify
     Runtime --> Verify
@@ -81,6 +87,11 @@ flowchart LR
 Keep the package manifest, governance bundle, and trust root under distinct
 review. The package manifest names build inputs and outputs. The governance
 bundle contains policy and decision history. The root defines who can sign.
+
+In 0.1.7, review the package's edition, exact language revision, previews, and
+diagnostic policy as part of that separation. Governance may narrow those
+choices with `edition`, `language_revision`, `previews`, and `diagnostics`
+requirements; it cannot make an invalid language selection valid.
 
 ## Canonical JSON is mandatory
 
@@ -290,10 +301,12 @@ IO.puts(details["signing_payload_digest"])
 
 Confirm the displayed digest through an independent approved tool before
 signing. The payload already contains the domain prefix
-`catena:manifest:0.1.6\n`; sign the exact bytes as emitted. Do not prepend another
-domain string or sign the hexadecimal digest instead of the payload unless
-your signing protocol is explicitly designed to reproduce Catena's required
-signature.
+`catena:manifest:<artifact-version>\n`; a 0.1.6 artifact therefore uses
+`catena:manifest:0.1.6\n`, while a 0.1.7 artifact uses
+`catena:manifest:0.1.7\n`. Sign the exact bytes as emitted. Do not prepend
+another domain string or sign the hexadecimal digest instead of the payload
+unless your signing protocol is explicitly designed to reproduce Catena's
+required signature.
 
 ### 2. Sign outside the compiler
 

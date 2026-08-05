@@ -1,10 +1,11 @@
 defmodule Catena.Governance.Policy do
-  @moduledoc "Closed, bounded, explanation-producing Catena 0.1.6 policy algebra."
+  @moduledoc "Closed, bounded, explanation-producing versioned policy algebra."
 
-  alias Catena.Diagnostic
+  alias Catena.{Diagnostic, LanguageLifecycle, LanguageVersion}
   alias Catena.Governance.Crypto
 
   @budget 20_000
+  @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
 
   @spec evaluate(map(), map(), pos_integer()) ::
           {:ok, boolean(), map(), non_neg_integer()} | {:error, Diagnostic.t()}
@@ -155,6 +156,75 @@ defmodule Catena.Governance.Policy do
      remaining - 1}
   end
 
+  defp evaluate_node(%{"op" => "edition", "allowed" => allowed} = node, context, remaining) do
+    known = Enum.map(LanguageVersion.editions(), & &1["id"])
+
+    if context.format_version == @edition_version and exact_fields?(node, ~w(op allowed)) and
+         known_list?(allowed, known) do
+      selected = context.edition
+      decision = selected in allowed
+
+      {:ok, decision,
+       explanation("edition", decision, %{"selected" => selected, "allowed" => allowed}),
+       remaining - 1}
+    else
+      error("unknown or malformed edition policy requirement")
+    end
+  end
+
+  defp evaluate_node(
+         %{"op" => "language_revision", "from" => first, "to" => last} = node,
+         context,
+         remaining
+       ) do
+    revisions = LanguageVersion.all()
+
+    if context.format_version == @edition_version and exact_fields?(node, ~w(op from to)) and
+         first in revisions and last in revisions and LanguageVersion.at_or_after?(last, first) do
+      selected = context.language_revision
+      decision = selected in revisions and LanguageVersion.between?(selected, first, last)
+
+      {:ok, decision,
+       explanation("language_revision", decision, %{
+         "selected" => selected,
+         "from" => first,
+         "to" => last
+       }), remaining - 1}
+    else
+      error("unknown or malformed language revision policy requirement")
+    end
+  end
+
+  defp evaluate_node(%{"op" => "previews", "allowed" => allowed} = node, context, remaining) do
+    known = LanguageLifecycle.preview_ids(context.language_revision)
+
+    if context.format_version == @edition_version and exact_fields?(node, ~w(op allowed)) and
+         known_list?(allowed, known) do
+      selected = context.previews
+      decision = is_list(selected) and Enum.all?(selected, &(&1 in allowed))
+
+      {:ok, decision,
+       explanation("previews", decision, %{"selected" => selected, "allowed" => allowed}),
+       remaining - 1}
+    else
+      error("unknown or malformed previews policy requirement")
+    end
+  end
+
+  defp evaluate_node(%{"op" => "diagnostics", "absent" => absent} = node, context, remaining) do
+    if context.format_version == @edition_version and exact_fields?(node, ~w(op absent)) and
+         known_list?(absent, LanguageLifecycle.warning_ids()) do
+      present = context.diagnostics
+      decision = is_list(present) and Enum.all?(absent, &(&1 not in present))
+
+      {:ok, decision,
+       explanation("diagnostics", decision, %{"present" => present, "absent" => absent}),
+       remaining - 1}
+    else
+      error("unknown or malformed diagnostics policy requirement")
+    end
+  end
+
   defp evaluate_node(%{"op" => "deny", "reason" => reason}, _context, remaining)
        when is_binary(reason) and byte_size(reason) > 0,
        do: {:ok, false, explanation("deny", false, %{"reason" => reason}), remaining - 1}
@@ -230,6 +300,14 @@ defmodule Catena.Governance.Policy do
 
   defp explanation(op, decision, details),
     do: Map.merge(%{"op" => op, "decision" => decision}, details)
+
+  defp known_list?(values, known),
+    do:
+      is_list(values) and Enum.all?(values, &is_binary/1) and
+        values == values |> Enum.uniq() |> Enum.sort() and Enum.all?(values, &(&1 in known))
+
+  defp exact_fields?(value, fields),
+    do: MapSet.new(Map.keys(value)) == MapSet.new(fields)
 
   defp error(message), do: {:error, Diagnostic.new("GOV002", message, path: "$.policies")}
 end

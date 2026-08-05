@@ -1,10 +1,11 @@
 defmodule Catena.Package.Manifest do
-  @moduledoc "Strict decoder for Catena 0.1.4 and governed 0.1.6 package manifests."
+  @moduledoc "Strict decoder for retained and edition-aware Catena package manifests."
 
-  alias Catena.{Diagnostic, LanguageVersion}
+  alias Catena.{Diagnostic, LanguageLifecycle, LanguageVersion}
 
   @categorical_version LanguageVersion.introduced(:traits_and_categories)
   @governance_version LanguageVersion.introduced(:specifications_and_governance)
+  @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
   @module_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @value_name ~r/^[a-z][A-Za-z0-9_]*$/
 
@@ -20,7 +21,8 @@ defmodule Catena.Package.Manifest do
   end
 
   defp decode_version(%{"version" => @categorical_version} = value) do
-    with module when is_binary(module) <- Map.get(value, "companion_module"),
+    with {:ok, selection, advisories} <- legacy_selection(value, @categorical_version),
+         module when is_binary(module) <- Map.get(value, "companion_module"),
          true <- Regex.match?(@module_name, module),
          modules when is_list(modules) <- Map.get(value, "modules", []),
          true <- Enum.all?(modules, &valid_module?/1),
@@ -32,6 +34,10 @@ defmodule Catena.Package.Manifest do
       {:ok,
        %{
          version: @categorical_version,
+         artifact_version: @categorical_version,
+         selection: selection,
+         advisories: advisories,
+         denied_diagnostics: [],
          governed?: false,
          package: nil,
          profile: nil,
@@ -44,6 +50,9 @@ defmodule Catena.Package.Manifest do
          output: output
        }}
     else
+      {:error, %Diagnostic{} = diagnostic} ->
+        {:error, diagnostic}
+
       _ ->
         malformed(
           "malformed Catena 0.1.4 package manifest; explicit modules, interfaces, roots, companion_module, and output are required"
@@ -52,7 +61,8 @@ defmodule Catena.Package.Manifest do
   end
 
   defp decode_version(%{"version" => @governance_version} = value) do
-    with package when is_binary(package) and byte_size(package) > 0 <- Map.get(value, "package"),
+    with {:ok, selection, advisories} <- legacy_selection(value, @governance_version),
+         package when is_binary(package) and byte_size(package) > 0 <- Map.get(value, "package"),
          module when is_binary(module) <- Map.get(value, "companion_module"),
          true <- Regex.match?(@module_name, module),
          modules when is_list(modules) <- Map.get(value, "modules", []),
@@ -70,6 +80,10 @@ defmodule Catena.Package.Manifest do
       {:ok,
        %{
          version: @governance_version,
+         artifact_version: @governance_version,
+         selection: selection,
+         advisories: advisories,
+         denied_diagnostics: [],
          governed?: is_binary(governance),
          package: package,
          profile: profile,
@@ -82,9 +96,59 @@ defmodule Catena.Package.Manifest do
          output: output
        }}
     else
+      {:error, %Diagnostic{} = diagnostic} ->
+        {:error, diagnostic}
+
       _ ->
         malformed(
           "malformed Catena 0.1.6 package manifest; package, modules, interfaces, companion_module, output, assurance, and profile are required"
+        )
+    end
+  end
+
+  defp decode_version(%{"version" => @edition_version} = value) do
+    with {:ok, selection} <- LanguageVersion.resolve_selection(value),
+         package when is_binary(package) and byte_size(package) > 0 <- Map.get(value, "package"),
+         module when is_binary(module) <- Map.get(value, "companion_module"),
+         true <- Regex.match?(@module_name, module),
+         modules when is_list(modules) <- Map.get(value, "modules", []),
+         true <- Enum.all?(modules, &valid_module?/1),
+         interfaces when is_list(interfaces) <- Map.get(value, "interfaces", []),
+         true <- Enum.all?(interfaces, &is_binary/1),
+         roots when is_list(roots) <- Map.get(value, "roots", []),
+         true <- Enum.all?(roots, &valid_root?/1),
+         output when is_binary(output) <- Map.get(value, "output"),
+         assurance when is_binary(assurance) <- Map.get(value, "assurance"),
+         profile when is_binary(profile) and byte_size(profile) > 0 <-
+           Map.get(value, "profile", "static"),
+         governance <- Map.get(value, "governance"),
+         true <- is_nil(governance) or is_binary(governance),
+         {:ok, denied_diagnostics} <- diagnostics(Map.get(value, "diagnostics", %{})) do
+      {:ok,
+       %{
+         version: @edition_version,
+         artifact_version: @edition_version,
+         selection: selection,
+         advisories: [],
+         denied_diagnostics: denied_diagnostics,
+         governed?: is_binary(governance),
+         package: package,
+         profile: profile,
+         governance: governance,
+         assurance: assurance,
+         companion_module: module,
+         modules: modules,
+         interfaces: interfaces,
+         roots: roots,
+         output: output
+       }}
+    else
+      {:error, %Diagnostic{} = diagnostic} ->
+        {:error, diagnostic}
+
+      _ ->
+        malformed(
+          "malformed Catena 0.1.7 package manifest; edition, language_revision, previews, package, modules, interfaces, companion_module, output, assurance, and profile are required"
         )
     end
   end
@@ -102,6 +166,81 @@ defmodule Catena.Package.Manifest do
   end
 
   defp valid_root?(_root), do: false
+
+  defp diagnostics(%{} = diagnostics) do
+    denied = Map.get(diagnostics, "deny", [])
+    LanguageLifecycle.validate_denied_diagnostics(denied)
+  end
+
+  defp diagnostics(_diagnostics) do
+    {:error, Diagnostic.new("EDN001", "diagnostics must be an object", path: "$.diagnostics")}
+  end
+
+  defp legacy_selection(value, revision) do
+    fields = ~w(edition language_revision previews)
+    present = Enum.filter(fields, &Map.has_key?(value, &1))
+    inferred = LanguageVersion.legacy_selection(revision)
+
+    case present do
+      [] ->
+        {:ok, inferred, [legacy_advisory(revision)]}
+
+      ^fields ->
+        with {:ok, selection} <- LanguageVersion.resolve_selection(value),
+             true <- selection == inferred do
+          {:ok, selection, []}
+        else
+          {:error, %Diagnostic{} = diagnostic} ->
+            {:error, diagnostic}
+
+          false ->
+            {:error,
+             Diagnostic.new(
+               "EDN001",
+               "explicit language revision must match legacy manifest version #{revision}",
+               path: "$.language_revision",
+               details: %{
+                 manifest_version: revision,
+                 language_revision: Map.get(value, "language_revision")
+               }
+             )}
+        end
+
+      _partial ->
+        {:error,
+         Diagnostic.new(
+           "EDN001",
+           "legacy language selection must provide edition, language_revision, and previews together",
+           path: "$",
+           details: %{present: present, required: fields}
+         )}
+    end
+  end
+
+  defp legacy_advisory(revision) do
+    %Diagnostic{
+      id: "EDN002",
+      severity: :warning,
+      message: "legacy manifest implies edition 0.1 and language revision #{revision}",
+      path: "$",
+      details: %{edition: "0.1", language_revision: revision, previews: []},
+      fixes: [
+        json_add("$.edition", "0.1"),
+        json_add("$.language_revision", revision),
+        json_add("$.previews", [])
+      ]
+    }
+  end
+
+  defp json_add(path, value) do
+    %{
+      "kind" => "json-edit",
+      "operation" => "add",
+      "path" => path,
+      "value" => value,
+      "applicability" => "machine-applicable"
+    }
+  end
 
   defp malformed(message),
     do: {:error, Diagnostic.new("LNK001", message, path: "$")}

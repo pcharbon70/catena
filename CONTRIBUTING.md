@@ -22,6 +22,9 @@ handling.
 
 For a new semantic feature, follow
 [Adding a Language Feature](guides/development/adding-a-language-feature.md).
+Changes to editions, exact revisions, previews, artifact formats, or migration
+records also follow
+[Versioning and Feature Lifecycle](guides/development/versioning-and-feature-lifecycle.md).
 
 ## Install the toolchain
 
@@ -59,8 +62,10 @@ as normative. Do not use a pull request to smuggle an unresolved syntax or
 semantic decision into the executable model.
 
 New prototype slices use the next unused `0.1.n` patch in
-`Catena.LanguageVersion`. Update every AST, interface, package, artifact,
-signature-domain, guide, and conformance boundary that the slice changes.
+`Catena.LanguageVersion`. Edition, language revision, artifact version, and
+compiler release are separate identities; update each AST, interface, package,
+artifact, signature-domain, guide, and conformance boundary only as its own
+contract requires, and preserve historical bytes.
 Do not infer ordering or replacement from the number alone; the normative
 specification must still state applicability explicitly.
 
@@ -126,6 +131,8 @@ behavior, even when tested and released, never silently amends Catena.
 7. Keep governance authority outside source modules and private keys outside
    the compiler.
 8. Remove verification-only and governance material before BEAM generation.
+9. Bind a resolved 0.1.7 language selection into interfaces, specialization,
+   compile metadata, assurance, approvals, and policy without runtime dispatch.
 
 ## Tests
 
@@ -207,6 +214,8 @@ before disclosure.
 - [ ] Behavior matches the explicitly applicable normative chapter and the PR
       cites its governing heading.
 - [ ] Older JSON AST and interface versions remain deliberately supported.
+- [ ] Exact selections, migration records, feature states, and historical
+      signed domains remain deliberate when versioning is affected.
 - [ ] Every implicit semantic choice is explicit in typed core.
 - [ ] Independent verification rejects forged evidence.
 - [ ] Backend output preserves order, identity, and effects.

@@ -1,13 +1,26 @@
 defmodule Catena.Assurance do
-  @moduledoc "Build and independently inspect Catena 0.1.6 artifact-bound assurance manifests."
+  @moduledoc "Build and independently inspect versioned artifact-bound assurance manifests."
 
-  alias Catena.{CanonicalJCS, Diagnostic, Governance, LanguageVersion}
+  alias Catena.{
+    CanonicalJCS,
+    Diagnostic,
+    Governance,
+    Interface,
+    LanguageSelection,
+    LanguageVersion
+  }
+
   alias Catena.Governance.Crypto
 
-  @version LanguageVersion.introduced(:specifications_and_governance)
+  @legacy_version LanguageVersion.introduced(:specifications_and_governance)
+  @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
+  @versions LanguageVersion.from(:specifications_and_governance)
 
   @spec build(map(), [map()], [map()], map() | nil, [map()]) :: map()
   def build(package, artifacts, cores, governance_result, signatures \\ []) do
+    format_version = Map.get(package, :artifact_version, @legacy_version)
+    selection = Map.get(package, :selection, LanguageVersion.legacy_selection(@legacy_version))
+
     claims =
       (Enum.flat_map(cores, &get_in(&1, [:specifications, :claims]))
        |> Enum.map(&claim_record/1)) ++ Map.get(package, :claims, [])
@@ -37,8 +50,8 @@ defmodule Catena.Assurance do
       "modules" => cores |> Enum.map(& &1.module) |> Enum.sort(),
       "dependency_digests" => Map.get(package, :dependency_digests, []) |> Enum.sort(),
       "compiler" => Application.spec(:catena, :vsn) |> to_string(),
-      "frontend" => "json-ast-#{@version}",
-      "specification" => @version,
+      "frontend" => "json-ast-#{format_version}",
+      "specification" => selection.language_revision,
       "otp" => :erlang.system_info(:otp_release) |> to_string(),
       "canonicalization" => "RFC8785/catena-safe-integer",
       "artifacts" => artifact_records,
@@ -53,14 +66,16 @@ defmodule Catena.Assurance do
       "erasure" => erasure_record(cores)
     }
 
+    signed = selection_payload(signed, selection, format_version, package)
+
     document = %{
       "format" => "catena-assurance-manifest",
-      "version" => @version,
+      "version" => format_version,
       "signed" => signed,
       "signatures" => signatures
     }
 
-    payload = CanonicalJCS.payload("manifest", signed)
+    payload = CanonicalJCS.payload("manifest", format_version, signed)
 
     %{
       document: document,
@@ -75,12 +90,13 @@ defmodule Catena.Assurance do
   def verify(binary, directory, root) do
     with {:ok, document} <- CanonicalJCS.decode(binary, canonical: true),
          "catena-assurance-manifest" <- Map.get(document, "format"),
-         @version <- Map.get(document, "version"),
+         version when version in @versions <- Map.get(document, "version"),
          signed when is_map(signed) <- Map.get(document, "signed"),
          signatures when is_list(signatures) <- Map.get(document, "signatures"),
-         :ok <- verify_manifest_shape(signed),
-         :ok <- verify_manifest_signature(signed, signatures, root),
+         :ok <- verify_manifest_shape(signed, version),
+         :ok <- verify_manifest_signature(signed, signatures, root, version),
          :ok <- verify_artifacts(Map.get(signed, "artifacts"), directory),
+         :ok <- verify_selection_artifacts(signed, version, directory),
          :ok <- verify_erasure(Map.get(signed, "erasure")),
          :ok <- verify_ungoverned_evidence(signed),
          :ok <- verify_governance(signed, root) do
@@ -91,12 +107,12 @@ defmodule Catena.Assurance do
          state: get_in(signed, ["governance", "state"]),
          digest: CanonicalJCS.digest(document),
          payload_digest:
-           :crypto.hash(:sha256, CanonicalJCS.payload("manifest", signed))
+           :crypto.hash(:sha256, CanonicalJCS.payload("manifest", version, signed))
            |> Base.encode16(case: :lower)
        }}
     else
       {:error, %Diagnostic{} = diagnostic} -> {:error, diagnostic}
-      _ -> error("malformed catena-assurance-manifest 0.1.6 document")
+      _ -> error("malformed or unsupported catena-assurance-manifest document")
     end
   end
 
@@ -120,7 +136,7 @@ defmodule Catena.Assurance do
     }
   end
 
-  defp verify_manifest_shape(signed) do
+  defp verify_manifest_shape(signed, version) do
     claims = signed["claims"]
     evidence = signed["evidence"]
     assumptions = signed["assumptions"]
@@ -130,8 +146,8 @@ defmodule Catena.Assurance do
     valid? =
       is_binary(signed["package"]) and byte_size(signed["package"]) > 0 and
         is_binary(signed["profile"]) and signed["action"] in ~w(build publish activate) and
-        is_binary(signed["compiler"]) and signed["frontend"] == "json-ast-#{@version}" and
-        signed["specification"] == @version and is_binary(signed["otp"]) and
+        is_binary(signed["compiler"]) and signed["frontend"] == "json-ast-#{version}" and
+        valid_specification_version?(signed, version) and is_binary(signed["otp"]) and
         signed["canonicalization"] == "RFC8785/catena-safe-integer" and
         string_list?(modules) and digest_list?(dependencies) and is_list(claims) and
         ordered_unique_ids?(claims) and Enum.all?(claims, &valid_claim_record?/1) and
@@ -140,7 +156,9 @@ defmodule Catena.Assurance do
         assumptions ==
           Enum.filter(evidence, &(&1["kind"] == "assumption")) |> Enum.sort_by(& &1["id"])
 
-    if valid?, do: :ok, else: error("assurance manifest signed fields are malformed")
+    if valid? and valid_selection_payload?(signed, version),
+      do: :ok,
+      else: error("assurance manifest signed fields are malformed")
   end
 
   defp verify_ungoverned_evidence(%{"governance" => nil} = signed) do
@@ -261,7 +279,7 @@ defmodule Catena.Assurance do
     }
   end
 
-  defp verify_manifest_signature(signed, signatures, root) do
+  defp verify_manifest_signature(signed, signatures, root, version) do
     action = signed["action"]
 
     cond do
@@ -274,9 +292,13 @@ defmodule Catena.Assurance do
       true ->
         sequence = get_in(signed, ["governance", "sequence"]) || root.sequence
 
-        case Crypto.verify_threshold(root, "normal", "manifest", signed, signatures, sequence) do
-          {:ok, _signers} -> :ok
-          {:error, reason} -> error("assurance manifest signature rejected: #{reason}")
+        if Map.get(root, :version, @legacy_version) == version do
+          case Crypto.verify_threshold(root, "normal", "manifest", signed, signatures, sequence) do
+            {:ok, _signers} -> :ok
+            {:error, reason} -> error("assurance manifest signature rejected: #{reason}")
+          end
+        else
+          error("assurance manifest and trust root use different format versions")
         end
     end
   end
@@ -383,6 +405,10 @@ defmodule Catena.Assurance do
       action: signed["action"],
       package: signed["package"],
       profile: signed["profile"],
+      edition: Map.get(signed, "edition"),
+      language_revision: Map.get(signed, "language_revision", signed["specification"]),
+      previews: Map.get(signed, "previews", []),
+      diagnostics: Map.get(signed, "diagnostics", []),
       modules: Map.get(signed, "modules", []),
       subjects: Enum.uniq(artifact_subjects ++ claim_subjects),
       compiler_evidence: Enum.filter(evidence, &(&1["kind"] in ~w(conformance example))),
@@ -392,6 +418,96 @@ defmodule Catena.Assurance do
         Enum.map(artifacts, & &1["sha256"]) ++ Map.get(signed, "dependency_digests", [])
     }
   end
+
+  defp selection_payload(signed, %LanguageSelection{} = selection, @edition_version, package) do
+    diagnostic_ids =
+      package
+      |> Map.get(:diagnostics, [])
+      |> Enum.map(& &1.id)
+      |> Enum.uniq()
+      |> Enum.sort()
+
+    Map.merge(signed, %{
+      "edition" => selection.edition,
+      "language_revision" => selection.language_revision,
+      "previews" => selection.previews,
+      "diagnostics" => diagnostic_ids
+    })
+  end
+
+  defp selection_payload(signed, _selection, _version, _package), do: signed
+
+  defp valid_specification_version?(signed, @legacy_version),
+    do: signed["specification"] == @legacy_version
+
+  defp valid_specification_version?(signed, @edition_version),
+    do: signed["specification"] in LanguageVersion.all()
+
+  defp valid_selection_payload?(_signed, @legacy_version), do: true
+
+  defp valid_selection_payload?(signed, @edition_version) do
+    case LanguageVersion.resolve_selection(signed) do
+      {:ok, selection} ->
+        signed["specification"] == selection.language_revision and
+          string_list?(signed["diagnostics"])
+
+      {:error, _diagnostic} ->
+        false
+    end
+  end
+
+  defp verify_selection_artifacts(_signed, @legacy_version, _directory), do: :ok
+
+  defp verify_selection_artifacts(signed, @edition_version, directory) do
+    selection = %{
+      edition: signed["edition"],
+      language_revision: signed["language_revision"],
+      previews: signed["previews"]
+    }
+
+    Enum.reduce_while(signed["artifacts"], :ok, fn artifact, :ok ->
+      with {:ok, path} <- safe_path(directory, artifact["path"]),
+           {:ok, binary} <- File.read(path),
+           :ok <- artifact_selection(artifact["kind"], binary, selection) do
+        {:cont, :ok}
+      else
+        _ ->
+          {:halt, error("artifact #{inspect(artifact["path"])} has another language selection")}
+      end
+    end)
+  end
+
+  defp artifact_selection("interface", binary, selection) do
+    case Interface.decode(binary) do
+      {:ok, interface} ->
+        if interface.edition == selection.edition and
+             interface.language_revision == selection.language_revision and
+             interface.previews == selection.previews,
+           do: :ok,
+           else: :error
+
+      {:error, _diagnostic} ->
+        :error
+    end
+  end
+
+  defp artifact_selection(kind, binary, selection) when kind in ~w(beam companion_beam) do
+    with {:ok, {_module, chunks}} <- :beam_lib.chunks(binary, [:compile_info]),
+         compile_info when is_list(compile_info) <- Keyword.get(chunks, :compile_info),
+         edition when is_list(edition) <- Keyword.get(compile_info, :catena_edition),
+         revision when is_list(revision) <-
+           Keyword.get(compile_info, :catena_language_revision),
+         previews when is_list(previews) <- Keyword.get(compile_info, :catena_previews),
+         true <- List.to_string(edition) == selection.edition,
+         true <- List.to_string(revision) == selection.language_revision,
+         true <- Enum.map(previews, &List.to_string/1) == selection.previews do
+      :ok
+    else
+      _ -> :error
+    end
+  end
+
+  defp artifact_selection(_kind, _binary, _selection), do: :error
 
   defp safe_path(directory, path) do
     if Path.type(path) == :absolute or ".." in Path.split(path) do

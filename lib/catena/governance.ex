@@ -1,18 +1,20 @@
 defmodule Catena.Governance do
-  @moduledoc "Catena 0.1.6 governance bundle validation, evidence admission, and package gate."
+  @moduledoc "Versioned governance bundle validation, evidence admission, and package gate."
 
   alias Catena.{CanonicalJCS, Diagnostic, LanguageVersion}
   alias Catena.Governance.{Crypto, Lifecycle, Policy}
 
   @actions ~w(build publish activate)
   @scope_kinds ~w(package module subject action output interface profile)
-  @version LanguageVersion.introduced(:specifications_and_governance)
+  @legacy_version LanguageVersion.introduced(:specifications_and_governance)
+  @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
+  @versions LanguageVersion.from(:specifications_and_governance)
 
   @spec decode_bundle(binary()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def decode_bundle(binary) when is_binary(binary) do
     with {:ok, value} <- CanonicalJCS.decode(binary, canonical: true),
          "catena-governance-bundle" <- Map.get(value, "format"),
-         @version <- Map.get(value, "version"),
+         version when version in @versions <- Map.get(value, "version"),
          package when is_binary(package) and byte_size(package) > 0 <- Map.get(value, "package"),
          profile when is_binary(profile) and byte_size(profile) > 0 <-
            Map.get(value, "profile", "static"),
@@ -29,6 +31,7 @@ defmodule Catena.Governance do
          true <- Enum.all?(manifest_signatures, &valid_signature_shape?/1) do
       {:ok,
        %{
+         version: version,
          package: package,
          profile: profile,
          policies: policies,
@@ -41,17 +44,19 @@ defmodule Catena.Governance do
        }}
     else
       {:error, %Diagnostic{} = diagnostic} -> {:error, diagnostic}
-      _ -> error("GOV001", "malformed catena-governance-bundle 0.1.6 document", "$")
+      _ -> error("GOV001", "malformed or unsupported catena-governance-bundle document", "$")
     end
   end
 
   @spec evaluate(map(), map() | nil, map()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def evaluate(bundle, root, context) do
+    context = Map.put(context, :format_version, bundle.version)
     action = Map.get(context, :action)
 
     with true <- action in @actions,
          true <- bundle.package == context.package,
          :ok <- namespace_matches(root, bundle.package),
+         :ok <- format_matches(root, bundle.version),
          {:ok, lifecycle} <- Lifecycle.replay(bundle.transitions, root),
          :ok <- valid_action_state(action, lifecycle),
          sequence <- current_sequence(root, lifecycle),
@@ -68,10 +73,15 @@ defmodule Catena.Governance do
          approval_payload <-
            approval_payload(context, lifecycle, evidence, policy_digest, sequence),
          policy_context <- %{
+           format_version: bundle.version,
            action: action,
            subject: Map.get(context, :subject, %{"kind" => "package", "name" => context.package}),
            state: lifecycle.state,
            profile: bundle.profile,
+           edition: Map.get(context, :edition),
+           language_revision: Map.get(context, :language_revision),
+           previews: Map.get(context, :previews, []),
+           diagnostics: Map.get(context, :diagnostics, []),
            sequence: sequence,
            root: root,
            evidence: evidence,
@@ -97,6 +107,10 @@ defmodule Catena.Governance do
          action: action,
          package: bundle.package,
          profile: bundle.profile,
+         edition: Map.get(context, :edition),
+         language_revision: Map.get(context, :language_revision),
+         previews: Map.get(context, :previews, []),
+         diagnostics: Map.get(context, :diagnostics, []),
          state: lifecycle.state,
          sequence: sequence,
          policy_digest: policy_digest,
@@ -378,7 +392,7 @@ defmodule Catena.Governance do
   defp approval_payload(context, lifecycle, evidence, policy_digest, sequence) do
     {from, to, prior_transition_digest} = approval_states(context.action, lifecycle)
 
-    %{
+    payload = %{
       "action" => context.action,
       "package" => context.package,
       "profile" => context.profile,
@@ -395,6 +409,8 @@ defmodule Catena.Governance do
         |> Enum.map(&%{"id" => &1["id"], "digest" => CanonicalJCS.digest(&1)})
         |> Enum.sort_by(& &1["id"])
     }
+
+    selection_approval_payload(payload, context)
   end
 
   defp approval_states("activate", %{events: events}) do
@@ -433,6 +449,23 @@ defmodule Catena.Governance do
 
   defp namespace_matches(_root, _package),
     do: {:error, "trust-root namespace does not match package"}
+
+  defp format_matches(nil, _version), do: :ok
+  defp format_matches(%{version: version}, version), do: :ok
+
+  defp format_matches(_root, _version),
+    do: {:error, "governance bundle and trust root use different format versions"}
+
+  defp selection_approval_payload(payload, %{format_version: @edition_version} = context) do
+    Map.merge(payload, %{
+      "edition" => Map.get(context, :edition),
+      "language_revision" => Map.get(context, :language_revision),
+      "previews" => Map.get(context, :previews, []),
+      "diagnostics" => Map.get(context, :diagnostics, [])
+    })
+  end
+
+  defp selection_approval_payload(payload, %{format_version: @legacy_version}), do: payload
 
   defp valid_action_state("activate", %{state: "Active", events: events}) do
     case List.last(events) do

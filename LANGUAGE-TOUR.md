@@ -29,7 +29,7 @@ chapter.
 
 ## The language in one view
 
-Catena's initial model has seven connected parts:
+Catena's initial model has eight connected parts:
 
 1. **Functions and inference** — ordinary code receives principal
    Hindley–Milner types where possible; advanced features require explicit
@@ -44,7 +44,10 @@ Catena's initial model has seven connected parts:
    behavior explicit and select handlers through lexical capability identity.
 6. **Specifications and governance** — optional typed rules and exact examples
    become strict, artifact-bound package gates once a project adopts them.
-7. **BEAM execution** — verified typed core lowers to Erlang Abstract Format,
+7. **Editions and previews** — packages pin one exact language contract;
+   named experimental features cannot silently appear through a compiler
+   update or dependency.
+8. **BEAM execution** — verified typed core lowers to Erlang Abstract Format,
    which OTP 29 compiles into `.beam` modules.
 
 The language is expression-oriented, strict, and immutable by default.
@@ -256,6 +259,42 @@ punctuation. Read the
 for the exact formats, policy algebra, lifecycle, diagnostics, and promotion
 gate.
 
+## Editions, exact revisions, and previews
+
+Catena separates an edition such as `0.1` from an exact language revision such
+as `0.1.7`. The edition is a compatibility track; the exact revision selects
+one cumulative set of language rules. Artifact formats and compiler releases
+are separate identities.
+
+A new package records its choice explicitly:
+
+```json
+{
+  "version": "0.1.7",
+  "edition": "0.1",
+  "language_revision": "0.1.7",
+  "previews": []
+}
+```
+
+Dependencies retain their own selections and interoperate through checked
+semantic interfaces. A preview that becomes part of an exported obligation
+must be named in that interface, and a consumer that did not enable it is
+rejected. Selection affects compile-time checking, metadata, and artifact
+identity; generated functions never dispatch on edition or preview flags.
+
+Catena 0.1.7 intentionally publishes no actual preview feature. It defines
+the lifecycle—preview to stable or withdrawn, then stable to deprecated to
+removed—without turning private compiler switches into public language
+features.
+
+The 0.1.7 edition and lifecycle chapters are normative, with their immutable
+compiler evidence recorded in the research archive. Read
+[Editions, Revisions, and Previews](guides/language/editions-and-previews.md)
+for the user workflow and the
+[normative specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/editions-and-feature-lifecycle)
+for the exact contract.
+
 ## From Catena to BEAM
 
 The compiler path is:
@@ -294,6 +333,7 @@ and build the command-line tool:
 asdf install
 asdf exec mix test
 asdf exec mix escript.build
+./catena language-info
 ```
 
 The most approachable durable input is the
@@ -337,6 +377,10 @@ Elixir, so read them for semantics and diagnostics rather than surface syntax:
    — typed rules, exact examples, canonical signatures, trust rotation,
    additive policy, lifecycle replay, package staging, artifact binding, and
    complete BEAM erasure.
+7. [`c008_editions_lifecycle_test.exs`](test/catena/c008_editions_lifecycle_test.exs)
+   — exact pins, lifecycle states, migration diagnostics, selection-bound
+   interfaces and artifacts, versioned signatures, policy constraints, and
+   absence of runtime edition dispatch.
 
 ## Continue in catena-research
 

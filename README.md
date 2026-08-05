@@ -33,10 +33,12 @@ git switch rewrite
 
 The clean rewrite now contains executable normative type-system,
 data-and-pattern, clause-condition, trait/categorical-operation,
-effect-handler, and 0.1.6 specification-and-governance slices. The
-bootstrap toolchain is written in Elixir 1.20.2 on Erlang/OTP 29.0.4 and
-targets only the BEAM VM. It does not reuse the
-historical proof-of-concept's compiler or language design.
+effect-handler, and 0.1.6 specification-and-governance slices. It also
+contains the executable normative 0.1.7 editions-and-feature-lifecycle slice,
+whose immutable promotion evidence is recorded in the research archive. The
+bootstrap toolchain is written in
+Elixir 1.20.2 on Erlang/OTP 29.0.4 and targets only the BEAM VM. It does not
+reuse the historical proof-of-concept's compiler or language design.
 
 The normative language definition belongs to the separate
 [Catena research specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification).
@@ -59,9 +61,11 @@ and compiler developer documentation. Contributors should also read
 
 Catena's current language line is `0.1`. Completed semantic slices increment
 its patch component: C001 through C006 are therefore `0.1.1` through `0.1.6`.
-`Catena.LanguageVersion` is the executable registry for that sequence. The
-Mix application version remains `0.1.0`; it identifies the compiler package,
-not the language accepted by a particular input.
+Candidate C008 is implemented at `0.1.7`. `Catena.LanguageVersion` is the
+executable exact-revision registry, while edition `0.1` names the surrounding
+compatibility track. The Mix application version remains `0.1.0`; it
+identifies the compiler package, not the language accepted by a particular
+input.
 
 The former two-component prototype identifiers are retired and are not input
 aliases. Update unsigned JSON AST inputs mechanically, then rebuild interfaces
@@ -73,7 +77,8 @@ of their canonical signature domains.
 
 ```mermaid
 flowchart LR
-    JSON[Versioned JSON AST 0.1.1 through 0.1.6] --> D[Nominal data elaboration]
+    SEL[Package or standalone language selection] --> JSON[Versioned JSON AST 0.1.1 through 0.1.7]
+    JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
     C --> T[Kinded traits and coherent evidence]
@@ -86,13 +91,15 @@ flowchart LR
     CPS --> EAF[Erlang Abstract Format]
     EAF --> OTP[OTP 29 compile:noenv_forms/2]
     OTP --> BEAM[Runtime-only module .beam]
-    I[Digest-bound 0.1.2 through 0.1.6 interfaces] --> L[Manifest-directed specialization]
+    I[Digest-bound 0.1.2 through 0.1.7 interfaces] --> L[Manifest-directed specialization]
     L --> OTP
     OTP --> CB[Companion .beam with direct calls]
     BEAM --> A[Artifact digests]
     CB --> A
     A --> GOV[Offline trust, lifecycle, and additive policy]
-    GOV --> SIDE[Canonical assurance sidecar and signing payload]
+    SEL --> I
+    SEL --> L
+    GOV --> SIDE[Selection-bound assurance sidecar and signing payload]
 ```
 
 The JSON AST is a temporary versioned toolchain input, not a proposed Catena
@@ -101,7 +108,8 @@ does not emit Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
 
 The implementation preserves the C001 through C005 evidence and adds the
-normative C006 assurance slice. Together they include:
+normative C006 assurance and C008 edition-lifecycle slices. Together they
+include:
 
 - Algorithm W for literals, variables, lambdas, application, polymorphic
   `let`, tuples, and signatures;
@@ -191,11 +199,25 @@ normative C006 assurance slice. Together they include:
   and predeclared recovery;
 - an immutable Draft-to-Superseded lifecycle, exact approval and evidence
   binding, and a closed additive policy algebra with an independent oracle;
-- transactional 0.1.6 package staging, path and symlink containment, failed-gate
-  no-output behavior, exact BEAM/interface binding, and canonical assurance
-  sidecars; and
+- transactional 0.1.6 and 0.1.7 package staging, path and symlink containment,
+  failed-gate no-output behavior, exact BEAM/interface binding, and canonical
+  assurance sidecars; and
 - an external-signer workflow: the compiler emits canonical payload bytes and
   their digest, verifies supplied signatures, and never handles private keys.
+- edition `0.1`, exact retained revisions `0.1.1` through `0.1.7`, explicit
+  package selection, structured standalone reporting, and legacy `EDN002`
+  migration advisories;
+- a closed preview/stable/withdrawn/deprecated/removed feature registry,
+  immutable feature IDs, compatibility change records, structured safe edits,
+  and no actual preview enabled in 0.1.7;
+- selection-bearing interfaces, specialization identities, BEAM compile
+  metadata, package results, assurance records, approval decisions, and
+  governance policy context with no runtime selection dispatch;
+- retained 0.1.6 signed bytes alongside version-aware 0.1.7 signature domains,
+  root-state binding, downgrade rejection, and no cross-version verification
+  fallback; and
+- a public `language-info` API and CLI command plus focused production/oracle,
+  byte-preservation, artifact-substitution, and lifecycle conformance tests.
 
 This is not yet a Catena source parser or a complete implementation of resource
 scopes, exception boundaries, top-level host effects, scoped or multi-shot
@@ -214,7 +236,7 @@ asdf exec mix test
 asdf exec mix escript.build
 ```
 
-The CLI accepts five commands:
+The CLI accepts six commands:
 
 ```bash
 ./catena check-ir program.json
@@ -226,6 +248,7 @@ The CLI accepts five commands:
 ./catena compile-package-ir --action build package.catena-package.json
 ./catena compile-package-ir --action publish --trust-root trust-root.json package.catena-package.json
 ./catena verify-assurance --trust-root trust-root.json assurance.json
+./catena language-info
 ```
 
 `compile-ir` writes an OTP-generated `.beam` and a deterministic `.cati.json`
@@ -248,9 +271,22 @@ an external normal-root signature over the exact emitted assurance payload;
 the compiler reports that payload and digest for an external signer and
 verifies supplied signatures on the next invocation.
 
+AST and artifact format 0.1.7 add package-local edition, exact language
+revision, and named preview selection. Standalone compilation can use
+`--edition`, `--language-revision`, repeatable `--preview`, and repeatable
+`--deny-diagnostic`; every success reports the resolved selection. A 0.1.7
+package manifest requires the selection fields and may constrain known warning
+IDs. See [Editions, Revisions, and Previews](guides/language/editions-and-previews.md).
+
 ## Intended evolution
 
-Elixir is the bootstrap implementation language, not part of Catena's target
-semantics. Once Catena can express and validate the compiler, the toolchain is
-intended to self-host while preserving the verified typed-core and OTP 29
-Abstract Format boundary.
+Elixir is the bootstrap implementation language through C008; it is
+not part of Catena's target semantics. Self-hosting is tracked separately as
+G141 for a late 0.x milestone, after Catena can express the compiler's required
+module, data, error, build, and interoperability facilities. The planned
+transition is staged: define a bounded self-hosting subset, compile Catena compiler modules
+with the trusted Elixir bootstrap, compare both compilers' outputs, require a
+two-stage reproducible fixed point, and retain a reproducible bootstrap path.
+At every stage Catena still targets only BEAM, verified typed core remains the
+lowering boundary, and OTP 29 Abstract Format remains the sole production
+`.beam` generation path.

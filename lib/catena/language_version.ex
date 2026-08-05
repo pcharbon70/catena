@@ -7,13 +7,16 @@ defmodule Catena.LanguageVersion do
   independently in `mix.exs`.
   """
 
+  alias Catena.{Diagnostic, LanguageLifecycle, LanguageSelection}
+
   @versions [
     type_system: "0.1.1",
     data_and_patterns: "0.1.2",
     clause_conditions: "0.1.3",
     traits_and_categories: "0.1.4",
     effects_and_handlers: "0.1.5",
-    specifications_and_governance: "0.1.6"
+    specifications_and_governance: "0.1.6",
+    editions_and_feature_lifecycle: "0.1.7"
   ]
   @ordered Keyword.values(@versions)
   @interfaces tl(@ordered)
@@ -27,6 +30,7 @@ defmodule Catena.LanguageVersion do
           | :traits_and_categories
           | :effects_and_handlers
           | :specifications_and_governance
+          | :editions_and_feature_lifecycle
 
   @spec all() :: [String.t()]
   def all, do: @ordered
@@ -39,6 +43,44 @@ defmodule Catena.LanguageVersion do
 
   @spec latest() :: String.t()
   def latest, do: List.last(@ordered)
+
+  @spec editions() :: [map()]
+  def editions do
+    [
+      %{
+        "id" => "0.1",
+        "status" => "prototype",
+        "revisions" => @ordered
+      }
+    ]
+  end
+
+  @spec current_selection() :: LanguageSelection.t()
+  def current_selection do
+    %LanguageSelection{edition: "0.1", language_revision: latest(), previews: []}
+  end
+
+  @spec legacy_selection(String.t()) :: LanguageSelection.t()
+  def legacy_selection(revision) when revision in @ordered do
+    %LanguageSelection{edition: "0.1", language_revision: revision, previews: []}
+  end
+
+  @spec resolve_selection(map() | LanguageSelection.t()) ::
+          {:ok, LanguageSelection.t()} | {:error, Diagnostic.t()}
+  def resolve_selection(%LanguageSelection{} = selection), do: validate_selection(selection)
+
+  def resolve_selection(selection) when is_map(selection) do
+    resolved = %LanguageSelection{
+      edition: Map.get(selection, :edition, Map.get(selection, "edition")),
+      language_revision:
+        Map.get(selection, :language_revision, Map.get(selection, "language_revision")),
+      previews: Map.get(selection, :previews, Map.get(selection, "previews"))
+    }
+
+    validate_selection(resolved)
+  end
+
+  def resolve_selection(_selection), do: selection_error("language selection must be an object")
 
   @spec introduced(feature()) :: String.t()
   def introduced(feature), do: Keyword.fetch!(@versions, feature)
@@ -59,9 +101,63 @@ defmodule Catena.LanguageVersion do
   def internal_representation("0.1.1"), do: "0.1.2"
   def internal_representation(version) when version in @ordered, do: version
 
+  @spec default_artifact_version(String.t(), String.t()) :: String.t()
+  def default_artifact_version(frontend_format, language_revision)
+      when frontend_format in @ordered and language_revision in @ordered do
+    if frontend_format == language_revision do
+      internal_representation(frontend_format)
+    else
+      introduced(:editions_and_feature_lifecycle)
+    end
+  end
+
+  @spec at_or_after?(String.t(), String.t()) :: boolean()
+  def at_or_after?(left, right) do
+    case {Enum.find_index(@ordered, &(&1 == left)), Enum.find_index(@ordered, &(&1 == right))} do
+      {left_index, right_index} when is_integer(left_index) and is_integer(right_index) ->
+        left_index >= right_index
+
+      _ ->
+        false
+    end
+  end
+
+  @spec between?(String.t(), String.t(), String.t()) :: boolean()
+  def between?(revision, first, last),
+    do: at_or_after?(revision, first) and at_or_after?(last, revision)
+
   @spec valid_core_semver?(term()) :: boolean()
   def valid_core_semver?(version) when is_binary(version),
     do: Regex.match?(@core_semver, version)
 
   def valid_core_semver?(_version), do: false
+
+  defp validate_selection(%LanguageSelection{} = selection) do
+    cond do
+      selection.edition != "0.1" ->
+        selection_error(
+          "unknown or unsupported edition #{inspect(selection.edition)}",
+          "$.edition"
+        )
+
+      selection.language_revision not in @ordered ->
+        selection_error(
+          "unknown or unsupported language revision #{inspect(selection.language_revision)}",
+          "$.language_revision"
+        )
+
+      not String.starts_with?(selection.language_revision, selection.edition <> ".") ->
+        selection_error("language revision does not belong to the selected edition")
+
+      true ->
+        case LanguageLifecycle.validate_previews(selection) do
+          :ok -> {:ok, selection}
+          {:error, _} = error -> error
+        end
+    end
+  end
+
+  defp selection_error(message, path \\ "$") do
+    {:error, Diagnostic.new("EDN001", message, path: path)}
+  end
 end

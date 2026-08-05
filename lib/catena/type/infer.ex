@@ -1,5 +1,5 @@
 defmodule Catena.Type.Infer do
-  @moduledoc "Algorithm W with C002-C006 data, condition, trait, effect, and assurance elaboration."
+  @moduledoc "Algorithm W with cumulative Catena data, condition, trait, effect, and assurance elaboration."
 
   alias Catena.Effect.Row
   alias Catena.{Categorical, Condition, Data, Derive, Diagnostic, Effect, LanguageVersion, Type}
@@ -125,7 +125,13 @@ defmodule Catena.Type.Infer do
 
     %{
       version: ast.version,
+      frontend_format: ast.frontend_format,
       frontend_version: ast.frontend_version,
+      edition: ast.edition,
+      language_revision: ast.language_revision,
+      previews: ast.previews,
+      required_previews: ast.required_previews,
+      diagnostics: ast.diagnostics,
       origin: ast.origin,
       module: ast.module,
       exports: ast.exports ++ derived_exports,

@@ -18,15 +18,21 @@ Every public failure is a `Catena.Diagnostic` with:
   id: "M001",
   message: "match is not exhaustive",
   path: "$.definitions[0].body",
-  details: %{witness: "Option.Some(_)"}
+  severity: :error,
+  details: %{witness: "Option.Some(_)"},
+  fixes: []
 }
 ```
 
 - `id` is the stable machine category.
 - `message` explains the immediate problem.
 - `path` identifies a JSON-AST, interface, package, or governance location.
+- `severity` distinguishes a default error from a warning that policy may
+  promote to failure without changing its ID.
 - `details` carries structured evidence such as witnesses, expected/observed
   values, threshold counts, signing payloads, or backend errors.
+- `fixes` carries ordered structured suggestions; C008 reports safe edits but
+  never applies them.
 
 The CLI wraps this as JSON on standard error. Tests should normally assert the
 identifier and the meaning-sensitive details, not an entire prose message that
@@ -49,6 +55,7 @@ may improve without changing the contract.
 | `ART...` | artifact paths, collisions, sizes, hashes, substitution |
 | `ERS...` | verification or governance material escaping erasure |
 | `LNK...` | package manifest and specialization/linking |
+| `EDN...` / `PRV...` / `DEP...` | edition selection, preview propagation, migration, deprecation |
 | `B...` | OTP rejecting generated Erlang Abstract Format |
 | `I...` | inference-independent core invariant failure |
 
@@ -108,6 +115,7 @@ and warnings in structured details.
 | `c004_categorical_test.exs` | traits, coherence, laws, derivation, templates, specialization, erasure |
 | `c005_effects_test.exs` | lexical capabilities, deep handlers, affine resume, CPS, reference traces |
 | `c006_specification_governance_test.exs` | rules, evidence, JCS, Ed25519, policy oracle, lifecycle, artifact transactions |
+| `c008_editions_lifecycle_test.exs` | exact pins, feature lifecycle, migration diagnostics, selection binding, versioned signatures |
 | `resumption_token_test.exs` | dynamic one-use continuation defense |
 
 Tests construct JSON programs directly in Elixir. That is intentional: they
@@ -190,6 +198,11 @@ retention.
 For 0.1.6 erasure, check that verification definitions, claims, evidence,
 policies, signatures, keys, and assurance digests do not appear in any BEAM
 chunk or runtime export.
+
+For 0.1.7 selection, inspect interface content, specialization keys, assurance
+fields, approval payloads, and the standard BEAM compile-information chunk.
+Then inspect Erlang Abstract Format to prove that edition and preview values do
+not enter executable function bodies.
 
 ### Adversarial governance tests
 

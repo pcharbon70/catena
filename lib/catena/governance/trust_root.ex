@@ -1,29 +1,31 @@
 defmodule Catena.Governance.TrustRoot do
-  @moduledoc "Canonical offline trust-root decoding and hash-chained Catena 0.1.6 rotation."
+  @moduledoc "Canonical offline trust-root decoding and hash-chained versioned rotation."
 
   alias Catena.{CanonicalJCS, Diagnostic, LanguageVersion}
   alias Catena.Governance.Crypto
 
   @hex_key ~r/^[0-9a-f]{64}$/
   @hex_digest ~r/^[0-9a-f]{64}$/
-  @version LanguageVersion.introduced(:specifications_and_governance)
+  @legacy_version LanguageVersion.introduced(:specifications_and_governance)
+  @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
+  @versions LanguageVersion.from(:specifications_and_governance)
 
   @spec decode(binary()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def decode(binary) when is_binary(binary) do
     with {:ok, value} <- CanonicalJCS.decode(binary, canonical: true),
          "catena-trust-root" <- Map.get(value, "format"),
-         @version <- Map.get(value, "version"),
+         version when version in @versions <- Map.get(value, "version"),
          namespace when is_binary(namespace) and byte_size(namespace) > 0 <-
            Map.get(value, "namespace"),
          initial when is_map(initial) <- Map.get(value, "initial"),
          history when is_list(history) <- Map.get(value, "history", []),
-         {:ok, root} <- decode_state(initial, namespace),
+         {:ok, root} <- decode_state(initial, namespace, version),
          root <- Map.put(root, :states, %{root.sequence => snapshot(root)}),
          {:ok, current} <- replay(history, root) do
       {:ok, Map.put(current, :history, history)}
     else
       {:error, %Diagnostic{} = diagnostic} -> {:error, diagnostic}
-      _ -> error("malformed catena-trust-root 0.1.6 document")
+      _ -> error("malformed or unsupported catena-trust-root document")
     end
   end
 
@@ -39,7 +41,7 @@ defmodule Catena.Governance.TrustRoot do
 
   @spec state_payload(map()) :: map()
   def state_payload(root) do
-    %{
+    payload = %{
       "sequence" => root.sequence,
       "principals" =>
         root.principals
@@ -72,6 +74,11 @@ defmodule Catena.Governance.TrustRoot do
         "evidence" => Enum.sort(root.revocations.evidence)
       }
     }
+
+    case Map.get(root, :version, @legacy_version) do
+      @edition_version -> Map.put(payload, "format_version", @edition_version)
+      @legacy_version -> payload
+    end
   end
 
   @spec at_sequence(map(), pos_integer()) :: map() | nil
@@ -102,7 +109,7 @@ defmodule Catena.Governance.TrustRoot do
          digest when is_binary(digest) <- Map.get(event, "digest"),
          true <- Regex.match?(@hex_digest, digest) and digest == CanonicalJCS.digest(payload),
          true <- is_map(next_value),
-         {:ok, next} <- decode_state(next_value, prior.namespace),
+         {:ok, next} <- decode_state(next_value, prior.namespace, prior.version),
          true <- next.sequence == sequence,
          :ok <- verify_rotation(mode, prior, next, payload, signatures, new_signatures, sequence) do
       states = Map.put(Map.get(prior, :states, %{}), next.sequence, snapshot(next))
@@ -134,7 +141,7 @@ defmodule Catena.Governance.TrustRoot do
     end
   end
 
-  defp decode_state(value, namespace) do
+  defp decode_state(value, namespace, version) do
     principals = Map.get(value, "principals")
     roles = Map.get(value, "roles")
     delegations = Map.get(value, "delegations", [])
@@ -148,6 +155,7 @@ defmodule Catena.Governance.TrustRoot do
          {:ok, delegations} <- decode_delegations(delegations, principals, roles),
          {:ok, revocations} <- decode_revocations(revocations, principals, delegations) do
       root = %{
+        version: version,
         namespace: namespace,
         sequence: sequence,
         principals: principals,

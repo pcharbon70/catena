@@ -1,5 +1,5 @@
 defmodule Catena.Governance.Lifecycle do
-  @moduledoc "Immutable Catena 0.1.6 lifecycle replay with signed hash-chain validation."
+  @moduledoc "Immutable versioned governance-lifecycle replay with signed hash-chain validation."
 
   alias Catena.{CanonicalJCS, Diagnostic}
   alias Catena.Governance.{Crypto, TrustRoot}

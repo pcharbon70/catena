@@ -22,7 +22,8 @@ accepted by the source parser or implemented semantic slice.
 flowchart TD
     Start[Start here] --> Tour[Language Tour]
     Tour --> First[Getting Started]
-    First --> Data[Variant Types]
+    First --> Editions[Editions and Previews]
+    Editions --> Data[Variant Types]
     Data --> Match[Pattern Matching]
     Match --> Traits[Traits and Composition]
     Traits --> Effects[Effects and Handlers]
@@ -36,7 +37,8 @@ flowchart TD
     Dev --> IR[Intermediate Representations]
     IR --> Tests[Diagnostics and Testing]
     Tests --> Feature[Adding a Language Feature]
-    Feature --> Contrib[Contributing]
+    Feature --> Lifecycle[Versioning and Feature Lifecycle]
+    Lifecycle --> Contrib[Contributing]
 ```
 
 ## User path
@@ -45,22 +47,25 @@ flowchart TD
    language direction.
 2. [Getting Started](getting-started.md) — install the toolchain, understand a
    source-first example, and run the executable model.
-3. [Variant Types and Structured Data](language/algebraic-data-types.md) —
+3. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
+   pin one exact language contract, inspect retained revisions, understand
+   named feature lifecycle, and read migration diagnostics.
+4. [Variant Types and Structured Data](language/algebraic-data-types.md) —
    model a domain with nominal variants, explicit payloads, and controlled
    module boundaries.
-4. [Pattern Matching](language/pattern-matching.md) — consume data with
+5. [Pattern Matching](language/pattern-matching.md) — consume data with
    ordered, exhaustive clauses and safe conditions.
-5. [Traits and Composition](language/traits-and-composition.md) — use shared
+6. [Traits and Composition](language/traits-and-composition.md) — use shared
    behavior such as `map`, `map2`, and `and_then` without requiring category
    theory terminology.
-6. [Effects and Handlers](language/effects-and-handlers.md) — declare external
+7. [Effects and Handlers](language/effects-and-handlers.md) — declare external
    abilities, request them through lexical capabilities, and interpret them
    with deep affine handlers.
-7. [Specifications](language/specifications.md) — attach typed rules and exact
+8. [Specifications](language/specifications.md) — attach typed rules and exact
    examples to named language subjects.
-8. [Governance](language/governance.md) — understand policy, evidence,
+9. [Governance](language/governance.md) — understand policy, evidence,
    approval, lifecycle, and protected package actions.
-9. [Catena and BEAM](language/catena-and-beam.md) — understand Abstract Format
+10. [Catena and BEAM](language/catena-and-beam.md) — understand Abstract Format
    lowering, module interfaces, companion modules, and the current
    interoperability boundary.
 
@@ -87,6 +92,9 @@ secure key generation, custody, approval collection, and transport.
 - [Adding a Language Feature](development/adding-a-language-feature.md) — the
   end-to-end specification, implementation, verification, and documentation
   workflow.
+- [Versioning and Feature Lifecycle](development/versioning-and-feature-lifecycle.md)
+  — exact semantic selection, retained formats, previews, migration records,
+  signature domains, compatibility tests, and the C008 promotion gate.
 - [Contributing](../CONTRIBUTING.md) — repository setup, change discipline,
   review expectations, and pull-request checklist.
 
@@ -125,10 +133,13 @@ could also appear in the compiler.
 | 0.1.4 | coherent traits, structural derivation, specialization, and erasure |
 | 0.1.5 | lexical effects, deep handlers, affine resumptions, and effect-directed CPS |
 | 0.1.6 | typed specifications, offline governance, assurance artifacts, and total erasure |
+| 0.1.7 | editions, exact revisions, previews, migration records, and selection-bound artifacts |
 
-These versions identify additive semantic slices of the prototype. They are
-not end-user language editions or promises that all ordinary language
-facilities are complete. The compiler package has its own release version;
-`mix.exs` therefore remains `0.1.0`. Retired two-component slice identifiers
+Versions 0.1.1 through 0.1.7 identify completed cumulative semantic slices.
+Version 0.1.7 implements the normative C008 edition and lifecycle contract;
+its immutable promotion evidence is recorded in the research archive. Edition `0.1` is the
+end-user compatibility track; each exact three-component revision selects a
+specific cumulative contract. The compiler package has its own release
+version, so `mix.exs` remains `0.1.0`. Retired two-component slice identifiers
 are rejected rather than normalized because they also occurred in digests and
 signed protocol domains.

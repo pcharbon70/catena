@@ -1,25 +1,32 @@
 defmodule Catena.Interface do
-  @moduledoc "Deterministic, layout-free C002-C006 module interfaces."
+  @moduledoc "Deterministic, layout-free, selection-aware Catena module interfaces."
 
   alias Catena.Categorical.TypeTerm
   alias Catena.Effect.Row
-  alias Catena.{CanonicalJSON, Condition, Diagnostic, Kind, LanguageVersion, Specification}
+
+  alias Catena.{
+    CanonicalJSON,
+    Condition,
+    Diagnostic,
+    Kind,
+    LanguageVersion,
+    Specification
+  }
+
   alias Catena.Type.Scheme
 
   @versions LanguageVersion.interface_versions()
   @categorical_versions LanguageVersion.from(:traits_and_categories)
   @effect_versions LanguageVersion.from(:effects_and_handlers)
-  @pre_categorical_versions LanguageVersion.before(:traits_and_categories) --
-                              [LanguageVersion.introduced(:type_system)]
-  @pre_effect_versions LanguageVersion.before(:effects_and_handlers) --
-                         [LanguageVersion.introduced(:type_system)]
-  @pre_specification_versions LanguageVersion.before(:specifications_and_governance) --
-                                [LanguageVersion.introduced(:type_system)]
-  @specification_version LanguageVersion.introduced(:specifications_and_governance)
+  @pre_categorical_versions LanguageVersion.before(:traits_and_categories)
+  @pre_effect_versions LanguageVersion.before(:effects_and_handlers)
+  @pre_specification_versions LanguageVersion.before(:specifications_and_governance)
+  @specification_versions LanguageVersion.from(:specifications_and_governance)
+  @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
   @claim_subject_kinds ~w(value datatype trait instance effect handler module output interface action profile)
 
-  @spec build(map()) :: map()
-  def build(core) do
+  @spec build(map(), keyword()) :: map()
+  def build(core, options \\ []) do
     values =
       core.definitions
       |> Enum.filter(&(&1.name in core.exports))
@@ -45,10 +52,20 @@ defmodule Catena.Interface do
       |> Enum.map(&encode_datatype/1)
       |> Enum.sort_by(& &1["id"])
 
+    artifact_version =
+      Keyword.get(
+        options,
+        :artifact_version,
+        LanguageVersion.default_artifact_version(
+          Map.get(core, :frontend_format, core.frontend_version),
+          Map.get(core, :language_revision, core.frontend_version)
+        )
+      )
+
     payload =
       %{
         "format" => "catena-interface",
-        "version" => LanguageVersion.internal_representation(core.frontend_version),
+        "version" => artifact_version,
         "origin" => core.origin,
         "module" => core.module,
         "types" => types,
@@ -57,6 +74,7 @@ defmodule Catena.Interface do
       |> categorical_payload(core)
       |> effect_payload(core)
       |> specification_payload(core)
+      |> selection_payload(core, artifact_version)
 
     Map.put(payload, "digest", digest(payload))
   end
@@ -70,18 +88,23 @@ defmodule Catena.Interface do
          true <- is_map(value),
          version when version in @versions <- Map.get(value, "version"),
          "catena-interface" <- Map.get(value, "format"),
+         {:ok, selection, required_previews} <- decode_selection(value, version),
          digest when is_binary(digest) <- Map.get(value, "digest"),
          payload = Map.delete(value, "digest"),
          true <- secure_equal?(digest, digest(payload)),
          {:ok, types} <- decode_types(Map.get(value, "types"), value),
          {:ok, values} <- decode_values(Map.get(value, "values"), types),
-         {:ok, categorical} <- decode_categorical(value, version),
-         {:ok, effects} <- decode_effects(value, version),
-         {:ok, specifications} <- decode_specifications(value, version) do
+         {:ok, categorical} <- decode_categorical(value, selection.language_revision),
+         {:ok, effects} <- decode_effects(value, selection.language_revision),
+         {:ok, specifications} <- decode_specifications(value, selection.language_revision) do
       {:ok,
        Map.merge(
          %{
            version: version,
+           edition: selection.edition,
+           language_revision: selection.language_revision,
+           previews: selection.previews,
+           required_previews: required_previews,
            origin: Map.fetch!(value, "origin"),
            module: Map.fetch!(value, "module"),
            digest: digest,
@@ -150,9 +173,10 @@ defmodule Catena.Interface do
   defp effect_payload(payload, _core), do: payload
 
   defp specification_payload(payload, %{
-         frontend_version: @specification_version,
+         frontend_version: version,
          specifications: specifications
-       }) do
+       })
+       when version in @specification_versions do
     Map.merge(payload, %{
       "claims" => Specification.interface_payload(specifications),
       "specification_digest" => specifications.digest
@@ -160,6 +184,17 @@ defmodule Catena.Interface do
   end
 
   defp specification_payload(payload, _core), do: payload
+
+  defp selection_payload(payload, core, @edition_version) do
+    Map.merge(payload, %{
+      "edition" => core.edition,
+      "language_revision" => core.language_revision,
+      "previews" => core.previews,
+      "required_previews" => core.required_previews
+    })
+  end
+
+  defp selection_payload(payload, _core, _version), do: payload
 
   defp encode_effect_family(family) do
     %{
@@ -463,7 +498,7 @@ defmodule Catena.Interface do
   defp decode_specifications(_value, version) when version in @pre_specification_versions,
     do: {:ok, %{claims: [], specification_digest: nil}}
 
-  defp decode_specifications(value, @specification_version) do
+  defp decode_specifications(value, version) when version in @specification_versions do
     claims = Map.get(value, "claims")
     digest = Map.get(value, "specification_digest")
 
@@ -488,6 +523,29 @@ defmodule Catena.Interface do
   end
 
   defp valid_claim_summary?(_claim), do: false
+
+  defp decode_selection(value, @edition_version) do
+    required = Map.get(value, "required_previews")
+
+    with {:ok, selection} <- LanguageVersion.resolve_selection(value),
+         true <- sorted_string_list?(required),
+         true <- MapSet.subset?(MapSet.new(required), MapSet.new(selection.previews)) do
+      {:ok, selection, required}
+    else
+      {:error, %Diagnostic{} = diagnostic} -> {:error, diagnostic}
+      _ -> error("interface requires sorted preview selection and public requirements")
+    end
+  end
+
+  defp decode_selection(_value, version) do
+    selection = LanguageVersion.legacy_selection(version)
+    {:ok, selection, []}
+  end
+
+  defp sorted_string_list?(values),
+    do:
+      is_list(values) and Enum.all?(values, &is_binary/1) and
+        values == Enum.sort(Enum.uniq(values))
 
   defp valid_claim_example?(%{
          "name" => name,

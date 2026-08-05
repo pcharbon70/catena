@@ -7,6 +7,10 @@ defmodule Catena.Report do
   def module(core) do
     %{
       version: core.version,
+      edition: core.edition,
+      language_revision: core.language_revision,
+      previews: core.previews,
+      diagnostics: Enum.map(Map.get(core, :diagnostics, []), &diagnostic/1),
       module: core.module,
       profile: Atom.to_string(core.profile),
       types:
@@ -33,7 +37,9 @@ defmodule Catena.Report do
       id: diagnostic.id,
       message: diagnostic.message,
       path: diagnostic.path,
-      details: diagnostic.details
+      severity: Atom.to_string(diagnostic.severity),
+      details: diagnostic.details,
+      fixes: diagnostic.fixes
     }
   end
 
