@@ -22,6 +22,11 @@ convenient. Add a versioned rule with explicit compatibility behavior.
 Follow the research repository's
 [Specification Authority](https://github.com/pcharbon70/catena-research/blob/main/SPECIFICATION-AUTHORITY.md):
 a larger version number is not an implicit replacement.
+Use its
+[Conformance Vocabulary](https://github.com/pcharbon70/catena-research/blob/main/CONFORMANCE-VOCABULARY.md)
+for requirement words, invalidity, variation, limits, and explicit runtime
+failure. Review the current [compiler profile](../../CONFORMANCE.md) before
+introducing or changing any implementation choice.
 
 ## Research and specify first
 
@@ -43,6 +48,13 @@ applicable specification rather than embed rationale as accidental behavior.
 Every implementation obligation and conflict report should cite the exact
 normative document and heading. Reference evaluators, tests, and existing
 compiler behavior cannot fill a gap or ambiguity in that text.
+
+If a rule introduces an implementation-defined choice, enumerate every allowed
+value and define how an implementation publishes it. That first real choice
+also triggers machine-readable conformance output. Keep `SHOULD` for quality or
+implementation technique, and record any deviation and rationale in
+`CONFORMANCE.md`; a deviation cannot change safety or observable language
+semantics.
 
 ## Design the public words with the semantics
 
@@ -266,7 +278,8 @@ At minimum, include:
 ## Update the learning path
 
 Update the root README, `LANGUAGE-TOUR.md`, guide index, relevant task guide,
-developer architecture, and current-boundary lists. Examples must distinguish:
+developer architecture, current-boundary lists, and `CONFORMANCE.md` when the
+implementation disclosure changes. Examples must distinguish:
 
 - executable JSON or CLI commands;
 - illustrative future source notation;
@@ -307,6 +320,8 @@ changes.
 - interfaces and old versions behave deliberately;
 - reference/differential evidence exists where appropriate;
 - diagnostic and deterministic limits are stable;
+- the compiler profile discloses every choice, recommendation disposition,
+  bounded presentation variation, and limit;
 - runtime and erasure behavior are inspected;
 - previous suites pass unchanged;
 - guide and tour language matches normative status; and

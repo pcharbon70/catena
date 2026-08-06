@@ -89,6 +89,9 @@ secure key generation, custody, approval collection, and transport.
   assurance records.
 - [Diagnostics and Testing](development/diagnostics-and-testing.md) — stable
   error families and the layered conformance strategy.
+- [Compiler Conformance Profile](../CONFORMANCE.md) — the bootstrap release,
+  supported revisions, selected optional paths, recommendation dispositions,
+  presentation latitude, and published implementation limits.
 - [Adding a Language Feature](development/adding-a-language-feature.md) — the
   end-to-end specification, implementation, verification, and documentation
   workflow.
@@ -110,6 +113,11 @@ The research repository's
 defines which documents control. Only an applicable `status: normative`
 specification chapter defines the language. A version number does not select a
 winner unless normative text explicitly states applicability or replacement.
+The companion
+[Conformance Vocabulary](https://github.com/pcharbon70/catena-research/blob/main/CONFORMANCE-VOCABULARY.md)
+defines canonical requirement words and behavior classes. The local
+[compiler profile](../CONFORMANCE.md) discloses implementation choices and
+limits against those rules; it remains evidence rather than authority.
 
 Conformance requirements, executable reference paths, compiler tests,
 immutable implementation records, and compiler behavior are evidence against

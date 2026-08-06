@@ -12,13 +12,18 @@ Before changing code, read:
 2. [Compiler Architecture](guides/development/compiler-architecture.md);
 3. [Intermediate Representations](guides/development/intermediate-representations.md);
 4. [Diagnostics and Testing](guides/development/diagnostics-and-testing.md); and
-5. the applicable
+5. the current [compiler conformance profile](CONFORMANCE.md); and
+6. the applicable
    [normative specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification).
 
 The research repository's
 [Specification Authority](https://github.com/pcharbon70/catena-research/blob/main/SPECIFICATION-AUTHORITY.md)
 defines document status, rendered labels, exact rule citations, and conflict
 handling.
+Its [Conformance Vocabulary](https://github.com/pcharbon70/catena-research/blob/main/CONFORMANCE-VOCABULARY.md)
+defines the five canonical requirement words and the behavior classes used in
+specification and contributor material. The local profile discloses this
+implementation's choices, deviations, and limits; it does not amend a rule.
 
 For a new semantic feature, follow
 [Adding a Language Feature](guides/development/adding-a-language-feature.md).
@@ -68,6 +73,10 @@ artifact, signature-domain, guide, and conformance boundary only as its own
 contract requires, and preserve historical bytes.
 Do not infer ordering or replacement from the number alone; the normative
 specification must still state applicability explicitly.
+
+C007 and C009 are repository-governance milestones and do not consume language
+revisions. After implemented revision `0.1.7`, the next semantic slice remains
+`0.1.8`.
 
 ### Internal refactor
 
@@ -221,6 +230,8 @@ before disclosure.
 - [ ] Backend output preserves order, identity, and effects.
 - [ ] OTP 29 Abstract Format remains the sole BEAM path.
 - [ ] Diagnostics have stable IDs, paths, and repair details.
+- [ ] `CONFORMANCE.md` discloses every changed permission, recommendation
+      disposition, presentation choice, and implementation limit.
 - [ ] Deterministic limits and outputs are tested.
 - [ ] Runtime/reference or policy/reference paths remain independent.
 - [ ] Interfaces, package artifacts, and assurance binding are tested when affected.

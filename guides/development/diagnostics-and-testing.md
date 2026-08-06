@@ -8,6 +8,11 @@ Tests are not language authority. The research repository's
 [Specification Authority](https://github.com/pcharbon70/catena-research/blob/main/SPECIFICATION-AUTHORITY.md)
 requires each disputed or conformance-sensitive expectation to cite the
 applicable normative document and heading.
+The companion
+[Conformance Vocabulary](https://github.com/pcharbon70/catena-research/blob/main/CONFORMANCE-VOCABULARY.md)
+defines invalid input, implementation limits, explicit traps, and bounded
+presentation variation. The current implementation's choices and limits are
+published in [CONFORMANCE.md](../../CONFORMANCE.md).
 
 ## Diagnostic contract
 
@@ -89,6 +94,11 @@ Technical details: no coherent instance evidence for MultiMapper Report.
 The headline names the operation and requirement. The explanation names the
 dependency choice. The final line preserves the exact internal fact without
 making it prerequisite vocabulary.
+
+Formal labels such as “invalid,” “implementation limit,” and “explicit trap”
+belong in specifications, contributor material, and optional technical detail.
+Routine diagnostics should continue to say what the programmer attempted, why
+it failed, and how to repair it in approachable Catena vocabulary.
 
 ## A useful diagnostic answers four questions
 
@@ -245,6 +255,8 @@ supported useful case and the first rejected over-budget case.
 
 Budget exhaustion must retain its own diagnostic; it is not evidence that a
 match is non-exhaustive, a rule is false, or a policy explicitly denied.
+Keep every active budget and its outcome synchronized with the published
+[compiler conformance profile](../../CONFORMANCE.md).
 
 ## Adding a diagnostic
 
@@ -267,7 +279,8 @@ match is non-exhaustive, a rule is false, or a policy explicitly denied.
 - generated outputs are deterministic where required;
 - the sole OTP form-compiler call remains sole;
 - `git diff --check` passes;
-- the worktree contains no generated escript or temporary artifacts; and
-- documentation links point to the current normative status.
+- the worktree contains no generated escript or temporary artifacts;
+- documentation links point to the current normative status; and
+- `CONFORMANCE.md` reflects every affected choice, deviation, and limit.
 
 Continue with [Adding a Language Feature](adding-a-language-feature.md).
