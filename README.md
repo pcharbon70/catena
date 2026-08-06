@@ -46,6 +46,10 @@ This repository provides the executable model and conformance evidence for
 that specification. The research repository's
 [Specification Authority](https://github.com/pcharbon70/catena-research/blob/main/SPECIFICATION-AUTHORITY.md)
 defines document status, content labels, rule citations, and conflict handling.
+The repository's [Conformance Vocabulary](https://github.com/pcharbon70/catena-research/blob/main/CONFORMANCE-VOCABULARY.md)
+defines requirement words and behavior classes. This compiler's versioned
+[conformance profile](CONFORMANCE.md) publishes its supported revisions,
+permitted choices, recommendation dispositions, and finite limits.
 
 To explore the language as a programmer, begin with the
 [Catena Language Tour](LANGUAGE-TOUR.md). It introduces the language model,
@@ -66,6 +70,11 @@ executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
 identifies the compiler package, not the language accepted by a particular
 input.
+
+C007 specification authority and C009 conformance vocabulary are repository
+governance milestones, not semantic language slices. Neither consumes a
+language revision. The next semantic slice therefore begins at the next unused
+revision, `0.1.8`.
 
 The former two-component prototype identifiers are retired and are not input
 aliases. Update unsigned JSON AST inputs mechanically, then rebuild interfaces
