@@ -1,7 +1,7 @@
 # Compiler Architecture
 
 This guide explains the Elixir bootstrap compiler as an implementation of the
-C001 through C006 and C008 normative slices plus the candidate C010 kernel. The compiler is
+C001 through C006, C008, and C010 normative slices. The compiler is
 intentionally small and explicit: semantic checks occur before backend
 lowering, independently rechecked evidence protects important boundaries,
 and OTP 29 owns `.beam` generation.
@@ -109,7 +109,7 @@ condition-lowering selection, resolved language selection, diagnostics, and
 artifact version.
 
 `Catena.check_kernel/2` and `Catena.compile_kernel/2` provide the parallel
-candidate 0.1.8 boundary. Kernel compilation always uses its fixed layout and
+normative 0.1.8 boundary. Kernel compilation always uses its fixed layout and
 returns the unified core and 0.1.8 interface in metadata.
 
 ### CLI

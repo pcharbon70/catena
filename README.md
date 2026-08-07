@@ -35,11 +35,11 @@ The clean rewrite contains executable normative type-system,
 data-and-pattern, clause-condition, trait/categorical-operation,
 effect-handler, and 0.1.6 specification-and-governance slices. It also
 contains the executable normative 0.1.7 editions-and-feature-lifecycle slice,
-whose immutable promotion evidence is recorded in the research archive. A
-candidate 0.1.8 formal semantic kernel is also implemented: it adds an exact
+whose immutable promotion evidence is recorded in the research archive. The
+normative 0.1.8 formal semantic kernel is also implemented: it adds an exact
 S-expression conformance input, structural rows, a unified independently
-verified core, a small-step reference machine, and typed local actors. It is
-candidate evidence until its immutable promotion gate is authorized. The
+verified core, a small-step reference machine, and typed local actors. Its
+immutable promotion evidence is recorded in the research archive. The
 bootstrap toolchain is written in
 Elixir 1.20.2 on Erlang/OTP 29.0.4 and targets only the BEAM VM. It does not
 reuse the historical proof-of-concept's compiler or language design.
@@ -69,7 +69,7 @@ and compiler developer documentation. Contributors should also read
 
 Catena's current language line is `0.1`. Completed semantic slices increment
 its patch component: C001 through C006 are therefore `0.1.1` through `0.1.6`.
-Normative C008 is implemented at `0.1.7`; candidate C010 uses `0.1.8`.
+Normative C008 is implemented at `0.1.7`; normative C010 uses `0.1.8`.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -78,8 +78,7 @@ input.
 
 C007 specification authority and C009 conformance vocabulary are repository
 governance milestones, not semantic language slices. Neither consumes a
-language revision. If C010 is promoted, the next semantic slice begins at
-`0.1.9`.
+language revision. The next semantic slice begins at `0.1.9`.
 
 The former two-component prototype identifiers are retired and are not input
 aliases. Update unsigned JSON AST inputs mechanically, then rebuild interfaces
@@ -122,7 +121,7 @@ flowchart LR
 ```
 
 The JSON AST is a retained versioned toolchain input, not proposed Catena
-surface syntax. Revision 0.1.8 adds a candidate S-expression kernel input, but
+surface syntax. Revision 0.1.8 adds a normative S-expression kernel input, but
 not the later ergonomic, layout-sensitive frontend. The backend does not emit
 Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
@@ -259,7 +258,7 @@ multi-shot control, programmable patterns, runtime assurance
 monitors, stronger proof methods, long-term governance migration, package
 distribution, or foreign-term validation. JSON remains the bootstrap boundary
 for revisions 0.1.1 through 0.1.7; the exact kernel format is the separate
-0.1.8 candidate boundary.
+normative 0.1.8 boundary.
 
 ## Build and test
 
@@ -323,7 +322,7 @@ IDs. See [Editions, Revisions, and Previews](guides/language/editions-and-previe
 
 ## Intended evolution
 
-Elixir is the bootstrap implementation language through candidate C010; it is
+Elixir is the bootstrap implementation language through normative C010; it is
 not part of Catena's target semantics. Self-hosting is tracked separately as
 G141 for a late 0.x milestone, after Catena can express the compiler's required
 module, data, error, build, and interoperability facilities. The planned

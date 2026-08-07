@@ -75,9 +75,8 @@ Do not infer ordering or replacement from the number alone; the normative
 specification must still state applicability explicitly.
 
 C007 and C009 are repository-governance milestones and do not consume language
-revisions. Candidate C010 occupies `0.1.8`; after its promotion, the next
-semantic slice uses `0.1.9` unless an approved versioning policy changes the
-prototype convention.
+revisions. Normative C010 occupies `0.1.8`; the next semantic slice uses
+`0.1.9` unless an approved versioning policy changes the prototype convention.
 
 ### Internal refactor
 

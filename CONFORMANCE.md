@@ -24,18 +24,19 @@ affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.7`; candidate `0.1.8` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.8` |
 | Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
 C009 remains a repository-governance milestone and did not consume a language
-revision. Candidate C010 uses `0.1.8` without changing compiler release
+revision. Normative C010 uses `0.1.8` without changing compiler release
 `0.1.0`. It adds a separate kernel frontend, 0.1.8 interface and compile
 metadata, public kernel CLI commands, and fixed kernel BEAM representations;
 the retained JSON, package, governance, and historical signature formats are
-unchanged. C010 is not a conformance claim until its immutable promotion gate
-is complete.
+unchanged. Its explicitly authorized immutable compiler identity and
+post-commit evidence are recorded in the
+[C010 conformance journal](https://github.com/pcharbon70/catena-research/blob/main/50-journal/2026-08-06-c010-formal-semantic-kernel.md).
 
 Format 1 is intentionally human-readable. Catena will add machine-readable
 conformance output when the first genuine implementation-defined choice is

@@ -91,7 +91,7 @@ identify their protocol location.
 
 ## Exact 0.1.8 kernel module
 
-The candidate kernel frontend consumes one closed S-expression module. Tokens
+The normative kernel frontend consumes one closed S-expression module. Tokens
 and compound forms carry half-open byte/line/column spans. Its declaration and
 expression grammar is versioned separately from JSON, and the JSON decoder
 does not accept revision 0.1.8.

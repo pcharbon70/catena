@@ -2,10 +2,9 @@ defmodule Catena.LanguageVersion do
   @moduledoc """
   Canonical prototype language-slice versions.
 
-  Catena's current language line is `0.1`. Each implemented semantic slice,
-  including a candidate awaiting its immutable promotion gate, reserves the
-  next patch component. Compiler-package releases are versioned independently
-  in `mix.exs`.
+  Catena's current language line is `0.1`. Each implemented semantic slice
+  uses the next patch component. Compiler-package releases are versioned
+  independently in `mix.exs`.
   """
 
   alias Catena.{Diagnostic, LanguageLifecycle, LanguageSelection}

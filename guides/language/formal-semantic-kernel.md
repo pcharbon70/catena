@@ -2,8 +2,9 @@
 
 Catena 0.1.8 has an exact S-expression input for conformance work. It is an
 executable semantic kernel, not the future ergonomic source language. The
-candidate compiler implementation and chapters remain non-normative until the
-C010 immutable promotion gate is authorized and recorded.
+normative chapters and explicitly authorized immutable compiler evidence are
+recorded in the
+[C010 conformance journal](https://github.com/pcharbon70/catena-research/blob/main/50-journal/2026-08-06-c010-formal-semantic-kernel.md).
 
 ## What the kernel integrates
 
@@ -161,7 +162,7 @@ result has no source form to identify. Programmer-facing messages continue to
 use ordinary words such as record, variant, process, message, receive, and
 trap.
 
-The exact candidate grammar and semantics are in the
+The exact normative grammar and semantics are in the
 [0.1.8 formal semantic kernel chapters](https://github.com/pcharbon70/catena-research/tree/main/60-specification/formal-semantic-kernel).
 Continue with [Catena and BEAM](catena-and-beam.md) for the shared backend
 boundary.

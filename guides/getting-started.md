@@ -9,7 +9,7 @@ general-purpose source-language distribution.
 The repository contains an Elixir bootstrap compiler that can:
 
 - decode versioned Catena JSON AST 0.1.1 through 0.1.7;
-- parse the exact candidate 0.1.8 semantic-kernel S-expression with source
+- parse the exact normative 0.1.8 semantic-kernel S-expression with source
   spans;
 - infer and check types, data, patterns, conditions, traits, effects, and
   typed specifications;
@@ -20,7 +20,7 @@ The repository contains an Elixir bootstrap compiler that can:
 - build artifact-bound assurance manifests for 0.1.6 and 0.1.7 packages; and
 - execute the normative 0.1.7 edition, exact-revision, preview-lifecycle, and
   selection-binding contract; and
-- check and run candidate 0.1.8 structural rows, handlers, typed local actors,
+- check and run normative 0.1.8 structural rows, handlers, typed local actors,
   process-local traps, and bounded schedule exploration.
 
 It does not yet contain an ergonomic Catena source parser, formatter, REPL, package

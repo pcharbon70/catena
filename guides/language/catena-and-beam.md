@@ -17,7 +17,7 @@ describe lowering with typed core, CPS workers, Erlang Abstract Format, and
 BEAM modules. The latter are implementation representations, not extra source
 concepts.
 
-The candidate 0.1.8 kernel implements `process`; the wider concurrency
+The normative 0.1.8 kernel implements `process`; the wider concurrency
 vocabulary remains distinct:
 
 | Public word | Runtime relationship |
@@ -178,7 +178,7 @@ Both layouts must behave like the same reference value. `.cati.json`
 interfaces omit layout information so dependent Catena modules cannot couple
 themselves to tuple positions or tags.
 
-The candidate kernel intentionally has one fixed lowering: maps for structural
+The normative kernel intentionally has one fixed lowering: maps for structural
 records, tagged three-tuples for structural variants, and a tagged tuple with a
 field tuple for regular nominal constructor values. These are conformance
 backend facts for exact 0.1.8, not foreign construction or inspection APIs.
@@ -276,7 +276,7 @@ Implemented and tested:
 - cross-module Catena compilation through `.cati.json` interfaces;
 - direct specialized calls in companion modules;
 - hidden effect-handler ABI generated from verified interfaces;
-- candidate 0.1.8 public process-entry interfaces and local BEAM actor
+- normative 0.1.8 public process-entry interfaces and local BEAM actor
   execution; and
 - artifact binding and offline assurance verification.
 

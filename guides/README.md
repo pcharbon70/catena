@@ -65,7 +65,7 @@ flowchart TD
    with deep affine handlers.
 8. [Formal Semantic Kernel](language/formal-semantic-kernel.md) — run the exact
    0.1.8 conformance input and understand structural rows, the small-step
-   machine, typed actors, fixed layouts, and candidate status.
+   machine, typed actors, fixed layouts, and normative conformance evidence.
 9. [Specifications](language/specifications.md) — attach typed rules and exact
    examples to named language subjects.
 10. [Governance](language/governance.md) — understand policy, evidence,
@@ -148,7 +148,7 @@ could also appear in the compiler.
 | 0.1.6 | typed specifications, offline governance, assurance artifacts, and total erasure |
 | 0.1.7 | editions, exact revisions, previews, migration records, and selection-bound artifacts |
 
-Versions 0.1.1 through 0.1.7 identify completed cumulative semantic slices.
+Versions 0.1.1 through 0.1.8 identify completed cumulative semantic slices.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;
 its immutable promotion evidence is recorded in the research archive. Edition `0.1` is the
 end-user compatibility track; each exact three-component revision selects a

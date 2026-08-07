@@ -301,7 +301,7 @@ for the exact contract.
 
 ## The executable formal kernel and typed actors
 
-Candidate revision 0.1.8 integrates the executable portions of the earlier
+Normative revision 0.1.8 integrates the executable portions of the earlier
 semantic slices with structural records and variants in one exact
 S-expression module. It adds named local process entries and a send-only
 `Process M` handle. Messages must be closed first-order values; ordinary
@@ -319,8 +319,8 @@ exploration. The production path lowers the same verified meaning through
 fixed maps/tagged tuples and OTP 29 Abstract Format. See the
 [Formal Semantic Kernel guide](guides/language/formal-semantic-kernel.md).
 
-These chapters and this implementation remain candidate evidence until the
-C010 immutable promotion gate is explicitly authorized and recorded.
+The explicitly authorized C010 immutable compiler identity and post-commit
+evidence are recorded in the research archive.
 
 ## From Catena to BEAM
 
@@ -382,7 +382,7 @@ The compiler writes an OTP-generated `.beam` and a deterministic
 `.cati.json` module interface beside the input. The JSON is an explicit
 bootstrap representation, not a preview of intended Catena source syntax.
 
-The candidate kernel fixture can be checked directly:
+The normative kernel fixture can be checked directly:
 
 ```bash
 ./catena check-kernel test/fixtures/c010-kernel.catena
@@ -440,8 +440,8 @@ Catena does not yet provide an ergonomic source parser, formatter, REPL,
 end-user package manager, complete standard library, distributed or supervised
 concurrency, resource-scope semantics, exception boundary, foreign-term
 validation, or finalized surface grammar. The compiler is valuable today as a
-deterministic executable model of the completed and candidate specification
-slices—not yet as a general-purpose language toolchain.
+deterministic executable model of the completed specification slices—not yet
+as a general-purpose language toolchain.
 
 Continue with the [Catena Guides](guides/README.md) for detailed user tasks,
 governance operations, BEAM boundaries, and compiler development.
