@@ -8,12 +8,17 @@ defmodule Catena.LanguageVersionTest do
 
   test "prototype slices use one ordered 0.1 patch sequence" do
     assert LanguageVersion.all() ==
+             ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8)
+
+    assert LanguageVersion.json_frontend_versions() ==
              ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7)
 
-    assert LanguageVersion.interface_versions() ==
-             ~w(0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7)
+    assert LanguageVersion.kernel_frontend_versions() == ["0.1.8"]
 
-    assert LanguageVersion.latest() == "0.1.7"
+    assert LanguageVersion.interface_versions() ==
+             ~w(0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8)
+
+    assert LanguageVersion.latest() == "0.1.8"
     assert LanguageVersion.internal_representation("0.1.1") == "0.1.2"
     assert LanguageVersion.default_artifact_version("0.1.1", "0.1.1") == "0.1.2"
     assert LanguageVersion.default_artifact_version("0.1.6", "0.1.6") == "0.1.6"
@@ -25,7 +30,7 @@ defmodule Catena.LanguageVersionTest do
   end
 
   test "every current AST slice is accepted and every retired identifier is rejected" do
-    for version <- LanguageVersion.all() do
+    for version <- LanguageVersion.json_frontend_versions() do
       document =
         %{
           "version" => version,

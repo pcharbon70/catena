@@ -23,6 +23,7 @@ Every public failure is a `Catena.Diagnostic` with:
   id: "M001",
   message: "match is not exhaustive",
   path: "$.definitions[0].body",
+  span: nil,
   severity: :error,
   details: %{witness: "Option.Some(_)"},
   fixes: []
@@ -32,6 +33,8 @@ Every public failure is a `Catena.Diagnostic` with:
 - `id` is the stable machine category.
 - `message` explains the immediate problem.
 - `path` identifies a JSON-AST, interface, package, or governance location.
+- `span` identifies a half-open byte/line/column range in exact 0.1.8 kernel
+  input; retained JSON and protocol diagnostics may leave it absent.
 - `severity` distinguishes a default error from a warning that policy may
   promote to failure without changing its ID.
 - `details` carries structured evidence such as witnesses, expected/observed
@@ -61,6 +64,7 @@ may improve without changing the contract.
 | `ERS...` | verification or governance material escaping erasure |
 | `LNK...` | package manifest and specialization/linking |
 | `EDN...` / `PRV...` / `DEP...` | edition selection, preview propagation, migration, deprecation |
+| `SYN...` / `PRC...` | exact kernel syntax/limits and typed process boundaries |
 | `B...` | OTP rejecting generated Erlang Abstract Format |
 | `I...` | inference-independent core invariant failure |
 
@@ -126,11 +130,12 @@ and warnings in structured details.
 | `c005_effects_test.exs` | lexical capabilities, deep handlers, affine resume, CPS, reference traces |
 | `c006_specification_governance_test.exs` | rules, evidence, JCS, Ed25519, policy oracle, lifecycle, artifact transactions |
 | `c008_editions_lifecycle_test.exs` | exact pins, feature lifecycle, migration diagnostics, selection binding, versioned signatures |
+| `c010_formal_semantic_kernel_test.exs` | exact parsing/spans, unified judgments, rows, actors, schedule exploration, interfaces, forged evidence, reference/BEAM agreement |
 | `resumption_token_test.exs` | dynamic one-use continuation defense |
 
-Tests construct JSON programs directly in Elixir. That is intentional: they
-test the semantic frontend without pretending that source punctuation has been
-selected.
+Retained-slice tests construct JSON programs directly in Elixir. The C010
+corpus instead parses exact kernel S-expressions; that punctuation is fixed for
+the semantic kernel but is not presented as the ergonomic source frontend.
 
 ## Run the suite
 
@@ -147,6 +152,7 @@ Run one slice while developing:
 
 ```bash
 asdf exec mix test test/catena/c005_effects_test.exs --trace
+asdf exec mix test test/catena/c010_formal_semantic_kernel_test.exs --trace
 ```
 
 Always run the complete suite before handoff. A new slice must leave older
@@ -181,6 +187,8 @@ semantics with generated BEAM:
 - native versus ordinary condition lowering;
 - free-request effect evaluator versus CPS BEAM; and
 - values plus traces when order, forwarding, resume, or abort is observable.
+- kernel values, explicit traps, proper tail calls, process traces, selective
+  receive, and bounded schedule outcome sets.
 
 Do not implement the reference path by calling the production dispatch or
 policy helper. Shared implementation would let one bug make both answers agree.

@@ -24,7 +24,7 @@ defmodule Catena.C008EditionsLifecycleTest do
 
     assert info["current"] == %{
              "edition" => "0.1",
-             "language_revision" => "0.1.7",
+             "language_revision" => "0.1.8",
              "previews" => []
            }
 
@@ -102,7 +102,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     assert {:ok, %LanguageSelection{}} =
              LanguageVersion.resolve_selection(selection("0.1.7"))
 
-    for value <- ["0.1", "0.1.7-preview", "0.1.07", "latest", "0.1.8"] do
+    for value <- ["0.1", "0.1.7-preview", "0.1.07", "latest", "0.1.9"] do
       assert {:error, %{id: "EDN001", path: "$.language_revision"}} =
                LanguageVersion.resolve_selection(selection(value))
     end
@@ -269,7 +269,7 @@ defmodule Catena.C008EditionsLifecycleTest do
   test "0.1.7 package manifests require exact selection and legacy manifests report safe additions" do
     manifest = package_manifest("C008Manifest", "0.1.7")
     assert {:ok, decoded} = manifest |> JSON.encode!() |> Manifest.decode()
-    assert decoded.selection == LanguageVersion.current_selection()
+    assert decoded.selection == LanguageVersion.legacy_selection("0.1.7")
 
     assert {:error, %{id: "EDN001"}} =
              manifest
@@ -309,7 +309,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     migrated = legacy |> Map.put("version", "0.1.7") |> Map.merge(selection("0.1.7"))
     assert {:ok, migrated_decoded} = migrated |> JSON.encode!() |> Manifest.decode()
     assert migrated_decoded.artifact_version == "0.1.7"
-    assert migrated_decoded.selection == LanguageVersion.current_selection()
+    assert migrated_decoded.selection == LanguageVersion.legacy_selection("0.1.7")
   end
 
   test "making a legacy manifest selection explicit preserves all output bytes" do
@@ -378,7 +378,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     File.write!(manifest_path, package_manifest("C008Package", "0.1.7") |> JSON.encode!())
 
     assert {:ok, first} = Linker.compile_manifest(manifest_path)
-    assert first.selection == LanguageVersion.current_selection()
+    assert first.selection == LanguageVersion.legacy_selection("0.1.7")
     assert first.artifact_version == "0.1.7"
     assert first.diagnostics == []
     assert File.exists?(first.output)

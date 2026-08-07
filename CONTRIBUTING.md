@@ -75,8 +75,9 @@ Do not infer ordering or replacement from the number alone; the normative
 specification must still state applicability explicitly.
 
 C007 and C009 are repository-governance milestones and do not consume language
-revisions. After implemented revision `0.1.7`, the next semantic slice remains
-`0.1.8`.
+revisions. Candidate C010 occupies `0.1.8`; after its promotion, the next
+semantic slice uses `0.1.9` unless an approved versioning policy changes the
+prototype convention.
 
 ### Internal refactor
 
@@ -130,6 +131,8 @@ behavior, even when tested and released, never silently amends Catena.
 ## Preserve architectural boundaries
 
 1. Decode protocol shape in `Catena.AST.Decoder`.
+   Decode exact 0.1.8 kernel syntax in `Catena.Kernel.Parser`; do not route it
+   through the retained JSON decoder.
 2. Resolve types, effects, identities, and selections during elaboration.
 3. Recheck proof-relevant facts independently in typed core or the dedicated
    verifier.
@@ -142,6 +145,9 @@ behavior, even when tested and released, never silently amends Catena.
 8. Remove verification-only and governance material before BEAM generation.
 9. Bind a resolved 0.1.7 language selection into interfaces, specialization,
    compile metadata, assurance, approvals, and policy without runtime dispatch.
+10. Keep `Catena.Kernel.Stepper` and `Catena.Kernel.Explorer` independent from
+    `Catena.Kernel.Backend`, and recheck every 0.1.8 core node in
+    `Catena.Kernel.Verifier` before either path consumes it.
 
 ## Tests
 
@@ -149,6 +155,12 @@ During development, run the focused test file:
 
 ```bash
 asdf exec mix test test/catena/c003_clause_condition_test.exs --trace
+```
+
+For the 0.1.8 kernel, use:
+
+```bash
+asdf exec mix test test/catena/c010_formal_semantic_kernel_test.exs --trace
 ```
 
 Before committing or requesting review, run:
@@ -187,9 +199,10 @@ Update documentation in the same change when behavior or navigation changes:
 - `guides/` for task and developer explanations; and
 - `catena-research` for normative or research changes.
 
-Label Catena source examples as illustrative until the source parser and
-surface grammar are normative. Executable examples should use current JSON AST
-or tests.
+Label ergonomic Catena examples as illustrative until that frontend is
+normative. Executable examples may use retained JSON AST or the exact 0.1.8
+kernel S-expression; never present the kernel syntax as the final ergonomic
+surface language.
 
 ## Pull-request description
 
