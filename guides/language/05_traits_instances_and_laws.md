@@ -1,7 +1,7 @@
 # 5. Traits, instances, and laws
 
 Concrete transforms are easy to understand: `zone_fee` knows about `Zone`,
-and `validate_weight` knows about `Natural`. Reuse becomes more interesting
+and `validate_weight` knows about `Int`. Reuse becomes more interesting
 when several unrelated types support the same kind of behavior.
 
 A **trait** names that behavior without choosing a representation. An
@@ -22,13 +22,13 @@ name the single operation the pricing code needs:
 
 ```catena
 trait Chargeable a where
-  charge : a -> Natural
+  charge : a -> Int
 end
 ```
 
 The type parameter `a` stands for whichever type supplies an instance.
 `Chargeable` does not say how a value stores pricing data. It only promises
-that `charge` can turn such a value into a `Natural`.
+that `charge` can turn such a value into an `Int`.
 
 This separation is useful because generic callers depend on a stable
 capability instead of inspecting every constructor themselves.
@@ -85,7 +85,7 @@ A constrained transform asks for an instance without fixing the concrete
 type. Constraints follow the result type with `constrain`:
 
 ```catena
-transform add_charge : a -> Natural -> Natural constrain Chargeable a
+transform add_charge : a -> Int -> Int constrain Chargeable a
 transform add_charge item subtotal =
   subtotal + charge item
 ```
@@ -109,7 +109,7 @@ Multiple type-level constraints are joined with `&`:
 
 ```catena
 transform inspect_charge :
-  a -> Natural
+  a -> Int
   constrain Chargeable a & Comparable a
 ```
 
@@ -157,21 +157,39 @@ The prelude uses this structure extensively. `Accumulator` extends
 The standard `Combiner` trait describes an associative way to join two values.
 `Accumulator` adds an identity value named `empty`.
 
-Parcel Relay can wrap monetary totals in a domain type:
+Parcel Relay can wrap monetary totals in a domain type. This self-contained
+version declares the three small traits locally, so it can go through the
+current artifact API without depending on the shipped Prelude:
 
 ```catena
-import Prelude
+trait Comparable a where
+  equals : a -> a -> Bool
+end
 
-type Quote = Quote Natural
+trait Combiner a where
+  combine : a -> a -> a
+end
+
+trait Accumulator a extend Combiner a where
+  empty : a
+end
+
+type Quote = Quote Int
 
 instance Comparable Quote where
-  transform equals Quote(left) Quote(right) =
-    left == right
+  transform equals left right =
+    match (left, right) of
+      | (Quote(left_value), Quote(right_value)) ->
+          left_value == right_value
+    end
 end
 
 instance Combiner Quote where
-  transform combine Quote(left) Quote(right) =
-    Quote (left + right)
+  transform combine left right =
+    match (left, right) of
+      | (Quote(left_value), Quote(right_value)) ->
+          Quote (left_value + right_value)
+    end
 end
 
 instance Accumulator Quote where
@@ -192,7 +210,9 @@ Quote 5 <> Quote 8
 ```
 
 The compiler desugars `<>` to `combine`. The instance determines what
-combination means for `Quote`.
+combination means for `Quote`. This local concrete example executes through
+the current dictionary backend; that does not promote every polymorphic or
+imported use of `<>`.
 
 ## Why laws matter
 
@@ -250,7 +270,7 @@ For Parcel Relay, adding zero to every optional quote must preserve the
 optional quote:
 
 ```catena
-transform mapper_identity_example : Maybe Natural -> Bool
+transform mapper_identity_example : Maybe Int -> Bool
 transform mapper_identity_example quote =
   equals (map (fn amount -> amount) quote) quote
 ```
@@ -272,8 +292,8 @@ end
 ```
 
 `Maybe` can fill `f` because `Maybe a` becomes a complete type after one type
-argument. `List` can too. A plain `Natural` cannot: it is already a complete
-type and cannot form `Natural a`.
+argument. `List` can too. A plain `Int` cannot: it is already a complete
+type and cannot form `Int a`.
 
 This “type of a type constructor” is called a **kind**. Catena builds and
 validates a kind environment before ordinary declaration typing, so a
@@ -308,11 +328,23 @@ Trait declarations, inheritance, constraints, instances, higher-kinded
 validation, resolution, coherence support, and the standard-library trait
 database are implemented compiler surfaces.
 
-The source-to-artifact backend currently erases trait declarations and has
-provisional instance dictionary lowering, but complete source-level trait
-dispatch is deferred to backend hardening. Operator examples such as `<>` are
-therefore best understood as front-end semantics until that dispatch path is
-promoted with executable evidence.
+The artifact backend emits validated dictionaries and method closures for
+concrete local and imported instances. Required, default, and inherited
+methods, coherence/orphan rejection, and representative calls through
+`Comparable`, `Mapper`, `Applicator`, `Chainable`, `Pipeline`, `System`, and
+`Flow` have source-to-BEAM evidence.
+
+Two narrower limits matter in these examples:
+
+- the shipped `Prelude` is currently a typed/source library rather than a
+  complete executable BEAM provider because its default `Pipeline.join`
+  references an unresolved `id`; and
+- `<>` desugars to `combine`. Local concrete cases such as the `Quote` example
+  above execute, but the backend ledger has not promoted general
+  trait-dispatched `<>`; `combine` must resolve to an accepted callable.
+
+Use a self-contained trait module or a closed source set with executable
+providers when testing the current dictionary backend.
 
 ## What to remember
 

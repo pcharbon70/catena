@@ -23,12 +23,12 @@ transforms:
 
 ```catena
 effect RateLookup
-  operation rate : Zone -> Natural
+  operation rate : Zone -> Int
 end
 ```
 
-`RateLookup` names the capability. `rate` accepts a `Zone` and returns a
-`Natural`. The declaration does not say whether rates come from a database,
+`RateLookup` names the capability. `rate` accepts a `Zone` and returns an
+`Int`. The declaration does not say whether rates come from a database,
 configuration file, HTTP service, or in-memory table.
 
 Effects may contain multiple operations:
@@ -56,13 +56,13 @@ A transform that performs the operation records the effect after `/` in its
 return type:
 
 ```catena
-transform quote_for_zone : Zone -> Natural / {RateLookup}
+transform quote_for_zone : Zone -> Int / {RateLookup}
 transform quote_for_zone zone =
   let base = 5 in
   base + perform RateLookup.rate(zone)
 ```
 
-Read the signature as: given a `Zone`, this computation returns a `Natural`
+Read the signature as: given a `Zone`, this computation returns an `Int`
 while requiring `RateLookup`.
 
 The effect annotation belongs to the returned computation. For several
@@ -70,11 +70,11 @@ arguments:
 
 ```catena
 transform quote :
-  Natural -> Zone -> Natural / {RateLookup}
+  Int -> Zone -> Int / {RateLookup}
 ```
 
 arrows associate to the right, so the effect is attached to the final
-`Natural` result.
+`Int` result.
 
 Multiple required effects are listed together:
 
@@ -103,7 +103,7 @@ For a deterministic Parcel Relay test, rates can be handled with pure pattern
 matching:
 
 ```catena
-transform quote_with_test_rates : Zone -> Natural
+transform quote_with_test_rates : Zone -> Int
 transform quote_with_test_rates zone =
   handle (quote_for_zone zone) then {
     RateLookup {
@@ -135,7 +135,7 @@ With `RateLookup`, the business logic only states its need. A test handler can
 return fixed rates:
 
 ```catena
-transform quote_with_flat_rate : Zone -> Natural
+transform quote_with_flat_rate : Zone -> Int
 transform quote_with_flat_rate zone =
   handle (quote_for_zone zone) then {
     RateLookup {
@@ -217,14 +217,14 @@ Use `Result a e` when failure is an ordinary domain outcome the caller should
 inspect and transform. An invalid parcel weight is data:
 
 ```catena
-transform validate_weight : Natural -> Result Natural QuoteError
+transform validate_weight : Int -> Result Int QuoteError
 ```
 
 Use an effect when a computation requires an ambient capability or an
 interpretation supplied by its environment:
 
 ```catena
-transform quote_for_zone : Zone -> Natural / {RateLookup}
+transform quote_for_zone : Zone -> Int / {RateLookup}
 ```
 
 The two combine naturally. A rate lookup can be effectful while validation
@@ -232,7 +232,7 @@ returns `Result`:
 
 ```catena
 transform validated_quote :
-  Natural -> Zone -> Result Natural QuoteError / {RateLookup}
+  Int -> Zone -> Result Int QuoteError / {RateLookup}
 ```
 
 The result context describes a business outcome. The effect set describes what
@@ -265,12 +265,16 @@ annotations, handlers, effect inference/checking, and explicit-context runtime
 lowering are implemented surfaces. Built-in runtime handling exists for I/O
 and Process.
 
-The backend ledger classifies performs and handlers as runtime-lowered rather
-than fully source-to-BEAM proven. The richer algebraic-effects implementation
-also includes internal resumption and handler orchestration surfaces whose
-complete ergonomic source syntax is still evolving. The examples here use
-only the parser-native handler form and do not imply ordinary Erlang stacks can
-capture true delimited continuations.
+The backend ledger classifies performs and handlers as runtime-lowered because
+they call Catena's explicit-context runtime. That path is also source-to-BEAM
+proven for declared operation resolution, helper-call context propagation,
+handler patterns, zero and multiple arguments, nested and multiple effects,
+failure behavior, and cleanup.
+
+The richer algebraic-effects implementation includes internal resumption and
+handler orchestration surfaces whose complete ergonomic source syntax is still
+evolving. The examples here use only the parser-native handler form and do not
+imply that ordinary Erlang stacks capture true delimited continuations.
 
 ## What to remember
 

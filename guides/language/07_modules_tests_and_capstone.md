@@ -15,9 +15,9 @@ into a small layered program:
 ```text
 Parcel.Domain      immutable domain types
        ↓
-Parcel.Pricing     validation, quotes, and the RateLookup effect
+Parcel.Pricing     validation and pure quote calculation
        ↓
-Parcel.App         concrete rate handler
+Parcel.App         RateLookup effect and concrete handler
        ↓
 Parcel.Tests       examples and general pricing properties
 ```
@@ -70,15 +70,17 @@ type Zone =
   | International
 
 type Parcel =
-  Parcel String Natural Zone
+  Parcel String Int Zone
 
 transform tracking_code : Parcel -> String
-transform tracking_code Parcel(code _ _) = code
+transform tracking_code Parcel(code ignored_weight ignored_zone) = code
 ```
 
-This version uses a positional constructor to keep the capstone compact. The
-record-carrying constructor from the type guide is equally valid when named
-fields improve readability.
+This version uses the promoted positional constructor representation. A
+standalone structural record is also executable, but nesting a record directly
+as an algebraic constructor payload is not currently a reliable composition.
+Distinct ignored bindings avoid reusing one Core wildcard variable in a
+multi-position pattern.
 
 The exported types make their constructors visible through the current import
 environment. `tracking_code` provides one stable accessor; other
@@ -86,57 +88,44 @@ representation details can remain local until callers genuinely need them.
 
 ## The pricing module
 
-The pricing layer imports domain types, defines its domain error, declares the
-external capability it needs, and exports one high-level quote transform:
+The pricing layer imports domain types, defines its domain result, and accepts
+the current rate as an explicit input. This keeps validation and arithmetic
+pure:
 
 ```catena
 module Parcel.Pricing
 
 export type QuoteError
-export effect RateLookup
+export type QuoteResult
 export transform quote
 
-import Prelude
 import Parcel.Domain
 
 type QuoteError =
   MissingWeight
   | UnsupportedZone
 
-effect RateLookup
-  operation rate : Zone -> Natural
-end
-
-transform validate_weight 0 = Err MissingWeight
-transform validate_weight weight = Ok weight
-
-transform validate_zone International = Err UnsupportedZone
-transform validate_zone zone = Ok zone
+type QuoteResult =
+  Quoted Int
+  | QuoteFailed QuoteError
 
 transform quote :
-  Parcel -> Result Natural QuoteError / {RateLookup}
-transform quote Parcel(_ weight zone) =
-  do {
-    valid_weight <- validate_weight weight;
-    valid_zone <- validate_zone zone;
-    let regional_rate = perform RateLookup.rate(valid_zone);
-    Ok (5 + valid_weight + valid_weight + regional_rate)
-  }
+  Parcel -> Int -> QuoteResult
+transform quote Parcel(ignored_code 0 ignored_zone) ignored_rate =
+  QuoteFailed MissingWeight
+transform quote Parcel(ignored_code ignored_weight International) ignored_rate =
+  QuoteFailed UnsupportedZone
+transform quote Parcel(ignored_code weight ignored_zone) regional_rate =
+  Quoted (5 + weight + weight + regional_rate)
 ```
 
-Notice the layering inside the result type:
+`QuoteResult` describes the business outcome. A missing weight and an
+unsupported zone become explicit error data, while a successful value is
+wrapped in `Quoted`. Looking up the current rate remains an environmental
+concern interpreted by the application.
 
-```text
-Result Natural QuoteError / {RateLookup}
-```
-
-`Result` describes the business outcome. `RateLookup` describes the
-environmental capability. A missing weight becomes explicit error data.
-Looking up the current rate remains an effect interpreted by the application.
-
-Only `quote`, `QuoteError`, and `RateLookup` are exported. The validation
-helpers are private implementation details, so callers cannot accidentally
-bypass the module's intended entry point.
+Only `quote`, `QuoteError`, and `QuoteResult` are exported. The clauses form
+the module's intended validation boundary.
 
 ## Import styles
 
@@ -153,10 +142,26 @@ import qualified Parcel.Pricing as Pricing
 ```
 
 The parser also represents selective imports and qualified dotted imports.
-The current module system is intentionally minimal: it resolves files, merges
-exported type environments, gives local declarations precedence, and detects
-important name/import errors. Complete package semantics and executable
-cross-module linkage remain future work.
+The typed-module path can resolve files and merge exported type environments.
+The artifact path additionally resolves imported calls through versioned
+interfaces. Open, qualified, aliased, selective, dotted, shadowed, and
+higher-order imports have source-to-BEAM evidence.
+
+Executable imports are compiled as a closed source set containing every
+provider:
+
+```erlang
+{ok, #{order := Order, artifacts := Artifacts}} =
+    catena_compile:compile_source_set_to_beam(#{
+        'Parcel.Domain' => DomainSource,
+        'Parcel.Pricing' => PricingSource,
+        'Parcel.App' => AppSource
+    }).
+```
+
+`Order` places dependencies before consumers. A single-source artifact request
+with unresolved imports fails closed. Package discovery, separately compiled
+dependencies, and release assembly remain future tooling.
 
 For learning examples, prefer open imports when the vocabulary is small and
 unambiguous. Prefer qualified imports when two modules expose similar names or
@@ -172,28 +177,27 @@ module Parcel.App
 
 export transform local_quote
 
-import Prelude
 import Parcel.Domain
 import Parcel.Pricing
 
-transform local_quote :
-  Parcel -> Result Natural QuoteError
+effect RateLookup
+  operation rate : Parcel -> Int
+end
+
 transform local_quote parcel =
-  handle (quote parcel) then {
-    RateLookup {
-      rate(zone) ->
-        match zone of
-          | Local -> 0
-          | Regional -> 5
-          | International -> 15
-        end
+  let regional_rate =
+    handle perform RateLookup.rate(parcel) then {
+      RateLookup {
+        rate(ignored_parcel) -> 5
+      }
     }
-  }
+  in quote parcel regional_rate
 ```
 
-The signature is now pure because the application supplies the rate handler.
-A different module could handle the same operation through configuration or
-I/O and would expose that remaining effect in its own signature.
+`RateLookup` is declared where this closed executable example handles it. The
+handler supplies a deterministic regional rate, so `local_quote` is pure. A
+different application could perform I/O in its interpretation and expose any
+remaining effect in its own signature.
 
 This split gives each layer one reason to change:
 
@@ -217,25 +221,25 @@ module Parcel.Tests
 import Parcel.Domain
 import Parcel.Pricing
 
-transform example_quote : Natural -> Natural
+transform example_quote : Int -> Int
 transform example_quote weight =
   5 + weight + weight
 
 test "base formula quotes four units at thirteen" =
   example_quote 4 == 13
 
-property "base quote never drops below five" =
-  forall weight : Natural.
-    5 + weight + weight >= 5
+property "base quote follows its formula" =
+  forall weight : Int.
+    example_quote weight == 5 + weight + weight
 ```
 
 A native property names generators after each binding. The current grammar
 accepts forms such as:
 
 ```catena
-property "regional rate is nonnegative" =
-  forall weight : Natural, distance : Natural.
-    weight + distance >= 0
+property "integer addition is commutative" =
+  forall weight : Int, distance : Int.
+    weight + distance == distance + weight
 ```
 
 Native `test` and `property` declarations are real front-end AST forms.
@@ -275,21 +279,23 @@ transform pricing_suite =
 The lambda receives an ignored argument because the current source lambda form
 has one named parameter. `suite` groups first-class `Test` values. The library
 also exposes property configuration, assertions, law-verification descriptors,
- seeds, and iteration controls.
+seeds, and iteration controls.
 
-The internal Erlang property engine is broader than the currently polished
-source-language bridge. It includes generators, shrinking, reports, laws,
-state-machine helpers, process/concurrency support, and advanced testing
-utilities. Some parallel and distributed paths remain partial. Treat the
-source `Test` and `Gen` modules as the promoted bridge, not as a claim that
-every internal helper is already automatic language syntax.
+The source modules describe the intended library-first surface, but their
+canonical compilation status differs today: `Gen` can produce a BEAM
+artifact, while `Test` and `Laws` currently fail frontend type/name checking.
+The internal Erlang property engine is broader: it includes generators,
+shrinking, reports, laws, state-machine helpers, process/concurrency support,
+and advanced testing utilities. Some parallel and distributed paths remain
+partial. Treat the suite snippet above as source-library design, not as an
+application artifact that the current public BEAM API can run.
 
 ## Testing laws
 
 Domain properties protect Parcel Relay's business rules:
 
 ```text
-shipping fees are never below the base fee
+the quote agrees with its pricing formula
 adding insurance never reduces a quote
 zero weight is rejected
 handling a fixed rate is deterministic
@@ -321,7 +327,7 @@ For the current repository, a healthy loop is:
 
 1. model the domain with types;
 2. write pure transforms and explicit signatures;
-3. use `Result` for expected business outcomes;
+3. use a result algebraic data type for expected business outcomes;
 4. introduce effects only for environmental capabilities;
 5. handle effects at an application or test boundary;
 6. keep module exports small;
@@ -339,8 +345,8 @@ When debugging a language example, identify the stage:
 - a backend error means the validated program uses a construct whose
   semantics-preserving emission is not yet promoted.
 
-That last category is especially important today. Front-end success and
-artifact support are deliberately separate contracts.
+Front-end success and artifact support remain deliberately separate
+contracts, even though the promoted application surface is now broad.
 
 ## Beyond the capstone
 
@@ -363,15 +369,16 @@ treating internal modules as settled language syntax.
 
 In particular, the runtime actor toolkit is implemented in Erlang, while
 source-language actor declarations and typed protocols are not yet a complete
-compiler path. Similarly, the pure `System`/`Flow` trait surface and operators
-exist, while canonical instances and later Flow phases remain planned.
+compiler path. Concrete `System` and `Flow` dictionary calls and the `>>>`,
+`<<<`, `***`, and `&&&` operators have executable evidence, but the shipped
+Prelude is not yet a complete BEAM provider for ordinary application imports.
 
 ## What to remember
 
 - Modules own declarations and expose an explicit public surface.
 - Dotted module names map to lowercase directory paths.
-- Imports currently merge exported compiler environments; full packaging and
-  executable linkage are still evolving.
+- Closed source sets provide executable import linkage; full packaging,
+  separate compilation, and release assembly remain future tooling.
 - Unit examples and general properties protect different kinds of knowledge.
 - Native test/property declarations and library-first `Test` values are
   distinct current surfaces.

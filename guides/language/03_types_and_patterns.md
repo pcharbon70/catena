@@ -27,29 +27,23 @@ type Zone =
   | International
 
 type Parcel =
-  Parcel {
-    tracking: String,
-    weight: Natural,
-    zone: Zone
-  }
+  Parcel String Int Zone
 ```
 
 `Local`, `Regional`, and `International` are nullary constructors: they carry
-no additional data. `Parcel` is a constructor carrying one record value. The
-record gives each field a useful name.
+no additional data. `Parcel` is a constructor with three positional payloads:
+a tracking code, a weight, and a zone.
 
 A parcel value can now be constructed as:
 
 ```catena
-Parcel {
-  tracking: "PR-100",
-  weight: 4,
-  zone: Regional
-}
+Parcel "PR-100" 4 Regional
 ```
 
-This value has the nominal type `Parcel`, rather than merely being any record
-with three coincidentally similar fields.
+This value has the nominal type `Parcel`. Structural records remain useful on
+their own, as shown in the previous chapter, but the currently promoted
+constructor examples use positional payloads. Combining a structural record
+directly as a constructor payload is not yet a reliable executable path.
 
 ## Variants can carry different data
 
@@ -81,7 +75,7 @@ constructor.
 The zone fee is naturally exhaustive:
 
 ```catena
-transform zone_fee : Zone -> Natural
+transform zone_fee : Zone -> Int
 transform zone_fee Local = 0
 transform zone_fee Regional = 5
 transform zone_fee International = 15
@@ -147,30 +141,32 @@ transform is_terminal =
 This form behaves like a transform whose argument is matched by its clauses.
 The underscore wildcard accepts a value without binding a name.
 
-## Destructuring records and constructors
+## Destructuring constructors and records
 
-Patterns can reach through the `Parcel` constructor and its record payload.
-Bind only the fields a transform needs:
+Constructor patterns bind their payloads by position. Use distinct descriptive
+names for positions that the body ignores:
 
 ```catena
-transform parcel_weight : Parcel -> Natural
+transform parcel_weight : Parcel -> Int
 transform parcel_weight parcel =
   match parcel of
-    | Parcel({tracking: _, weight: weight, zone: _}) -> weight
+    | Parcel(ignored_tracking weight ignored_zone) -> weight
   end
 ```
 
-Every field is shown because current record patterns are closed shapes. The
-tracking code and zone are deliberately ignored with `_`; the weight is bound
-to the lowercase name `weight`.
+The tracking code and zone names are deliberately unused; `weight` is the
+payload this transform needs. A single `_` wildcard is executable, but use
+distinct ignored bindings when one pattern ignores several positions: the
+current Core emitter can otherwise reuse one wildcard variable within a
+clause.
 
 When several fields matter, bind them together:
 
 ```catena
-transform parcel_quote : Parcel -> Natural
+transform parcel_quote : Parcel -> Int
 transform parcel_quote parcel =
   match parcel of
-    | Parcel({tracking: _, weight: weight, zone: zone}) ->
+    | Parcel(ignored_tracking weight zone) ->
         5 + weight + weight + zone_fee zone
   end
 ```
@@ -179,16 +175,24 @@ This example combines the modeling work with the pricing rules from the first
 two guides. The important improvement is that the relationship between weight
 and zone now travels in a typed parcel value.
 
+Structural record patterns require the named keys they mention and allow
+additional keys in the value:
+
+```catena
+transform record_weight {weight: weight} = weight
+transform record_weight _ = 0
+```
+
 ## Tuples and lists
 
 Tuples group a fixed number of values by position. They are useful for small,
 local results:
 
 ```catena
-transform quote_with_code : Parcel -> (String, Natural)
+transform quote_with_code : Parcel -> (String, Int)
 transform quote_with_code parcel =
   match parcel of
-    | Parcel({tracking: code, weight: weight, zone: zone}) ->
+    | Parcel(code weight zone) ->
         (code, 5 + weight + weight + zone_fee zone)
   end
 ```
@@ -198,7 +202,7 @@ Lists hold zero or more values of one element type. The empty list pattern is
 rest.
 
 ```catena
-transform parcel_count : List Parcel -> Natural
+transform parcel_count : List Parcel -> Int
 transform parcel_count parcels =
   match parcels of
     | [] -> 0
@@ -215,7 +219,7 @@ A guard adds a pure condition after a pattern. Parcel Relay can classify
 handling effort without inventing a constructor for every numeric range:
 
 ```catena
-transform handling_fee : Natural -> Natural
+transform handling_fee : Int -> Int
 transform handling_fee weight when weight > 20 = 12
 transform handling_fee weight when weight > 10 = 7
 transform handling_fee _ = 3
@@ -266,10 +270,11 @@ because adding a new state should force the places that interpret states to be
 reconsidered.
 
 Catena has implemented and tested exhaustiveness, missing-pattern, and
-redundancy analysis. The public Core pipeline currently enforces guard purity,
-clause arity, and or-pattern binding consistency, while automatic collection
-of exhaustiveness and redundancy warnings at that boundary remains follow-on
-work.
+redundancy analysis. The artifact pipeline executes parser-native patterns,
+guards, as-patterns, and recursively expanded or-patterns; it also enforces
+guard purity, clause arity, and or-pattern binding consistency. Automatic
+collection of exhaustiveness and redundancy warnings at the public artifact
+boundary remains follow-on work.
 
 For now, write exhaustive matches by discipline even when a particular
 compiler entry point does not surface the warning automatically. Prefer an
