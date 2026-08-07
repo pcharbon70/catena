@@ -14,7 +14,8 @@ is not a replacement for the specification.
 Catena is currently an executable language-design prototype, not yet a
 source-language distribution:
 
-- the compiler accepts a versioned JSON AST rather than Catena source text;
+- the compiler accepts retained versioned JSON AST and a separate exact 0.1.8
+  semantic-kernel S-expression, not ergonomic Catena source text;
 - snippets in this tour are illustrative notation unless a linked
   specification says that a particular form is fixed;
 - public parser punctuation, layout, and several ordinary language facilities
@@ -29,7 +30,7 @@ chapter.
 
 ## The language in one view
 
-Catena's initial model has eight connected parts:
+Catena's initial model has nine connected parts:
 
 1. **Functions and inference** — ordinary code receives principal
    Hindley–Milner types where possible; advanced features require explicit
@@ -42,12 +43,15 @@ Catena's initial model has eight connected parts:
    `combine`, and `and_then` under names that describe what programmers do.
 5. **Effects and handlers** — `uses`, `request`, and `handle` make nonlocal
    behavior explicit and select handlers through lexical capability identity.
-6. **Specifications and governance** — optional typed rules and exact examples
+6. **Typed actors and formal semantics** — a send-only `Process M` handle,
+   named entries, selective receive, explicit traps, and a small-step machine
+   make local concurrency and failure precise.
+7. **Specifications and governance** — optional typed rules and exact examples
    become strict, artifact-bound package gates once a project adopts them.
-7. **Editions and previews** — packages pin one exact language contract;
+8. **Editions and previews** — packages pin one exact language contract;
    named experimental features cannot silently appear through a compiler
    update or dependency.
-8. **BEAM execution** — verified typed core lowers to Erlang Abstract Format,
+9. **BEAM execution** — verified typed core lowers to Erlang Abstract Format,
    which OTP 29 compiles into `.beam` modules.
 
 The language is expression-oriented, strict, and immutable by default.
@@ -295,14 +299,35 @@ for the user workflow and the
 [normative specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/editions-and-feature-lifecycle)
 for the exact contract.
 
+## The executable formal kernel and typed actors
+
+Normative revision 0.1.8 integrates the executable portions of the earlier
+semantic slices with structural records and variants in one exact
+S-expression module. It adds named local process entries and a send-only
+`Process M` handle. Messages must be closed first-order values; ordinary
+effects must be handled before a process entry returns.
+
+Send is asynchronous and returns Unit. A dead-target send drops its message.
+Messages from one sender preserve order; receive removes the oldest matching
+message and leaves skipped messages in place. Scheduling across senders is
+nondeterministic and has no fairness promise. Normal return and explicit
+`trap reason` terminate only the current process and discard its mailbox.
+
+The compiler preserves source spans, independently rechecks the unified typed
+core, and exposes a CEK-style small-step machine plus bounded schedule
+exploration. The production path lowers the same verified meaning through
+fixed maps/tagged tuples and OTP 29 Abstract Format. See the
+[Formal Semantic Kernel guide](guides/language/formal-semantic-kernel.md).
+
+The explicitly authorized C010 immutable compiler identity and post-commit
+evidence are recorded in the research archive.
+
 ## From Catena to BEAM
 
 The compiler path is:
 
 ```text
-future Catena source parser
-        ↓
-versioned JSON AST (the current input)
+retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓
 inference and elaboration
         ↓
@@ -357,6 +382,12 @@ The compiler writes an OTP-generated `.beam` and a deterministic
 `.cati.json` module interface beside the input. The JSON is an explicit
 bootstrap representation, not a preview of intended Catena source syntax.
 
+The normative kernel fixture can be checked directly:
+
+```bash
+./catena check-kernel test/fixtures/c010-kernel.catena
+```
+
 ## Explore executable features in order
 
 The tests are executable conformance evidence. They construct JSON programs in
@@ -381,6 +412,10 @@ Elixir, so read them for semantics and diagnostics rather than surface syntax:
    — exact pins, lifecycle states, migration diagnostics, selection-bound
    interfaces and artifacts, versioned signatures, policy constraints, and
    absence of runtime edition dispatch.
+8. [`c010_formal_semantic_kernel_test.exs`](test/catena/c010_formal_semantic_kernel_test.exs)
+   — exact parsing, rows, nominal data, traits, handlers, independent core
+   verification, typed actors, schedule exploration, traps, interfaces, and
+   reference/BEAM agreement.
 
 ## Continue in catena-research
 
@@ -401,12 +436,12 @@ limitations, alternatives, and unresolved questions.
 
 ## Current boundary
 
-Catena does not yet provide a source parser, formatter, REPL, end-user package
-manager, complete standard library, language-level concurrency model, resource
-scope semantics, exception boundary, foreign-term validation, or finalized
-surface grammar. The compiler is valuable today as a deterministic executable
-model of the completed specification slices—not yet as a general-purpose
-language toolchain.
+Catena does not yet provide an ergonomic source parser, formatter, REPL,
+end-user package manager, complete standard library, distributed or supervised
+concurrency, resource-scope semantics, exception boundary, foreign-term
+validation, or finalized surface grammar. The compiler is valuable today as a
+deterministic executable model of the completed specification slices—not yet
+as a general-purpose language toolchain.
 
 Continue with the [Catena Guides](guides/README.md) for detailed user tasks,
 governance operations, BEAM boundaries, and compiler development.

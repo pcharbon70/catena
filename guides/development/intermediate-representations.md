@@ -9,11 +9,17 @@ Calling all of them “the IR” obscures which invariants have been established
 ```mermaid
 flowchart LR
     J[Versioned JSON AST] --> A[Decoded AST]
+    K[Exact kernel S-expression] --> KA[Spanned kernel module]
     A --> C[Elaborated typed core]
     C --> V[Verified typed core]
     V --> E[Erlang Abstract Format]
     E --> B[BEAM]
     V --> I[Catena interface]
+    KA --> KC[Unified 0.1.8 typed core]
+    KC --> KV[Independently verified kernel core]
+    KV --> E
+    KV --> KI[0.1.8 kernel interface]
+    KV --> CFG[Small-step process configuration]
     V --> S[Specification graph]
     B --> P[Package artifact set]
     I --> P
@@ -82,6 +88,19 @@ Properties:
 
 The decoder adds paths such as `$.definitions[0].body` so later diagnostics can
 identify their protocol location.
+
+## Exact 0.1.8 kernel module
+
+The normative kernel frontend consumes one closed S-expression module. Tokens
+and compound forms carry half-open byte/line/column spans. Its declaration and
+expression grammar is versioned separately from JSON, and the JSON decoder
+does not accept revision 0.1.8.
+
+`Catena.Kernel.Parser` produces a spanned semantic module containing regular
+data, closed trait instances, ordinary effects and handlers, definitions, and
+named process entries. `Catena.Kernel.Checker` resolves those declarations
+into one core in which every expression records type, effects, span, and any
+selected constructor, trait implementation, handler, or process entry.
 
 ## Decoded AST
 
@@ -160,6 +179,12 @@ called only after this gate.
 If a new core node cannot be independently verified, the feature is not ready
 for backend lowering.
 
+The 0.1.8 kernel core is a distinct `:kernel_core` representation verified by
+`Catena.Kernel.Verifier`. It also seeds `Catena.Kernel.Stepper` configurations:
+a definition table, logical processes, local control and continuation stacks,
+typed mailboxes, consumed resumptions, trace, and next logical process ID.
+Those configurations are reference evidence and never enter production BEAM.
+
 ## Erlang Abstract Format
 
 `Catena.Backend.ErlangAbstract` produces the documented Erlang syntax-tree
@@ -211,6 +236,7 @@ Interface evolution is additive by implemented slice:
 | 0.1.5 | effects, handlers, and normalized `uses` rows |
 | 0.1.6 | claim summaries, specification digest, inherited obligations |
 | 0.1.7 | edition, exact language revision, enabled previews, public preview requirements |
+| 0.1.8 | separate kernel interface with exported regular types and public typed process entries |
 
 Decoders retain compatibility with valid earlier interfaces. Never infer
 missing newer evidence from an older version.

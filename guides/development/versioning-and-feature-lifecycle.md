@@ -1,8 +1,9 @@
 # Versioning and Feature Lifecycle
 
 This guide explains how the bootstrap compiler implements Catena's normative
-0.1.7 edition, exact-revision, preview, migration, and compatibility model. It
-is for compiler contributors; the programmer-facing guide is
+0.1.7 edition, exact-revision, preview, migration, and compatibility model and
+how the normative 0.1.8 kernel coexists with it. It is for compiler
+contributors; the programmer-facing guide is
 [Editions, Revisions, and Previews](../language/editions-and-previews.md).
 
 ## Preserve the four identities
@@ -54,6 +55,12 @@ selection. `Catena.LanguageLifecycle` owns immutable feature IDs, state
 history, compatibility changes, diagnostic IDs, and structured migration
 edits. `Catena.LanguageInfo` exposes both registries without mutation.
 
+The executable registry currently ends at normative `0.1.8`. The JSON frontend
+remains closed at `0.1.7`; `Catena.Kernel.Parser` alone accepts exact `0.1.8`
+S-expressions. A future candidate may be selectable for evidence runs without
+making its research chapters normative; promotion still requires its
+separately recorded immutable gate.
+
 For a new revision:
 
 1. reserve the next approved language revision in the research specification;
@@ -90,6 +97,9 @@ revision.
 Catena 0.1.7 contains no preview entry. A contributor must not use the public
 preview registry for implementation switches, hidden syntax, or vendor
 experiments.
+
+Normative 0.1.8 also enables no previews. Its formal kernel is an exact
+revision boundary, not a preview or vendor extension.
 
 When a real preview is added, compute `required_previews` from exported
 semantics. The enabled set alone is not the dependency contract. Validate

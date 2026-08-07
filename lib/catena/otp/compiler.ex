@@ -4,7 +4,7 @@ defmodule Catena.OTP.Compiler do
   alias Catena.{Diagnostic, LanguageVersion}
 
   @default_version LanguageVersion.introduced(:data_and_patterns)
-  @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
+  @selection_versions LanguageVersion.from(:editions_and_feature_lifecycle)
 
   @spec compile([term()], keyword()) ::
           {:ok, module(), binary(), [term()]} | {:error, Diagnostic.t()}
@@ -16,15 +16,16 @@ defmodule Catena.OTP.Compiler do
 
     frontend =
       options
-      |> Keyword.get(:frontend_version, @default_version)
-      |> then(&("json-ast-" <> &1))
+      |> Keyword.get_lazy(:frontend, fn ->
+        "json-ast-" <> Keyword.get(options, :frontend_version, @default_version)
+      end)
       |> String.to_charlist()
 
     compile_info = [{:catena_specification, specification}, {:catena_frontend, frontend}]
 
     compile_info =
       case {Keyword.get(options, :artifact_version), Keyword.get(options, :language_selection)} do
-        {@edition_version, selection} when not is_nil(selection) ->
+        {version, selection} when version in @selection_versions and not is_nil(selection) ->
           compile_info ++
             [
               {:catena_edition, String.to_charlist(selection.edition)},

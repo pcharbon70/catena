@@ -84,9 +84,21 @@ defmodule Catena.Interface do
 
   @spec decode(binary()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def decode(binary) when is_binary(binary) do
-    with {:ok, value} <- JSON.decode(binary),
-         true <- is_map(value),
-         version when version in @versions <- Map.get(value, "version"),
+    with {:ok, value} <- JSON.decode(binary), true <- is_map(value) do
+      if Map.get(value, "version") == LanguageVersion.introduced(:formal_semantic_kernel) do
+        Catena.Kernel.Interface.decode_value(value)
+      else
+        decode_legacy_value(value)
+      end
+    else
+      _ -> error("malformed or unsupported Catena interface")
+    end
+  rescue
+    _error -> error("malformed or unsupported Catena interface")
+  end
+
+  defp decode_legacy_value(value) do
+    with version when version in @versions <- Map.get(value, "version"),
          "catena-interface" <- Map.get(value, "format"),
          {:ok, selection, required_previews} <- decode_selection(value, version),
          digest when is_binary(digest) <- Map.get(value, "digest"),
@@ -118,8 +130,6 @@ defmodule Catena.Interface do
       {:error, %Diagnostic{} = diagnostic} -> {:error, diagnostic}
       _ -> error("malformed or unsupported Catena interface")
     end
-  rescue
-    _error -> error("malformed or unsupported Catena interface")
   end
 
   defp encode_datatype(type) do

@@ -2,8 +2,8 @@ defmodule Catena.LanguageVersion do
   @moduledoc """
   Canonical prototype language-slice versions.
 
-  Catena's current language line is `0.1`. Each completed semantic slice uses
-  the next patch component. Compiler-package releases are versioned
+  Catena's current language line is `0.1`. Each implemented semantic slice
+  uses the next patch component. Compiler-package releases are versioned
   independently in `mix.exs`.
   """
 
@@ -16,7 +16,8 @@ defmodule Catena.LanguageVersion do
     traits_and_categories: "0.1.4",
     effects_and_handlers: "0.1.5",
     specifications_and_governance: "0.1.6",
-    editions_and_feature_lifecycle: "0.1.7"
+    editions_and_feature_lifecycle: "0.1.7",
+    formal_semantic_kernel: "0.1.8"
   ]
   @ordered Keyword.values(@versions)
   @interfaces tl(@ordered)
@@ -31,9 +32,16 @@ defmodule Catena.LanguageVersion do
           | :effects_and_handlers
           | :specifications_and_governance
           | :editions_and_feature_lifecycle
+          | :formal_semantic_kernel
 
   @spec all() :: [String.t()]
   def all, do: @ordered
+
+  @spec json_frontend_versions() :: [String.t()]
+  def json_frontend_versions, do: before(:formal_semantic_kernel)
+
+  @spec kernel_frontend_versions() :: [String.t()]
+  def kernel_frontend_versions, do: from(:formal_semantic_kernel)
 
   @spec interface_versions() :: [String.t()]
   def interface_versions, do: @interfaces

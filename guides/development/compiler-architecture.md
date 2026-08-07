@@ -1,7 +1,7 @@
 # Compiler Architecture
 
 This guide explains the Elixir bootstrap compiler as an implementation of the
-C001 through C006 and C008 normative slices. The compiler is
+C001 through C006, C008, and C010 normative slices. The compiler is
 intentionally small and explicit: semantic checks occur before backend
 lowering, independently rechecked evidence protects important boundaries,
 and OTP 29 owns `.beam` generation.
@@ -31,6 +31,7 @@ the programmer's words:
 | match, clause, condition, witness | pattern matrix, usefulness, condition facts, coverage witness |
 | trait, implementation, requirement, guarantee | trait declaration, instance evidence, predicate, law record |
 | effect, operation, `uses`, `request`, `handle`, `resume` | effect row, capability identity, request core, handler table, affine continuation |
+| process, message, receive, trap | process entry, mailbox type, schedule transition, explicit terminal failure |
 | rule, example, promise, evidence | claim graph, checker definition, semantic digest, evidence record |
 | owner, approve, activate, replace | principal/role, signed approval, governed action, lifecycle transition |
 
@@ -45,6 +46,7 @@ detail view should require the programmer to know those intermediate names.
 ```mermaid
 flowchart TD
     JSON[Versioned JSON AST] --> Decoder[Catena.AST.Decoder]
+    Kernel[Exact 0.1.8 S-expression] --> KParser[Catena.Kernel.Parser]
     Selection[Catena.LanguageSelection] --> Decoder
     Decoder --> Infer[Catena.Type.Infer]
     Infer --> Data[Data and coverage evidence]
@@ -61,6 +63,13 @@ flowchart TD
     Backend --> OTP[Catena.OTP.Compiler]
     OTP --> Beam[BEAM binary]
     Verify --> Interface[Catena.Interface]
+    KParser --> KCheck[Catena.Kernel.Checker]
+    KCheck --> KVerify[Catena.Kernel.Verifier]
+    KVerify --> KBackend[Catena.Kernel.Backend]
+    KVerify --> Stepper[Catena.Kernel.Stepper]
+    Stepper --> Explorer[Catena.Kernel.Explorer]
+    KBackend --> OTP
+    KVerify --> KInterface[Catena.Kernel.Interface]
 
     Beam --> Linker[Catena.Package.Linker]
     Interface --> Linker
@@ -99,6 +108,10 @@ Metadata includes typed core, Erlang forms, interface bytes, warnings, layout,
 condition-lowering selection, resolved language selection, diagnostics, and
 artifact version.
 
+`Catena.check_kernel/2` and `Catena.compile_kernel/2` provide the parallel
+normative 0.1.8 boundary. Kernel compilation always uses its fixed layout and
+returns the unified core and 0.1.8 interface in metadata.
+
 ### CLI
 
 `Catena.CLI` wraps those APIs and the package/assurance path:
@@ -107,6 +120,8 @@ artifact version.
 check-ir
 elaborate-ir
 compile-ir
+check-kernel
+compile-kernel
 compile-package-ir
 verify-assurance
 language-info
@@ -138,6 +153,12 @@ Version 0.1.1 is normalized into the 0.1.2 internal data-capable form while its
 frontend identity is preserved for compiler metadata. Newer inputs retain
 their versioned sections. Unknown versions or tags fail rather than becoming
 opaque extension nodes.
+
+`Catena.Kernel.SExpression` and `Catena.Kernel.Parser` form a separate strict
+frontend for exact revision 0.1.8. They preserve half-open source spans,
+enforce printable-ASCII/CRLF rules and published limits, and decode a closed
+module grammar. The JSON decoder deliberately rejects 0.1.8 so the two
+frontend contracts cannot be confused.
 
 The decoder should enforce structural shape. Type-dependent and
 cross-declaration meaning belongs in elaboration, not in an ever-growing JSON
@@ -190,6 +211,13 @@ reported as internal family `I001`, not blamed on the source program.
 This independent pass is a trust boundary. Do not weaken it simply because an
 earlier phase “already checked” the same fact.
 
+`Catena.Kernel.Verifier` provides the corresponding C010 gate. It re-derives
+every expression and pattern judgment, row operation, constructor and trait
+selection, handler/resumption use, coverage result, sendability boundary,
+process entry, and recorded effect row. `Catena.Kernel.Stepper` then supplies a
+separately structured local CEK and global actor transition system; the bounded
+explorer enumerates runnable-process choices without calling the BEAM backend.
+
 ## Backend lowering
 
 `Catena.Backend.ErlangAbstract` accepts verified core and produces Erlang
@@ -206,6 +234,12 @@ Abstract Format tuples. It is responsible for:
 
 The backend must not redo language-level inference or choose unresolved trait,
 capability, pattern, or governance behavior.
+
+`Catena.Kernel.Backend` lowers only verified 0.1.8 core. It uses fixed maps for
+records, tagged tuples for structural variants and nominal constructors, local
+PIDs for opaque process handles, direct lowering for process-only code, and
+effect-directed CPS for ordinary handlers. Both backend modules converge on
+the same `Catena.OTP.Compiler` boundary.
 
 ## OTP boundary
 
@@ -232,6 +266,12 @@ Decoding verifies the content digest before exposing any imported evidence.
 Backward decoding supports valid interface versions 0.1.2 through 0.1.7. A
 0.1.7 interface binds edition, exact revision, enabled previews, and public
 preview requirements while remaining neutral across package editions.
+
+The separate 0.1.8 kernel interface carries exported regular datatypes, public
+values, and public process entries. Each process entry binds its
+origin-qualified identity, parameter and mailbox types, arity, and
+deterministic spawn symbol. Its digest contains every field and exposes no PID
+or worker layout.
 
 ## Package compilation
 
@@ -310,6 +350,11 @@ Every compiler change preserves these boundaries:
     approvals, and policy context bind one resolved selection.
 14. **No runtime edition dispatch:** selection metadata may remain in the
     compile-information chunk but never controls generated function bodies.
+15. **Actor locality:** process return or trap affects only that process;
+    skipped mailbox messages remain ordered until accepted or discarded at
+    termination.
+16. **Reference independence:** the kernel stepper and schedule explorer never
+    call production lowering or native process dispatch.
 
 Continue with [Intermediate Representations](intermediate-representations.md)
 for the data passed between these stages, and

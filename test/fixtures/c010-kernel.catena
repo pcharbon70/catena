@@ -1,0 +1,85 @@
+(module C010Fixture
+  (edition 0.1)
+  (revision 0.1.8)
+  (origin "test://c010-fixture")
+  (export value main)
+  (export value loop)
+  (export value launch)
+  (export type Option)
+  (export process Selective)
+  (data Option
+    (params a)
+    (constructor None (fields))
+    (constructor Some (fields a)))
+  (trait Increment
+    (parameter a)
+    (method increment (Fn a (effects) a)))
+  (instance Increment Int
+    (method increment increment_int))
+  (effect Ask
+    (operation ask (params Int) Int))
+  (handler AddOne
+    (effect Ask)
+    (input Int)
+    (output Int)
+    (return result (var result))
+    (operation ask
+      (params (value Int))
+      (resume next)
+      (resume next (add (var value) 1))))
+  (process Selective
+    (mailbox (Option Int))
+    (params)
+    (receive
+      (case (constructor Some (bind message))
+        (when (greater (var message) 0))
+        (unit))))
+  (def main
+    (signature (Tuple Int Bool Int) (uses))
+    (let record_value
+      (record (field answer 1) (field ready true))
+      (let updated
+        (update (var record_value) answer 2)
+        (tuple
+          (select (var updated) answer)
+          (select (restrict (extend (var updated) temporary 9) temporary) ready)
+          (match
+            (var choose_variant)
+            (case (variant left (bind value))
+              (call (var unwrap_option) (construct Some (var value))))
+            (case (variant right (bind ignored)) 0))))))
+  (def choose_variant
+    (signature (Variant (row (field left Int) (field right Bool))) (uses))
+    (annotate
+      (inject left (handle AddOne (request Ask ask 3)))
+      (Variant (row (field left Int) (field right Bool)))))
+  (def increment_int
+    (signature (Fn Int (effects) Int) (uses))
+    (fn (value Int) (add (var value) 1)))
+  (def unwrap_option
+    (signature (Fn (Option Int) (effects) Int) (uses))
+    (fn (option (Option Int))
+      (match
+        (var option)
+        (case (constructor None) 0)
+        (case (constructor Some (bind item))
+          (trait-call Increment increment (var item))))))
+  (def loop
+    (signature (Fn Int (effects) (Fn Int (effects) Int)) (uses))
+    (fn (remaining Int)
+      (fn (total Int)
+        (match
+          (equal (var remaining) 0)
+          (case true (var total))
+          (case false
+            (call
+              (var loop)
+              (subtract (var remaining) 1)
+              (add (var total) 1)))))))
+  (def launch
+    (signature Unit (uses Process))
+    (let target
+      (spawn Selective)
+      (sequence
+        (send (var target) (construct Some 0))
+        (send (var target) (construct Some 1))))))

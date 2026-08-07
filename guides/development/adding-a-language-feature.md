@@ -90,11 +90,12 @@ Keep decoder support for valid earlier versions unless the specification
 explicitly defines migration or removal. Do not infer new evidence when
 decoding an old interface.
 
-During the current `0.1` prototype line, each accepted semantic slice receives
-the next unused patch from `Catena.LanguageVersion`. Since C008 revision 0.1.7,
-the exact language revision, edition, artifact format, and Mix application
-release are separate axes. Change each only when its own contract changes, and
-bind the resolved language selection into every new interface, cache key,
+During the current `0.1` prototype line, each bounded semantic slice reserves
+the next unused patch from `Catena.LanguageVersion`. Normative C010 uses
+revision 0.1.8, so a later slice begins at 0.1.9 unless policy changes. Exact
+language revision, edition, artifact format, and Mix application release are
+separate axes. Change each only when its own contract changes, and bind the
+resolved language selection into every new interface, cache key,
 compile-metadata, assurance, approval, and governance boundary. Historical
 artifact formats and signature domains remain byte-compatible.
 

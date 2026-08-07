@@ -4,10 +4,11 @@ These guides explain the executable Catena language model, its assurance
 protocol, and the bootstrap compiler. They complement rather than replace the
 [normative language specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification).
 
-Catena does not yet have a source parser. Code in a `catena` fence is
-**illustrative source notation**: it teaches the selected language meaning but
-does not freeze punctuation, layout, or every keyword. Commands and JSON-AST
-examples are executable against the current compiler.
+Catena does not yet have an ergonomic source parser. Code in a `catena` fence
+is **illustrative source notation**: it teaches the selected language meaning
+but does not freeze punctuation, layout, or every keyword. Commands, JSON-AST
+examples, and the separately identified exact 0.1.8 kernel S-expressions are
+executable against the current compiler.
 
 The reader-facing guides use Catena's current behavior-first vocabulary:
 `variant`, `payload`, `match`, `Mapper`, `uses`, `request`, `promises`, and
@@ -27,7 +28,8 @@ flowchart TD
     Data --> Match[Pattern Matching]
     Match --> Traits[Traits and Composition]
     Traits --> Effects[Effects and Handlers]
-    Effects --> Specs[Specifications]
+    Effects --> Kernel[Formal Semantic Kernel]
+    Kernel --> Specs[Specifications]
     Specs --> Gov[Governance]
     Gov --> Beam[Catena and BEAM]
 
@@ -61,11 +63,14 @@ flowchart TD
 7. [Effects and Handlers](language/effects-and-handlers.md) — declare external
    abilities, request them through lexical capabilities, and interpret them
    with deep affine handlers.
-8. [Specifications](language/specifications.md) — attach typed rules and exact
+8. [Formal Semantic Kernel](language/formal-semantic-kernel.md) — run the exact
+   0.1.8 conformance input and understand structural rows, the small-step
+   machine, typed actors, fixed layouts, and normative conformance evidence.
+9. [Specifications](language/specifications.md) — attach typed rules and exact
    examples to named language subjects.
-9. [Governance](language/governance.md) — understand policy, evidence,
+10. [Governance](language/governance.md) — understand policy, evidence,
    approval, lifecycle, and protected package actions.
-10. [Catena and BEAM](language/catena-and-beam.md) — understand Abstract Format
+11. [Catena and BEAM](language/catena-and-beam.md) — understand Abstract Format
    lowering, module interfaces, companion modules, and the current
    interoperability boundary.
 
@@ -143,7 +148,7 @@ could also appear in the compiler.
 | 0.1.6 | typed specifications, offline governance, assurance artifacts, and total erasure |
 | 0.1.7 | editions, exact revisions, previews, migration records, and selection-bound artifacts |
 
-Versions 0.1.1 through 0.1.7 identify completed cumulative semantic slices.
+Versions 0.1.1 through 0.1.8 identify completed cumulative semantic slices.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;
 its immutable promotion evidence is recorded in the research archive. Edition `0.1` is the
 end-user compatibility track; each exact three-component revision selects a

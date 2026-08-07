@@ -17,7 +17,8 @@ describe lowering with typed core, CPS workers, Erlang Abstract Format, and
 BEAM modules. The latter are implementation representations, not extra source
 concepts.
 
-The proposed concurrency vocabulary also remains distinct:
+The normative 0.1.8 kernel implements `process`; the wider concurrency
+vocabulary remains distinct:
 
 | Public word | Runtime relationship |
 | --- | --- |
@@ -31,14 +32,15 @@ For example, a domain function may return `Result Quote QuoteProblem`, a
 transform may `use` `RateLookup`, and the process running it may terminate.
 Those are three different events: an expected value, an external ability, and
 a concurrency failure. Catena should not rename all three “errors” merely
-because BEAM can carry each one at runtime. Process syntax and supervision are
-still research work; this example fixes the vocabulary boundary, not grammar.
+because BEAM can carry each one at runtime. Exact kernel process syntax exists;
+ergonomic process syntax, links, monitors, and supervision remain research
+work.
 
 ## One supported backend path
 
 ```mermaid
 flowchart LR
-    Input[JSON AST today / Catena source later] --> Typed[Typed core]
+    Input[JSON AST 0.1.1–0.1.7 or kernel S-expression 0.1.8] --> Typed[Typed core]
     Typed --> Verify[Independent verifier]
     Verify --> Strategy{Pure or effectful?}
     Strategy -->|pure| Direct[Direct lowering]
@@ -133,6 +135,11 @@ Do not infer source-level calling conventions from generated function names or
 arities. Only documented Catena exports and digest-verified interfaces are
 stable within the implemented slice.
 
+A public 0.1.8 process entry lowers to a deterministic hidden spawn export
+`__catena_spawn_Name/arity`; its worker remains private. Kernel programs obtain
+only an opaque send-only `Process M` handle. The native PID and worker symbol
+are backend facts, not general FFI promises.
+
 ## Direct lowering for pure code
 
 Definitions proven pure and free of effect-control forms retain an ordinary
@@ -171,6 +178,11 @@ Both layouts must behave like the same reference value. `.cati.json`
 interfaces omit layout information so dependent Catena modules cannot couple
 themselves to tuple positions or tags.
 
+The normative kernel intentionally has one fixed lowering: maps for structural
+records, tagged three-tuples for structural variants, and a tagged tuple with a
+field tuple for regular nominal constructor values. These are conformance
+backend facts for exact 0.1.8, not foreign construction or inspection APIs.
+
 Until foreign-term validation and representation attributes are specified:
 
 - do not persist a Catena ADT by serializing its observed Erlang tuple;
@@ -193,10 +205,12 @@ needs:
 - transparent or abstract datatypes;
 - condition evidence;
 - traits, instances, laws, templates, and standard hierarchy digest;
-- effect families, handlers, and normalized `uses` rows; and
-- 0.1.6 claim summaries and inherited obligations; and
+- effect families, handlers, and normalized `uses` rows;
+- 0.1.6 claim summaries and inherited obligations;
 - for a 0.1.7 interface, edition, exact revision, enabled previews, and public
-  preview requirements.
+  preview requirements; and
+- for a separate 0.1.8 kernel interface, exported regular datatypes and public
+  process identities, parameter/mailbox types, arities, and spawn symbols.
 
 The interface is deterministic and protected by SHA-256. A content mismatch
 is rejected before dependent checking or linking. It is content binding, not
@@ -261,7 +275,9 @@ Implemented and tested:
 - loading and executing generated modules;
 - cross-module Catena compilation through `.cati.json` interfaces;
 - direct specialized calls in companion modules;
-- hidden effect-handler ABI generated from verified interfaces; and
+- hidden effect-handler ABI generated from verified interfaces;
+- normative 0.1.8 public process-entry interfaces and local BEAM actor
+  execution; and
 - artifact binding and offline assurance verification.
 
 Not yet specified as user-facing language features:

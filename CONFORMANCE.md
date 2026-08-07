@@ -24,15 +24,19 @@ affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | `0.1.1` through `0.1.7`, cumulative as specified |
-| Source boundary | Versioned JSON AST; no Catena source parser yet |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.8` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
-C009 is a repository-governance milestone. It does not create language
-revision `0.1.8`, change compiler release `0.1.0`, or change AST, interface,
-artifact, signature, CLI, or BEAM formats. The next semantic slice therefore
-still uses the next unused language revision, `0.1.8`.
+C009 remains a repository-governance milestone and did not consume a language
+revision. Normative C010 uses `0.1.8` without changing compiler release
+`0.1.0`. It adds a separate kernel frontend, 0.1.8 interface and compile
+metadata, public kernel CLI commands, and fixed kernel BEAM representations;
+the retained JSON, package, governance, and historical signature formats are
+unchanged. Its explicitly authorized immutable compiler identity and
+post-commit evidence are recorded in the
+[C010 conformance journal](https://github.com/pcharbon70/catena-research/blob/main/50-journal/2026-08-06-c010-formal-semantic-kernel.md).
 
 Format 1 is intentionally human-readable. Catena will add machine-readable
 conformance output when the first genuine implementation-defined choice is
@@ -68,10 +72,10 @@ silently treating a recommendation as either mandatory or irrelevant.
 
 | Recommendation | Current disposition | Rationale and follow-up |
 | --- | --- | --- |
-| [Secondary diagnostic spans](https://github.com/pcharbon70/catena-research/blob/main/60-specification/type-system/diagnostics-and-conformance.md#diagnostic-contract) | Not implemented | The JSON-AST prototype carries one stable path rather than a source-span set. Tracked by P117. |
+| [Secondary diagnostic spans](https://github.com/pcharbon70/catena-research/blob/main/60-specification/type-system/diagnostics-and-conformance.md#diagnostic-contract) | Partially implemented | Every source-derived 0.1.8 syntax or static diagnostic has a primary source span. Standalone malformed-interface and forged-core results have no source form. Related secondary spans remain absent, and retained JSON inputs still carry stable paths. Tracked by P117. |
 | [Task-facing “clause condition” wording](https://github.com/pcharbon70/catena-research/blob/main/60-specification/clause-conditions/diagnostics-and-conformance.md#stable-diagnostics) | Current wording deviation | Some compiler details still use implementation-facing condition/guard terms. Public wording cleanup is tracked by P117. |
 | [Shared pattern matrices](https://github.com/pcharbon70/catena-research/blob/main/60-specification/data-and-patterns/match-semantics-and-coverage.md#usefulness-model) | Current performance deviation | The implementation may rebuild equivalent matrices. Required usefulness and coverage results are unchanged; sharing work is tracked by G138. |
-| [Original Catena source locations](https://github.com/pcharbon70/catena-research/blob/main/60-specification/type-system/typed-core-elaboration.md#beam-only-backend-boundary) | Unavailable | There is no Catena source parser or normative location model yet. Source provenance is tracked by P117 and the source-file gaps. |
+| [Original Catena source locations](https://github.com/pcharbon70/catena-research/blob/main/60-specification/type-system/typed-core-elaboration.md#beam-only-backend-boundary) | Implemented for the kernel; unavailable for JSON | The 0.1.8 parser preserves half-open byte/line/column spans through verified core and Abstract Format annotations. Retained JSON revisions still have paths rather than source spans. Tracked by P117 and the ergonomic-source gaps. |
 | [Stale-preview removal edit](https://github.com/pcharbon70/catena-research/blob/main/60-specification/editions-and-feature-lifecycle/feature-lifecycle-and-compatibility.md#preview-selection) | Not implemented | The compiler diagnoses stale preview selection but does not suggest the semantics-preserving removal edit. Tracked by P125. |
 
 No deviation in this table is permitted to change acceptance, safety,
@@ -114,6 +118,9 @@ behavior.
 | Package specialization | 20,000 specialization steps | Implementation limit: `TRT007` |
 | Specification example evaluation | 20,000 semantic steps per example | Implementation limit: `EVD003` |
 | Governance policy evaluation | 20,000 policy steps | Implementation limit: `GOV002` and a denied decision |
+| Kernel S-expression parsing | 20,000 syntax nodes and nesting depth 1,024 | Implementation limit: `SYN003`; no successful output |
+| Kernel reference execution | 20,000 small steps by default | Evidence bound: `budget_exhausted`; not a source rejection |
+| Kernel schedule exploration | 20,000 transitions and 20,000 distinct configurations | Evidence bound: `exhausted`; inconclusive rather than a semantic counterexample |
 
 Specific diagnostic fields and transaction boundaries remain governed by the
 linked specification chapters. G012 owns the future general policy for
@@ -126,8 +133,10 @@ This implementation claims no undefined behavior. Invalid or malformed input
 is rejected with no successful output publication at the affected
 transactional boundary. Resource exhaustion uses the published limit outcomes
 and analysis cutoff above. Specified dynamic failures—such as consuming an
-affine resumption more than once—trap explicitly; they do not open an
-arbitrary-behavior escape.
+affine resumption more than once or evaluating 0.1.8 `trap reason`—trap
+explicitly; they do not open an arbitrary-behavior escape. A process trap is
+local to that process. Sending to a dead target succeeds with Unit and drops
+the message, as specified; it is not undefined behavior.
 
 Specification silence is reported as a specification defect rather than
 filled by compiler precedent. Tests, reference evaluators, guides, and this

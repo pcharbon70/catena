@@ -1,5 +1,5 @@
 defmodule Catena.CLI do
-  @moduledoc "Command-line entry point for the versioned JSON AST compiler."
+  @moduledoc "Command-line entry point for retained JSON and exact kernel inputs."
 
   alias Catena.{Assurance, Interface, LanguageInfo, LanguageSelection, LanguageVersion, Report}
   alias Catena.Governance.TrustRoot
@@ -50,6 +50,8 @@ defmodule Catena.CLI do
             ["check-ir", path] -> check(path, compiler_options)
             ["elaborate-ir", path] -> check(path, compiler_options)
             ["compile-ir", path] -> compile(path, compiler_options)
+            ["check-kernel", path] -> check_kernel(path, compiler_options)
+            ["compile-kernel", path] -> compile_kernel(path, compiler_options)
             ["compile-package-ir", path] -> compile_package(path, compiler_options)
             ["verify-assurance", path] -> verify_assurance(path, compiler_options)
             _ -> halt_with(usage(), 64)
@@ -57,6 +59,43 @@ defmodule Catena.CLI do
         else
           {:error, diagnostic} -> diagnostic(diagnostic)
         end
+    end
+  end
+
+  defp check_kernel(path, options) do
+    case path
+         |> File.read!()
+         |> Catena.check_kernel(Keyword.put(options, :source, Path.expand(path))) do
+      {:ok, core} -> print(%{status: "ok", module: Report.kernel_module(core)})
+      {:error, diagnostic} -> diagnostic(diagnostic)
+    end
+  end
+
+  defp compile_kernel(path, options) do
+    case path
+         |> File.read!()
+         |> Catena.compile_kernel(Keyword.put(options, :source, Path.expand(path))) do
+      {:ok, module, binary, metadata} ->
+        directory = Path.dirname(path)
+        stem = Atom.to_string(module)
+        beam_output = Path.join(directory, stem <> ".beam")
+        interface_output = Path.join(directory, stem <> ".cati.json")
+        File.write!(beam_output, binary)
+        File.write!(interface_output, metadata.interface_binary)
+
+        print(%{
+          status: "ok",
+          module: stem,
+          output: beam_output,
+          interface: interface_output,
+          selection: LanguageSelection.to_map(metadata.selection),
+          diagnostics: Enum.map(metadata.diagnostics, &Report.diagnostic/1),
+          layout: "fixed",
+          warnings: inspect(metadata.warnings)
+        })
+
+      {:error, diagnostic} ->
+        diagnostic(diagnostic)
     end
   end
 
@@ -210,6 +249,7 @@ defmodule Catena.CLI do
       "[--preview NAME] [--deny-diagnostic ID] " <>
       "[--action build|publish|activate] [--trust-root FILE] " <>
       "({check-ir|elaborate-ir|compile-ir|compile-package-ir|verify-assurance} FILE.json" <>
+      " | {check-kernel|compile-kernel} FILE.catena-kernel" <>
       " | language-info)"
   end
 end

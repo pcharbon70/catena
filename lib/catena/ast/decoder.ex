@@ -3,7 +3,8 @@ defmodule Catena.AST.Decoder do
 
   alias Catena.{Diagnostic, LanguageSelection, LanguageVersion, Specification}
 
-  @versions LanguageVersion.all()
+  @versions LanguageVersion.before(:formal_semantic_kernel)
+  @latest_json List.last(@versions)
   @type_system_version LanguageVersion.introduced(:type_system)
   @data_versions LanguageVersion.from(:data_and_patterns)
   @condition_versions LanguageVersion.from(:clause_conditions)
@@ -131,8 +132,8 @@ defmodule Catena.AST.Decoder do
   end
 
   defp inferred_selection(frontend_format) do
-    if frontend_format == LanguageVersion.latest() do
-      {:ok, LanguageVersion.current_selection(), [], false}
+    if frontend_format == @latest_json do
+      {:ok, LanguageVersion.legacy_selection(frontend_format), [], false}
     else
       inferred = LanguageVersion.legacy_selection(frontend_format)
 

@@ -9,6 +9,8 @@ general-purpose source-language distribution.
 The repository contains an Elixir bootstrap compiler that can:
 
 - decode versioned Catena JSON AST 0.1.1 through 0.1.7;
+- parse the exact normative 0.1.8 semantic-kernel S-expression with source
+  spans;
 - infer and check types, data, patterns, conditions, traits, effects, and
   typed specifications;
 - independently verify its typed core;
@@ -17,9 +19,11 @@ The repository contains an Elixir bootstrap compiler that can:
 - emit digest-bound `.cati.json` module interfaces; and
 - build artifact-bound assurance manifests for 0.1.6 and 0.1.7 packages; and
 - execute the normative 0.1.7 edition, exact-revision, preview-lifecycle, and
-  selection-binding contract.
+  selection-binding contract; and
+- check and run normative 0.1.8 structural rows, handlers, typed local actors,
+  process-local traps, and bounded schedule exploration.
 
-It does not yet contain a Catena source parser, formatter, REPL, package
+It does not yet contain an ergonomic Catena source parser, formatter, REPL, package
 manager, stable Erlang FFI, or complete standard library.
 
 ## Learn Catena's words from behavior
@@ -138,6 +142,7 @@ exposing the chosen runtime layout.
 ```mermaid
 flowchart LR
     Source[Future Catena source] -. parser not implemented .-> JSON[Versioned JSON AST]
+    Kernel[Exact 0.1.8 kernel S-expression] --> KDecode[Kernel parser]
     JSON --> Decode[Strict decoding]
     Decode --> Infer[Inference and elaboration]
     Infer --> Verify[Independent typed-core verification]
@@ -145,11 +150,15 @@ flowchart LR
     Lower --> OTP[OTP 29 compiler]
     OTP --> Beam[BEAM module]
     Verify --> Interface[Digest-bound interface]
+    KDecode --> KVerify[Unified checked and verified core]
+    KVerify --> Lower
+    KVerify --> Reference[Small-step machine and explorer]
 ```
 
 JSON is a bootstrap boundary, not a preview of the final source file format.
 Keeping that boundary explicit lets the project test language semantics before
-parser choices become permanent.
+ergonomic parser choices become permanent. The exact kernel input is a retained
+conformance format, not a preview of ergonomic layout.
 
 ## Understand signatures and inference
 
@@ -206,6 +215,8 @@ catena compile-ir [--layout compact|uniform] PROGRAM.json
 catena compile-ir [--condition-lowering auto|native|ordinary] PROGRAM.json
 catena compile-package-ir [--action build|publish|activate] PACKAGE.json
 catena verify-assurance --trust-root ROOT.json ASSURANCE.json
+catena check-kernel PROGRAM.catena-kernel
+catena compile-kernel [--interface DEP.cati.json] PROGRAM.catena-kernel
 catena language-info
 ```
 
@@ -245,11 +256,13 @@ Continue in this order:
    operation should work across types.
 5. [Effects and Handlers](language/effects-and-handlers.md) when code needs an
    external ability.
-6. [Specifications](language/specifications.md) when a package needs checked
+6. [Formal Semantic Kernel](language/formal-semantic-kernel.md) when you need
+   the exact 0.1.8 input, structural rows, reference semantics, or typed actors.
+7. [Specifications](language/specifications.md) when a package needs checked
    rules and durable evidence.
-7. [Governance](language/governance.md) when an organization needs to control
+8. [Governance](language/governance.md) when an organization needs to control
    build, publication, or activation.
-8. [Catena and BEAM](language/catena-and-beam.md) when you need to understand
+9. [Catena and BEAM](language/catena-and-beam.md) when you need to understand
    generated artifacts and runtime boundaries.
 
 ## Know the current boundary
@@ -259,6 +272,8 @@ Do not infer unspecified facilities from familiar syntax. In particular:
 - list, map, binary, view, and pattern-synonym patterns are not implemented;
 - list comprehensions remain research work;
 - handlers do not yet promise resource cleanup or multi-shot resumptions;
+- 0.1.8 actors are local, typed, fire-and-forget processes without timeouts,
+  links, monitors, supervision, distribution, or fairness guarantees;
 - specifications have no runtime-monitoring profile in 0.1.6;
 - 0.1.7 publishes no actual preview feature, despite defining how named
   previews will work;
