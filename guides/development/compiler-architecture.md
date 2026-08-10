@@ -356,7 +356,10 @@ Every compiler change preserves these boundaries:
 16. **Reference independence:** the kernel stepper and schedule explorer never
     call production lowering or native process dispatch.
 
-Continue with [Intermediate Representations](intermediate-representations.md)
-for the data passed between these stages, and
+Continue with the
+[semantic-kernel developer guides](../../docs/guides/developer/README.md) for
+a detailed boundary-by-boundary treatment of the exact 0.1.8 path,
+[Intermediate Representations](intermediate-representations.md) for the data
+passed between these stages, and
 [Versioning and Feature Lifecycle](versioning-and-feature-lifecycle.md) for the
 C008 implementation rules.
