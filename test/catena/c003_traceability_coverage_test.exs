@@ -18,12 +18,9 @@ defmodule Catena.C003TraceabilityCoverageTest do
   @allowed_uncovered %{
     "CC-OBL-010" => "or-pattern lowering with one shared condition continuation",
     "CC-OBL-011" => "0.1.2 interface consumed without condition evidence",
-    "CC-OBL-016" => "nonempty condition effect rejected",
     "CC-OBL-032" =>
       "OTP Abstract Format sole BEAM boundary is architectural; no focused c003 unit",
     "CC-OBL-033" => "typed core/effects/source attribution preserved through lowering (partial)",
-    "CC-OBL-034" =>
-      "ordinary-match exhaustiveness is exercised in c002_data_test; c003-specific test pending",
     "CC-OBL-038" => "body failure or divergence does not resume clause selection",
     "CC-OBL-039" => "independent typed-core verifier rejects duplicated condition evaluation",
     "CC-OBL-040" => "or-pattern alternatives bind the same names",
