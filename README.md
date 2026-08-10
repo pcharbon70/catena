@@ -62,7 +62,11 @@ authoritative `catena-research` documents.
 
 The [Catena Guides](guides/README.md) provide a detailed source-first learning
 path, task guides for each implemented language slice, governance operations,
-and compiler developer documentation. Contributors should also read
+and compiler developer documentation. The
+[semantic-kernel developer series](docs/guides/developer/README.md) explains
+the kernel, S-expression reader, parser, type checker, reference machine,
+stepper/explorer, OTP lowering, and compiler as separate cooperating
+boundaries. Contributors should also read
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Prototype language versions

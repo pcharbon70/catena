@@ -36,7 +36,8 @@ flowchart TD
     Gov --> Ops[Governance Operations]
 
     Start --> Dev[Compiler Architecture]
-    Dev --> IR[Intermediate Representations]
+    Dev --> Concepts[Kernel Developer Concepts]
+    Concepts --> IR[Intermediate Representations]
     IR --> Tests[Diagnostics and Testing]
     Tests --> Feature[Adding a Language Feature]
     Feature --> Lifecycle[Versioning and Feature Lifecycle]
@@ -89,6 +90,10 @@ secure key generation, custody, approval collection, and transport.
 
 - [Compiler Architecture](development/compiler-architecture.md) — pipeline,
   modules, trust boundaries, and non-negotiable invariants.
+- [Semantic-kernel Developer Guides](../docs/guides/developer/README.md) — a
+  detailed concept-by-concept account of the kernel, S-expression reader,
+  parser, type checker, reference machine, stepper/explorer, OTP lowering, and
+  compiler, including their contracts and relationships.
 - [Intermediate Representations](development/intermediate-representations.md)
   — JSON AST, decoded AST, typed core, interfaces, Erlang Abstract Format, and
   assurance records.

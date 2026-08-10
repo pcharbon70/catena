@@ -10,10 +10,12 @@ Before changing code, read:
 
 1. [Catena Language Tour](LANGUAGE-TOUR.md);
 2. [Compiler Architecture](guides/development/compiler-architecture.md);
-3. [Intermediate Representations](guides/development/intermediate-representations.md);
-4. [Diagnostics and Testing](guides/development/diagnostics-and-testing.md); and
-5. the current [compiler conformance profile](CONFORMANCE.md); and
-6. the applicable
+3. the [semantic-kernel developer guides](docs/guides/developer/README.md)
+   when working on the exact 0.1.8 path;
+4. [Intermediate Representations](guides/development/intermediate-representations.md);
+5. [Diagnostics and Testing](guides/development/diagnostics-and-testing.md);
+6. the current [compiler conformance profile](CONFORMANCE.md); and
+7. the applicable
    [normative specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification).
 
 The research repository's
@@ -196,6 +198,8 @@ Update documentation in the same change when behavior or navigation changes:
 - `README.md` for repository status, commands, and architecture summary;
 - `LANGUAGE-TOUR.md` for the programmer's compact model;
 - `guides/` for task and developer explanations; and
+- `docs/guides/developer/` for detailed semantic-kernel phase and relationship
+  guides; and
 - `catena-research` for normative or research changes.
 
 Label ergonomic Catena examples as illustrative until that frontend is
