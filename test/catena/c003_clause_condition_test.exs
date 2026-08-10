@@ -5,6 +5,8 @@ defmodule Catena.C003ClauseConditionTest do
   alias Catena.Backend.ErlangAbstract
   alias Catena.Reference.Evaluator
 
+  @tag obligations:
+         ~w(CC-OBL-001 CC-OBL-003 CC-OBL-004 CC-OBL-007 CC-OBL-008 CC-OBL-009 CC-OBL-026 CC-OBL-027 CC-OBL-030 CC-OBL-035 CC-OBL-036 CC-OBL-037 CC-OBL-041)
   test "checks exhaustive integer condition partitions and lowers them both ways" do
     source = partition_program("ConditionPartitions") |> JSON.encode!()
 
@@ -45,6 +47,8 @@ defmodule Catena.C003ClauseConditionTest do
     refute lowered.native == lowered.ordinary
   end
 
+  @tag obligations:
+         ~w(CC-OBL-014 CC-OBL-015 CC-OBL-017 CC-OBL-019 CC-OBL-024 CC-OBL-043 CC-OBL-046 CC-OBL-047 CC-OBL-049)
   test "requires safe, typed, acyclic condition declarations" do
     unsafe =
       partition_program("UnsafeCondition")
@@ -88,6 +92,7 @@ defmodule Catena.C003ClauseConditionTest do
     assert {:error, %{id: "CND002"}} = Catena.check_json(JSON.encode!(non_boolean_guard))
   end
 
+  @tag obligations: ~w(CC-OBL-002 CC-OBL-022 CC-OBL-023 CC-OBL-029 CC-OBL-042)
   test "fact reasoning proves redundancy but remains conservative outside its theory" do
     redundant =
       module_03("RedundantFacts", ["classify"], [
@@ -117,6 +122,7 @@ defmodule Catena.C003ClauseConditionTest do
     assert {:error, %{id: "M001"}} = Catena.check_json(JSON.encode!(unsupported))
   end
 
+  @tag obligations: ~w(CC-OBL-005 CC-OBL-006 CC-OBL-012 CC-OBL-044 CC-OBL-045)
   test "exports canonical condition evidence and imports it explicitly" do
     producer =
       module_03("PredicateSource", ["positive"], [
@@ -187,6 +193,7 @@ defmodule Catena.C003ClauseConditionTest do
     end
   end
 
+  @tag obligations: ~w(CC-OBL-020 CC-OBL-028)
   test "rejects tampered nested condition evidence independently of the interface digest" do
     assert {:ok, :EvidenceSource, _binary, metadata} =
              partition_program("EvidenceSource") |> JSON.encode!() |> Catena.compile_json()
@@ -210,6 +217,7 @@ defmodule Catena.C003ClauseConditionTest do
     assert {:error, %{id: "CND005"}} = Interface.decode(tampered)
   end
 
+  @tag obligations: ~w(CC-OBL-013 CC-OBL-025 CC-OBL-031)
   test "receive harness accepts only native conditions over a closed message type" do
     assert {:ok, core} =
              partition_program("ReceiveHarness") |> JSON.encode!() |> Catena.check_json()
@@ -228,6 +236,7 @@ defmodule Catena.C003ClauseConditionTest do
     end
   end
 
+  @tag obligations: ~w(CC-OBL-014 CC-OBL-017 CC-OBL-018 CC-OBL-021)
   test "rejects unsupported partial and higher-order condition forms" do
     lambda = %{"tag" => "function", "parameter" => "y", "body" => variable("y")}
 
