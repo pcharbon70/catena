@@ -12,6 +12,7 @@ defmodule Catena.C004CategoricalTest do
   alias Catena.Package.Linker
   alias Catena.Type.Trait
 
+  @tag obligations: ~w(TR-OBL-017 TR-OBL-020)
   test "standard interface freezes all seventeen approachable capabilities and method ABI" do
     standard = Standard.interface!()
 
@@ -45,6 +46,7 @@ defmodule Catena.C004CategoricalTest do
     assert hd(compose["methods"])["direction"] == "left-to-right"
   end
 
+  @tag obligations: ~w(TR-OBL-010 TR-OBL-012 TR-OBL-029)
   test "standard List mapping and reduction stay stack safe on large inputs" do
     list_type =
       constructor(
@@ -95,6 +97,7 @@ defmodule Catena.C004CategoricalTest do
     assert total == div(250_000 * 250_001, 2)
   end
 
+  @tag obligations: ~w(TR-OBL-008 TR-OBL-009 TR-OBL-023 TR-OBL-025)
   test "AST 0.1.4 derives implicit instances and executable type-qualified operations" do
     json = JSON.encode!(derived_module())
     assert {:ok, module, binary, metadata} = Catena.compile_json(json)
@@ -239,6 +242,7 @@ defmodule Catena.C004CategoricalTest do
              {:catena_adt, String.to_atom(box.id), 0, {6}}
   end
 
+  @tag obligations: ~w(TR-OBL-005 TR-OBL-021 TR-OBL-024)
   test "all standard capabilities resolve coherent parent evidence and Workflow has two useful witnesses" do
     categorical =
       Catena.Categorical.prepare!(
@@ -308,6 +312,7 @@ defmodule Catena.C004CategoricalTest do
     assert length(resolved) == 10
   end
 
+  @tag obligations: ~w(TR-OBL-006 TR-OBL-026 TR-OBL-027)
   test "law testing requires explicit Equatable evidence and bounded function samples" do
     categorical =
       Catena.Categorical.prepare!(
@@ -337,6 +342,8 @@ defmodule Catena.C004CategoricalTest do
     refute Law.extensionally_equal?(&(&1 + 1), &(&1 * 2), [0, 1, 2])
   end
 
+  @tag obligations:
+         ~w(TR-OBL-011 TR-OBL-015 TR-OBL-016 TR-OBL-019 TR-OBL-028 TR-OBL-030 TR-OBL-031)
   test "package specialization resolves evidence to a direct call and is deterministic" do
     assert {:ok, _module, _binary, metadata} =
              Catena.compile_json(JSON.encode!(template_module()))
@@ -379,6 +386,7 @@ defmodule Catena.C004CategoricalTest do
     refute :erlang.apply(module, :equals_int, [7, 8])
   end
 
+  @tag obligations: ~w(TR-OBL-014 TR-OBL-015)
   test "toolchain manifest writes the declared companion BEAM relative to itself" do
     assert {:ok, _module, _binary, metadata} =
              Catena.compile_json(JSON.encode!(template_module()))
@@ -419,6 +427,7 @@ defmodule Catena.C004CategoricalTest do
     assert result.evidence_erased
   end
 
+  @tag obligations: ~w(TR-OBL-007 TR-OBL-032)
   test "0.1.4 rejects reserved law trust and incomplete template closure" do
     invalid_law =
       template_module()
@@ -435,6 +444,7 @@ defmodule Catena.C004CategoricalTest do
     assert closure_error.id == "TRT006"
   end
 
+  @tag obligations: ~w(TR-OBL-001 TR-OBL-022)
   test "type term codec preserves higher-kinded applications" do
     encoded = %{
       "tag" => "application",
