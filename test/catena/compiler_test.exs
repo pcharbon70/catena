@@ -3,6 +3,7 @@ defmodule Catena.CompilerTest do
 
   alias Catena.Type
 
+  @tag obligations: ~w(TS-OBL-008 TS-OBL-009)
   test "checks a signed polymorphic identity" do
     assert {:ok, core} = Catena.check_json(identity_json())
     [definition] = core.definitions
@@ -12,16 +13,19 @@ defmodule Catena.CompilerTest do
              {:function, {:variable, "a"}, {:variable, "a"}}
   end
 
+  @tag obligations: ~w(TS-OBL-003 TS-OBL-006)
   test "requires signatures on exports" do
     json = module_json("Unsigned", ["answer"], [definition("answer", [], nil, integer(42))])
     assert {:error, %{id: "T008"}} = Catena.check_json(json)
   end
 
+  @tag obligations: ~w(TS-OBL-037 TS-OBL-040)
   test "rejects an unbound value with T001" do
     json = module_json("Unbound", [], [definition("bad", [], nil, variable("missing"))])
     assert {:error, %{id: "T001"}} = Catena.check_json(json)
   end
 
+  @tag obligations: ~w(TS-OBL-011)
   test "skolemization rejects a falsely universal signature" do
     signature = forall(["a"], function_type(variable_type("a"), variable_type("a")))
 
@@ -33,12 +37,14 @@ defmodule Catena.CompilerTest do
     assert {:error, %{id: "T002"}} = Catena.check_json(json)
   end
 
+  @tag obligations: ~w(TS-OBL-005 TS-OBL-013)
   test "occurs check rejects self application" do
     self_call = call(variable("x"), [variable("x")])
     json = module_json("Infinite", [], [definition("omega", ["x"], nil, self_call)])
     assert {:error, %{id: "T003"}} = Catena.check_json(json)
   end
 
+  @tag obligations: ~w(TS-OBL-001 TS-OBL-004 TS-OBL-030 TS-OBL-037)
   test "reports the executable effect-annotation boundary with T010" do
     signature =
       forall(
@@ -55,6 +61,7 @@ defmodule Catena.CompilerTest do
     assert {:error, %{id: "T010"}} = Catena.check_json(json)
   end
 
+  @tag obligations: ~w(TS-OBL-036 TS-OBL-043 TS-OBL-044)
   test "compiles deterministic BEAM through OTP 29 and executes it" do
     signature = forall([], tuple_type([integer_type(), boolean_type()]))
 
@@ -99,6 +106,7 @@ defmodule Catena.CompilerTest do
     assert Keyword.get(compile_info, :catena_frontend) == ~c"json-ast-0.1.1"
   end
 
+  @tag obligations: ~w(TS-OBL-031)
   test "preserves curried top-level functions when used as values" do
     choose_signature =
       forall(
