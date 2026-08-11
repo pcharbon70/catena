@@ -9,6 +9,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
   @rfc8032_empty_signature "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e06522490155" <>
                              "5fb8821590a33bacc61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b"
 
+  @tag obligations: ~w(SG-OBL-039)
   test "Catena's JCS profile is deterministic and rejects ambiguous signed JSON" do
     value = %{"z" => [3, %{"b" => true, "a" => nil}], "a" => "€"}
     assert CanonicalJCS.encode(value) == ~s({"a":"€","z":[3,{"a":null,"b":true}]})
@@ -26,11 +27,13 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:error, %{id: "EVD001"}} = CanonicalJCS.decode(~s({ "a":1}), canonical: true)
   end
 
+  @tag obligations: ~w(SG-OBL-039)
   test "OTP 29 Ed25519 verification agrees with the RFC 8032 empty-message vector" do
     assert Crypto.verify(<<>>, @rfc8032_public, @rfc8032_empty_signature)
     refute Crypto.verify("changed", @rfc8032_public, @rfc8032_empty_signature)
   end
 
+  @tag obligations: ~w(SG-OBL-001 SG-OBL-002 SG-OBL-008 SG-OBL-012 SG-OBL-026 SG-OBL-028)
   test "AST 0.1.6 type-checks exact rules, exports claim summaries, and erases checkers" do
     json = specification_module_json("C006Rule", true)
 
@@ -69,6 +72,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     :code.delete(:C006Rule)
   end
 
+  @tag obligations: ~w(SG-OBL-027 SG-OBL-044)
   test "fully discharged specifications do not change emitted BEAM bytes" do
     plain = base_module("C006Erasure", [])
     specified = specification_module("C006Erasure", true)
@@ -78,6 +82,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert plain_beam == specified_beam
   end
 
+  @tag obligations: ~w(SG-OBL-013 SG-OBL-026 SG-OBL-028)
   test "runtime references to verification-only definitions fail before lowering" do
     module = specification_module("C006Escape", true)
 
@@ -97,6 +102,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:error, %{id: "ERS001"}} = Catena.check_json(JSON.encode!(module))
   end
 
+  @tag obligations: ~w(SG-OBL-007 SG-OBL-029)
   test "claim subject and example failures keep stable diagnostic families" do
     unknown =
       specification_module("C006Unknown", true)
@@ -111,6 +117,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:error, %{id: "EVD002"}} = Catena.check_json(counterexample)
   end
 
+  @tag obligations: ~w(SG-OBL-009 SG-OBL-033)
   test "all 0.1.6 claim subject kinds resolve against the typed module and package graph" do
     subjects = [
       %{"kind" => "value", "name" => "main"},
@@ -156,6 +163,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert Enum.map(resolved, & &1.subject) == subjects
   end
 
+  @tag obligations: ~w(SG-OBL-010 SG-OBL-036)
   test "semantic claim digests ignore JSON formatting but change with meaning" do
     module = specification_module("C006Digest", true)
     compact = JSON.encode!(module)
@@ -172,6 +180,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     refute compact_core.specifications.digest == changed_core.specifications.digest
   end
 
+  @tag obligations: ~w(SG-OBL-012 SG-OBL-034 SG-OBL-035)
   test "mistyped, effectful, failing, and over-budget rule checkers remain distinct" do
     module = specification_module("C006CheckerBoundary", true)
     assert {:ok, ast} = Catena.AST.Decoder.decode(JSON.encode!(module))
@@ -222,12 +231,14 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert error.diagnostic.id == "EVD003"
   end
 
+  @tag obligations: ~w(SG-OBL-013 SG-OBL-026 SG-OBL-028)
   test "verification definitions cannot become runtime exports" do
     module = specification_module("C006Export", true)
     module = %{module | "exports" => ["main", "positive"]}
     assert {:error, %{id: "SPC003"}} = Catena.check_json(JSON.encode!(module))
   end
 
+  @tag obligations: ~w(SG-OBL-012 SG-OBL-035)
   test "the rule evaluator reports deterministic budget exhaustion separately" do
     core = %{
       frontend_version: "0.1.6",
@@ -244,6 +255,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
              Catena.Reference.Evaluator.run_bounded(core, "loop", [], 37)
   end
 
+  @tag obligations: ~w(SG-OBL-031 SG-OBL-032)
   test "production policy evaluation agrees with the independent oracle" do
     requirements = %{
       "op" => "all",
@@ -288,6 +300,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert explanation == oracle
   end
 
+  @tag obligations: ~w(SG-OBL-003 SG-OBL-004 SG-OBL-006 SG-OBL-020 SG-OBL-022 SG-OBL-037)
   test "governance combines every matching policy additively and fails closed" do
     claim_digest = String.duplicate("a", 64)
     subject = %{"kind" => "value", "name" => "main"}
@@ -360,6 +373,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:error, %{id: "GOV001"}} = Governance.evaluate(decoded_denied, nil, context)
   end
 
+  @tag obligations: ~w(SG-OBL-038)
   test "the 20000-step policy budget is shared across every matching policy" do
     leaves = List.duplicate(%{"op" => "action", "allowed" => ["build"]}, 10_000)
 
@@ -381,6 +395,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:error, %{id: "GOV002"}} = Governance.evaluate(decoded, nil, governance_context())
   end
 
+  @tag obligations: ~w(SG-OBL-006 SG-OBL-020 SG-OBL-037)
   test "package, module, subject, action, output, interface, and profile scopes add" do
     scope_context = %{
       governance_context()
@@ -417,6 +432,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert length(explanations) == 7
   end
 
+  @tag obligations: ~w(SG-OBL-038 SG-OBL-042)
   test "trust roots count distinct Ed25519 principals and require old plus new rotation authority" do
     old = keypair("old")
     recovery = keypair("recovery")
@@ -469,6 +485,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
              missing_new |> CanonicalJCS.encode() |> TrustRoot.decode()
   end
 
+  @tag obligations: ~w(SG-OBL-014 SG-OBL-021 SG-OBL-038 SG-OBL-039)
   test "signature thresholds reject duplicate actors and cross-domain substitution" do
     first = keypair("first")
     second = keypair("second")
@@ -535,6 +552,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
              )
   end
 
+  @tag obligations: ~w(SG-OBL-042)
   test "predeclared recovery can replace normal authority without new-root self-authorization" do
     old = keypair("old")
     recovery = keypair("recovery")
@@ -572,6 +590,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:error, %{id: "GOV005"}} = invalid |> CanonicalJCS.encode() |> TrustRoot.decode()
   end
 
+  @tag obligations: ~w(SG-OBL-040)
   test "delegated signatures remain bounded by action, subject, profile, and sequence" do
     owner = keypair("owner")
     recovery = keypair("recovery")
@@ -634,6 +653,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:ok, %{decision: "allow"}} = Governance.evaluate(decoded, root, governance_context())
   end
 
+  @tag obligations: ~w(SG-OBL-011 SG-OBL-038)
   test "assumptions count only when policy names them and an authorized role signs the exact decision" do
     assumer = keypair("assumer")
     recovery = keypair("recovery")
@@ -738,6 +758,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
              Governance.evaluate(disjunctive_decoded, root, context)
   end
 
+  @tag obligations: ~w(SG-OBL-040)
   test "external attestations are signed, sequence-bounded, and claim-bound" do
     attestor = keypair("attestor")
     recovery = keypair("recovery")
@@ -834,6 +855,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:error, %{id: "EVD001"}} = Governance.evaluate(decoded, revoked_root, context)
   end
 
+  @tag obligations: ~w(SG-OBL-018 SG-OBL-041)
   test "lifecycle replay rejects skipped, terminal, and broken hash-chain transitions" do
     signer = keypair("signer")
     recovery = keypair("recovery")
@@ -867,6 +889,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:error, %{id: "GOV004"}} = Lifecycle.replay([event, broken], root)
   end
 
+  @tag obligations: ~w(SG-OBL-016 SG-OBL-041)
   test "activate requires a signed lifecycle transition into Active" do
     signer = keypair("signer")
     recovery = keypair("recovery")
@@ -920,6 +943,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:ok, %{state: "Active"}} = Governance.evaluate(decoded, root, context)
   end
 
+  @tag obligations: ~w(SG-OBL-018 SG-OBL-041)
   test "lifecycle replay covers every valid edge and rejects reordering" do
     signer = keypair("signer")
     recovery = keypair("recovery")
@@ -964,6 +988,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:error, %{id: "GOV004"}} = Lifecycle.replay([accepted, proposed], root)
   end
 
+  @tag obligations: ~w(SG-OBL-023 SG-OBL-024 SG-OBL-025)
   test "0.1.6 package build stages outputs, emits a sidecar, and verifies exact artifacts" do
     directory = temporary_directory!("package")
     module_path = Path.join(directory, "module.json")
@@ -1003,6 +1028,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     :code.delete(:C006Package)
   end
 
+  @tag obligations: ~w(SG-OBL-027 SG-OBL-044)
   test "fully discharged specifications leave every package BEAM byte-identical" do
     directory = temporary_directory!("package-erasure")
     module_path = Path.join(directory, "module.json")
@@ -1024,6 +1050,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert plain_companion == specified_companion
   end
 
+  @tag obligations: ~w(SG-OBL-002 SG-OBL-015 SG-OBL-019 SG-OBL-025)
   test "a governed build consumes compiler evidence and emits the external signing payload" do
     directory = temporary_directory!("governed")
 
@@ -1062,6 +1089,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
              Assurance.verify(File.read!(result.assurance), directory, nil)
   end
 
+  @tag obligations: ~w(SG-OBL-017 SG-OBL-028)
   test "imported interfaces carry claim obligations and semantic dependency digests" do
     directory = temporary_directory!("inherited-claims")
 
@@ -1089,6 +1117,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert length(get_in(assurance, ["signed", "dependency_digests"])) == 1
   end
 
+  @tag obligations: ~w(SG-OBL-017 SG-OBL-025 SG-OBL-040)
   test "signed assurance manifests bind the exact payload and artifact" do
     signer = keypair("signer")
     recovery = keypair("recovery")
@@ -1139,6 +1168,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:error, %{id: "ART001"}} = Assurance.verify(wrong_domain.binary, directory, root)
   end
 
+  @tag obligations: ~w(SG-OBL-015 SG-OBL-023)
   test "publish exposes an exact candidate payload, writes nothing, then accepts external signing" do
     signer = keypair("signer")
     recovery = keypair("recovery")
@@ -1204,6 +1234,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
              Assurance.verify(File.read!(result.assurance), directory, root)
   end
 
+  @tag obligations: ~w(SG-OBL-023 SG-OBL-043)
   test "failed governed gates and unsafe paths leave final outputs absent" do
     directory = temporary_directory!("gate")
     File.write!(Path.join(directory, "module.json"), specification_module_json("C006Gate", true))
@@ -1249,6 +1280,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:error, %{id: "ART001"}} = Linker.compile_manifest(path, action: :build)
   end
 
+  @tag obligations: ~w(SG-OBL-009 SG-OBL-033)
   test "package-level claim subjects must name declared outputs, interfaces, actions, and profiles" do
     directory = temporary_directory!("package-subject")
 
@@ -1269,6 +1301,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     refute File.exists?(Path.join(directory, "assurance.json"))
   end
 
+  @tag obligations: ~w(SG-OBL-025 SG-OBL-040)
   test "artifact substitution invalidates a previously valid assurance manifest" do
     directory = temporary_directory!("substitution")
     File.write!(Path.join(directory, "module.json"), specification_module_json("C006Bind", true))
@@ -1281,6 +1314,7 @@ defmodule Catena.C006SpecificationGovernanceTest do
     assert {:error, %{id: "ART001"}} = Assurance.verify(manifest, directory, nil)
   end
 
+  @tag obligations: ~w(SG-OBL-024 SG-OBL-043)
   test "assurance verification refuses artifact paths that escape through symlinks" do
     directory = temporary_directory!("verify-symlink")
     outside = temporary_directory!("verify-symlink-outside")
