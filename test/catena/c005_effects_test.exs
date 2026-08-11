@@ -3,6 +3,7 @@ defmodule Catena.C005EffectsTest do
 
   alias Catena.Effect.Row
 
+  @tag obligations: ~w(EF-OBL-011 EF-OBL-017 EF-OBL-019 EF-OBL-023)
   test "deep handlers resume exactly once in the reference model and generated BEAM" do
     private_handler =
       handler("PrivateAddOne", "Ask", resume("next", variable("value")))
@@ -52,6 +53,7 @@ defmodule Catena.C005EffectsTest do
     assert hd(interface.handlers).name == "AddOne"
   end
 
+  @tag obligations: ~w(EF-OBL-019)
   test "a clause can abort without invoking the captured continuation" do
     program = resumptive_program("C005Abort")
 
@@ -83,6 +85,7 @@ defmodule Catena.C005EffectsTest do
     unload(:C005Abort)
   end
 
+  @tag obligations: ~w(EF-OBL-004 EF-OBL-026)
   test "selection rejects missing and ambiguous capabilities and accepts a qualifier" do
     missing =
       resumptive_program("C005Missing")
@@ -124,6 +127,7 @@ defmodule Catena.C005EffectsTest do
     unload(:C005Ambiguous)
   end
 
+  @tag obligations: ~w(EF-OBL-007 EF-OBL-009 EF-OBL-026)
   test "rejects incomplete handlers and statically non-affine resumptions" do
     incomplete =
       resumptive_program("C005Incomplete")
@@ -144,6 +148,7 @@ defmodule Catena.C005EffectsTest do
     assert {:error, %{id: "RES002"}} = Catena.check_json(JSON.encode!(non_affine))
   end
 
+  @tag obligations: ~w(EF-OBL-003 EF-OBL-006)
   test "operation callbacks must have a closed empty effect row" do
     bad_callback =
       function_type(integer_type(), integer_type())
@@ -159,6 +164,7 @@ defmodule Catena.C005EffectsTest do
     assert {:error, %{id: "EFX002"}} = Catena.check_json(JSON.encode!(invalid))
   end
 
+  @tag obligations: ~w(EF-OBL-012 EF-OBL-022)
   test "effectful definitions forward their selected capability through a CPS worker" do
     ask_once =
       %{
@@ -202,6 +208,7 @@ defmodule Catena.C005EffectsTest do
     unload(:C005Forward)
   end
 
+  @tag obligations: ~w(EF-OBL-008 EF-OBL-022)
   test "handler clauses may request an explicitly declared outer capability" do
     ask_with_log =
       handler(
@@ -244,6 +251,7 @@ defmodule Catena.C005EffectsTest do
     unload(:C005ClauseEffects)
   end
 
+  @tag obligations: ~w(EF-OBL-002 EF-OBL-007 EF-OBL-026)
   test "effect diagnostics cover type mismatch, missing return, and capability escape" do
     wrong_type =
       resumptive_program("C005WrongRequestType")
@@ -290,6 +298,7 @@ defmodule Catena.C005EffectsTest do
     assert {:error, %{id: "EFX003"}} = Catena.check_json(JSON.encode!(escaping))
   end
 
+  @tag obligations: ~w(EF-OBL-024)
   test "the runtime token traps before a second continuation entry" do
     parent = self()
     resumption = Catena.Effect.Runtime.new_resumption(fn value -> send(parent, {:ran, value}) end)
@@ -304,6 +313,7 @@ defmodule Catena.C005EffectsTest do
     refute_receive {:ran, 2}
   end
 
+  @tag obligations: ~w(EF-OBL-012 EF-OBL-014 EF-OBL-018)
   test "generic effects, unnamed uses, open rows, and pure direct lowering round trip" do
     store_effect = %{
       "name" => "Store",
@@ -411,6 +421,7 @@ defmodule Catena.C005EffectsTest do
     assert open_forward_interface.uses.tail == "forwarded_rest"
   end
 
+  @tag obligations: ~w(EF-OBL-010)
   test "typed-core verification rejects forged effect-row evidence" do
     assert {:ok, core} =
              resumptive_program("C005ForgedCore") |> JSON.encode!() |> Catena.check_json()
@@ -428,6 +439,7 @@ defmodule Catena.C005EffectsTest do
     assert reason =~ "effect"
   end
 
+  @tag obligations: ~w(EF-OBL-003 EF-OBL-015)
   test "operations accept ordinary data and closed pure functions" do
     callback_type = function_type(integer_type(), integer_type())
 
@@ -489,6 +501,7 @@ defmodule Catena.C005EffectsTest do
     unload(:C005PureCallback)
   end
 
+  @tag obligations: ~w(EF-OBL-027)
   test "effectful branches preserve existing exhaustive match semantics" do
     branch = %{
       "tag" => "match",
@@ -521,6 +534,7 @@ defmodule Catena.C005EffectsTest do
     unload(:C005EffectfulMatch)
   end
 
+  @tag obligations: ~w(EF-OBL-016 EF-OBL-025)
   test "interfaces preserve nominal effect identities across module checking" do
     assert {:ok, :C005EffectSource, source_binary, source_metadata} =
              resumptive_program("C005EffectSource")
@@ -587,6 +601,7 @@ defmodule Catena.C005EffectsTest do
              Catena.check_json(JSON.encode!(conflicting), interfaces: [interface])
   end
 
+  @tag obligations: ~w(EF-OBL-007 EF-OBL-022)
   test "handler arguments evaluate left to right in the outer capability scope" do
     offset_handler =
       handler(
@@ -636,6 +651,7 @@ defmodule Catena.C005EffectsTest do
     unload(:C005HandlerArguments)
   end
 
+  @tag obligations: ~w(EF-OBL-001 EF-OBL-016 EF-OBL-022)
   test "two capabilities of one family remain distinct and subtraction removes only one" do
     pair_type = %{"tag" => "tuple", "elements" => [integer_type(), integer_type()]}
 
@@ -680,6 +696,7 @@ defmodule Catena.C005EffectsTest do
     unload(:C005DistinctCapabilities)
   end
 
+  @tag obligations: ~w(EF-OBL-025 EF-OBL-026)
   test "version 0.1.5 interfaces reject duplicate nominal effect identities" do
     assert {:ok, :C005MalformedInterface, _binary, metadata} =
              resumptive_program("C005MalformedInterface")
@@ -695,6 +712,7 @@ defmodule Catena.C005EffectsTest do
     assert {:error, %{id: "A005"}} = Catena.Interface.decode(duplicate)
   end
 
+  @tag obligations: ~w(EF-OBL-020 EF-OBL-021)
   test "reversing nested handlers observably reverses their return transformations" do
     add_return =
       handler("AddReturn", "Ask", resume("next", variable("value")))
@@ -755,6 +773,7 @@ defmodule Catena.C005EffectsTest do
     unload(:C005HandlerOrder)
   end
 
+  @tag obligations: ~w(EF-OBL-009 EF-OBL-024)
   test "affine checking permits one resume on each mutually exclusive branch" do
     branch_resume = %{
       "tag" => "match",
