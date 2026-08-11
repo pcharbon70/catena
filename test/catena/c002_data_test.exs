@@ -47,7 +47,7 @@ defmodule Catena.C002DataTest do
     assert ast.type_groups == []
   end
 
-  @tag obligations: ~w(DP-OBL-005 DP-OBL-014 DP-OBL-019)
+  @tag obligations: ~w(DP-OBL-005 DP-OBL-014 DP-OBL-019 DP-OBL-035)
   test "uses stable semantic diagnostics for duplicate declarations and unsupported patterns" do
     duplicate = type_decl("Duplicate", [], [constructor("Same", []), constructor("Same", [])])
     program = module_02("DuplicateData", [type_group([duplicate])], [], [], [])
@@ -505,6 +505,161 @@ defmodule Catena.C002DataTest do
       assert match?({:ok, _}, result) == MapSet.member?(accepted, key),
              "unexpected result for #{inspect(key)}: #{inspect(result)}"
     end
+  end
+
+  @tag obligations: ~w(DP-OBL-017)
+  test "rejects implicit interchange of positional and named constructor styles" do
+    pair =
+      type_decl("Pair", [parameter("a"), parameter("b")], [
+        constructor("Pair", [variable_type("a"), variable_type("b")])
+      ])
+
+    bad =
+      definition(
+        "bad",
+        [],
+        forall(["a", "b"], named_type("Pair", [variable_type("a"), variable_type("b")])),
+        named_construct("Pair.Pair", [{"left", integer(1)}, {"right", integer(2)}])
+      )
+
+    program =
+      module_02(
+        "StyleInterchange",
+        [type_group([pair])],
+        [%{"name" => "Pair", "visibility" => "transparent"}],
+        ["bad"],
+        [bad]
+      )
+
+    assert {:error, %{id: "A003"}} = Catena.check_json(JSON.encode!(program))
+  end
+
+  @tag obligations: ~w(DP-OBL-021)
+  test "rejects a variable name occurring more than once in a single pattern" do
+    pair = type_decl("Pair", [], [constructor("Pair", [integer_type(), integer_type()])])
+
+    bad =
+      definition(
+        "bad",
+        ["p"],
+        forall([], function_type(named_type("Pair"), integer_type())),
+        match_expr(variable("p"), [
+          clause(constructor_pattern("Pair.Pair", [bind("x"), bind("x")]), integer(0))
+        ])
+      )
+
+    program =
+      module_02(
+        "DuplicateBinder",
+        [type_group([pair])],
+        [%{"name" => "Pair", "visibility" => "transparent"}],
+        ["bad"],
+        [bad]
+      )
+
+    assert {:error, %{id: "M003"}} = Catena.check_json(JSON.encode!(program))
+  end
+
+  @tag obligations: ~w(DP-OBL-024)
+  test "patterns are pure and reject a call expression in a pattern position" do
+    option = type_decl("Option", [parameter("a")], [constructor("Some", [variable_type("a")])])
+
+    call_pattern = %{"tag" => "call", "callee" => variable("f"), "arguments" => [bind("x")]}
+
+    bad =
+      definition(
+        "bad",
+        ["v"],
+        forall([], function_type(named_type("Option", [integer_type()]), integer_type())),
+        match_expr(variable("v"), [clause(call_pattern, integer(0))])
+      )
+
+    program =
+      module_02(
+        "ImpurePattern",
+        [type_group([option])],
+        [%{"name" => "Option", "visibility" => "transparent"}],
+        ["bad"],
+        [bad]
+      )
+
+    assert {:error, %{id: "M005"}} = Catena.check_json(JSON.encode!(program))
+  end
+
+  @tag obligations: ~w(DP-OBL-025)
+  test "rejects a constructor pattern with the wrong arity" do
+    option =
+      type_decl("Option", [parameter("a")], [
+        constructor("None", []),
+        constructor("Some", [variable_type("a")])
+      ])
+
+    bad =
+      definition(
+        "bad",
+        ["v"],
+        forall([], function_type(named_type("Option", [integer_type()]), integer_type())),
+        match_expr(variable("v"), [
+          clause(constructor_pattern("Option.Some", [bind("x"), bind("y")]), integer(0)),
+          clause(constructor_pattern("Option.None", []), integer(1))
+        ])
+      )
+
+    program =
+      module_02(
+        "WrongArity",
+        [type_group([option])],
+        [%{"name" => "Option", "visibility" => "transparent"}],
+        ["bad"],
+        [bad]
+      )
+
+    assert {:error, %{id: "M003"}} = Catena.check_json(JSON.encode!(program))
+  end
+
+  @tag obligations: ~w(DP-OBL-042)
+  test "rejects an existential variable appearing in the datatype result" do
+    box =
+      type_decl("Box", [parameter("a")], [
+        constructor(
+          "Hold",
+          [variable_type("a")],
+          [parameter("e")],
+          named_type("Box", [variable_type("e")])
+        )
+      ])
+
+    program = module_02("ExistentialResult", [type_group([box])], [], [], [])
+
+    assert {:error, %{id: "T009"}} = Catena.check_json(JSON.encode!(program))
+  end
+
+  @tag obligations: ~w(DP-OBL-043)
+  test "rejects a GADT pattern match without an enclosing signature" do
+    expr =
+      type_decl("Expr", [parameter("a")], [
+        constructor("IntLit", [integer_type()], [], named_type("Expr", [integer_type()]))
+      ])
+
+    evaluate = %{
+      "name" => "evaluate",
+      "parameters" => ["expression"],
+      "body" =>
+        match_expr(variable("expression"), [
+          clause(constructor_pattern("Expr.IntLit", [bind("value")]), variable("value"))
+        ])
+    }
+
+    program =
+      module_02(
+        "GadtNoSignature",
+        [type_group([expr])],
+        [%{"name" => "Expr", "visibility" => "transparent"}],
+        [],
+        [evaluate]
+      )
+
+    assert {:error, %{id: "T010"}} = Catena.check_json(JSON.encode!(program))
   end
 
   defp option_program(module, derivations \\ []) do
