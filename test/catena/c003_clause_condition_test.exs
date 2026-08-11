@@ -262,6 +262,36 @@ defmodule Catena.C003ClauseConditionTest do
     assert {:error, %{id: "CND001"}} = Catena.check_json(JSON.encode!(old_ast))
   end
 
+  @tag obligations: ~w(CC-OBL-016)
+  test "condition signatures reject a nonempty effect" do
+    effectful_signature =
+      function_type(integer_type(), boolean_type())
+      |> Map.put("effect", [%{"effect" => "Ask"}])
+
+    bad = condition("bad", ["x"], forall(effectful_signature), variable("x"))
+
+    assert {:error, %{id: "CND002"}} =
+             Catena.check_json(JSON.encode!(module_03("EffectfulCondition", [], [bad])))
+  end
+
+  @tag obligations: ~w(CC-OBL-034)
+  test "ordinary match expressions must be exhaustive" do
+    non_exhaustive =
+      definition(
+        "bad",
+        ["value"],
+        forall(function_type(boolean_type(), integer_type())),
+        match_expr(variable("value"), [
+          match_clause(%{"tag" => "boolean", "value" => true}, integer(1))
+        ])
+      )
+
+    assert {:error, %{id: "M001"}} =
+             Catena.check_json(
+               JSON.encode!(module_03("NonExhaustiveMatch", ["bad"], [non_exhaustive]))
+             )
+  end
+
   defp partition_program(module) do
     positive =
       condition(
@@ -346,6 +376,12 @@ defmodule Catena.C003ClauseConditionTest do
 
   defp call(callee, arguments),
     do: %{"tag" => "call", "callee" => callee, "arguments" => arguments}
+
+  defp match_expr(scrutinee, clauses),
+    do: %{"tag" => "match", "scrutinee" => scrutinee, "clauses" => clauses}
+
+  defp match_clause(pattern, body),
+    do: %{"pattern" => pattern, "body" => body}
 
   defp forall(type), do: %{"forall" => [], "type" => type}
   defp integer_type, do: %{"tag" => "integer"}
