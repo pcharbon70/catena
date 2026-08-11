@@ -16,6 +16,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     LanguageVersion
   }
 
+  @tag obligations: ~w(ED-OBL-009 ED-OBL-011 ED-OBL-012 ED-OBL-029)
   test "the language registry exposes exact retained selections and a closed lifecycle" do
     info = LanguageInfo.document()
 
@@ -98,6 +99,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     assert LanguageLifecycle.valid_registry?([emergency_entry | rest])
   end
 
+  @tag obligations: ~w(ED-OBL-001 ED-OBL-003 ED-OBL-008 ED-OBL-013 ED-OBL-014)
   test "selection validation rejects aliases, mismatches, duplicate previews, and unknown pins" do
     assert {:ok, %LanguageSelection{}} =
              LanguageVersion.resolve_selection(selection("0.1.7"))
@@ -129,6 +131,7 @@ defmodule Catena.C008EditionsLifecycleTest do
              })
   end
 
+  @tag obligations: ~w(ED-OBL-009 ED-OBL-021 ED-OBL-029)
   test "every retained exact revision compiles through the 0.1.7 artifact schema" do
     for revision <- LanguageVersion.all() do
       assert {:ok, _module, _beam, metadata} =
@@ -144,6 +147,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     end
   end
 
+  @tag obligations: ~w(ED-OBL-005)
   test "a module-level selection cannot contradict its package selection" do
     source =
       module_document("C008SelectionMismatch", "0.1.7")
@@ -158,6 +162,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     assert selected["language_revision"] == "0.1.7"
   end
 
+  @tag obligations: ~w(ED-OBL-006 ED-OBL-007 ED-OBL-027)
   test "standalone compilation reports current selection and legacy inference without byte changes" do
     current = module_document("C008Standalone", "0.1.7")
     assert {:ok, current_core} = current |> JSON.encode!() |> Catena.check_json()
@@ -202,6 +207,7 @@ defmodule Catena.C008EditionsLifecycleTest do
              |> Catena.check_json(denied_diagnostics: ["TYPO"])
   end
 
+  @tag obligations: ~w(ED-OBL-004 ED-OBL-009 ED-OBL-010)
   test "an explicit older pin rejects newer constructs but accepts neutral newer transport" do
     neutral = module_document("C008Pinned", "0.1.7")
 
@@ -222,6 +228,7 @@ defmodule Catena.C008EditionsLifecycleTest do
              |> Catena.check_json(language_selection: selection("0.1.4"))
   end
 
+  @tag obligations: ~w(ED-OBL-004 ED-OBL-008)
   test "0.1.2 matching is not mistaken for 0.1.3 clause conditions" do
     fixture =
       Path.expand("../fixtures/c002-option.catena.json", __DIR__)
@@ -246,6 +253,7 @@ defmodule Catena.C008EditionsLifecycleTest do
              |> Catena.check_json(language_selection: selection("0.1.2"))
   end
 
+  @tag obligations: ~w(ED-OBL-023 ED-OBL-035)
   test "0.1.7 retains 0.1.6 verification-only definitions" do
     document =
       module_document("C008CumulativeSpecification", "0.1.7")
@@ -266,6 +274,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     assert Enum.any?(core.definitions, &(&1.name == "compile_check" and &1.verification_only?))
   end
 
+  @tag obligations: ~w(ED-OBL-002 ED-OBL-003 ED-OBL-007 ED-OBL-026)
   test "0.1.7 package manifests require exact selection and legacy manifests report safe additions" do
     manifest = package_manifest("C008Manifest", "0.1.7")
     assert {:ok, decoded} = manifest |> JSON.encode!() |> Manifest.decode()
@@ -312,6 +321,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     assert migrated_decoded.selection == LanguageVersion.legacy_selection("0.1.7")
   end
 
+  @tag obligations: ~w(ED-OBL-007 ED-OBL-020 ED-OBL-027)
   test "making a legacy manifest selection explicit preserves all output bytes" do
     directory = temporary_directory!("legacy-manifest")
     source_path = Path.join(directory, "module.json")
@@ -347,6 +357,7 @@ defmodule Catena.C008EditionsLifecycleTest do
            }
   end
 
+  @tag obligations: ~w(ED-OBL-017 ED-OBL-018 ED-OBL-031 ED-OBL-036)
   test "interfaces bind enabled and publicly required previews and consumers fail closed" do
     assert {:ok, _module, _beam, metadata} =
              module_document("C008Interface", "0.1.7")
@@ -370,6 +381,7 @@ defmodule Catena.C008EditionsLifecycleTest do
              ])
   end
 
+  @tag obligations: ~w(ED-OBL-019 ED-OBL-021 ED-OBL-024 ED-OBL-032 ED-OBL-035)
   test "0.1.7 artifacts and assurance bind the package selection without runtime dispatch" do
     directory = temporary_directory!("package")
     source_path = Path.join(directory, "module.json")
@@ -431,6 +443,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     refute inspect(metadata.forms) =~ "catena_previews"
   end
 
+  @tag obligations: ~w(ED-OBL-021 ED-OBL-032)
   test "specialization identities change with exact selection" do
     assert {:ok, _module, _beam, metadata} =
              template_module()
@@ -459,6 +472,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     refute first_beam == second_beam
   end
 
+  @tag obligations: ~w(ED-OBL-012 ED-OBL-016 ED-OBL-030)
   test "the 0.1.7 policy algebra constrains selection and agrees with its reference oracle" do
     requirement = %{
       "op" => "all",
@@ -524,6 +538,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     assert {:error, %{id: "GOV002"}} = Policy.evaluate(malformed, policy_context)
   end
 
+  @tag obligations: ~w(ED-OBL-022 ED-OBL-023 ED-OBL-025 ED-OBL-033)
   test "trust roots and signatures use one declared version domain without fallback" do
     signer = keypair("signer")
     recovery = keypair("recovery")
@@ -557,6 +572,7 @@ defmodule Catena.C008EditionsLifecycleTest do
              Catena.Governance.evaluate(bundle, old_root, governance_context("0.1.7"))
   end
 
+  @tag obligations: ~w(ED-OBL-028)
   test "language-info is available as mutation-free JSON from the CLI" do
     output = capture_io(fn -> Catena.CLI.main(["language-info"]) end)
     assert {:ok, document} = JSON.decode(String.trim(output))
