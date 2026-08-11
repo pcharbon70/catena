@@ -23,7 +23,6 @@ defmodule Catena.C003TraceabilityCoverageTest do
     "CC-OBL-033" => "typed core/effects/source attribution preserved through lowering (partial)",
     "CC-OBL-038" => "body failure or divergence does not resume clause selection",
     "CC-OBL-039" => "independent typed-core verifier rejects duplicated condition evaluation",
-    "CC-OBL-040" => "or-pattern alternatives bind the same names",
     "CC-OBL-048" => "implementation limit reported as limit or unknown, not a semantic proof"
   }
 
