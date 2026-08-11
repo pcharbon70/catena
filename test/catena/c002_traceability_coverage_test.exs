@@ -19,22 +19,9 @@ defmodule Catena.C002TraceabilityCoverageTest do
   # This set must shrink toward empty: covering a gap requires both adding a
   # tagged test and removing its entry here, or this gate fails.
   @allowed_uncovered %{
-    "DP-OBL-003" => "alias is a different declaration form; no focused c002 unit",
-    "DP-OBL-017" =>
-      "positional and named constructor styles must not interchange; no focused c002 unit",
-    "DP-OBL-021" => "a variable name occurs at most once in a pattern; no focused c002 unit",
-    "DP-OBL-024" =>
-      "patterns are pure with no calls, effects, or conversions; no focused c002 unit",
-    "DP-OBL-025" =>
-      "invalid bindings, arity, field use, or alternative agreement use M003; no focused c002 unit",
+    "DP-OBL-003" => "alias is a future declaration form; no 0.1.2 executable surface",
     "DP-OBL-026" =>
       "future refutability context (function parameters or let bindings); P044 partial, no 0.1.2 executable context",
-    "DP-OBL-035" =>
-      "string, range, variant, list-syntax, and binary coverage outside 0.1.2; no focused c002 unit",
-    "DP-OBL-042" =>
-      "existential variable must not appear in the datatype result; no focused c002 unit",
-    "DP-OBL-043" =>
-      "GADT or existential match requires an enclosing signature (T010); no focused c002 unit",
     "DP-OBL-048" => "coverage must not justify an unsound branch type; no focused c002 unit",
     "DP-OBL-056" =>
       "layout selection after typed-core verification and no spelling/arity reconstruction; architectural",
