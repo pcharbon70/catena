@@ -662,6 +662,66 @@ defmodule Catena.C002DataTest do
     assert {:error, %{id: "T010"}} = Catena.check_json(JSON.encode!(program))
   end
 
+  @tag obligations: ~w(DP-OBL-048)
+  test "coverage uses GADT equalities to exclude impossible constructors but not to excuse a missing case" do
+    expr =
+      type_decl("Expr", [parameter("a")], [
+        constructor("IntLit", [integer_type()], [], named_type("Expr", [integer_type()])),
+        constructor("BoolLit", [boolean_type()], [], named_type("Expr", [boolean_type()]))
+      ])
+
+    transparent = [%{"name" => "Expr", "visibility" => "transparent"}]
+
+    # Positive half: a concrete Int index makes BoolLit impossible, so one
+    # clause is exhaustive. Coverage MAY use the local equality here.
+    only_int =
+      definition(
+        "only_int",
+        ["e"],
+        forall([], function_type(named_type("Expr", [integer_type()]), boolean_type())),
+        match_expr(variable("e"), [
+          clause(constructor_pattern("Expr.IntLit", [bind("n")]), %{
+            "tag" => "boolean",
+            "value" => true
+          })
+        ])
+      )
+
+    assert {:ok, _} =
+             Catena.check_json(
+               JSON.encode!(
+                 module_02("Gap048Positive", [type_group([expr])], transparent, ["only_int"], [
+                   only_int
+                 ])
+               )
+             )
+
+    # Negative half: a generic index must still cover every constructor. Coverage
+    # must not let the Int-refined branch justify excluding BoolLit; the match is
+    # non-exhaustive with BoolLit as the witness.
+    leak =
+      definition(
+        "leak",
+        ["e"],
+        forall(
+          ["a"],
+          function_type(named_type("Expr", [variable_type("a")]), variable_type("a"))
+        ),
+        match_expr(variable("e"), [
+          clause(constructor_pattern("Expr.IntLit", [bind("n")]), variable("n"))
+        ])
+      )
+
+    assert {:error, %{id: "M001", details: %{witness: witness}}} =
+             Catena.check_json(
+               JSON.encode!(
+                 module_02("Gap048Negative", [type_group([expr])], transparent, ["leak"], [leak])
+               )
+             )
+
+    assert witness =~ "BoolLit"
+  end
+
   defp option_program(module, derivations \\ []) do
     option =
       type_decl(

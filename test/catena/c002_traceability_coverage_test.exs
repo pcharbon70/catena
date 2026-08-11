@@ -22,7 +22,6 @@ defmodule Catena.C002TraceabilityCoverageTest do
     "DP-OBL-003" => "alias is a future declaration form; no 0.1.2 executable surface",
     "DP-OBL-026" =>
       "future refutability context (function parameters or let bindings); P044 partial, no 0.1.2 executable context",
-    "DP-OBL-048" => "coverage must not justify an unsound branch type; no focused c002 unit",
     "DP-OBL-056" =>
       "layout selection after typed-core verification and no spelling/arity reconstruction; architectural",
     "DP-OBL-057" => "L001 inconsistent-layout implementation-failure path; architectural",
