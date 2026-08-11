@@ -3,6 +3,7 @@ defmodule Catena.TypeConformanceTest do
 
   alias Catena.Type.{Advanced, Declarative, Infer, Row, Trait, Unify}
 
+  @tag obligations: ~w(TS-OBL-008 TS-OBL-009 TS-OBL-039 TS-OBL-041 TS-OBL-042)
   test "bounded declarative oracle agrees with inference acceptance" do
     expressions = [
       %{tag: :integer, value: 1, path: "$"},
@@ -17,6 +18,7 @@ defmodule Catena.TypeConformanceTest do
     end
   end
 
+  @tag obligations: ~w(TS-OBL-014 TS-OBL-016)
   test "unique rows ignore order and reject duplicates" do
     assert Row.unique([{"x", :integer}, {"y", :boolean}]) ==
              Row.unique([{"y", :boolean}, {"x", :integer}])
@@ -27,6 +29,7 @@ defmodule Catena.TypeConformanceTest do
     assert error.diagnostic.id == "T005"
   end
 
+  @tag obligations: ~w(TS-OBL-015 TS-OBL-016)
   test "effect rows preserve duplicate labels and lexical identity" do
     row = Row.effects([{"State", :left}, {"State", :right}])
     assert length(row.occurrences) == 2
@@ -40,6 +43,7 @@ defmodule Catena.TypeConformanceTest do
     assert error.diagnostic.id == "T004"
   end
 
+  @tag obligations: ~w(TS-OBL-017 TS-OBL-018 TS-OBL-019 TS-OBL-020 TS-OBL-022)
   test "trait registry enforces ownership, non-overlap, and associated types" do
     registry = Trait.new() |> Trait.add_trait("Collection.Element", 1)
 
@@ -60,6 +64,7 @@ defmodule Catena.TypeConformanceTest do
     assert error.diagnostic.id == "T007"
   end
 
+  @tag obligations: ~w(TS-OBL-026 TS-OBL-027 TS-OBL-028)
   test "rigid GADT existentials cannot escape their branch" do
     assert :ok = Advanced.assert_no_escape!({:var, :ordinary}, MapSet.new([:existential]))
 
