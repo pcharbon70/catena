@@ -292,6 +292,31 @@ defmodule Catena.C003ClauseConditionTest do
              )
   end
 
+  @tag obligations: ~w(CC-OBL-040)
+  test "or-pattern alternatives must bind the same names at the same types" do
+    pair_type = %{"tag" => "tuple", "elements" => [boolean_type(), boolean_type()]}
+    wildcard = %{"tag" => "wildcard"}
+
+    mismatched_or = %{
+      "tag" => "or",
+      "alternatives" => [
+        %{"tag" => "tuple", "elements" => [bind("a"), wildcard]},
+        %{"tag" => "tuple", "elements" => [wildcard, bind("b")]}
+      ]
+    }
+
+    bad =
+      definition(
+        "bad",
+        ["pair"],
+        forall(function_type(pair_type, integer_type())),
+        match_expr(variable("pair"), [match_clause(mismatched_or, integer(1))])
+      )
+
+    assert {:error, %{id: "M003"}} =
+             Catena.check_json(JSON.encode!(module_03("OrPatternBindings", ["bad"], [bad])))
+  end
+
   defp partition_program(module) do
     positive =
       condition(
