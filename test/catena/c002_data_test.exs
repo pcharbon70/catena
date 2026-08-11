@@ -5,6 +5,7 @@ defmodule Catena.C002DataTest do
   alias Catena.Reference.Evaluator
   alias Catena.TypedCore.Verifier
 
+  @tag obligations: ~w(DP-OBL-002 DP-OBL-051 DP-OBL-054 DP-OBL-055 DP-OBL-067)
   test "keeps the durable C002 conformance fixture executable" do
     source = File.read!("test/fixtures/c002-option.catena.json")
     assert {:ok, core} = Catena.check_json(source)
@@ -37,6 +38,7 @@ defmodule Catena.C002DataTest do
     refute metadata.interface_binary =~ "uniform"
   end
 
+  @tag obligations: ~w(DP-OBL-070)
   test "normalizes AST 0.1.1 into the 0.1.2 compiler representation" do
     json = JSON.encode!(module_01("Legacy", [], []))
     assert {:ok, ast} = Decoder.decode(json)
@@ -45,6 +47,7 @@ defmodule Catena.C002DataTest do
     assert ast.type_groups == []
   end
 
+  @tag obligations: ~w(DP-OBL-005 DP-OBL-014 DP-OBL-019)
   test "uses stable semantic diagnostics for duplicate declarations and unsupported patterns" do
     duplicate = type_decl("Duplicate", [], [constructor("Same", []), constructor("Same", [])])
     program = module_02("DuplicateData", [type_group([duplicate])], [], [], [])
@@ -64,6 +67,8 @@ defmodule Catena.C002DataTest do
     assert {:error, %{id: "M005"}} = Catena.check_json(JSON.encode!(program))
   end
 
+  @tag obligations:
+         ~w(DP-OBL-007 DP-OBL-008 DP-OBL-015 DP-OBL-018 DP-OBL-023 DP-OBL-027 DP-OBL-030 DP-OBL-031 DP-OBL-039 DP-OBL-049 DP-OBL-051 DP-OBL-055 DP-OBL-067 DP-OBL-068)
   test "infers, verifies, evaluates, and compiles exhaustive nominal matches in both layouts" do
     source = option_program("C002Option") |> JSON.encode!()
     assert {:ok, core} = Catena.check_json(source)
@@ -85,6 +90,7 @@ defmodule Catena.C002DataTest do
     end
   end
 
+  @tag obligations: ~w(DP-OBL-032 DP-OBL-066)
   test "rejects non-exhaustive matches with a concrete witness" do
     program =
       option_program("MissingCase")
@@ -98,6 +104,7 @@ defmodule Catena.C002DataTest do
     assert witness == "Option.Some(_)"
   end
 
+  @tag obligations: ~w(DP-OBL-033)
   test "rejects redundant clauses" do
     program =
       option_program("RedundantCase")
@@ -109,6 +116,7 @@ defmodule Catena.C002DataTest do
     assert {:error, %{id: "M002"}} = Catena.check_json(JSON.encode!(program))
   end
 
+  @tag obligations: ~w(DP-OBL-001 DP-OBL-006 DP-OBL-013 DP-OBL-036)
   test "accepts empty and negative recursive declarations but limits structural metadata" do
     empty = type_decl("Empty", [], [])
 
@@ -127,6 +135,7 @@ defmodule Catena.C002DataTest do
     assert negative_type.variance == [:invariant]
   end
 
+  @tag obligations: ~w(DP-OBL-029 DP-OBL-036)
   test "permits an empty match only for a proven-empty type" do
     empty = type_decl("Empty", [], [])
 
@@ -142,6 +151,7 @@ defmodule Catena.C002DataTest do
     assert {:ok, :EmptyMatch, _binary, _metadata} = Catena.compile_json(JSON.encode!(program))
   end
 
+  @tag obligations: ~w(DP-OBL-007 DP-OBL-016 DP-OBL-054)
   test "keeps named-field evaluation order while storing payloads in declaration order" do
     pair =
       type_decl("Pair", [], [
@@ -178,6 +188,7 @@ defmodule Catena.C002DataTest do
     unload(:NamedFields)
   end
 
+  @tag obligations: ~w(DP-OBL-060 DP-OBL-061 DP-OBL-062 DP-OBL-063 DP-OBL-064)
   test "generates and verifies an explicit constructor-complete fold" do
     program = option_program("DerivedFold", ["fold"])
     assert {:ok, :DerivedFold, binary, metadata} = Catena.compile_json(JSON.encode!(program))
@@ -191,6 +202,7 @@ defmodule Catena.C002DataTest do
     unload(:DerivedFold)
   end
 
+  @tag obligations: ~w(DP-OBL-010 DP-OBL-011 DP-OBL-052)
   test "interfaces preserve nominal identity and hide abstract constructors" do
     producer = option_program("Producer")
     assert {:ok, :Producer, _binary, transparent} = Catena.compile_json(JSON.encode!(producer))
@@ -227,6 +239,7 @@ defmodule Catena.C002DataTest do
              Catena.check_json(JSON.encode!(consumer), interfaces: [abstract_interface])
   end
 
+  @tag obligations: ~w(DP-OBL-011 DP-OBL-012)
   test "explicit constructor imports are the only unqualified imported access" do
     assert {:ok, :ImportSource, _binary, metadata} =
              option_program("ImportSource") |> JSON.encode!() |> Catena.compile_json()
@@ -260,6 +273,7 @@ defmodule Catena.C002DataTest do
              Catena.compile_json(JSON.encode!(consumer), interfaces: [interface])
   end
 
+  @tag obligations: ~w(DP-OBL-050)
   test "rejects a tampered interface digest" do
     assert {:ok, :DigestSource, _binary, metadata} =
              option_program("DigestSource") |> JSON.encode!() |> Catena.compile_json()
@@ -270,6 +284,7 @@ defmodule Catena.C002DataTest do
     assert {:error, %{id: "A005"}} = Interface.decode(tampered)
   end
 
+  @tag obligations: ~w(DP-OBL-002 DP-OBL-050 DP-OBL-053)
   test "treats origin changes as nominal identity changes" do
     first = option_program("OriginIdentity")
     second = Map.put(first, "origin", "test://different-origin")
@@ -292,6 +307,7 @@ defmodule Catena.C002DataTest do
              )
   end
 
+  @tag obligations: ~w(DP-OBL-009 DP-OBL-041 DP-OBL-044 DP-OBL-045)
   test "uses local equalities for annotated GADT matches" do
     expr =
       type_decl("Expr", [parameter("a")], [
@@ -337,6 +353,7 @@ defmodule Catena.C002DataTest do
     unload(:GADTMatch)
   end
 
+  @tag obligations: ~w(DP-OBL-046)
   test "rejects existential values escaping a match branch" do
     packed =
       type_decl("Packed", [], [
@@ -357,6 +374,7 @@ defmodule Catena.C002DataTest do
     assert {:error, %{id: "T009"}} = Catena.check_json(JSON.encode!(program))
   end
 
+  @tag obligations: ~w(DP-OBL-027 DP-OBL-028 DP-OBL-033 DP-OBL-037 DP-OBL-039)
   test "preserves ordered fallthrough for guards not proved true" do
     decide =
       definition(
@@ -391,6 +409,7 @@ defmodule Catena.C002DataTest do
     assert {:error, %{id: "M002"}} = Catena.check_json(JSON.encode!(false_guard))
   end
 
+  @tag obligations: ~w(DP-OBL-018 DP-OBL-020 DP-OBL-022 DP-OBL-033)
   test "expands exhaustive or patterns without changing branch bindings" do
     alternatives = %{
       "tag" => "or",
@@ -416,11 +435,13 @@ defmodule Catena.C002DataTest do
     unload(:OrPatterns)
   end
 
+  @tag obligations: ~w(DP-OBL-038 DP-OBL-066)
   test "reports deterministic coverage implementation limits" do
     source = option_program("CoverageBudget") |> JSON.encode!()
     assert {:error, %{id: "M004"}} = Catena.check_json(source, coverage_budget: 1)
   end
 
+  @tag obligations: ~w(DP-OBL-004 DP-OBL-013)
   test "elaborates mutually recursive groups atomically" do
     left =
       type_decl("Left", [], [constructor("Left", [named_type("Right")])])
@@ -434,6 +455,7 @@ defmodule Catena.C002DataTest do
     assert Enum.all?(core.data.types, &(&1.inhabitation == :inhabited))
   end
 
+  @tag obligations: ~w(DP-OBL-040 DP-OBL-047 DP-OBL-071)
   test "typed-core verifier independently rejects corrupted constructor and decision metadata" do
     assert {:ok, core} = option_program("VerifierGate") |> JSON.encode!() |> Catena.check_json()
     [make, main] = Enum.reject(core.definitions, & &1.generated?)
@@ -449,6 +471,7 @@ defmodule Catena.C002DataTest do
     assert reason =~ "decision tree"
   end
 
+  @tag obligations: ~w(DP-OBL-030 DP-OBL-034 DP-OBL-069)
   test "bounded Boolean pattern corpus agrees with the finite coverage model" do
     candidates = [
       [],
