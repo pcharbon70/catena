@@ -5,6 +5,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
 
   @fixture Path.expand("../fixtures/c010-kernel.catena", __DIR__)
 
+  @tag obligations: ~w(FK-OBL-003 FK-OBL-007)
   test "the exact S-expression envelope preserves spans and rejects malformed input" do
     source = File.read!(@fixture)
 
@@ -49,12 +50,14 @@ defmodule Catena.C010FormalSemanticKernelTest do
     assert {:error, %{id: "T001"}} = Parser.parse(duplicate_export)
   end
 
+  @tag obligations: ~w(FK-OBL-007)
   test "parser node and nesting limits are distinct from malformed syntax" do
     assert {:error, %{id: "SYN003"}} = SExpression.parse("(a b c)", node_limit: 3)
     assert {:error, %{id: "SYN003"}} = SExpression.parse("(a (b (c)))", depth_limit: 2)
     assert {:ok, _node} = SExpression.parse("(a (b (c)))", node_limit: 10, depth_limit: 3)
   end
 
+  @tag obligations: ~w(FK-OBL-002 FK-OBL-015)
   test "kernel selection is exact and JSON frontends remain bounded at 0.1.7" do
     source = File.read!(@fixture)
 
@@ -80,6 +83,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
     assert {:error, %{id: "T012", path: "$.version"}} = Catena.check_json(JSON.encode!(json))
   end
 
+  @tag obligations: ~w(FK-OBL-001 FK-OBL-004 FK-OBL-008 FK-OBL-009)
   test "rows, closed variants, strict order, and integrated core evidence check together" do
     assert {:ok, core} = @fixture |> File.read!() |> Catena.check_kernel(source: @fixture)
     assert core.profile == :formal_semantic_kernel
@@ -173,6 +177,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
     assert {:error, %{id: "M001"}} = Catena.check_kernel(guarded_catch_all)
   end
 
+  @tag obligations: ~w(FK-OBL-008 FK-OBL-010)
   test "regular nominal data is typed, exhaustive, sendable, and fixed-layout" do
     source = """
     (module Nominal
@@ -247,6 +252,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
     assert {:error, %{id: "PRC002"}} = Catena.check_kernel(non_sendable)
   end
 
+  @tag obligations: ~w(FK-OBL-009 FK-OBL-011)
   test "trait evidence and deep affine handling are integrated and erased" do
     assert {:ok, core} = @fixture |> File.read!() |> Catena.check_kernel(source: @fixture)
     choose = Enum.find(core.definitions, &(&1.name == "choose_variant"))
@@ -358,6 +364,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
     unload(global_module)
   end
 
+  @tag obligations: ~w(FK-OBL-005 FK-OBL-012)
   test "proper tail calls agree between the stepper and generated BEAM" do
     assert {:ok, core} = @fixture |> File.read!() |> Catena.check_kernel(source: @fixture)
     assert {:ok, 250, _outcome} = Stepper.run(core, "loop", [250, 0], budget: 10_000)
@@ -377,6 +384,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
     unload(module)
   end
 
+  @tag obligations: ~w(FK-OBL-009 FK-OBL-011)
   test "selective receive preserves skipped messages and process traps stay local" do
     assert {:ok, core} = @fixture |> File.read!() |> Catena.check_kernel(source: @fixture)
     assert {:ok, :unit, outcome} = Stepper.run(core, "launch")
@@ -429,6 +437,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
     assert Enum.find(trapped_outcome.processes, &(&1.pid == 0)).status == :terminated
   end
 
+  @tag obligations: ~w(FK-OBL-011)
   test "dead-target send drops the message and waiting configurations are quiescent" do
     source = """
     (module Lifetime
@@ -464,6 +473,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
     assert Enum.any?(waiting.processes, &(&1.status == :waiting))
   end
 
+  @tag obligations: ~w(FK-OBL-011 FK-OBL-014)
   test "bounded exploration admits both cross-sender receive orders" do
     source = """
     (module Schedules
@@ -499,6 +509,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
              Explorer.explore(core, "main", [], transition_limit: 1)
   end
 
+  @tag obligations: ~w(FK-OBL-011)
   test "self-send preserves per-sender FIFO order" do
     source = """
     (module SenderOrder
@@ -529,6 +540,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
            |> Enum.map(& &1.message) == [1, 2]
   end
 
+  @tag obligations: ~w(FK-OBL-001 FK-OBL-013)
   test "generated closed terms make progress and preserve their checked result types" do
     cases =
       for integer <- -8..8 do
@@ -575,6 +587,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
     unload(module)
   end
 
+  @tag obligations: ~w(FK-OBL-004 FK-OBL-008)
   test "local let bindings generalize only under the value and effect restriction" do
     polymorphic =
       minimal_module(
@@ -623,6 +636,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
              hd(restricted_core.definitions).expression.binding
   end
 
+  @tag obligations: ~w(FK-OBL-010 FK-OBL-015)
   test "interfaces bind public process identities and reject substitution" do
     assert {:ok, core} = @fixture |> File.read!() |> Catena.check_kernel(source: @fixture)
     interface = Interface.build(core)
@@ -668,6 +682,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
     assert {:error, %{id: "PRC004"}} = Catena.check_kernel(consumer, interfaces: [])
   end
 
+  @tag obligations: ~w(FK-OBL-004 FK-OBL-010)
   test "sendability, process contexts, and forged core evidence are rejected" do
     non_sendable = """
     (module NonSendable
@@ -700,6 +715,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
     assert {:error, _reason} = Verifier.verify(forged_constructor)
   end
 
+  @tag obligations: ~w(FK-OBL-011)
   test "explicit trap is a typed bottom and lowers to the fixed BEAM trap" do
     source = minimal_module("ExplicitTrap", "Int", "(trap 9)")
     assert {:ok, core} = Catena.check_kernel(source)
@@ -712,6 +728,7 @@ defmodule Catena.C010FormalSemanticKernelTest do
     unload(module)
   end
 
+  @tag obligations: ~w(FK-OBL-006 FK-OBL-015)
   test "kernel artifacts and interfaces are deterministic and record the kernel frontend" do
     source = File.read!(@fixture)
 
