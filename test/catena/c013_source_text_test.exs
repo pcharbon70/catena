@@ -24,7 +24,7 @@ defmodule Catena.C013SourceTextTest do
     assert decoded.source == source
     assert decoded.text == source
     assert Enum.map(decoded.units, & &1.scalar) == String.to_charlist(source)
-    assert decoded.selection.language_revision == "0.1.9"
+    assert decoded.selection.language_revision == "0.1.10"
     assert Enum.at(decoded.units, 4).span == span(8, 10, 1, 5, 1, 6)
 
     composed = "é"
@@ -129,9 +129,9 @@ defmodule Catena.C013SourceTextTest do
   end
 
   @tag obligations: ~w(ST-OBL-001 ST-OBL-010)
-  test "0.1.9 is source-text-only and public discovery remains deterministic" do
-    assert LanguageVersion.latest() == "0.1.9"
-    assert LanguageVersion.source_text_frontend_versions() == ["0.1.9"]
+  test "0.1.9 remains source-text-only after the cumulative identifier revision" do
+    assert LanguageVersion.latest() == "0.1.10"
+    assert LanguageVersion.source_text_frontend_versions() == ~w(0.1.9 0.1.10)
     refute "0.1.9" in LanguageVersion.compilable_revisions()
     refute "0.1.9" in LanguageVersion.interface_versions()
     refute "0.1.9" in LanguageVersion.artifact_versions()
@@ -139,7 +139,7 @@ defmodule Catena.C013SourceTextTest do
     assert {:ok, :stable} == LanguageLifecycle.state("source-text", "0.1.9")
 
     info = LanguageInfo.document()
-    assert info["current"]["language_revision"] == "0.1.9"
+    assert info["current"]["language_revision"] == "0.1.10"
     assert Enum.any?(info["features"], &(&1["id"] == "source-text"))
 
     assert {:error, %{id: "EDN001", details: %{frontend: "source-text"}}} =
@@ -196,7 +196,7 @@ defmodule Catena.C013SourceTextTest do
     assert output == %{
              "status" => "ok",
              "edition" => "0.1",
-             "language_revision" => "0.1.9",
+             "language_revision" => "0.1.10",
              "byte_count" => 4,
              "scalar_count" => 2,
              "newline_count" => 1

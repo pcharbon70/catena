@@ -59,15 +59,35 @@ defmodule Catena.CLI do
             |> put_option(:language_selection, language_selection)
 
           case positional do
-            ["check-source-text", path] -> check_source_text(path, compiler_options)
-            ["check-ir", path] -> check(path, compiler_options)
-            ["elaborate-ir", path] -> check(path, compiler_options)
-            ["compile-ir", path] -> compile(path, compiler_options)
-            ["check-kernel", path] -> check_kernel(path, compiler_options)
-            ["compile-kernel", path] -> compile_kernel(path, compiler_options)
-            ["compile-package-ir", path] -> compile_package(path, compiler_options)
-            ["verify-assurance", path] -> verify_assurance(path, compiler_options)
-            _ -> halt_with(usage(), 64)
+            ["check-source-text", path] ->
+              check_source_text(path, compiler_options)
+
+            ["check-identifiers" | names] when names != [] ->
+              check_identifiers(names, compiler_options)
+
+            ["check-ir", path] ->
+              check(path, compiler_options)
+
+            ["elaborate-ir", path] ->
+              check(path, compiler_options)
+
+            ["compile-ir", path] ->
+              compile(path, compiler_options)
+
+            ["check-kernel", path] ->
+              check_kernel(path, compiler_options)
+
+            ["compile-kernel", path] ->
+              compile_kernel(path, compiler_options)
+
+            ["compile-package-ir", path] ->
+              compile_package(path, compiler_options)
+
+            ["verify-assurance", path] ->
+              verify_assurance(path, compiler_options)
+
+            _ ->
+              halt_with(usage(), 64)
           end
         else
           {:error, diagnostic} -> diagnostic(diagnostic)
@@ -85,6 +105,38 @@ defmodule Catena.CLI do
           byte_count: byte_size(source_text.source),
           scalar_count: length(source_text.units),
           newline_count: Enum.count(source_text.units, &(&1.scalar == ?\n))
+        })
+
+      {:error, diagnostic} ->
+        diagnostic(diagnostic)
+    end
+  end
+
+  defp check_identifiers(names, options) do
+    case Catena.audit_identifiers(names, options) do
+      {:ok, qualified_names, diagnostics} ->
+        print(%{
+          status: "ok",
+          edition: hd(qualified_names).selection.edition,
+          language_revision: hd(qualified_names).selection.language_revision,
+          unicode_version: Catena.UnicodeData.version(),
+          names:
+            Enum.map(qualified_names, fn name ->
+              %{
+                source: name.source,
+                canonical: name.canonical,
+                segments:
+                  Enum.map(name.segments, fn segment ->
+                    %{
+                      source: segment.source,
+                      canonical: segment.canonical,
+                      escaped: segment.escaped,
+                      scripts: segment.scripts
+                    }
+                  end)
+              }
+            end),
+          diagnostics: Enum.map(diagnostics, &Report.diagnostic/1)
         })
 
       {:error, diagnostic} ->
@@ -278,7 +330,7 @@ defmodule Catena.CLI do
       "[--edition MAJOR.MINOR] [--language-revision MAJOR.MINOR.PATCH] " <>
       "[--preview NAME] [--deny-diagnostic ID] " <>
       "[--action build|publish|activate] [--trust-root FILE] " <>
-      "(check-source-text FILE.catena" <>
+      "(check-source-text FILE.catena | check-identifiers NAME..." <>
       " | {check-ir|elaborate-ir|compile-ir|compile-package-ir|verify-assurance} FILE.json" <>
       " | {check-kernel|compile-kernel} FILE.catena-kernel" <>
       " | language-info | conformance-info)"

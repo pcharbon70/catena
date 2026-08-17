@@ -5,7 +5,8 @@ defmodule Catena do
   Versions 0.1.1 through 0.1.7 accept a versioned JSON AST. Normative revision
   0.1.8 additionally accepts the exact semantic-kernel S-expression format.
   Revision 0.1.9 defines the strict source-text envelope used by future
-  ergonomic syntax without yet supplying a lexer or parser for that syntax.
+  ergonomic syntax. Revision 0.1.10 validates standalone identifiers and
+  qualified names without yet supplying a complete lexer or parser.
   """
 
   alias Catena.{AST.Decoder, Compiler}
@@ -14,6 +15,20 @@ defmodule Catena do
   @spec decode_source_text(binary(), keyword()) ::
           {:ok, Catena.SourceText.t()} | {:error, Catena.Diagnostic.t()}
   def decode_source_text(source, options \\ []), do: Catena.SourceText.decode(source, options)
+
+  @spec parse_identifier(binary(), keyword()) ::
+          {:ok, Catena.Identifier.t()} | {:error, Catena.Diagnostic.t()}
+  def parse_identifier(source, options \\ []), do: Catena.Identifier.parse(source, options)
+
+  @spec parse_qualified_name(binary(), keyword()) ::
+          {:ok, Catena.QualifiedName.t()} | {:error, Catena.Diagnostic.t()}
+  def parse_qualified_name(source, options \\ []),
+    do: Catena.QualifiedName.parse(source, options)
+
+  @spec audit_identifiers([binary()], keyword()) ::
+          {:ok, [Catena.QualifiedName.t()], [Catena.Diagnostic.t()]}
+          | {:error, Catena.Diagnostic.t()}
+  def audit_identifiers(names, options \\ []), do: Catena.IdentifierAudit.audit(names, options)
 
   @spec check_json(binary(), keyword()) :: {:ok, map()} | {:error, Catena.Diagnostic.t()}
   def check_json(json, options \\ []) do

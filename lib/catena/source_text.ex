@@ -1,6 +1,6 @@
 defmodule Catena.SourceText do
   @moduledoc """
-  A strictly decoded Catena 0.1.9 source-text envelope.
+  A strictly decoded Catena 0.1.9-and-later source-text envelope.
 
   The original bytes and a logical LF-normalized stream are both retained.
   Each logical Unicode scalar carries a span into the original byte stream so
@@ -30,7 +30,7 @@ defmodule Catena.SourceText do
           selection: LanguageSelection.t()
         }
 
-  @source_revision "0.1.9"
+  @source_revisions LanguageVersion.source_text_frontend_versions()
   @utf8_bom <<0xEF, 0xBB, 0xBF>>
   @encoding_signatures [
     {<<0x00, 0x00, 0xFE, 0xFF>>, "UTF-32BE"},
@@ -64,20 +64,19 @@ defmodule Catena.SourceText do
     end
   end
 
-  defp require_source_revision(
-         %LanguageSelection{language_revision: @source_revision} = selection
-       ),
+  defp require_source_revision(%LanguageSelection{language_revision: revision} = selection)
+       when revision in @source_revisions,
        do: {:ok, selection}
 
   defp require_source_revision(%LanguageSelection{} = selection) do
     {:error,
      Diagnostic.new(
        "EDN001",
-       "source-text decoding requires language revision #{@source_revision}",
+       "source-text decoding requires a source-text-capable language revision",
        path: "$.language_revision",
        details: %{
          selected: selection.language_revision,
-         required: @source_revision,
+         supported: @source_revisions,
          frontend: "source-text"
        }
      )}

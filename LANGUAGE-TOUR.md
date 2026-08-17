@@ -16,7 +16,8 @@ source-language distribution:
 
 - the compiler accepts retained versioned JSON AST and a separate exact 0.1.8
   semantic-kernel S-expression for compilation, while 0.1.9 validates source
-  bytes and locations but does not yet tokenize or parse them;
+  bytes and locations and 0.1.10 validates standalone names without yet
+  tokenizing or parsing complete source files;
 - snippets in this tour are illustrative notation unless a linked
   specification says that a particular form is fixed;
 - public parser punctuation, layout, and several ordinary language facilities
@@ -310,10 +311,14 @@ lexer, while `catena check-source-text` validates it without creating an
 interface or BEAM file.
 
 Passing this boundary does not mean that a file is a Catena program. Revision
-0.1.9 deliberately defines no identifiers, tokens, comments, literals,
-surface grammar, or file-to-module rule. Read the
+0.1.9 deliberately defines no tokens, comments, literals, surface grammar, or
+file-to-module rule. Revision 0.1.10 builds on it with Unicode 17 XID names,
+required NFC spelling, case-sensitive role-neutral identity, backtick keyword
+escapes, dot qualification, secure script checks, and deny-able confusable
+warnings. `Catena.parse_identifier/2`, `Catena.parse_qualified_name/2`, and
+`catena check-identifiers` expose that standalone boundary. Read the
 [Source Text guide](guides/language/source-text.md) for the exact implemented
-boundary and its diagnostics.
+envelope and the [Identifiers guide](guides/language/identifiers.md) for names.
 
 ## The executable formal kernel and typed actors
 
@@ -344,7 +349,9 @@ The compiler path is:
 
 ```text
 source bytes 0.1.9 → logical Unicode stream plus original-byte spans
-                       (stops before the future lexer and parser)
+                       ↓
+standalone names 0.1.10 → validated identifiers and qualified names
+                           (stops before the future whole-source lexer/parser)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓
@@ -388,6 +395,12 @@ Validate the source envelope independently of grammar:
 
 The deterministic result reports the selected revision and byte, logical-
 scalar, and newline counts. It creates no output files.
+
+Validate standalone names independently of tokenization and resolution:
+
+```bash
+./catena check-identifiers alpha Option.Some '`type`'
+```
 
 The most approachable durable input is the
 [`Option` JSON-AST fixture](test/fixtures/c002-option.catena.json). Validate it

@@ -4,7 +4,7 @@ defmodule Catena.LanguageLifecycle do
   alias Catena.{Diagnostic, LanguageSelection, LanguageVersion}
 
   @states ~w(preview stable withdrawn deprecated removed)
-  @warning_ids ~w(DEP001 EDN002)
+  @warning_ids ~w(DEP001 EDN002 IDN007)
   @classifications ~w(breaking compatible-addition compatible-correction)
   @dimensions ~w(source-acceptance static-meaning dynamic-behavior diagnostics interfaces artifacts)
   @identifier ~r/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
@@ -67,6 +67,13 @@ defmodule Catena.LanguageLifecycle do
         "source-text",
         "0.1.9",
         specification("source-text/source-text-envelope.md#source-text-envelope")
+      ),
+      feature(
+        "identifiers",
+        "0.1.10",
+        specification(
+          "identifiers/identifier-syntax-and-equivalence.md#identifier-syntax-and-equivalence"
+        )
       )
     ]
   end
@@ -391,6 +398,7 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(source-acceptance static-meaning diagnostics interfaces artifacts)
 
   defp affected_dimensions("source-text"), do: ~w(source-acceptance diagnostics)
+  defp affected_dimensions("identifiers"), do: ~w(source-acceptance static-meaning diagnostics)
 
   defp migration("editions-and-feature-lifecycle"),
     do:
@@ -399,6 +407,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("source-text"),
     do:
       "Select 0.1.9 to validate the ergonomic source envelope; exact 0.1.8 kernel inputs are not migrated or reinterpreted."
+
+  defp migration("identifiers"),
+    do:
+      "Select 0.1.10 to validate standalone ergonomic identifiers and qualified names; retained JSON and exact kernel names are unchanged."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 

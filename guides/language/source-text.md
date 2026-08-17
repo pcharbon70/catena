@@ -15,7 +15,8 @@ mix escript.build
 ```
 
 Successful output is a deterministic JSON object containing edition `0.1`,
-language revision `0.1.9`, and byte, logical-scalar, and logical-newline counts.
+the selected source-capable revision (`0.1.10` by default), and byte,
+logical-scalar, and logical-newline counts.
 No `.beam` or `.cati.json` file is created.
 
 Library callers use the same decoder:
@@ -61,9 +62,10 @@ accepted scalar.
 ## What remains later work
 
 Passing `check-source-text` means only that the bytes satisfy revision 0.1.9's
-source envelope. G014 through G020 in the research checklist still own
-identifiers, whitespace and layout, comments, literals, numbers, operators,
-punctuation, and file-to-module rules. Until those slices are implemented,
+source envelope. C014 now defines standalone identifiers and qualified names;
+G015 through G020 still own whole-source token boundaries, whitespace and
+layout, comments, literals, numbers, operators, punctuation, and file-to-module
+rules. Until those slices are implemented,
 the retained JSON AST and exact 0.1.8 kernel remain the compilation inputs.
 
 The normative contract is the research repository's
