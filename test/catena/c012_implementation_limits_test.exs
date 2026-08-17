@@ -17,6 +17,17 @@ defmodule Catena.C012ImplementationLimitsTest do
     assert first["language"]["current_revision"] == "0.1.8"
     assert first["implementation"]["release"] == "0.1.0"
 
+    assert Enum.map(first["permissions"], & &1["id"]) == [
+             "export-signature-candidate",
+             "legacy-selection-inference",
+             "interface-consumption",
+             "adt-layout",
+             "gadt-coverage-equalities",
+             "derived-fold-lowering",
+             "selection-metadata",
+             "claim-summaries"
+           ]
+
     assert Map.keys(first["limits"]) |> Enum.sort() ==
              ImplementationLimits.all() |> Enum.map(&Atom.to_string(&1.id)) |> Enum.sort()
 

@@ -59,9 +59,13 @@ defmodule Catena.ConformanceInfo do
 
   defp permissions do
     [
+      %{"id" => "export-signature-candidate", "disposition" => "disabled"},
+      %{"id" => "legacy-selection-inference", "disposition" => "enabled-with-EDN002"},
       %{"id" => "interface-consumption", "disposition" => "enabled"},
       %{"id" => "adt-layout", "disposition" => "compact-default-uniform-selectable"},
       %{"id" => "gadt-coverage-equalities", "disposition" => "enabled"},
+      %{"id" => "derived-fold-lowering", "disposition" => "verified-ordinary-path"},
+      %{"id" => "selection-metadata", "disposition" => "emitted"},
       %{"id" => "claim-summaries", "disposition" => "emitted"}
     ]
   end
