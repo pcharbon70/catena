@@ -15,7 +15,8 @@ Catena is currently an executable language-design prototype, not yet a
 source-language distribution:
 
 - the compiler accepts retained versioned JSON AST and a separate exact 0.1.8
-  semantic-kernel S-expression, not ergonomic Catena source text;
+  semantic-kernel S-expression for compilation, while 0.1.9 validates source
+  bytes and locations but does not yet tokenize or parse them;
 - snippets in this tour are illustrative notation unless a linked
   specification says that a particular form is fixed;
 - public parser punctuation, layout, and several ordinary language facilities
@@ -299,6 +300,21 @@ for the user workflow and the
 [normative specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/editions-and-feature-lifecycle)
 for the exact contract.
 
+## The source-text boundary
+
+Normative revision 0.1.9 establishes the input shared by future ergonomic
+syntax: strict UTF-8, no leading byte-order mark, LF and CRLF as one logical
+newline, no whole-file Unicode normalization, and one original-byte span per
+logical scalar. `Catena.decode_source_text/2` exposes that stream to a future
+lexer, while `catena check-source-text` validates it without creating an
+interface or BEAM file.
+
+Passing this boundary does not mean that a file is a Catena program. Revision
+0.1.9 deliberately defines no identifiers, tokens, comments, literals,
+surface grammar, or file-to-module rule. Read the
+[Source Text guide](guides/language/source-text.md) for the exact implemented
+boundary and its diagnostics.
+
 ## The executable formal kernel and typed actors
 
 Normative revision 0.1.8 integrates the executable portions of the earlier
@@ -327,6 +343,9 @@ evidence are recorded in the research archive.
 The compiler path is:
 
 ```text
+source bytes 0.1.9 → logical Unicode stream plus original-byte spans
+                       (stops before the future lexer and parser)
+
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓
 inference and elaboration
@@ -360,6 +379,15 @@ asdf exec mix test
 asdf exec mix escript.build
 ./catena language-info
 ```
+
+Validate the source envelope independently of grammar:
+
+```bash
+./catena check-source-text guides/language/source-text.md
+```
+
+The deterministic result reports the selected revision and byte, logical-
+scalar, and newline counts. It creates no output files.
 
 The most approachable durable input is the
 [`Option` JSON-AST fixture](test/fixtures/c002-option.catena.json). Validate it
@@ -416,6 +444,9 @@ Elixir, so read them for semantics and diagnostics rather than surface syntax:
    — exact parsing, rows, nominal data, traits, handlers, independent core
    verification, typed actors, schedule exploration, traps, interfaces, and
    reference/BEAM agreement.
+9. [`c013_source_text_test.exs`](test/catena/c013_source_text_test.exs) — strict
+   UTF-8, BOM and newline failures, normalization preservation, original-byte
+   spans, source-only version separation, and deterministic CLI validation.
 
 ## Continue in catena-research
 
@@ -436,7 +467,7 @@ limitations, alternatives, and unresolved questions.
 
 ## Current boundary
 
-Catena does not yet provide an ergonomic source parser, formatter, REPL,
+Catena does not yet provide an ergonomic source lexer or parser, formatter, REPL,
 end-user package manager, complete standard library, distributed or supervised
 concurrency, resource-scope semantics, exception boundary, foreign-term
 validation, or finalized surface grammar. The compiler is valuable today as a

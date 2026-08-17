@@ -4,7 +4,7 @@ defmodule Catena.CanonicalJCS do
   alias Catena.{Diagnostic, LanguageVersion}
 
   @legacy_governance_version LanguageVersion.introduced(:specifications_and_governance)
-  @signed_versions LanguageVersion.from(:specifications_and_governance)
+  @signed_versions LanguageVersion.signed_format_versions()
 
   @safe_integer 9_007_199_254_740_991
 

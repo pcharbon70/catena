@@ -62,6 +62,11 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "editions-and-feature-lifecycle/edition-selection-and-applicability.md#edition-selection-and-applicability"
         )
+      ),
+      feature(
+        "source-text",
+        "0.1.9",
+        specification("source-text/source-text-envelope.md#source-text-envelope")
       )
     ]
   end
@@ -385,9 +390,15 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("specifications-and-governance"),
     do: ~w(source-acceptance static-meaning diagnostics interfaces artifacts)
 
+  defp affected_dimensions("source-text"), do: ~w(source-acceptance diagnostics)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
+
+  defp migration("source-text"),
+    do:
+      "Select 0.1.9 to validate the ergonomic source envelope; exact 0.1.8 kernel inputs are not migrated or reinterpreted."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 

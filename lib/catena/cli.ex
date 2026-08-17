@@ -1,5 +1,5 @@
 defmodule Catena.CLI do
-  @moduledoc "Command-line entry point for retained JSON and exact kernel inputs."
+  @moduledoc "Command-line entry point for source text, retained JSON, and exact kernel inputs."
 
   alias Catena.{
     Assurance,
@@ -59,6 +59,7 @@ defmodule Catena.CLI do
             |> put_option(:language_selection, language_selection)
 
           case positional do
+            ["check-source-text", path] -> check_source_text(path, compiler_options)
             ["check-ir", path] -> check(path, compiler_options)
             ["elaborate-ir", path] -> check(path, compiler_options)
             ["compile-ir", path] -> compile(path, compiler_options)
@@ -71,6 +72,23 @@ defmodule Catena.CLI do
         else
           {:error, diagnostic} -> diagnostic(diagnostic)
         end
+    end
+  end
+
+  defp check_source_text(path, options) do
+    case path |> File.read!() |> Catena.decode_source_text(options) do
+      {:ok, source_text} ->
+        print(%{
+          status: "ok",
+          edition: source_text.selection.edition,
+          language_revision: source_text.selection.language_revision,
+          byte_count: byte_size(source_text.source),
+          scalar_count: length(source_text.units),
+          newline_count: Enum.count(source_text.units, &(&1.scalar == ?\n))
+        })
+
+      {:error, diagnostic} ->
+        diagnostic(diagnostic)
     end
   end
 
@@ -260,7 +278,8 @@ defmodule Catena.CLI do
       "[--edition MAJOR.MINOR] [--language-revision MAJOR.MINOR.PATCH] " <>
       "[--preview NAME] [--deny-diagnostic ID] " <>
       "[--action build|publish|activate] [--trust-root FILE] " <>
-      "({check-ir|elaborate-ir|compile-ir|compile-package-ir|verify-assurance} FILE.json" <>
+      "(check-source-text FILE.catena" <>
+      " | {check-ir|elaborate-ir|compile-ir|compile-package-ir|verify-assurance} FILE.json" <>
       " | {check-kernel|compile-kernel} FILE.catena-kernel" <>
       " | language-info | conformance-info)"
   end

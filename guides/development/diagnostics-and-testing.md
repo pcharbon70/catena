@@ -33,8 +33,9 @@ Every public failure is a `Catena.Diagnostic` with:
 - `id` is the stable machine category.
 - `message` explains the immediate problem.
 - `path` identifies a JSON-AST, interface, package, or governance location.
-- `span` identifies a half-open byte/line/column range in exact 0.1.8 kernel
-  input; retained JSON and protocol diagnostics may leave it absent.
+- `span` identifies a half-open original-byte/line/column range in exact 0.1.8
+  kernel input or the 0.1.9 source envelope; retained JSON and protocol
+  diagnostics may leave it absent.
 - `severity` distinguishes a default error from a warning that policy may
   promote to failure without changing its ID.
 - `details` carries structured evidence such as witnesses, expected/observed
@@ -65,6 +66,7 @@ may improve without changing the contract.
 | `LNK...` | package manifest and specialization/linking |
 | `EDN...` / `PRV...` / `DEP...` | edition selection, preview propagation, migration, deprecation |
 | `SYN...` / `PRC...` | exact kernel syntax/limits and typed process boundaries |
+| `SRC...` | source encoding, BOM, and newline-envelope failures |
 | `LIM...` | portable source and generated-artifact limits |
 | `B...` | OTP rejecting generated Erlang Abstract Format |
 | `I...` | inference-independent core invariant failure |
@@ -134,6 +136,8 @@ and warnings in structured details.
 | `c010_formal_semantic_kernel_test.exs` | exact parsing/spans, unified judgments, rows, actors, schedule exploration, interfaces, forged evidence, reference/BEAM agreement |
 | `c012_implementation_limits_test.exs` | machine-readable disclosure, portable boundary pairs, evidence-bound classification, and mailbox-capacity policy |
 | `c012_traceability_coverage_test.exs` | complete `IL-OBL-*` obligation coverage and explicit architectural allowlists |
+| `c013_source_text_test.exs` | UTF-8, BOM, newline, normalization, source-span, revision, and CLI behavior |
+| `c013_traceability_coverage_test.exs` | complete `ST-OBL-*` source-text obligation coverage |
 | `resumption_token_test.exs` | dynamic one-use continuation defense |
 
 Retained-slice tests construct JSON programs directly in Elixir. The C010
@@ -156,6 +160,7 @@ Run one slice while developing:
 ```bash
 asdf exec mix test test/catena/c005_effects_test.exs --trace
 asdf exec mix test test/catena/c010_formal_semantic_kernel_test.exs --trace
+asdf exec mix test test/catena/c013_source_text_test.exs --trace
 ```
 
 Always run the complete suite before handoff. A new slice must leave older

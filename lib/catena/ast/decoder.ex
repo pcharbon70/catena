@@ -165,37 +165,51 @@ defmodule Catena.AST.Decoder do
   defp validate_applicability(_value, _selection, false), do: :ok
 
   defp validate_applicability(value, selection, true) do
-    requirements = [
-      {:data_and_patterns, &uses_data_and_patterns?/1},
-      {:clause_conditions, &uses_clause_conditions?/1},
-      {:traits_and_categories, &uses_categories?/1},
-      {:effects_and_handlers, &uses_effects?/1},
-      {:specifications_and_governance, &uses_specifications?/1}
-    ]
+    if selection.language_revision in LanguageVersion.compilable_revisions() do
+      requirements = [
+        {:data_and_patterns, &uses_data_and_patterns?/1},
+        {:clause_conditions, &uses_clause_conditions?/1},
+        {:traits_and_categories, &uses_categories?/1},
+        {:effects_and_handlers, &uses_effects?/1},
+        {:specifications_and_governance, &uses_specifications?/1}
+      ]
 
-    case Enum.find(requirements, fn {feature, used?} ->
-           introduced = LanguageVersion.introduced(feature)
+      case Enum.find(requirements, fn {feature, used?} ->
+             introduced = LanguageVersion.introduced(feature)
 
-           used?.(value) and
-             not LanguageVersion.at_or_after?(selection.language_revision, introduced)
-         end) do
-      nil ->
-        :ok
+             used?.(value) and
+               not LanguageVersion.at_or_after?(selection.language_revision, introduced)
+           end) do
+        nil ->
+          :ok
 
-      {feature, _used?} ->
-        introduced = LanguageVersion.introduced(feature)
+        {feature, _used?} ->
+          introduced = LanguageVersion.introduced(feature)
 
-        {:error,
-         Diagnostic.new(
-           "EDN001",
-           "#{feature_name(feature)} requires language revision #{introduced} or later",
-           path: "$",
-           details: %{
-             feature: Atom.to_string(feature),
-             introduced: introduced,
-             selected: selection.language_revision
-           }
-         )}
+          {:error,
+           Diagnostic.new(
+             "EDN001",
+             "#{feature_name(feature)} requires language revision #{introduced} or later",
+             path: "$",
+             details: %{
+               feature: Atom.to_string(feature),
+               introduced: introduced,
+               selected: selection.language_revision
+             }
+           )}
+      end
+    else
+      {:error,
+       Diagnostic.new(
+         "EDN001",
+         "JSON input cannot compile language revision #{selection.language_revision}",
+         path: "$.language_revision",
+         details: %{
+           frontend: "json-ast",
+           selected: selection.language_revision,
+           supported: LanguageVersion.compilable_revisions()
+         }
+       )}
     end
   end
 

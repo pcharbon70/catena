@@ -7,7 +7,7 @@ defmodule Catena.Effect do
 
   @effect_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @value_name ~r/^[a-z][A-Za-z0-9_]*$/
-  @effect_versions LanguageVersion.from(:effects_and_handlers)
+  @effect_versions LanguageVersion.compilable_from(:effects_and_handlers)
 
   @spec prepare!(map(), map(), [map()]) :: map()
   def prepare!(%{frontend_version: version}, _data, _interfaces)

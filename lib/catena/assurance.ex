@@ -14,7 +14,7 @@ defmodule Catena.Assurance do
 
   @legacy_version LanguageVersion.introduced(:specifications_and_governance)
   @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
-  @versions LanguageVersion.from(:specifications_and_governance)
+  @versions LanguageVersion.signed_format_versions()
 
   @spec build(map(), [map()], [map()], map() | nil, [map()]) :: map()
   def build(package, artifacts, cores, governance_result, signatures \\ []) do
@@ -441,14 +441,15 @@ defmodule Catena.Assurance do
     do: signed["specification"] == @legacy_version
 
   defp valid_specification_version?(signed, @edition_version),
-    do: signed["specification"] in LanguageVersion.all()
+    do: signed["specification"] in LanguageVersion.compilable_revisions()
 
   defp valid_selection_payload?(_signed, @legacy_version), do: true
 
   defp valid_selection_payload?(signed, @edition_version) do
     case LanguageVersion.resolve_selection(signed) do
       {:ok, selection} ->
-        signed["specification"] == selection.language_revision and
+        selection.language_revision in LanguageVersion.compilable_revisions() and
+          signed["specification"] == selection.language_revision and
           string_list?(signed["diagnostics"])
 
       {:error, _diagnostic} ->

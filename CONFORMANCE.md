@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.8` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.9` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -44,6 +44,11 @@ C012 centralizes the already-published bootstrap budgets, establishes portable
 floors for source and artifact dimensions, and adds deterministic
 machine-readable disclosure without changing language revision or compiler
 release.
+
+Normative C013 uses `0.1.9` for strict UTF-8 source-text decoding. It adds
+`Catena.SourceText`, `Catena.decode_source_text/2`, `catena check-source-text`,
+and `SRC001`–`SRC003`. This revision emits no module interface or BEAM artifact
+and does not change the retained JSON or exact-kernel frontends.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
@@ -83,7 +88,7 @@ silently treating a recommendation as either mandatory or irrelevant.
 | [Secondary diagnostic spans](https://github.com/pcharbon70/catena-research/blob/main/60-specification/type-system/diagnostics-and-conformance.md#diagnostic-contract) | Partially implemented | Every source-derived 0.1.8 syntax or static diagnostic has a primary source span. Standalone malformed-interface and forged-core results have no source form. Related secondary spans remain absent, and retained JSON inputs still carry stable paths. Tracked by P117. |
 | [Task-facing “clause condition” wording](https://github.com/pcharbon70/catena-research/blob/main/60-specification/clause-conditions/diagnostics-and-conformance.md#stable-diagnostics) | Current wording deviation | Some compiler details still use implementation-facing condition/guard terms. Public wording cleanup is tracked by P117. |
 | [Shared pattern matrices](https://github.com/pcharbon70/catena-research/blob/main/60-specification/data-and-patterns/match-semantics-and-coverage.md#usefulness-model) | Current performance deviation | The implementation may rebuild equivalent matrices. Required usefulness and coverage results are unchanged; sharing work is tracked by G138. |
-| [Original Catena source locations](https://github.com/pcharbon70/catena-research/blob/main/60-specification/type-system/typed-core-elaboration.md#beam-only-backend-boundary) | Implemented for the kernel; unavailable for JSON | The 0.1.8 parser preserves half-open byte/line/column spans through verified core and Abstract Format annotations. Retained JSON revisions still have paths rather than source spans. Tracked by P117 and the ergonomic-source gaps. |
+| [Original Catena source locations](https://github.com/pcharbon70/catena-research/blob/main/60-specification/type-system/typed-core-elaboration.md#beam-only-backend-boundary) | Implemented for the kernel and source envelope; unavailable for JSON | The 0.1.8 parser preserves spans through verified core and Abstract Format annotations. The 0.1.9 decoder maps every logical scalar to original bytes, but no ergonomic parser yet carries those spans into typed core. Retained JSON revisions still have paths. Tracked by P117 and the remaining ergonomic-source gaps. |
 | [Stale-preview removal edit](https://github.com/pcharbon70/catena-research/blob/main/60-specification/editions-and-feature-lifecycle/feature-lifecycle-and-compatibility.md#preview-selection) | Not implemented | The compiler diagnoses stale preview selection but does not suggest the semantics-preserving removal edit. Tracked by P125. |
 
 No deviation in this table is permitted to change acceptance, safety,

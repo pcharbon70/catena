@@ -7,7 +7,7 @@ defmodule Catena.Type.Infer do
   alias Catena.Type.{Advanced, Parser, Scheme, Unify}
 
   @type state :: %{next: non_neg_integer(), substitution: map()}
-  @condition_versions LanguageVersion.from(:clause_conditions)
+  @condition_versions LanguageVersion.compilable_from(:clause_conditions)
 
   @spec module(map(), keyword()) :: map()
   def module(ast, options \\ []) do

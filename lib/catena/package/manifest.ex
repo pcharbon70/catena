@@ -108,6 +108,7 @@ defmodule Catena.Package.Manifest do
 
   defp decode_version(%{"version" => @edition_version} = value) do
     with {:ok, selection} <- LanguageVersion.resolve_selection(value),
+         :ok <- require_compilable_selection(selection),
          package when is_binary(package) and byte_size(package) > 0 <- Map.get(value, "package"),
          module when is_binary(module) <- Map.get(value, "companion_module"),
          true <- Regex.match?(@module_name, module),
@@ -154,6 +155,24 @@ defmodule Catena.Package.Manifest do
   end
 
   defp decode_version(_value), do: malformed("unsupported Catena package manifest version")
+
+  defp require_compilable_selection(selection) do
+    if selection.language_revision in LanguageVersion.compilable_revisions() do
+      :ok
+    else
+      {:error,
+       Diagnostic.new(
+         "EDN001",
+         "package IR compilation does not support source-only language revision #{selection.language_revision}",
+         path: "$.language_revision",
+         details: %{
+           frontend: "package-ir",
+           selected: selection.language_revision,
+           supported: LanguageVersion.compilable_revisions()
+         }
+       )}
+    end
+  end
 
   defp valid_module?(%{"source" => source, "beam" => beam, "interface" => interface}),
     do: is_binary(source) and is_binary(beam) and is_binary(interface)

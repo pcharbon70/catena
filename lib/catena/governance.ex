@@ -8,7 +8,7 @@ defmodule Catena.Governance do
   @scope_kinds ~w(package module subject action output interface profile)
   @legacy_version LanguageVersion.introduced(:specifications_and_governance)
   @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
-  @versions LanguageVersion.from(:specifications_and_governance)
+  @versions LanguageVersion.signed_format_versions()
 
   @spec decode_bundle(binary()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def decode_bundle(binary) when is_binary(binary) do
