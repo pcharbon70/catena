@@ -1,7 +1,7 @@
 defmodule Catena.Governance do
   @moduledoc "Versioned governance bundle validation, evidence admission, and package gate."
 
-  alias Catena.{CanonicalJCS, Diagnostic, LanguageVersion}
+  alias Catena.{CanonicalJCS, Diagnostic, ImplementationLimits, LanguageVersion}
   alias Catena.Governance.{Crypto, Lifecycle, Policy}
 
   @actions ~w(build publish activate)
@@ -177,7 +177,9 @@ defmodule Catena.Governance do
   def compiler_evidence(_), do: []
 
   defp evaluate_policies(policies, context) do
-    Enum.reduce_while(policies, {:ok, [], 0, 20_000}, fn policy,
+    budget = ImplementationLimits.configured(:governance_policy_steps)
+
+    Enum.reduce_while(policies, {:ok, [], 0, budget}, fn policy,
                                                          {:ok, explanations, steps, remaining} ->
       case Policy.evaluate(policy["requirement"], context, remaining) do
         {:ok, true, explanation, spent} ->

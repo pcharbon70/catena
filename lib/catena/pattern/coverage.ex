@@ -1,10 +1,10 @@
 defmodule Catena.Pattern.Coverage do
   @moduledoc "Typed-pattern usefulness, exhaustiveness, and redundancy analysis."
 
-  alias Catena.{Diagnostic, Type}
+  alias Catena.{Diagnostic, ImplementationLimits, Type}
   alias Catena.Condition.Facts
 
-  @default_budget 20_000
+  @default_budget ImplementationLimits.configured(:pattern_coverage_steps)
 
   @spec check!([map()], Type.t(), map(), keyword()) :: map()
   def check!(clauses, scrutinee_type, data, options \\ []) do
@@ -104,8 +104,12 @@ defmodule Catena.Pattern.Coverage do
   end
 
   defp useful(_matrix, _vector, _types, _data, budget) when budget <= 0 do
-    fail("M004", "pattern coverage analysis exceeded its deterministic budget", nil,
-      minimum_budget: @default_budget
+    fail(
+      "M004",
+      "pattern coverage analysis exceeded its deterministic budget",
+      nil,
+      ImplementationLimits.details(:pattern_coverage_steps, @default_budget + 1)
+      |> Map.put(:minimum_budget, @default_budget)
     )
   end
 

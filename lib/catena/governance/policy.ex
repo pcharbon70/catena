@@ -1,10 +1,10 @@
 defmodule Catena.Governance.Policy do
   @moduledoc "Closed, bounded, explanation-producing versioned policy algebra."
 
-  alias Catena.{Diagnostic, LanguageLifecycle, LanguageVersion}
+  alias Catena.{Diagnostic, ImplementationLimits, LanguageLifecycle, LanguageVersion}
   alias Catena.Governance.Crypto
 
-  @budget 20_000
+  @budget ImplementationLimits.configured(:governance_policy_steps)
   @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
 
   @spec evaluate(map(), map(), pos_integer()) ::
@@ -20,7 +20,11 @@ defmodule Catena.Governance.Policy do
   end
 
   defp evaluate_node(_requirement, _context, remaining) when remaining <= 0,
-    do: error("policy evaluation exhausted its 20000-step budget")
+    do:
+      error(
+        "policy evaluation exhausted its #{@budget}-step budget",
+        ImplementationLimits.details(:governance_policy_steps, @budget + 1)
+      )
 
   defp evaluate_node(%{"op" => "all", "requirements" => requirements}, context, remaining)
        when is_list(requirements) do
@@ -309,5 +313,6 @@ defmodule Catena.Governance.Policy do
   defp exact_fields?(value, fields),
     do: MapSet.new(Map.keys(value)) == MapSet.new(fields)
 
-  defp error(message), do: {:error, Diagnostic.new("GOV002", message, path: "$.policies")}
+  defp error(message, details \\ %{}),
+    do: {:error, Diagnostic.new("GOV002", message, path: "$.policies", details: details)}
 end

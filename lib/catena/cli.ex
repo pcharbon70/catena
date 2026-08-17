@@ -1,7 +1,16 @@
 defmodule Catena.CLI do
   @moduledoc "Command-line entry point for retained JSON and exact kernel inputs."
 
-  alias Catena.{Assurance, Interface, LanguageInfo, LanguageSelection, LanguageVersion, Report}
+  alias Catena.{
+    Assurance,
+    ConformanceInfo,
+    Interface,
+    LanguageInfo,
+    LanguageSelection,
+    LanguageVersion,
+    Report
+  }
+
   alias Catena.Governance.TrustRoot
   alias Catena.Package.Linker
 
@@ -27,6 +36,9 @@ defmodule Catena.CLI do
     case positional do
       ["language-info"] ->
         print(LanguageInfo.document())
+
+      ["conformance-info"] ->
+        print(ConformanceInfo.document())
 
       _ ->
         with {:ok, interfaces} <- load_interfaces(Keyword.get_values(options, :interface)),
@@ -250,6 +262,6 @@ defmodule Catena.CLI do
       "[--action build|publish|activate] [--trust-root FILE] " <>
       "({check-ir|elaborate-ir|compile-ir|compile-package-ir|verify-assurance} FILE.json" <>
       " | {check-kernel|compile-kernel} FILE.catena-kernel" <>
-      " | language-info)"
+      " | language-info | conformance-info)"
   end
 end

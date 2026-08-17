@@ -1,9 +1,9 @@
 defmodule Catena.Type.Trait do
   @moduledoc "Kind-aware, terminating Catena 0.1.4 trait registry and compile-time evidence solver."
 
-  alias Catena.{Diagnostic, Kind}
+  alias Catena.{Diagnostic, ImplementationLimits, Kind}
 
-  @default_budget 20_000
+  @default_budget ImplementationLimits.configured(:trait_resolution_steps)
 
   defstruct traits: %{}, instances: [], aliases: %{}, budget: @default_budget
 
@@ -179,7 +179,12 @@ defmodule Catena.Type.Trait do
 
   defp solve!(registry, trait, arguments, remaining, stack, memo, path) do
     if remaining <= 0 do
-      fail("TRT008", "trait resolution exceeded the deterministic budget", path)
+      fail(
+        "TRT008",
+        "trait resolution exceeded the deterministic budget",
+        path,
+        ImplementationLimits.details(:trait_resolution_steps, @default_budget + 1)
+      )
     end
 
     key = {trait.id, canonical(arguments)}
@@ -567,7 +572,8 @@ defmodule Catena.Type.Trait do
   defp valid_kind?({:arrow, left, right}), do: valid_kind?(left) and valid_kind?(right)
   defp valid_kind?(_), do: false
 
-  defp fail(id, message, path) do
-    raise Catena.TypeError, diagnostic: Diagnostic.new(id, message, path: path)
+  defp fail(id, message, path, details \\ %{}) do
+    raise Catena.TypeError,
+      diagnostic: Diagnostic.new(id, message, path: path, details: details)
   end
 end

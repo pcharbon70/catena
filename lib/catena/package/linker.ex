@@ -11,6 +11,7 @@ defmodule Catena.Package.Linker do
     Categorical,
     Diagnostic,
     Governance,
+    ImplementationLimits,
     Interface,
     LanguageLifecycle,
     LanguageVersion
@@ -19,7 +20,7 @@ defmodule Catena.Package.Linker do
   alias Catena.OTP.Compiler, as: OTPCompiler
   alias Catena.Type.Trait
 
-  @budget 20_000
+  @budget ImplementationLimits.configured(:package_specialization_steps)
   @categorical_version LanguageVersion.introduced(:traits_and_categories)
   @governance_version LanguageVersion.introduced(:specifications_and_governance)
   @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
@@ -1149,11 +1150,26 @@ defmodule Catena.Package.Linker do
   defp variables(count), do: Enum.map(0..(count - 1), &variable/1)
 
   defp spend!(remaining) when remaining > 0, do: remaining - 1
-  defp spend!(_remaining), do: fail("TRT007", "specialization exceeded 20000 steps", "$.roots")
+
+  defp spend!(_remaining),
+    do:
+      fail(
+        "TRT007",
+        "specialization exceeded #{@budget} steps",
+        "$.roots",
+        ImplementationLimits.details(:package_specialization_steps, @budget + 1)
+      )
+
   defp ensure_budget!(remaining) when remaining > 0, do: :ok
 
   defp ensure_budget!(_remaining),
-    do: fail("TRT007", "specialization exceeded 20000 steps", "$.roots")
+    do:
+      fail(
+        "TRT007",
+        "specialization exceeded #{@budget} steps",
+        "$.roots",
+        ImplementationLimits.details(:package_specialization_steps, @budget + 1)
+      )
 
   defp decoded_interface!(binary) do
     case Interface.decode(binary) do
@@ -1172,6 +1188,9 @@ defmodule Catena.Package.Linker do
     error in KeyError -> {:error, Diagnostic.new("LNK001", Exception.message(error))}
   end
 
-  defp fail(id, message, path),
-    do: raise(Catena.TypeError, diagnostic: Diagnostic.new(id, message, path: path))
+  defp fail(id, message, path, details \\ %{}),
+    do:
+      raise(Catena.TypeError,
+        diagnostic: Diagnostic.new(id, message, path: path, details: details)
+      )
 end

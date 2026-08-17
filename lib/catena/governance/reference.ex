@@ -1,10 +1,10 @@
 defmodule Catena.Governance.Reference do
   @moduledoc "Separately structured oracle for versioned policy decisions."
 
-  alias Catena.{CanonicalJCS, LanguageLifecycle, LanguageVersion}
+  alias Catena.{CanonicalJCS, ImplementationLimits, LanguageLifecycle, LanguageVersion}
   alias Catena.Governance.{Crypto, Lifecycle}
 
-  @limit 20_000
+  @limit ImplementationLimits.configured(:governance_policy_steps)
   @legacy_version LanguageVersion.introduced(:specifications_and_governance)
   @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
 

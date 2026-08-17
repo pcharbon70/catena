@@ -1,7 +1,7 @@
 defmodule Catena.Kernel.Backend do
   @moduledoc "Fixed-layout Erlang Abstract Format lowering for verified kernel 0.1.8 core."
 
-  alias Catena.{Diagnostic, LanguageSelection}
+  alias Catena.{Diagnostic, ImplementationLimits, LanguageSelection}
   alias Catena.Kernel.{Interface, Verifier}
   alias Catena.OTP.Compiler, as: OTPCompiler
 
@@ -10,6 +10,7 @@ defmodule Catena.Kernel.Backend do
   def compile(core, _options \\ []) do
     with :ok <- verify(core),
          forms <- lower(core),
+         :ok <- ImplementationLimits.validate_generated_arities(forms),
          selection <- %LanguageSelection{edition: "0.1", language_revision: "0.1.8", previews: []},
          {:ok, module, binary, warnings} <-
            OTPCompiler.compile(forms,

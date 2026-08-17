@@ -1,7 +1,13 @@
 defmodule Catena.AST.Decoder do
   @moduledoc "Strict decoder for the temporary, versioned Catena JSON AST."
 
-  alias Catena.{Diagnostic, LanguageSelection, LanguageVersion, Specification}
+  alias Catena.{
+    Diagnostic,
+    ImplementationLimits,
+    LanguageSelection,
+    LanguageVersion,
+    Specification
+  }
 
   @versions LanguageVersion.before(:formal_semantic_kernel)
   @latest_json List.last(@versions)
@@ -20,6 +26,7 @@ defmodule Catena.AST.Decoder do
   @spec decode(binary(), keyword()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def decode(json, options \\ []) when is_binary(json) do
     with {:ok, value} <- JSON.decode(json),
+         :ok <- ImplementationLimits.validate_integer_magnitudes(value),
          :ok <- require_map(value, "$"),
          {:ok, frontend_format} <- version(value),
          {:ok, selection, diagnostics, explicit_selection?} <-

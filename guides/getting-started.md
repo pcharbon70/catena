@@ -72,6 +72,13 @@ and migrations before compiling a package:
 ./catena language-info
 ```
 
+Inspect the implementation's exact choices, portable limits, analysis bounds,
+and runtime-capacity constraints as deterministic JSON:
+
+```bash
+./catena conformance-info
+```
+
 ## A source-first example
 
 Suppose we want to represent delivery progress and explain it to a user. In

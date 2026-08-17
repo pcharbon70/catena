@@ -1,8 +1,10 @@
 defmodule Catena.Condition.Facts do
   @moduledoc "Deterministic Boolean and integer difference-constraint reasoning for coverage."
 
-  @default_budget 20_000
-  @branch_budget 20_000
+  alias Catena.ImplementationLimits
+
+  @default_budget ImplementationLimits.configured(:condition_fact_nodes)
+  @branch_budget ImplementationLimits.configured(:condition_fact_branch_steps)
 
   @spec guard_formula(map() | nil, map()) :: map()
   def guard_formula(nil, _pattern), do: %{tag: :boolean, value: true}

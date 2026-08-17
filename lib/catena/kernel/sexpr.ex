@@ -1,11 +1,11 @@
 defmodule Catena.Kernel.SExpression do
   @moduledoc "Strict, source-spanned parser for the canonical 0.1.8 S-expression envelope."
 
-  alias Catena.{Diagnostic, SourceSpan}
+  alias Catena.{Diagnostic, ImplementationLimits, SourceSpan}
   alias Catena.Kernel.Node
 
-  @default_node_limit 20_000
-  @default_depth_limit 1_024
+  @default_node_limit ImplementationLimits.configured(:kernel_parser_nodes)
+  @default_depth_limit ImplementationLimits.configured(:kernel_parser_depth)
 
   @type token :: {:open | :close, SourceSpan.t()} | {:node, Node.t()}
 
@@ -252,7 +252,14 @@ defmodule Catena.Kernel.SExpression do
     nodes = state.nodes + 1
 
     if nodes > limit,
-      do: limit_error("kernel input exceeds the published parser node limit", span),
+      do:
+        limit_error(
+          "kernel input exceeds the published parser node limit",
+          span,
+          :kernel_parser_nodes,
+          nodes,
+          limit
+        ),
       else: {:ok, %{state | nodes: nodes}}
   end
 
@@ -265,7 +272,13 @@ defmodule Catena.Kernel.SExpression do
 
   defp parse_node([{:open, open_span} | rest], depth, limit) do
     if depth + 1 > limit do
-      limit_error("kernel input exceeds the published parser nesting limit", open_span)
+      limit_error(
+        "kernel input exceeds the published parser nesting limit",
+        open_span,
+        :kernel_parser_depth,
+        depth + 1,
+        limit
+      )
     else
       parse_list(rest, depth + 1, limit, open_span, [])
     end
@@ -308,5 +321,12 @@ defmodule Catena.Kernel.SExpression do
   defp token_span({_, span}), do: span
 
   defp syntax_error(message, span), do: {:error, Diagnostic.new("SYN001", message, span: span)}
-  defp limit_error(message, span), do: {:error, Diagnostic.new("SYN003", message, span: span)}
+
+  defp limit_error(message, span, limit_id, observed, configured) do
+    {:error,
+     Diagnostic.new("SYN003", message,
+       span: span,
+       details: ImplementationLimits.details(limit_id, observed, configured: configured)
+     )}
+  end
 end
