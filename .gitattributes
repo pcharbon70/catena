@@ -1,0 +1,2 @@
+priv/unicode/**/*.txt -diff linguist-generated=true
+priv/unicode/**/*.etf -diff linguist-generated=true

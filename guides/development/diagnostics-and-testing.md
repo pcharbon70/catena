@@ -67,6 +67,7 @@ may improve without changing the contract.
 | `EDN...` / `PRV...` / `DEP...` | edition selection, preview propagation, migration, deprecation |
 | `SYN...` / `PRC...` | exact kernel syntax/limits and typed process boundaries |
 | `SRC...` | source encoding, BOM, and newline-envelope failures |
+| `IDN...` | identifier spelling, normalization, security, qualification, and confusables |
 | `LIM...` | portable source and generated-artifact limits |
 | `B...` | OTP rejecting generated Erlang Abstract Format |
 | `I...` | inference-independent core invariant failure |
@@ -138,6 +139,8 @@ and warnings in structured details.
 | `c012_traceability_coverage_test.exs` | complete `IL-OBL-*` obligation coverage and explicit architectural allowlists |
 | `c013_source_text_test.exs` | UTF-8, BOM, newline, normalization, source-span, revision, and CLI behavior |
 | `c013_traceability_coverage_test.exs` | complete `ST-OBL-*` source-text obligation coverage |
+| `c014_identifiers_test.exs` | Unicode identifiers, NFC, security, keywords, qualification, confusables, and CLI behavior |
+| `c014_traceability_coverage_test.exs` | complete `ID-OBL-*` identifier obligation coverage |
 | `resumption_token_test.exs` | dynamic one-use continuation defense |
 
 Retained-slice tests construct JSON programs directly in Elixir. The C010

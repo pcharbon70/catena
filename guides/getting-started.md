@@ -13,6 +13,8 @@ The repository contains an Elixir bootstrap compiler that can:
   spans;
 - validate the normative 0.1.9 strict UTF-8 source-text envelope while
   preserving original-byte scalar spans;
+- validate normative 0.1.10 standalone Unicode identifiers, qualification,
+  keywords, and confusable-name diagnostics;
 - infer and check types, data, patterns, conditions, traits, effects, and
   typed specifications;
 - independently verify its typed core;
@@ -76,6 +78,12 @@ the later lexer and parser exist:
 
 The command reports deterministic byte, logical-scalar, and logical-newline
 counts. It does not claim that the file is a grammatically valid program.
+
+Validate names independently of the later whole-source lexer:
+
+```bash
+./catena check-identifiers alpha Option.Some '`type`'
+```
 
 Inspect the compiler's current default, retained revisions, feature states,
 and migrations before compiling a package:
@@ -161,7 +169,8 @@ exposing the chosen runtime layout.
 ```mermaid
 flowchart LR
     Source[Future Catena source bytes] --> Text[0.1.9 strict source-text decoder]
-    Text -. lexer and parser not implemented .-> JSON[Versioned JSON AST]
+    Text --> Names[0.1.10 standalone identifier validation]
+    Names -. lexer and parser not implemented .-> JSON[Versioned JSON AST]
     Kernel[Exact 0.1.8 kernel S-expression] --> KDecode[Kernel parser]
     JSON --> Decode[Strict decoding]
     Decode --> Infer[Inference and elaboration]

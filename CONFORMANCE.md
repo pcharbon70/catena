@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.9` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.10` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.10`; standalone identifiers for `0.1.10` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -49,6 +49,14 @@ Normative C013 uses `0.1.9` for strict UTF-8 source-text decoding. It adds
 `Catena.SourceText`, `Catena.decode_source_text/2`, `catena check-source-text`,
 and `SRC001`–`SRC003`. This revision emits no module interface or BEAM artifact
 and does not change the retained JSON or exact-kernel frontends.
+
+Normative C014 uses `0.1.10` for standalone identifiers and qualified names.
+The compiler uses vendored Unicode 17.0.0 data for XID, NFC, the General
+Security Profile, Highly Restrictive script checks, and confusable skeletons.
+It adds `Catena.parse_identifier/2`, `Catena.parse_qualified_name/2`,
+`Catena.audit_identifiers/2`, `catena check-identifiers`, and `IDN001`–`IDN007`.
+It emits no persisted interface or BEAM artifact and does not widen the JSON
+or exact-kernel frontend versions.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared

@@ -55,9 +55,10 @@ selection. `Catena.LanguageLifecycle` owns immutable feature IDs, state
 history, compatibility changes, diagnostic IDs, and structured migration
 edits. `Catena.LanguageInfo` exposes both registries without mutation.
 
-The executable registry currently ends at normative `0.1.9`. The JSON frontend
+The executable registry currently ends at normative `0.1.10`. The JSON frontend
 remains closed at `0.1.7`; `Catena.Kernel.Parser` alone accepts exact `0.1.8`
-S-expressions; and `Catena.SourceText` accepts exact `0.1.9` source bytes
+S-expressions; `Catena.SourceText` accepts `0.1.9` and cumulative `0.1.10`
+source bytes; and the 0.1.10 identifier frontend validates standalone names
 without emitting an interface or compiled artifact. A future candidate may be selectable for evidence runs without
 making its research chapters normative; promotion still requires its
 separately recorded immutable gate.
@@ -105,6 +106,10 @@ revision boundary, not a preview or vendor extension.
 Normative 0.1.9 likewise enables no previews. Its source-text feature is an
 encoding and location boundary, not a complete source grammar or compile
 frontend.
+
+Normative 0.1.10 enables no previews. Its identifier feature is a standalone
+lexical-name boundary and does not make the exact kernel or retained JSON
+frontends accept 0.1.10.
 
 When a real preview is added, compute `required_previews` from exported
 semantics. The enabled set alone is not the dependency contract. Validate
