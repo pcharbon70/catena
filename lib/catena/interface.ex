@@ -538,6 +538,7 @@ defmodule Catena.Interface do
     required = Map.get(value, "required_previews")
 
     with {:ok, selection} <- LanguageVersion.resolve_selection(value),
+         true <- selection.language_revision in LanguageVersion.compilable_revisions(),
          true <- sorted_string_list?(required),
          true <- MapSet.subset?(MapSet.new(required), MapSet.new(selection.previews)) do
       {:ok, selection, required}

@@ -4,7 +4,7 @@ defmodule Catena.OTP.Compiler do
   alias Catena.{Diagnostic, ImplementationLimits, LanguageVersion}
 
   @default_version LanguageVersion.introduced(:data_and_patterns)
-  @selection_versions LanguageVersion.from(:editions_and_feature_lifecycle)
+  @selection_versions LanguageVersion.compilable_from(:editions_and_feature_lifecycle)
 
   @spec compile([term()], keyword()) ::
           {:ok, module(), binary(), [term()]} | {:error, Diagnostic.t()}

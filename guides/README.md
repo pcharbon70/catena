@@ -4,8 +4,9 @@ These guides explain the executable Catena language model, its assurance
 protocol, and the bootstrap compiler. They complement rather than replace the
 [normative language specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification).
 
-Catena does not yet have an ergonomic source parser. Code in a `catena` fence
-is **illustrative source notation**: it teaches the selected language meaning
+Catena does not yet have an ergonomic source lexer or parser. Revision 0.1.9
+does provide the strict UTF-8 and source-location envelope those later stages
+will consume. Code in a `catena` fence is **illustrative source notation**: it teaches the selected language meaning
 but does not freeze punctuation, layout, or every keyword. Commands, JSON-AST
 examples, and the separately identified exact 0.1.8 kernel S-expressions are
 executable against the current compiler.
@@ -23,6 +24,7 @@ accepted by the source parser or implemented semantic slice.
 flowchart TD
     Start[Start here] --> Tour[Language Tour]
     Tour --> First[Getting Started]
+    First --> Text[Source Text]
     First --> Editions[Editions and Previews]
     Editions --> Data[Variant Types]
     Data --> Match[Pattern Matching]
@@ -50,28 +52,30 @@ flowchart TD
    language direction.
 2. [Getting Started](getting-started.md) — install the toolchain, understand a
    source-first example, and run the executable model.
-3. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
+3. [Source Text](language/source-text.md) — validate UTF-8, newline handling,
+   normalization preservation, and original-byte locations at revision 0.1.9.
+4. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
-4. [Variant Types and Structured Data](language/algebraic-data-types.md) —
+5. [Variant Types and Structured Data](language/algebraic-data-types.md) —
    model a domain with nominal variants, explicit payloads, and controlled
    module boundaries.
-5. [Pattern Matching](language/pattern-matching.md) — consume data with
+6. [Pattern Matching](language/pattern-matching.md) — consume data with
    ordered, exhaustive clauses and safe conditions.
-6. [Traits and Composition](language/traits-and-composition.md) — use shared
+7. [Traits and Composition](language/traits-and-composition.md) — use shared
    behavior such as `map`, `map2`, and `and_then` without requiring category
    theory terminology.
-7. [Effects and Handlers](language/effects-and-handlers.md) — declare external
+8. [Effects and Handlers](language/effects-and-handlers.md) — declare external
    abilities, request them through lexical capabilities, and interpret them
    with deep affine handlers.
-8. [Formal Semantic Kernel](language/formal-semantic-kernel.md) — run the exact
+9. [Formal Semantic Kernel](language/formal-semantic-kernel.md) — run the exact
    0.1.8 conformance input and understand structural rows, the small-step
    machine, typed actors, fixed layouts, and normative conformance evidence.
-9. [Specifications](language/specifications.md) — attach typed rules and exact
+10. [Specifications](language/specifications.md) — attach typed rules and exact
    examples to named language subjects.
-10. [Governance](language/governance.md) — understand policy, evidence,
+11. [Governance](language/governance.md) — understand policy, evidence,
    approval, lifecycle, and protected package actions.
-11. [Catena and BEAM](language/catena-and-beam.md) — understand Abstract Format
+12. [Catena and BEAM](language/catena-and-beam.md) — understand Abstract Format
    lowering, module interfaces, companion modules, and the current
    interoperability boundary.
 
@@ -152,8 +156,12 @@ could also appear in the compiler.
 | 0.1.5 | lexical effects, deep handlers, affine resumptions, and effect-directed CPS |
 | 0.1.6 | typed specifications, offline governance, assurance artifacts, and total erasure |
 | 0.1.7 | editions, exact revisions, previews, migration records, and selection-bound artifacts |
+| 0.1.8 | exact formal semantic kernel, independent verification, and typed local actors |
+| 0.1.9 | strict UTF-8 source-text envelope, newline normalization, and original-byte scalar spans |
 
-Versions 0.1.1 through 0.1.8 identify completed cumulative semantic slices.
+Versions 0.1.1 through 0.1.9 identify completed normative revision boundaries;
+their accepted frontend formats remain explicit rather than implicitly
+cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;
 its immutable promotion evidence is recorded in the research archive. Edition `0.1` is the
 end-user compatibility track; each exact three-component revision selects a

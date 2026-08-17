@@ -11,6 +11,8 @@ The repository contains an Elixir bootstrap compiler that can:
 - decode versioned Catena JSON AST 0.1.1 through 0.1.7;
 - parse the exact normative 0.1.8 semantic-kernel S-expression with source
   spans;
+- validate the normative 0.1.9 strict UTF-8 source-text envelope while
+  preserving original-byte scalar spans;
 - infer and check types, data, patterns, conditions, traits, effects, and
   typed specifications;
 - independently verify its typed core;
@@ -64,6 +66,16 @@ asdf exec mix escript.build
 ```
 
 The last command creates the `catena` executable in the repository root.
+
+Validate a future `.catena` source file's encoding and newline envelope before
+the later lexer and parser exist:
+
+```bash
+./catena check-source-text program.catena
+```
+
+The command reports deterministic byte, logical-scalar, and logical-newline
+counts. It does not claim that the file is a grammatically valid program.
 
 Inspect the compiler's current default, retained revisions, feature states,
 and migrations before compiling a package:
@@ -148,7 +160,8 @@ exposing the chosen runtime layout.
 
 ```mermaid
 flowchart LR
-    Source[Future Catena source] -. parser not implemented .-> JSON[Versioned JSON AST]
+    Source[Future Catena source bytes] --> Text[0.1.9 strict source-text decoder]
+    Text -. lexer and parser not implemented .-> JSON[Versioned JSON AST]
     Kernel[Exact 0.1.8 kernel S-expression] --> KDecode[Kernel parser]
     JSON --> Decode[Strict decoding]
     Decode --> Infer[Inference and elaboration]

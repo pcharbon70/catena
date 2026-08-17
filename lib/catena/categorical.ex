@@ -6,7 +6,7 @@ defmodule Catena.Categorical do
   alias Catena.Type.Trait
 
   @law_statuses %{"promised" => :promised, "tested" => :tested, "derived" => :derived}
-  @categorical_versions LanguageVersion.from(:traits_and_categories)
+  @categorical_versions LanguageVersion.compilable_from(:traits_and_categories)
 
   @spec prepare!(map(), map(), [map()]) :: map()
   def prepare!(%{frontend_version: version}, _data, _interfaces)

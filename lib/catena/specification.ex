@@ -9,7 +9,7 @@ defmodule Catena.Specification do
   @name ~r/^[a-z][A-Za-z0-9_]*$/
   @subject_kinds ~w(value datatype trait instance effect handler module output interface action profile)
   @budget ImplementationLimits.configured(:specification_example_steps)
-  @versions LanguageVersion.from(:specifications_and_governance)
+  @versions LanguageVersion.compilable_from(:specifications_and_governance)
 
   @spec decode_sections(map(), String.t()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def decode_sections(value, version) when version in @versions do

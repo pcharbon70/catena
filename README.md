@@ -42,8 +42,10 @@ verified core, a small-step reference machine, and typed local actors. Its
 immutable promotion evidence is recorded in the research archive. The C012
 implementation-limits governance milestone is also complete: the compiler
 enforces and reports portable source and artifact floors from one executable
-registry, while retaining language revision `0.1.8` and compiler release
-`0.1.0`. The bootstrap toolchain is written in
+registry. Normative C013 revision `0.1.9` adds strict UTF-8 source-text
+decoding, logical-newline handling, and original-byte scalar spans without yet
+claiming an ergonomic lexer or parser. The compiler release remains `0.1.0`.
+The bootstrap toolchain is written in
 Elixir 1.20.2 on Erlang/OTP 29.0.4 and targets only the BEAM VM. It does not
 reuse the historical proof-of-concept's compiler or language design.
 
@@ -61,8 +63,8 @@ Run `catena conformance-info` for the deterministic machine-readable form.
 
 To explore the language as a programmer, begin with the
 [Catena Language Tour](LANGUAGE-TOUR.md). It introduces the language model,
-shows how to run the retained JSON-AST path and exact kernel input, and routes into the
-authoritative `catena-research` documents.
+shows how to validate 0.1.9 source text and run the retained JSON-AST and exact
+kernel paths, and routes into the authoritative `catena-research` documents.
 
 The [Catena Guides](guides/README.md) provide a detailed source-first learning
 path, task guides for each implemented language slice, governance operations,
@@ -77,7 +79,8 @@ boundaries. Contributors should also read
 
 Catena's current language line is `0.1`. Completed semantic slices increment
 its patch component: C001 through C006 are therefore `0.1.1` through `0.1.6`.
-Normative C008 is implemented at `0.1.7`; normative C010 uses `0.1.8`.
+Normative C008 is implemented at `0.1.7`, normative C010 uses `0.1.8`, and
+normative C013 uses `0.1.9` for the source-text envelope.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -86,8 +89,7 @@ input.
 
 C007 specification authority, C009 conformance vocabulary, and C012
 implementation-limits policy are repository-governance milestones, not
-semantic language slices. None consumes a language revision. The next semantic
-slice begins at `0.1.9`.
+semantic language slices. None consumes a language revision.
 
 The former two-component prototype identifiers are retired and are not input
 aliases. Update unsigned JSON AST inputs mechanically, then rebuild interfaces
@@ -101,6 +103,8 @@ of their canonical signature domains.
 flowchart LR
     SEL[Package or standalone language selection] --> JSON[Versioned JSON AST 0.1.1 through 0.1.7]
     SEL --> KSEXPR[Exact kernel S-expression 0.1.8]
+    SEL --> ST[Strict source-text envelope 0.1.9]
+    ST --> STOP[Logical Unicode stream and spans]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
@@ -130,8 +134,9 @@ flowchart LR
 ```
 
 The JSON AST is a retained versioned toolchain input, not proposed Catena
-surface syntax. Revision 0.1.8 adds a normative S-expression kernel input, but
-not the later ergonomic, layout-sensitive frontend. The backend does not emit
+surface syntax. Revision 0.1.8 adds a normative S-expression kernel input.
+Revision 0.1.9 defines only the bytes-to-logical-text boundary for future
+ergonomic syntax; it does not tokenize or parse programs. The backend does not emit
 Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
 
@@ -259,9 +264,12 @@ include:
   reference/BEAM agreement evidence; and
 - fixed BEAM layouts for kernel records, variants, and nominal constructor
   values, plus direct or effect-directed CPS lowering through the sole OTP 29
-  boundary.
+  boundary; and
+- a strict UTF-8 0.1.9 source-text decoder that rejects BOMs, alternate
+  encodings, malformed sequences, and lone carriage returns while preserving
+  scalar spelling and original-byte spans through LF/CRLF normalization.
 
-This is not yet an ergonomic Catena source parser or a complete implementation of resource
+This is not yet an ergonomic Catena source lexer or parser or a complete implementation of resource
 scopes, exception boundaries, general host-effect entry policy, scoped or
 multi-shot control, programmable patterns, runtime assurance
 monitors, stronger proof methods, long-term governance migration, package
@@ -279,7 +287,8 @@ asdf exec mix test
 asdf exec mix escript.build
 ```
 
-The CLI accepts the retained JSON/package commands plus two kernel commands:
+The CLI accepts source-envelope validation, the retained JSON/package
+commands, and two kernel commands:
 
 ```bash
 ./catena check-ir program.json
@@ -291,10 +300,16 @@ The CLI accepts the retained JSON/package commands plus two kernel commands:
 ./catena compile-package-ir --action build package.catena-package.json
 ./catena compile-package-ir --action publish --trust-root trust-root.json package.catena-package.json
 ./catena verify-assurance --trust-root trust-root.json assurance.json
+./catena check-source-text program.catena
 ./catena check-kernel program.catena-kernel
 ./catena compile-kernel program.catena-kernel
 ./catena language-info
 ```
+
+`check-source-text` validates the 0.1.9 UTF-8, BOM, and newline contract and
+reports byte, logical-scalar, and logical-newline counts. It produces no
+interface or BEAM artifact because token and full-file grammar work remains a
+later language slice. See the [Source Text guide](guides/language/source-text.md).
 
 `compile-kernel` writes an OTP-generated `.beam` and deterministic 0.1.8
 `.cati.json` interface beside the input. A failed check or compilation

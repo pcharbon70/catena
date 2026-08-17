@@ -93,7 +93,7 @@ decoding an old interface.
 During the current `0.1` prototype line, each bounded semantic slice reserves
 the next unused patch from `Catena.LanguageVersion`. Normative C010 uses
 revision 0.1.8. C012 is a governance milestone and consumes no language patch,
-so a later semantic slice begins at 0.1.9 unless policy changes. Exact
+and normative C013 uses 0.1.9 for the source-text envelope. Exact
 language revision, edition, artifact format, and Mix application release are
 separate axes. Change each only when its own contract changes, and bind the
 resolved language selection into every new interface, cache key,

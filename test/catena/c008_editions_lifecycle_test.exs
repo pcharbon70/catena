@@ -25,7 +25,7 @@ defmodule Catena.C008EditionsLifecycleTest do
 
     assert info["current"] == %{
              "edition" => "0.1",
-             "language_revision" => "0.1.8",
+             "language_revision" => "0.1.9",
              "previews" => []
            }
 
@@ -53,8 +53,13 @@ defmodule Catena.C008EditionsLifecycleTest do
     assert Enum.all?(info["changes"], &is_binary(&1["from"]))
     assert hd(info["changes"])["from"] == "0.1.0"
 
-    assert List.last(info["changes"])["fixes"] |> Enum.map(& &1["path"]) ==
+    edition_change = Enum.find(info["changes"], &(&1["to"] == "0.1.7"))
+
+    assert edition_change["fixes"] |> Enum.map(& &1["path"]) ==
              ["$.version", "$.edition", "$.language_revision", "$.previews"]
+
+    assert List.last(info["changes"])["to"] == "0.1.9"
+    assert List.last(info["changes"])["fixes"] == []
 
     assert Enum.all?(info["changes"], fn change ->
              String.starts_with?(change["id"], "change-") and
@@ -104,7 +109,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     assert {:ok, %LanguageSelection{}} =
              LanguageVersion.resolve_selection(selection("0.1.7"))
 
-    for value <- ["0.1", "0.1.7-preview", "0.1.07", "latest", "0.1.9"] do
+    for value <- ["0.1", "0.1.7-preview", "0.1.07", "latest", "0.1.10"] do
       assert {:error, %{id: "EDN001", path: "$.language_revision"}} =
                LanguageVersion.resolve_selection(selection(value))
     end
@@ -132,8 +137,8 @@ defmodule Catena.C008EditionsLifecycleTest do
   end
 
   @tag obligations: ~w(ED-OBL-009 ED-OBL-021 ED-OBL-029)
-  test "every retained exact revision compiles through the 0.1.7 artifact schema" do
-    for revision <- LanguageVersion.all() do
+  test "every compilation-capable revision compiles through the 0.1.7 artifact schema" do
+    for revision <- LanguageVersion.compilable_revisions() do
       assert {:ok, _module, _beam, metadata} =
                module_document("C008Retained#{String.replace(revision, ".", "")}", "0.1.7")
                |> JSON.encode!()

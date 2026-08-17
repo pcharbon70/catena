@@ -17,10 +17,16 @@ defmodule Catena.LanguageVersion do
     effects_and_handlers: "0.1.5",
     specifications_and_governance: "0.1.6",
     editions_and_feature_lifecycle: "0.1.7",
-    formal_semantic_kernel: "0.1.8"
+    formal_semantic_kernel: "0.1.8",
+    source_text: "0.1.9"
   ]
   @ordered Keyword.values(@versions)
-  @interfaces tl(@ordered)
+  @json_frontends ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7)
+  @kernel_frontends ~w(0.1.8)
+  @source_text_frontends ~w(0.1.9)
+  @compilable @json_frontends ++ @kernel_frontends
+  @interfaces ~w(0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8)
+  @signed_formats ~w(0.1.6 0.1.7 0.1.8)
   @retired ~w(0.1 0.2 0.3 0.4 0.5 0.6)
   @core_semver ~r/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/
 
@@ -33,18 +39,34 @@ defmodule Catena.LanguageVersion do
           | :specifications_and_governance
           | :editions_and_feature_lifecycle
           | :formal_semantic_kernel
+          | :source_text
 
   @spec all() :: [String.t()]
   def all, do: @ordered
 
   @spec json_frontend_versions() :: [String.t()]
-  def json_frontend_versions, do: before(:formal_semantic_kernel)
+  def json_frontend_versions, do: @json_frontends
 
   @spec kernel_frontend_versions() :: [String.t()]
-  def kernel_frontend_versions, do: from(:formal_semantic_kernel)
+  def kernel_frontend_versions, do: @kernel_frontends
+
+  @spec source_text_frontend_versions() :: [String.t()]
+  def source_text_frontend_versions, do: @source_text_frontends
+
+  @spec compilable_revisions() :: [String.t()]
+  def compilable_revisions, do: @compilable
+
+  @spec compilable_from(feature()) :: [String.t()]
+  def compilable_from(feature), do: Enum.filter(from(feature), &(&1 in @compilable))
 
   @spec interface_versions() :: [String.t()]
   def interface_versions, do: @interfaces
+
+  @spec artifact_versions() :: [String.t()]
+  def artifact_versions, do: @interfaces
+
+  @spec signed_format_versions() :: [String.t()]
+  def signed_format_versions, do: @signed_formats
 
   @spec retired() :: [String.t()]
   def retired, do: @retired
@@ -107,11 +129,11 @@ defmodule Catena.LanguageVersion do
 
   @spec internal_representation(String.t()) :: String.t()
   def internal_representation("0.1.1"), do: "0.1.2"
-  def internal_representation(version) when version in @ordered, do: version
+  def internal_representation(version) when version in @compilable, do: version
 
   @spec default_artifact_version(String.t(), String.t()) :: String.t()
   def default_artifact_version(frontend_format, language_revision)
-      when frontend_format in @ordered and language_revision in @ordered do
+      when frontend_format in @compilable and language_revision in @compilable do
     if frontend_format == language_revision do
       internal_representation(frontend_format)
     else
