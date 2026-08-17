@@ -1,14 +1,14 @@
 defmodule Catena.Specification do
   @moduledoc "Catena typed claims, bounded examples, semantic digests, and erasure checks."
 
-  alias Catena.{CanonicalJCS, Diagnostic, LanguageVersion}
+  alias Catena.{CanonicalJCS, Diagnostic, ImplementationLimits, LanguageVersion}
   alias Catena.Effect.Row
   alias Catena.Reference.Evaluator
   alias Catena.Type
 
   @name ~r/^[a-z][A-Za-z0-9_]*$/
   @subject_kinds ~w(value datatype trait instance effect handler module output interface action profile)
-  @budget 20_000
+  @budget ImplementationLimits.configured(:specification_example_steps)
   @versions LanguageVersion.from(:specifications_and_governance)
 
   @spec decode_sections(map(), String.t()) :: {:ok, map()} | {:error, Diagnostic.t()}
@@ -270,8 +270,9 @@ defmodule Catena.Specification do
       {:budget_exhausted, steps} ->
         fail(
           "EVD003",
-          "example #{example.name} exhausted its 20000-step budget at #{steps}",
-          example.path
+          "example #{example.name} exhausted its #{@budget}-step budget at #{steps}",
+          example.path,
+          ImplementationLimits.details(:specification_example_steps, steps)
         )
 
       {:error, reason, _steps} ->
@@ -480,6 +481,9 @@ defmodule Catena.Specification do
 
   defp error(id, message, path), do: {:error, Diagnostic.new(id, message, path: path)}
 
-  defp fail(id, message, path),
-    do: raise(Catena.TypeError, diagnostic: Diagnostic.new(id, message, path: path))
+  defp fail(id, message, path, details \\ %{}),
+    do:
+      raise(Catena.TypeError,
+        diagnostic: Diagnostic.new(id, message, path: path, details: details)
+      )
 end

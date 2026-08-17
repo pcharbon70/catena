@@ -154,7 +154,9 @@ JSON escaping. A byte-order mark, lone CR, malformed UTF-8, non-ASCII byte,
 unbalanced delimiter, or trailing form reports `SYN001`. Unknown or malformed
 kernel forms report `SYN002`. The bootstrap accepts 20,000 syntax nodes and
 nesting depth 1,024; exceeding either reports the distinct implementation-limit
-diagnostic `SYN003`.
+diagnostic `SYN003` with the common structured limit details. These values and
+the kernel's other applicable bounds are also available from
+`catena conformance-info`.
 
 Every source-derived syntax or static diagnostic has a primary half-open
 byte/line/column source span. A standalone malformed interface or forged-core

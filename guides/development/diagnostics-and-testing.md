@@ -65,6 +65,7 @@ may improve without changing the contract.
 | `LNK...` | package manifest and specialization/linking |
 | `EDN...` / `PRV...` / `DEP...` | edition selection, preview propagation, migration, deprecation |
 | `SYN...` / `PRC...` | exact kernel syntax/limits and typed process boundaries |
+| `LIM...` | portable source and generated-artifact limits |
 | `B...` | OTP rejecting generated Erlang Abstract Format |
 | `I...` | inference-independent core invariant failure |
 
@@ -131,6 +132,8 @@ and warnings in structured details.
 | `c006_specification_governance_test.exs` | rules, evidence, JCS, Ed25519, policy oracle, lifecycle, artifact transactions |
 | `c008_editions_lifecycle_test.exs` | exact pins, feature lifecycle, migration diagnostics, selection binding, versioned signatures |
 | `c010_formal_semantic_kernel_test.exs` | exact parsing/spans, unified judgments, rows, actors, schedule exploration, interfaces, forged evidence, reference/BEAM agreement |
+| `c012_implementation_limits_test.exs` | machine-readable disclosure, portable boundary pairs, evidence-bound classification, and mailbox-capacity policy |
+| `c012_traceability_coverage_test.exs` | complete `IL-OBL-*` obligation coverage and explicit architectural allowlists |
 | `resumption_token_test.exs` | dynamic one-use continuation defense |
 
 Retained-slice tests construct JSON programs directly in Elixir. The C010
@@ -260,6 +263,12 @@ Use unique temporary directories for artifact tests and register cleanup with
 Coverage, condition normalization, specialization, specification evaluation,
 and policy evaluation use explicit step budgets. Test both the greatest
 supported useful case and the first rejected over-budget case.
+
+All active bounds belong in `Catena.ImplementationLimits`. Production checks,
+diagnostic details, tests, and `catena conformance-info` consume that registry;
+do not introduce a second hard-coded configuration value. A refusal diagnostic
+reports its limit identity, portable minimum, configured value, observed value,
+and unit.
 
 Budget exhaustion must retain its own diagnostic; it is not evidence that a
 match is non-exhaustive, a rule is false, or a policy explicitly denied.

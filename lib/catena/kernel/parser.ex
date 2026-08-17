@@ -1,7 +1,7 @@
 defmodule Catena.Kernel.Parser do
   @moduledoc "Decoder for the exact Catena 0.1.8 semantic-module grammar."
 
-  alias Catena.{Diagnostic, LanguageSelection, LanguageVersion}
+  alias Catena.{Diagnostic, ImplementationLimits, LanguageSelection, LanguageVersion}
   alias Catena.Kernel.{Node, SExpression}
 
   @module_name ~r/^[A-Z][A-Za-z0-9_]*$/
@@ -18,8 +18,12 @@ defmodule Catena.Kernel.Parser do
     with {:ok, form} <- SExpression.parse(source, options) do
       try do
         module = decode_module!(form, options)
-        validate_module!(module)
-        {:ok, module}
+
+        with :ok <- ImplementationLimits.validate_integer_magnitudes(module),
+             :ok <- ImplementationLimits.validate_source_arities(module) do
+          validate_module!(module)
+          {:ok, module}
+        end
       catch
         {:kernel_diagnostic, %Diagnostic{} = diagnostic} -> {:error, diagnostic}
       end

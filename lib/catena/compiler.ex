@@ -4,6 +4,7 @@ defmodule Catena.Compiler do
   alias Catena.{
     Backend.ErlangAbstract,
     Diagnostic,
+    ImplementationLimits,
     Interface,
     LanguageLifecycle,
     LanguageSelection,
@@ -20,7 +21,8 @@ defmodule Catena.Compiler do
     protect(fn ->
       selection = selection(ast)
 
-      with :ok <-
+      with :ok <- ImplementationLimits.validate_source_arities(ast),
+           :ok <-
              LanguageLifecycle.validate_interfaces(
                selection,
                Keyword.get(options, :interfaces, [])
@@ -61,6 +63,7 @@ defmodule Catena.Compiler do
                layout: layout,
                condition_lowering: condition_lowering
              ),
+           :ok <- ImplementationLimits.validate_generated_arities(forms),
            {:ok, module, binary, warnings} <-
              OTPCompiler.compile(
                forms,

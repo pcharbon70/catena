@@ -1,10 +1,10 @@
 defmodule Catena.Condition do
   @moduledoc "Clause-condition safety checking, normalization, and portable evidence."
 
-  alias Catena.{CanonicalJSON, Diagnostic, LanguageVersion}
+  alias Catena.{CanonicalJSON, Diagnostic, ImplementationLimits, LanguageVersion}
   alias Catena.Type.{Parser, Scheme}
 
-  @default_budget 20_000
+  @default_budget ImplementationLimits.configured(:condition_normalization_nodes)
   @version LanguageVersion.introduced(:clause_conditions)
   @binary_operators ~w(and or equal not_equal less less_equal greater greater_equal add subtract multiply)a
   @unary_operators ~w(not negate)a
@@ -491,7 +491,8 @@ defmodule Catena.Condition do
       "CND007",
       "condition normalization exceeded its deterministic safety budget",
       path,
-      minimum_budget: @default_budget
+      ImplementationLimits.details(:condition_normalization_nodes, @default_budget + 1)
+      |> Map.put(:minimum_budget, @default_budget)
     )
   end
 
@@ -602,7 +603,8 @@ defmodule Catena.Condition do
         "CND007",
         "condition normalization exceeded its deterministic safety budget",
         path,
-        minimum_budget: @default_budget
+        ImplementationLimits.details(:condition_normalization_nodes, node_count(core))
+        |> Map.put(:minimum_budget, @default_budget)
       )
     end
   end

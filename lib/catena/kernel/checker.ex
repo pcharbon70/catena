@@ -1,7 +1,7 @@
 defmodule Catena.Kernel.Checker do
   @moduledoc "Integrated type, row, effect, process, and elaboration judgment for kernel 0.1.8."
 
-  alias Catena.Diagnostic
+  alias Catena.{Diagnostic, ImplementationLimits}
   alias Catena.Kernel.Type
 
   @type state :: %{next: non_neg_integer(), substitution: map()}
@@ -9,6 +9,11 @@ defmodule Catena.Kernel.Checker do
   @spec check(map(), keyword()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def check(module, options \\ []) do
     try do
+      case ImplementationLimits.validate_source_arities(module) do
+        :ok -> :ok
+        {:error, diagnostic} -> throw({:kernel_diagnostic, diagnostic})
+      end
+
       imported = imported_processes!(module, Keyword.get(options, :interfaces, []))
       local = local_processes(module)
       processes = Map.merge(imported, local)
@@ -73,12 +78,18 @@ defmodule Catena.Kernel.Checker do
         next: state.next
       }
 
-      case Catena.Kernel.Verifier.verify(core) do
+      case ImplementationLimits.validate_source_arities(core) do
         :ok ->
-          {:ok, core}
+          case Catena.Kernel.Verifier.verify(core) do
+            :ok ->
+              {:ok, core}
 
-        {:error, reason} ->
-          {:error, Diagnostic.new("I001", "kernel-core verification failed: #{reason}")}
+            {:error, reason} ->
+              {:error, Diagnostic.new("I001", "kernel-core verification failed: #{reason}")}
+          end
+
+        {:error, diagnostic} ->
+          {:error, diagnostic}
       end
     catch
       {:kernel_diagnostic, %Diagnostic{} = diagnostic} -> {:error, diagnostic}

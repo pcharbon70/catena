@@ -1,7 +1,7 @@
 defmodule Catena.OTP.Compiler do
   @moduledoc "The sole `.beam` production boundary: OTP 29 `compile:noenv_forms/2`."
 
-  alias Catena.{Diagnostic, LanguageVersion}
+  alias Catena.{Diagnostic, ImplementationLimits, LanguageVersion}
 
   @default_version LanguageVersion.introduced(:data_and_patterns)
   @selection_versions LanguageVersion.from(:editions_and_feature_lifecycle)
@@ -48,10 +48,14 @@ defmodule Catena.OTP.Compiler do
 
     case :compile.noenv_forms(forms, compiler_options) do
       {:ok, module, binary} ->
-        {:ok, module, binary, []}
+        with :ok <- ImplementationLimits.validate_generated_module(binary) do
+          {:ok, module, binary, []}
+        end
 
       {:ok, module, binary, warnings} ->
-        {:ok, module, binary, warnings}
+        with :ok <- ImplementationLimits.validate_generated_module(binary) do
+          {:ok, module, binary, warnings}
+        end
 
       {:error, errors, warnings} ->
         {:error,

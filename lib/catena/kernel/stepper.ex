@@ -1,7 +1,9 @@
 defmodule Catena.Kernel.Stepper do
   @moduledoc "Small-step CEK and actor-configuration reference semantics for kernel 0.1.8."
 
-  @default_budget 20_000
+  alias Catena.ImplementationLimits
+
+  @default_budget ImplementationLimits.configured(:kernel_reference_steps)
 
   @type configuration :: map()
 

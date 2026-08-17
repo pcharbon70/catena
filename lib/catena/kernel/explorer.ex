@@ -1,10 +1,11 @@
 defmodule Catena.Kernel.Explorer do
   @moduledoc "Bounded exhaustive scheduler exploration for kernel actor configurations."
 
+  alias Catena.ImplementationLimits
   alias Catena.Kernel.Stepper
 
-  @default_transition_limit 20_000
-  @default_configuration_limit 20_000
+  @default_transition_limit ImplementationLimits.configured(:kernel_exploration_transitions)
+  @default_configuration_limit ImplementationLimits.configured(:kernel_exploration_configurations)
 
   @spec explore(map(), String.t(), [term()], keyword()) ::
           {:ok, map()} | {:exhausted, map()} | {:error, term()}

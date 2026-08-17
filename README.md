@@ -39,8 +39,11 @@ whose immutable promotion evidence is recorded in the research archive. The
 normative 0.1.8 formal semantic kernel is also implemented: it adds an exact
 S-expression conformance input, structural rows, a unified independently
 verified core, a small-step reference machine, and typed local actors. Its
-immutable promotion evidence is recorded in the research archive. The
-bootstrap toolchain is written in
+immutable promotion evidence is recorded in the research archive. The C012
+implementation-limits governance milestone is also complete: the compiler
+enforces and reports portable source and artifact floors from one executable
+registry, while retaining language revision `0.1.8` and compiler release
+`0.1.0`. The bootstrap toolchain is written in
 Elixir 1.20.2 on Erlang/OTP 29.0.4 and targets only the BEAM VM. It does not
 reuse the historical proof-of-concept's compiler or language design.
 
@@ -54,6 +57,7 @@ The repository's [Conformance Vocabulary](https://github.com/pcharbon70/catena-r
 defines requirement words and behavior classes. This compiler's versioned
 [conformance profile](CONFORMANCE.md) publishes its supported revisions,
 permitted choices, recommendation dispositions, and finite limits.
+Run `catena conformance-info` for the deterministic machine-readable form.
 
 To explore the language as a programmer, begin with the
 [Catena Language Tour](LANGUAGE-TOUR.md). It introduces the language model,
@@ -80,9 +84,10 @@ compatibility track. The Mix application version remains `0.1.0`; it
 identifies the compiler package, not the language accepted by a particular
 input.
 
-C007 specification authority and C009 conformance vocabulary are repository
-governance milestones, not semantic language slices. Neither consumes a
-language revision. The next semantic slice begins at `0.1.9`.
+C007 specification authority, C009 conformance vocabulary, and C012
+implementation-limits policy are repository-governance milestones, not
+semantic language slices. None consumes a language revision. The next semantic
+slice begins at `0.1.9`.
 
 The former two-component prototype identifiers are retired and are not input
 aliases. Update unsigned JSON AST inputs mechanically, then rebuild interfaces

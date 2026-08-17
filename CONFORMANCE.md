@@ -10,15 +10,18 @@ The research repository's
 [Specification Authority](https://github.com/pcharbon70/catena-research/blob/main/SPECIFICATION-AUTHORITY.md)
 defines which documents control, and its
 [Conformance Vocabulary](https://github.com/pcharbon70/catena-research/blob/main/CONFORMANCE-VOCABULARY.md)
-defines requirement words, behavior classes, and profile obligations. If this
-profile and an applicable normative rule disagree, the rule controls and the
-affected conformance claim is suspended.
+defines requirement words, behavior classes, and profile obligations. The
+[Implementation Limits and Portability policy](https://github.com/pcharbon70/catena-research/blob/main/IMPLEMENTATION-LIMITS.md)
+defines portable minima, limit reporting, and exhaustion outcomes. If this
+profile and an applicable controlling document disagree, the controlling
+document governs and the affected conformance claim is suspended.
 
 ## Profile identity
 
 | Field | Value |
 | --- | --- |
 | Profile format | `1` |
+| Machine-readable profile | `catena conformance-info` (`catena-conformance-info`, version `1`) |
 | Implementation | Catena Elixir bootstrap compiler |
 | Compiler release | `0.1.0` |
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
@@ -29,19 +32,24 @@ affected conformance claim is suspended.
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
-C009 remains a repository-governance milestone and did not consume a language
-revision. Normative C010 uses `0.1.8` without changing compiler release
+C009 and C012 remain repository-governance milestones and did not consume a
+language revision. Normative C010 uses `0.1.8` without changing compiler release
 `0.1.0`. It adds a separate kernel frontend, 0.1.8 interface and compile
 metadata, public kernel CLI commands, and fixed kernel BEAM representations;
 the retained JSON, package, governance, and historical signature formats are
 unchanged. Its explicitly authorized immutable compiler identity and
 post-commit evidence are recorded in the
 [C010 conformance journal](https://github.com/pcharbon70/catena-research/blob/main/50-journal/2026-08-06-c010-formal-semantic-kernel.md).
+C012 centralizes the already-published bootstrap budgets, establishes portable
+floors for source and artifact dimensions, and adds deterministic
+machine-readable disclosure without changing language revision or compiler
+release.
 
-Format 1 is intentionally human-readable. Catena will add machine-readable
-conformance output when the first genuine implementation-defined choice is
-introduced; until then it would duplicate this profile without enabling a
-choice that a program or package needs to discover.
+`catena conformance-info` writes one JSON object to standard output. The
+document reports implementation identity, supported revisions, declared
+choices and extensions, recommendation dispositions, bounded presentations,
+every executable limit, and runtime-capacity constraints. Its key order is not
+semantic; decoded content and values are deterministic for a compiler build.
 
 ## Implementation-scoped permissions
 
@@ -111,6 +119,10 @@ behavior.
 
 | Concern | Published bound | Classification and exhaustion behavior |
 | --- | --- | --- |
+| Source callable arity | 253 explicit arguments | Portable implementation limit: `LIM001`. Effectful kernel workers may add two hidden arguments and reach OTP arity 255. |
+| Integer literal magnitude | 4,096 decimal digits, excluding a leading minus sign | Portable implementation limit: `LIM002` |
+| Decoded text or binary literal payload | 65,536 bytes | Portable floor reserved for a future literal form; currently not applicable and owned by G017 |
+| Generated BEAM module | 1,048,576 bytes per module | Portable implementation limit: `LIM003` |
 | Pattern usefulness and coverage | 20,000 analysis steps | Implementation limit: `M004` |
 | Condition normalization and transitive inlining | 20,000 nodes/steps | Implementation limit: `CND007` |
 | Condition fact analysis | 20,000 formula nodes and 20,000 branch-analysis steps | Conservative evidence cutoff: `unknown`; structural coverage remains authoritative and retains `M004` for its own limit |
@@ -122,10 +134,18 @@ behavior.
 | Kernel reference execution | 20,000 small steps by default | Evidence bound: `budget_exhausted`; not a source rejection |
 | Kernel schedule exploration | 20,000 transitions and 20,000 distinct configurations | Evidence bound: `exhausted`; inconclusive rather than a semantic counterexample |
 
-Specific diagnostic fields and transaction boundaries remain governed by the
-linked specification chapters. G012 owns the future general policy for
-minimum supported complexity and configurable implementation limits; this
-profile only publishes the bootstrap compiler's current finite bounds.
+Refusal diagnostics carry `limit_id`, `minimum_supported`, `configured`,
+`observed`, and `unit` details. The implementation's executable registry is
+`Catena.ImplementationLimits`; production checks and `conformance-info` read
+the same values so documentation cannot silently become a second configuration
+source. Evidence cutoffs remain distinct: exhausting one produces `unknown`,
+`budget_exhausted`, or `exhausted`, never a source-limit diagnostic.
+
+Runtime mailbox capacity is deployment-defined rather than a compiler
+message-count limit. C012 forbids capacity handling from silently reordering
+messages from one sender, retargeting sends, or dropping messages addressed to
+a live target. Concrete quotas, process failure, and backpressure remain owned
+by G068 and G129.
 
 ## Undefined behavior and runtime failure
 
