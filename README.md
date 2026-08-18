@@ -49,8 +49,11 @@ pinned Unicode 17 identifiers, NFC spelling, qualification, reserved words,
 security profiles, and confusable warnings through a standalone name API.
 Normative C015 revision `0.1.11` adds non-semantic indentation, hard newline
 and semicolon separators, and grammar-aware soft continuation through a
-lossless lexer-event API. It deliberately does not claim a complete lexer or
-parser. The compiler release remains `0.1.0`.
+lossless lexer-event API. Normative C016 revision `0.1.12` adds slash comments,
+nested block comments, comment-internal layout classification, and outer
+documentation attachment through lexer- and parser-supplied events. It
+deliberately does not claim a complete lexer, parser, Markdown renderer, or
+doctest runner. The compiler release remains `0.1.0`.
 The bootstrap toolchain is written in
 Elixir 1.20.2 on Erlang/OTP 29.0.4 and targets only the BEAM VM. It does not
 reuse the historical proof-of-concept's compiler or language design.
@@ -69,8 +72,8 @@ Run `catena conformance-info` for the deterministic machine-readable form.
 
 To explore the language as a programmer, begin with the
 [Catena Language Tour](LANGUAGE-TOUR.md). It introduces the language model,
-shows how to validate source text and 0.1.10 names, resolve 0.1.11 layout
-events, run the retained JSON-AST and exact kernel paths, and find the
+shows how to validate source text and 0.1.10 names, resolve 0.1.11 layout and
+0.1.12 comment events, run the retained JSON-AST and exact kernel paths, and find the
 authoritative `catena-research` documents.
 
 The [Catena Guides](guides/README.md) provide a detailed source-first learning
@@ -89,7 +92,8 @@ its patch component: C001 through C006 are therefore `0.1.1` through `0.1.6`.
 Normative C008 is implemented at `0.1.7`, normative C010 uses `0.1.8`, and
 normative C013 uses `0.1.9` for the source-text envelope. Normative C014 uses
 `0.1.10` for standalone identifier syntax and security. Normative C015 uses
-`0.1.11` for whitespace, separators, and line continuation.
+`0.1.11` for whitespace, separators, and line continuation. Normative C016
+uses `0.1.12` for comments and documentation comments.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -115,7 +119,8 @@ flowchart LR
     SEL --> ST[Strict source-text envelope 0.1.9]
     ST --> ID[Standalone identifiers and qualified names 0.1.10]
     ID --> LY[Layout over lexer-supplied events 0.1.11]
-    LY --> STOP[Classified events and diagnostics]
+    LY --> CM[Comments and documentation attachment 0.1.12]
+    CM --> STOP[Classified events, attachments, and diagnostics]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
@@ -149,7 +154,9 @@ surface syntax. Revision 0.1.8 adds a normative S-expression kernel input.
 Revision 0.1.9 defines only the bytes-to-logical-text boundary for future
 ergonomic syntax. Revision 0.1.10 defines names without scanning complete
 files. Revision 0.1.11 classifies lexer-supplied whitespace and token events
-without defining the lexer or parser. The backend does not emit
+without defining the lexer or parser. Revision 0.1.12 scans one comment at a
+lexer-supplied position and resolves comments against parser-supplied
+declaration targets without supplying either whole-source phase. The backend does not emit
 Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
 
@@ -286,7 +293,11 @@ include:
   confusable-name warnings; and
 - a lossless 0.1.11 layout engine with non-semantic indentation, hard LF and
   semicolon separators, abstract token joins, nested continued/block frames,
-  exact source spans, and `LAY001`–`LAY003` diagnostics.
+  exact source spans, and `LAY001`–`LAY003` diagnostics; and
+- an iterative 0.1.12 comment scanner and resolver with nested block comments,
+  lossless comment-internal LF classification, normalized outer documentation,
+  explicit CommonMark/doctest policy metadata, and `CMT001`, `CMT002`, and
+  `DOC001` diagnostics.
 
 This is not yet an ergonomic Catena source lexer or parser or a complete implementation of resource
 scopes, exception boundaries, general host-effect entry policy, scoped or
@@ -338,6 +349,11 @@ compiled artifact. See the [Identifiers guide](guides/language/identifiers.md).
 There is no whole-source layout command yet. Library integrations can supply
 opaque lexer events to `Catena.resolve_layout/2`; see the
 [Whitespace and Layout guide](guides/language/whitespace-and-layout.md).
+
+There is no whole-source comment or documentation command. Lexer integrations
+can call `Catena.scan_comment/2`, and lexer/parser integrations can pass
+comments and declaration targets to `Catena.resolve_comments/2`; see the
+[Comments and Documentation Comments guide](guides/language/comments-and-documentation-comments.md).
 
 `compile-kernel` writes an OTP-generated `.beam` and deterministic 0.1.8
 `.cati.json` interface beside the input. A failed check or compilation

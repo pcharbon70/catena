@@ -17,6 +17,8 @@ The repository contains an Elixir bootstrap compiler that can:
   keywords, and confusable-name diagnostics;
 - resolve normative 0.1.11 whitespace, separators, and line continuation over
   lexer-supplied token events;
+- scan normative 0.1.12 comments and attach outer documentation over lexer-
+  and parser-supplied events;
 - infer and check types, data, patterns, conditions, traits, effects, and
   typed specifications;
 - independently verify its typed core;
@@ -89,8 +91,12 @@ Validate names independently of the later whole-source lexer:
 
 The 0.1.11 layout contract is available through `Catena.resolve_layout/2`, not
 a whole-source command. It consumes events from a future lexer so it does not
-guess the still-open comment, literal, or concrete-token rules. See
+guess the still-open literal or concrete-token rules. See
 [Whitespace, Separators, and Line Continuation](language/whitespace-and-layout.md).
+
+The 0.1.12 comment contract is available through `Catena.scan_comment/2` and
+`Catena.resolve_comments/2`, also without a whole-source command. See
+[Comments and Documentation Comments](language/comments-and-documentation-comments.md).
 
 Inspect the compiler's current default, retained revisions, feature states,
 and migrations before compiling a package:
@@ -179,7 +185,8 @@ flowchart LR
     Source[Future Catena source bytes] --> Text[0.1.9 strict source-text decoder]
     Text --> Names[0.1.10 standalone identifier validation]
     Names --> Layout[0.1.11 layout over lexer events]
-    Layout -. lexer and parser not implemented .-> JSON[Versioned JSON AST]
+    Layout --> Comments[0.1.12 comments and documentation events]
+    Comments -. lexer and parser not implemented .-> JSON[Versioned JSON AST]
     Kernel[Exact 0.1.8 kernel S-expression] --> KDecode[Kernel parser]
     JSON --> Decode[Strict decoding]
     Decode --> Infer[Inference and elaboration]
