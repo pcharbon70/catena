@@ -8,13 +8,15 @@ defmodule Catena.LanguageVersionTest do
 
   test "prototype slices use one ordered 0.1 patch sequence" do
     assert LanguageVersion.all() ==
-             ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8 0.1.9 0.1.10 0.1.11)
+             ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8 0.1.9 0.1.10 0.1.11 0.1.12)
 
     assert LanguageVersion.json_frontend_versions() ==
              ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7)
 
     assert LanguageVersion.kernel_frontend_versions() == ["0.1.8"]
-    assert LanguageVersion.source_text_frontend_versions() == ~w(0.1.9 0.1.10 0.1.11)
+
+    assert LanguageVersion.source_text_frontend_versions() ==
+             ~w(0.1.9 0.1.10 0.1.11 0.1.12)
 
     assert LanguageVersion.compilable_revisions() ==
              ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8)
@@ -28,7 +30,7 @@ defmodule Catena.LanguageVersionTest do
     assert LanguageVersion.compilable_from(:specifications_and_governance) ==
              ~w(0.1.6 0.1.7 0.1.8)
 
-    assert LanguageVersion.latest() == "0.1.11"
+    assert LanguageVersion.latest() == "0.1.12"
     assert LanguageVersion.internal_representation("0.1.1") == "0.1.2"
     assert LanguageVersion.default_artifact_version("0.1.1", "0.1.1") == "0.1.2"
     assert LanguageVersion.default_artifact_version("0.1.6", "0.1.6") == "0.1.6"

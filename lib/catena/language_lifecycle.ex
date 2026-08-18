@@ -81,6 +81,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "whitespace-and-layout/whitespace-and-indentation.md#whitespace-and-indentation"
         )
+      ),
+      feature(
+        "comments-and-documentation-comments",
+        "0.1.12",
+        specification(
+          "comments-and-documentation-comments/comment-lexing-and-layout.md#comment-lexing-and-layout"
+        )
       )
     ]
   end
@@ -410,6 +417,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("whitespace-and-layout"),
     do: ~w(source-acceptance static-meaning diagnostics)
 
+  defp affected_dimensions("comments-and-documentation-comments"),
+    do: ~w(source-acceptance static-meaning diagnostics)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -425,6 +435,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("whitespace-and-layout"),
     do:
       "Select 0.1.11 to classify source layout over lexer-supplied token events; retained JSON and exact kernel inputs are unchanged."
+
+  defp migration("comments-and-documentation-comments"),
+    do:
+      "Select 0.1.12 to scan comments and attach outer documentation comments to parser-supplied declaration targets; retained frontends and persisted formats are unchanged."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 

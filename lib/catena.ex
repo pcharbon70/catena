@@ -7,8 +7,9 @@ defmodule Catena do
   Revision 0.1.9 defines the strict source-text envelope used by future
   ergonomic syntax. Revision 0.1.10 validates standalone identifiers and
   qualified names. Revision 0.1.11 resolves whitespace, separators, and line
-  continuation over lexer-supplied token events without yet supplying a
-  complete lexer or parser.
+  continuation over lexer-supplied token events. Revision 0.1.12 scans nested
+  comments and attaches outer documentation comments to parser-supplied
+  declaration targets without yet supplying a complete lexer or parser.
   """
 
   alias Catena.{AST.Decoder, Compiler}
@@ -35,6 +36,14 @@ defmodule Catena do
   @spec resolve_layout([Catena.Layout.event()], keyword()) ::
           {:ok, Catena.Layout.Result.t()} | {:error, Catena.Diagnostic.t()}
   def resolve_layout(events, options \\ []), do: Catena.Layout.resolve(events, options)
+
+  @spec scan_comment(binary(), keyword()) ::
+          {:ok, Catena.Comment.ScanResult.t()} | {:error, Catena.Diagnostic.t()}
+  def scan_comment(source, options \\ []), do: Catena.Comment.scan(source, options)
+
+  @spec resolve_comments([Catena.Comment.event()], keyword()) ::
+          {:ok, Catena.Comment.Result.t()} | {:error, Catena.Diagnostic.t()}
+  def resolve_comments(events, options \\ []), do: Catena.Comment.resolve(events, options)
 
   @spec check_json(binary(), keyword()) :: {:ok, map()} | {:error, Catena.Diagnostic.t()}
   def check_json(json, options \\ []) do

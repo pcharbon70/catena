@@ -17,8 +17,9 @@ source-language distribution:
 - the compiler accepts retained versioned JSON AST and a separate exact 0.1.8
   semantic-kernel S-expression for compilation, while 0.1.9 validates source
   bytes and locations, 0.1.10 validates standalone names, and 0.1.11 resolves
-  layout over lexer-supplied events without yet tokenizing or parsing complete
-  source files;
+  layout over lexer-supplied events. Revision 0.1.12 scans comments and attaches
+  outer documentation over supplied events without yet tokenizing or parsing
+  complete source files;
 - snippets in this tour are illustrative notation unless a linked
   specification says that a particular form is fixed;
 - public parser punctuation and several ordinary language facilities
@@ -329,6 +330,15 @@ This preserves grammar-aware, Elixir-like continuation without prematurely
 assigning concrete operators or punctuation. Read the
 [Whitespace and Layout guide](guides/language/whitespace-and-layout.md).
 
+Revision 0.1.12 adds `//` line comments, nested `/* ... */` block comments,
+and their `///` and `/** ... */` outer-documentation forms. Every logical LF
+inside a comment participates in the same layout classifier. Documentation
+normalization preserves source text after defined delimiter, edge-line, and
+common-margin removal, then attaches only to the next parser-supplied
+declaration target. CommonMark and explicit doctest metadata are recorded, but
+rendering and execution remain future tooling. Read the
+[Comments and Documentation Comments guide](guides/language/comments-and-documentation-comments.md).
+
 ## The executable formal kernel and typed actors
 
 Normative revision 0.1.8 integrates the executable portions of the earlier
@@ -362,6 +372,8 @@ source bytes 0.1.9 → logical Unicode stream plus original-byte spans
 standalone names 0.1.10 → validated identifiers and qualified names
                            ↓
 layout events 0.1.11 → lossless soft/separator/blank classification
+                       ↓
+comment events 0.1.12 → nested scanning and outer documentation attachment
                        (stops before the future whole-source lexer/parser)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8

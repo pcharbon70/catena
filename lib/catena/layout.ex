@@ -78,14 +78,23 @@ defmodule Catena.Layout do
   @spec resolve([event()], keyword()) :: {:ok, Result.t()} | {:error, Diagnostic.t()}
   def resolve(events, options \\ []) when is_list(events) and is_list(options) do
     with {:ok, selection} <- resolve_selection(Keyword.get(options, :language_selection)),
-         :ok <- validate_events(events),
-         {:ok, resolved, frames, previous} <- walk(events, [], nil, []),
-         :ok <- finish(frames, previous) do
-      {:ok, %Result{events: Enum.reverse(resolved), selection: selection}}
+         {:ok, resolved} <- classify(events) do
+      {:ok, %Result{events: resolved, selection: selection}}
     end
   end
 
-  defp resolve_selection(nil), do: require_layout_revision(LanguageVersion.current_selection())
+  @doc false
+  @spec classify([event()]) :: {:ok, [event()]} | {:error, Diagnostic.t()}
+  def classify(events) when is_list(events) do
+    with :ok <- validate_events(events),
+         {:ok, resolved, frames, previous} <- walk(events, [], nil, []),
+         :ok <- finish(frames, previous) do
+      {:ok, Enum.reverse(resolved)}
+    end
+  end
+
+  defp resolve_selection(nil),
+    do: require_layout_revision(LanguageVersion.legacy_selection(@layout_revision))
 
   defp resolve_selection(selection) do
     with {:ok, resolved} <- LanguageVersion.resolve_selection(selection) do

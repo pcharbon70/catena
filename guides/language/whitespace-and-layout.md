@@ -88,10 +88,11 @@ token requiring a left expression cannot begin input or follow a hard
 separator. A token requiring a right expression cannot be followed by a
 semicolon or EOF.
 
-No layout CLI is provided yet. Accepting arbitrary source text would require
-the unfinished comment, literal, and concrete-token rules. The event API makes
-the completed classification contract executable without pretending those
-boundaries are settled.
+No layout CLI is provided yet. Revision 0.1.12 now integrates comments through
+the separate abstract comment resolver, while literal and concrete-token rules
+remain unfinished. The event API makes the completed classification contract
+executable without pretending those boundaries are settled. See
+[Comments and Documentation Comments](comments-and-documentation-comments.md).
 
 The normative contract is the research repository's
 [Whitespace and Layout Specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/whitespace-and-layout).
