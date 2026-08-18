@@ -113,6 +113,11 @@ defmodule Catena.CLI do
   end
 
   defp check_identifiers(names, options) do
+    options =
+      Keyword.put_new_lazy(options, :language_selection, fn ->
+        LanguageVersion.legacy_selection(LanguageVersion.introduced(:identifiers))
+      end)
+
     case Catena.audit_identifiers(names, options) do
       {:ok, qualified_names, diagnostics} ->
         print(%{

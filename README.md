@@ -46,8 +46,11 @@ registry. Normative C013 revision `0.1.9` adds strict UTF-8 source-text
 decoding, logical-newline handling, and original-byte scalar spans without yet
 claiming an ergonomic lexer or parser. Normative C014 revision `0.1.10` adds
 pinned Unicode 17 identifiers, NFC spelling, qualification, reserved words,
-security profiles, and confusable warnings through a standalone name API. The
-compiler release remains `0.1.0`.
+security profiles, and confusable warnings through a standalone name API.
+Normative C015 revision `0.1.11` adds non-semantic indentation, hard newline
+and semicolon separators, and grammar-aware soft continuation through a
+lossless lexer-event API. It deliberately does not claim a complete lexer or
+parser. The compiler release remains `0.1.0`.
 The bootstrap toolchain is written in
 Elixir 1.20.2 on Erlang/OTP 29.0.4 and targets only the BEAM VM. It does not
 reuse the historical proof-of-concept's compiler or language design.
@@ -66,8 +69,9 @@ Run `catena conformance-info` for the deterministic machine-readable form.
 
 To explore the language as a programmer, begin with the
 [Catena Language Tour](LANGUAGE-TOUR.md). It introduces the language model,
-shows how to validate source text and 0.1.10 names, run the retained JSON-AST
-and exact kernel paths, and find the authoritative `catena-research` documents.
+shows how to validate source text and 0.1.10 names, resolve 0.1.11 layout
+events, run the retained JSON-AST and exact kernel paths, and find the
+authoritative `catena-research` documents.
 
 The [Catena Guides](guides/README.md) provide a detailed source-first learning
 path, task guides for each implemented language slice, governance operations,
@@ -84,7 +88,8 @@ Catena's current language line is `0.1`. Completed semantic slices increment
 its patch component: C001 through C006 are therefore `0.1.1` through `0.1.6`.
 Normative C008 is implemented at `0.1.7`, normative C010 uses `0.1.8`, and
 normative C013 uses `0.1.9` for the source-text envelope. Normative C014 uses
-`0.1.10` for standalone identifier syntax and security.
+`0.1.10` for standalone identifier syntax and security. Normative C015 uses
+`0.1.11` for whitespace, separators, and line continuation.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -109,7 +114,8 @@ flowchart LR
     SEL --> KSEXPR[Exact kernel S-expression 0.1.8]
     SEL --> ST[Strict source-text envelope 0.1.9]
     ST --> ID[Standalone identifiers and qualified names 0.1.10]
-    ID --> STOP[Logical name results and diagnostics]
+    ID --> LY[Layout over lexer-supplied events 0.1.11]
+    LY --> STOP[Classified events and diagnostics]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
@@ -142,7 +148,8 @@ The JSON AST is a retained versioned toolchain input, not proposed Catena
 surface syntax. Revision 0.1.8 adds a normative S-expression kernel input.
 Revision 0.1.9 defines only the bytes-to-logical-text boundary for future
 ergonomic syntax. Revision 0.1.10 defines names without scanning complete
-files; neither revision tokenizes or parses programs. The backend does not emit
+files. Revision 0.1.11 classifies lexer-supplied whitespace and token events
+without defining the lexer or parser. The backend does not emit
 Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
 
@@ -276,7 +283,10 @@ include:
   scalar spelling and original-byte spans through LF/CRLF normalization; and
 - a Unicode 17-backed 0.1.10 standalone identifier frontend with exact NFC,
   secure script checks, keyword escapes, dot qualification, and deny-able
-  confusable-name warnings.
+  confusable-name warnings; and
+- a lossless 0.1.11 layout engine with non-semantic indentation, hard LF and
+  semicolon separators, abstract token joins, nested continued/block frames,
+  exact source spans, and `LAY001`–`LAY003` diagnostics.
 
 This is not yet an ergonomic Catena source lexer or parser or a complete implementation of resource
 scopes, exception boundaries, general host-effect entry policy, scoped or
@@ -325,6 +335,10 @@ later language slice. See the [Source Text guide](guides/language/source-text.md
 canonical segments, scripts, and confusable warnings. It likewise produces no
 compiled artifact. See the [Identifiers guide](guides/language/identifiers.md).
 
+There is no whole-source layout command yet. Library integrations can supply
+opaque lexer events to `Catena.resolve_layout/2`; see the
+[Whitespace and Layout guide](guides/language/whitespace-and-layout.md).
+
 `compile-kernel` writes an OTP-generated `.beam` and deterministic 0.1.8
 `.cati.json` interface beside the input. A failed check or compilation
 publishes neither successful output. The declared kernel origin, rather than
@@ -360,7 +374,7 @@ IDs. See [Editions, Revisions, and Previews](guides/language/editions-and-previe
 
 ## Intended evolution
 
-Elixir is the bootstrap implementation language through normative C010; it is
+Elixir is the bootstrap implementation language through normative C015; it is
 not part of Catena's target semantics. Self-hosting is tracked separately as
 G141 for a late 0.x milestone, after Catena can express the compiler's required
 module, data, error, build, and interoperability facilities. The planned

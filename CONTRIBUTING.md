@@ -78,8 +78,9 @@ specification must still state applicability explicitly.
 
 C007, C009, and C012 are repository-governance milestones and do not consume
 language revisions. Normative C010 occupies `0.1.8`, C013 occupies `0.1.9`,
-and C014 occupies `0.1.10`; the next semantic slice uses `0.1.11` unless an
-approved versioning policy changes the prototype convention.
+C014 occupies `0.1.10`, and C015 occupies `0.1.11`; the next semantic slice
+uses `0.1.12` unless an approved versioning policy changes the prototype
+convention.
 
 ### Internal refactor
 

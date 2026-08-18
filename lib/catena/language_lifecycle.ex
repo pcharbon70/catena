@@ -74,6 +74,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "identifiers/identifier-syntax-and-equivalence.md#identifier-syntax-and-equivalence"
         )
+      ),
+      feature(
+        "whitespace-and-layout",
+        "0.1.11",
+        specification(
+          "whitespace-and-layout/whitespace-and-indentation.md#whitespace-and-indentation"
+        )
       )
     ]
   end
@@ -400,6 +407,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("source-text"), do: ~w(source-acceptance diagnostics)
   defp affected_dimensions("identifiers"), do: ~w(source-acceptance static-meaning diagnostics)
 
+  defp affected_dimensions("whitespace-and-layout"),
+    do: ~w(source-acceptance static-meaning diagnostics)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -411,6 +421,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("identifiers"),
     do:
       "Select 0.1.10 to validate standalone ergonomic identifiers and qualified names; retained JSON and exact kernel names are unchanged."
+
+  defp migration("whitespace-and-layout"),
+    do:
+      "Select 0.1.11 to classify source layout over lexer-supplied token events; retained JSON and exact kernel inputs are unchanged."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 

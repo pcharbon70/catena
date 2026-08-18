@@ -141,6 +141,8 @@ and warnings in structured details.
 | `c013_traceability_coverage_test.exs` | complete `ST-OBL-*` source-text obligation coverage |
 | `c014_identifiers_test.exs` | Unicode identifiers, NFC, security, keywords, qualification, confusables, and CLI behavior |
 | `c014_traceability_coverage_test.exs` | complete `ID-OBL-*` identifier obligation coverage |
+| `c015_whitespace_layout_test.exs` | layout whitespace, indentation invariance, separators, continuation, frames, spans, and diagnostics |
+| `c015_traceability_coverage_test.exs` | complete `LY-OBL-*` whitespace-and-layout obligation coverage |
 | `resumption_token_test.exs` | dynamic one-use continuation defense |
 
 Retained-slice tests construct JSON programs directly in Elixir. The C010

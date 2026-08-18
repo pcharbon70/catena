@@ -1,7 +1,15 @@
 defmodule Catena.QualifiedName do
   @moduledoc "A standalone Catena 0.1.10 dot-qualified lexical name."
 
-  alias Catena.{Diagnostic, Identifier, LanguageSelection, SourceSpan, SourceText, UnicodeData}
+  alias Catena.{
+    Diagnostic,
+    Identifier,
+    LanguageSelection,
+    LanguageVersion,
+    SourceSpan,
+    SourceText,
+    UnicodeData
+  }
 
   @identifier_revision "0.1.10"
   @keywords ~w(
@@ -26,7 +34,12 @@ defmodule Catena.QualifiedName do
 
   @spec parse(binary(), keyword()) :: {:ok, t()} | {:error, Diagnostic.t()}
   def parse(source, options \\ []) when is_binary(source) and is_list(options) do
-    with {:ok, source_text} <- SourceText.decode(source, options),
+    identifier_options =
+      Keyword.put_new_lazy(options, :language_selection, fn ->
+        LanguageVersion.legacy_selection(@identifier_revision)
+      end)
+
+    with {:ok, source_text} <- SourceText.decode(source, identifier_options),
          :ok <- require_identifier_revision(source_text.selection),
          {:ok, pieces} <- split_segments(source_text.units, source_text.eof_span),
          {:ok, segments} <- validate_segments(pieces, source_text.selection) do

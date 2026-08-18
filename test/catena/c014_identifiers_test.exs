@@ -129,8 +129,8 @@ defmodule Catena.C014IdentifiersTest do
 
   @tag obligations: ~w(ID-OBL-001 ID-OBL-012 ID-OBL-013)
   test "0.1.10 is an identifier-only revision with deterministic CLI discovery" do
-    assert LanguageVersion.latest() == "0.1.10"
-    assert LanguageVersion.source_text_frontend_versions() == ~w(0.1.9 0.1.10)
+    assert LanguageVersion.latest() == "0.1.11"
+    assert LanguageVersion.source_text_frontend_versions() == ~w(0.1.9 0.1.10 0.1.11)
     refute "0.1.10" in LanguageVersion.compilable_revisions()
     refute "0.1.10" in LanguageVersion.interface_versions()
     refute "0.1.10" in LanguageVersion.artifact_versions()
