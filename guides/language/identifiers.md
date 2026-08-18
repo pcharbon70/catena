@@ -48,6 +48,11 @@ Qualified names are nonempty segments joined by ASCII `.` with no whitespace,
 for example `Option.Some`. Revision 0.1.10 defines only this lexical path;
 later module and namespace work defines what its segments resolve to.
 
+Revision 0.1.11 adds the next integration boundary: a lossless layout engine
+over lexer-supplied token events. It does not change identifier spelling or
+make the standalone identifier API select 0.1.11. See
+[Whitespace, Separators, and Line Continuation](whitespace-and-layout.md).
+
 ## Security diagnostics
 
 | Diagnostic | Meaning |

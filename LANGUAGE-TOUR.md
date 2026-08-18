@@ -16,11 +16,12 @@ source-language distribution:
 
 - the compiler accepts retained versioned JSON AST and a separate exact 0.1.8
   semantic-kernel S-expression for compilation, while 0.1.9 validates source
-  bytes and locations and 0.1.10 validates standalone names without yet
-  tokenizing or parsing complete source files;
+  bytes and locations, 0.1.10 validates standalone names, and 0.1.11 resolves
+  layout over lexer-supplied events without yet tokenizing or parsing complete
+  source files;
 - snippets in this tour are illustrative notation unless a linked
   specification says that a particular form is fixed;
-- public parser punctuation, layout, and several ordinary language facilities
+- public parser punctuation and several ordinary language facilities
   are still open design work; and
 - the compiler repository is executable evidence, while
   [catena-research](https://github.com/pcharbon70/catena-research) contains the
@@ -320,6 +321,14 @@ warnings. `Catena.parse_identifier/2`, `Catena.parse_qualified_name/2`, and
 [Source Text guide](guides/language/source-text.md) for the exact implemented
 envelope and the [Identifiers guide](guides/language/identifiers.md) for names.
 
+Revision 0.1.11 makes indentation non-semantic and classifies logical LF as a
+hard separator, a soft continuation, or blank layout. A semicolon is always a
+hard separator. `Catena.resolve_layout/2` consumes opaque lexer events whose
+tokens declare before/after joins and continued or block delimiter frames.
+This preserves grammar-aware, Elixir-like continuation without prematurely
+assigning concrete operators or punctuation. Read the
+[Whitespace and Layout guide](guides/language/whitespace-and-layout.md).
+
 ## The executable formal kernel and typed actors
 
 Normative revision 0.1.8 integrates the executable portions of the earlier
@@ -351,7 +360,9 @@ The compiler path is:
 source bytes 0.1.9 → logical Unicode stream plus original-byte spans
                        ↓
 standalone names 0.1.10 → validated identifiers and qualified names
-                           (stops before the future whole-source lexer/parser)
+                           ↓
+layout events 0.1.11 → lossless soft/separator/blank classification
+                       (stops before the future whole-source lexer/parser)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓

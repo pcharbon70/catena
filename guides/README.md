@@ -4,12 +4,13 @@ These guides explain the executable Catena language model, its assurance
 protocol, and the bootstrap compiler. They complement rather than replace the
 [normative language specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification).
 
-Catena does not yet have an ergonomic source lexer or parser. Revisions 0.1.9
-and 0.1.10 provide the strict source envelope and standalone Unicode name
-rules those later stages will consume. Code in a `catena` fence is **illustrative source notation**: it teaches the selected language meaning
-but does not freeze punctuation, layout, or every keyword. Commands, JSON-AST
-examples, and the separately identified exact 0.1.8 kernel S-expressions are
-executable against the current compiler.
+Catena does not yet have an ergonomic source lexer or parser. Revisions 0.1.9,
+0.1.10, and 0.1.11 provide the strict source envelope, standalone Unicode name
+rules, and layout classification those later stages will consume. Code in a
+`catena` fence is **illustrative source notation**: it teaches the selected
+language meaning but does not freeze punctuation or every keyword. Commands,
+JSON-AST examples, and the separately identified exact 0.1.8 kernel
+S-expressions are executable against the current compiler.
 
 The reader-facing guides use Catena's current behavior-first vocabulary:
 `variant`, `payload`, `match`, `Mapper`, `uses`, `request`, `promises`, and
@@ -26,7 +27,8 @@ flowchart TD
     Tour --> First[Getting Started]
     First --> Text[Source Text]
     Text --> Names[Identifiers]
-    Names --> Editions[Editions and Previews]
+    Names --> Layout[Whitespace and Layout]
+    Layout --> Editions[Editions and Previews]
     Editions --> Data[Variant Types]
     Data --> Match[Pattern Matching]
     Match --> Traits[Traits and Composition]
@@ -58,28 +60,31 @@ flowchart TD
 4. [Identifiers and Qualified Names](language/identifiers.md) — validate
    Unicode 17 names, NFC, security profiles, keywords, qualification, and
    confusable warnings at revision 0.1.10.
-5. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
+5. [Whitespace, Separators, and Line Continuation](language/whitespace-and-layout.md)
+   — resolve non-semantic indentation, hard separators, and grammar-aware soft
+   lines over lexer-supplied events at revision 0.1.11.
+6. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
-6. [Variant Types and Structured Data](language/algebraic-data-types.md) —
+7. [Variant Types and Structured Data](language/algebraic-data-types.md) —
    model a domain with nominal variants, explicit payloads, and controlled
    module boundaries.
-7. [Pattern Matching](language/pattern-matching.md) — consume data with
+8. [Pattern Matching](language/pattern-matching.md) — consume data with
    ordered, exhaustive clauses and safe conditions.
-8. [Traits and Composition](language/traits-and-composition.md) — use shared
+9. [Traits and Composition](language/traits-and-composition.md) — use shared
    behavior such as `map`, `map2`, and `and_then` without requiring category
    theory terminology.
-9. [Effects and Handlers](language/effects-and-handlers.md) — declare external
+10. [Effects and Handlers](language/effects-and-handlers.md) — declare external
    abilities, request them through lexical capabilities, and interpret them
    with deep affine handlers.
-10. [Formal Semantic Kernel](language/formal-semantic-kernel.md) — run the exact
+11. [Formal Semantic Kernel](language/formal-semantic-kernel.md) — run the exact
    0.1.8 conformance input and understand structural rows, the small-step
    machine, typed actors, fixed layouts, and normative conformance evidence.
-11. [Specifications](language/specifications.md) — attach typed rules and exact
+12. [Specifications](language/specifications.md) — attach typed rules and exact
    examples to named language subjects.
-12. [Governance](language/governance.md) — understand policy, evidence,
+13. [Governance](language/governance.md) — understand policy, evidence,
    approval, lifecycle, and protected package actions.
-13. [Catena and BEAM](language/catena-and-beam.md) — understand Abstract Format
+14. [Catena and BEAM](language/catena-and-beam.md) — understand Abstract Format
    lowering, module interfaces, companion modules, and the current
    interoperability boundary.
 
@@ -163,8 +168,9 @@ could also appear in the compiler.
 | 0.1.8 | exact formal semantic kernel, independent verification, and typed local actors |
 | 0.1.9 | strict UTF-8 source-text envelope, newline normalization, and original-byte scalar spans |
 | 0.1.10 | Unicode 17 identifiers, NFC spelling, secure scripts, keywords, qualification, and confusable diagnostics |
+| 0.1.11 | non-semantic indentation, hard separators, abstract continuation, and lossless layout events |
 
-Versions 0.1.1 through 0.1.10 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.11 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

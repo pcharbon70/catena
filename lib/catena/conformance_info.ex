@@ -75,7 +75,11 @@ defmodule Catena.ConformanceInfo do
       %{"id" => "secondary-diagnostic-spans", "disposition" => "partial", "owner" => "P117"},
       %{"id" => "clause-condition-wording", "disposition" => "deviation", "owner" => "P117"},
       %{"id" => "shared-pattern-matrices", "disposition" => "deviation", "owner" => "G138"},
-      %{"id" => "original-source-locations", "disposition" => "kernel-only", "owner" => "P117"},
+      %{
+        "id" => "original-source-locations",
+        "disposition" => "kernel-source-layout",
+        "owner" => "P117"
+      },
       %{
         "id" => "stale-preview-removal-edit",
         "disposition" => "not-implemented",

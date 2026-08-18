@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.10` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.10`; standalone identifiers for `0.1.10` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.11` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.11`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -57,6 +57,14 @@ It adds `Catena.parse_identifier/2`, `Catena.parse_qualified_name/2`,
 `Catena.audit_identifiers/2`, `catena check-identifiers`, and `IDN001`–`IDN007`.
 It emits no persisted interface or BEAM artifact and does not widen the JSON
 or exact-kernel frontend versions.
+
+Normative C015 uses `0.1.11` for whitespace, separators, and line
+continuation. It adds `Catena.Layout`, `Catena.resolve_layout/2`, lossless
+`soft`/`separator`/`blank` LF classifications, and `LAY001`–`LAY003`. The
+engine consumes abstract events supplied by a future lexer; it defines no
+whole-source CLI and does not guess comments, literals, or concrete token
+capabilities. It emits no persisted interface or BEAM artifact and does not
+widen the JSON, exact-kernel, interface, artifact, or signed-format versions.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
@@ -96,7 +104,7 @@ silently treating a recommendation as either mandatory or irrelevant.
 | [Secondary diagnostic spans](https://github.com/pcharbon70/catena-research/blob/main/60-specification/type-system/diagnostics-and-conformance.md#diagnostic-contract) | Partially implemented | Every source-derived 0.1.8 syntax or static diagnostic has a primary source span. Standalone malformed-interface and forged-core results have no source form. Related secondary spans remain absent, and retained JSON inputs still carry stable paths. Tracked by P117. |
 | [Task-facing “clause condition” wording](https://github.com/pcharbon70/catena-research/blob/main/60-specification/clause-conditions/diagnostics-and-conformance.md#stable-diagnostics) | Current wording deviation | Some compiler details still use implementation-facing condition/guard terms. Public wording cleanup is tracked by P117. |
 | [Shared pattern matrices](https://github.com/pcharbon70/catena-research/blob/main/60-specification/data-and-patterns/match-semantics-and-coverage.md#usefulness-model) | Current performance deviation | The implementation may rebuild equivalent matrices. Required usefulness and coverage results are unchanged; sharing work is tracked by G138. |
-| [Original Catena source locations](https://github.com/pcharbon70/catena-research/blob/main/60-specification/type-system/typed-core-elaboration.md#beam-only-backend-boundary) | Implemented for the kernel and source envelope; unavailable for JSON | The 0.1.8 parser preserves spans through verified core and Abstract Format annotations. The 0.1.9 decoder maps every logical scalar to original bytes, but no ergonomic parser yet carries those spans into typed core. Retained JSON revisions still have paths. Tracked by P117 and the remaining ergonomic-source gaps. |
+| [Original Catena source locations](https://github.com/pcharbon70/catena-research/blob/main/60-specification/type-system/typed-core-elaboration.md#beam-only-backend-boundary) | Implemented for the kernel and source/layout boundaries; unavailable for JSON | The 0.1.8 parser preserves spans through verified core and Abstract Format annotations. The 0.1.9 decoder maps every logical scalar to original bytes, and the 0.1.11 event engine preserves those spans through layout classification, but no ergonomic parser yet carries them into typed core. Retained JSON revisions still have paths. Tracked by P117 and the remaining ergonomic-source gaps. |
 | [Stale-preview removal edit](https://github.com/pcharbon70/catena-research/blob/main/60-specification/editions-and-feature-lifecycle/feature-lifecycle-and-compatibility.md#preview-selection) | Not implemented | The compiler diagnoses stale preview selection but does not suggest the semantics-preserving removal edit. Tracked by P125. |
 
 No deviation in this table is permitted to change acceptance, safety,

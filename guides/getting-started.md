@@ -15,6 +15,8 @@ The repository contains an Elixir bootstrap compiler that can:
   preserving original-byte scalar spans;
 - validate normative 0.1.10 standalone Unicode identifiers, qualification,
   keywords, and confusable-name diagnostics;
+- resolve normative 0.1.11 whitespace, separators, and line continuation over
+  lexer-supplied token events;
 - infer and check types, data, patterns, conditions, traits, effects, and
   typed specifications;
 - independently verify its typed core;
@@ -85,6 +87,11 @@ Validate names independently of the later whole-source lexer:
 ./catena check-identifiers alpha Option.Some '`type`'
 ```
 
+The 0.1.11 layout contract is available through `Catena.resolve_layout/2`, not
+a whole-source command. It consumes events from a future lexer so it does not
+guess the still-open comment, literal, or concrete-token rules. See
+[Whitespace, Separators, and Line Continuation](language/whitespace-and-layout.md).
+
 Inspect the compiler's current default, retained revisions, feature states,
 and migrations before compiling a package:
 
@@ -131,8 +138,9 @@ This example demonstrates the intended programming model:
 - Each exported function has a written signature.
 - Values are immutable and evaluation is strict.
 
-The notation is instructional. The normative semantics are fixed, but the
-future parser may choose different separators or layout.
+The notation is instructional. The normative semantics and 0.1.11 layout
+classification are fixed, while later grammar work still chooses concrete
+operators, delimiters, and complete productions.
 
 ## Run the executable model
 
@@ -170,7 +178,8 @@ exposing the chosen runtime layout.
 flowchart LR
     Source[Future Catena source bytes] --> Text[0.1.9 strict source-text decoder]
     Text --> Names[0.1.10 standalone identifier validation]
-    Names -. lexer and parser not implemented .-> JSON[Versioned JSON AST]
+    Names --> Layout[0.1.11 layout over lexer events]
+    Layout -. lexer and parser not implemented .-> JSON[Versioned JSON AST]
     Kernel[Exact 0.1.8 kernel S-expression] --> KDecode[Kernel parser]
     JSON --> Decode[Strict decoding]
     Decode --> Infer[Inference and elaboration]

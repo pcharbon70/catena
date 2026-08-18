@@ -1,10 +1,10 @@
 # Compiler Architecture
 
 This guide explains the Elixir bootstrap compiler as an implementation of the
-C001 through C006, C008, and C010 normative slices. The compiler is
-intentionally small and explicit: semantic checks occur before backend
-lowering, independently rechecked evidence protects important boundaries,
-and OTP 29 owns `.beam` generation.
+C001 through C006, C008, C010, C013, C014, and C015 normative slices. The
+compiler is intentionally small and explicit: semantic checks occur before
+backend lowering, independently rechecked evidence protects important
+boundaries, and OTP 29 owns `.beam` generation.
 
 ## Repository role
 
@@ -47,6 +47,9 @@ detail view should require the programmer to know those intermediate names.
 flowchart TD
     JSON[Versioned JSON AST] --> Decoder[Catena.AST.Decoder]
     Kernel[Exact 0.1.8 S-expression] --> KParser[Catena.Kernel.Parser]
+    Source[0.1.9 through 0.1.11 source bytes] --> SourceText[Catena.SourceText]
+    SourceText --> Names[Standalone 0.1.10 names]
+    Names --> Layout[0.1.11 lexer-event layout]
     Selection[Catena.LanguageSelection] --> Decoder
     Decoder --> Infer[Catena.Type.Infer]
     Infer --> Data[Data and coverage evidence]
@@ -112,6 +115,11 @@ artifact version.
 normative 0.1.8 boundary. Kernel compilation always uses its fixed layout and
 returns the unified core and 0.1.8 interface in metadata.
 
+`Catena.decode_source_text/2`, the standalone identifier APIs, and
+`Catena.resolve_layout/2` expose the source-only 0.1.9 through 0.1.11
+boundaries. Layout accepts opaque lexer-supplied events and returns a lossless
+classified stream. These APIs do not feed the retained semantic compiler yet.
+
 ### CLI
 
 `Catena.CLI` wraps those APIs and the package/assurance path:
@@ -122,6 +130,8 @@ elaborate-ir
 compile-ir
 check-kernel
 compile-kernel
+check-source-text
+check-identifiers
 compile-package-ir
 verify-assurance
 language-info

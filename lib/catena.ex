@@ -6,7 +6,9 @@ defmodule Catena do
   0.1.8 additionally accepts the exact semantic-kernel S-expression format.
   Revision 0.1.9 defines the strict source-text envelope used by future
   ergonomic syntax. Revision 0.1.10 validates standalone identifiers and
-  qualified names without yet supplying a complete lexer or parser.
+  qualified names. Revision 0.1.11 resolves whitespace, separators, and line
+  continuation over lexer-supplied token events without yet supplying a
+  complete lexer or parser.
   """
 
   alias Catena.{AST.Decoder, Compiler}
@@ -29,6 +31,10 @@ defmodule Catena do
           {:ok, [Catena.QualifiedName.t()], [Catena.Diagnostic.t()]}
           | {:error, Catena.Diagnostic.t()}
   def audit_identifiers(names, options \\ []), do: Catena.IdentifierAudit.audit(names, options)
+
+  @spec resolve_layout([Catena.Layout.event()], keyword()) ::
+          {:ok, Catena.Layout.Result.t()} | {:error, Catena.Diagnostic.t()}
+  def resolve_layout(events, options \\ []), do: Catena.Layout.resolve(events, options)
 
   @spec check_json(binary(), keyword()) :: {:ok, map()} | {:error, Catena.Diagnostic.t()}
   def check_json(json, options \\ []) do

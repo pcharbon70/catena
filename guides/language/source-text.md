@@ -15,7 +15,7 @@ mix escript.build
 ```
 
 Successful output is a deterministic JSON object containing edition `0.1`,
-the selected source-capable revision (`0.1.10` by default), and byte,
+the selected source-capable revision (`0.1.11` by default), and byte,
 logical-scalar, and logical-newline counts.
 No `.beam` or `.cati.json` file is created.
 
@@ -63,10 +63,11 @@ accepted scalar.
 
 Passing `check-source-text` means only that the bytes satisfy revision 0.1.9's
 source envelope. C014 now defines standalone identifiers and qualified names;
-G015 through G020 still own whole-source token boundaries, whitespace and
-layout, comments, literals, numbers, operators, punctuation, and file-to-module
-rules. Until those slices are implemented,
-the retained JSON AST and exact 0.1.8 kernel remain the compilation inputs.
+C015 now defines whitespace and layout over lexer-supplied events. G016 through
+G020 still own comments, literals, numbers, concrete tokenization, operators,
+punctuation, complete grammar, and file-to-module rules. Until those slices are
+implemented, the retained JSON AST and exact 0.1.8 kernel remain the
+compilation inputs.
 
 The normative contract is the research repository's
 [Source-Text Envelope](https://github.com/pcharbon70/catena-research/blob/main/60-specification/source-text/source-text-envelope.md).

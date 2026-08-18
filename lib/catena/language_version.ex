@@ -19,12 +19,13 @@ defmodule Catena.LanguageVersion do
     editions_and_feature_lifecycle: "0.1.7",
     formal_semantic_kernel: "0.1.8",
     source_text: "0.1.9",
-    identifiers: "0.1.10"
+    identifiers: "0.1.10",
+    whitespace_and_layout: "0.1.11"
   ]
   @ordered Keyword.values(@versions)
   @json_frontends ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7)
   @kernel_frontends ~w(0.1.8)
-  @source_text_frontends ~w(0.1.9 0.1.10)
+  @source_text_frontends ~w(0.1.9 0.1.10 0.1.11)
   @compilable @json_frontends ++ @kernel_frontends
   @interfaces ~w(0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8)
   @signed_formats ~w(0.1.6 0.1.7 0.1.8)
@@ -42,6 +43,7 @@ defmodule Catena.LanguageVersion do
           | :formal_semantic_kernel
           | :source_text
           | :identifiers
+          | :whitespace_and_layout
 
   @spec all() :: [String.t()]
   def all, do: @ordered
