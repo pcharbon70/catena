@@ -28,8 +28,8 @@ defmodule Catena.ImplementationLimits do
       unit: :bytes,
       portable_minimum: 65_536,
       configured: 65_536,
-      applies_to: "future decoded string and binary term literals",
-      exhaustion: %{kind: :not_applicable, owner: "G017"}
+      applies_to: "decoded text and byte literals",
+      exhaustion: %{kind: :diagnostic, id: "LIM004"}
     },
     %{
       id: :generated_beam_bytes,
@@ -116,14 +116,27 @@ defmodule Catena.ImplementationLimits do
   @spec portable_minimum(atom()) :: non_neg_integer() | nil
   def portable_minimum(id), do: fetch!(id).portable_minimum
 
-  @spec validate_integer_magnitudes(term()) :: :ok | {:error, Diagnostic.t()}
-  def validate_integer_magnitudes(value) do
+  @spec validate_integer_magnitudes(term(), Catena.SourceSpan.t() | nil) ::
+          :ok | {:error, Diagnostic.t()}
+  def validate_integer_magnitudes(value, span \\ nil) do
     observed = largest_integer_digits(value, 0)
 
     if observed <= configured(:integer_literal_digits) do
       :ok
     else
-      {:error, limit_diagnostic(:integer_literal_digits, observed)}
+      {:error, limit_diagnostic(:integer_literal_digits, observed, span: span)}
+    end
+  end
+
+  @spec validate_decoded_literal_bytes(binary(), Catena.SourceSpan.t() | nil) ::
+          :ok | {:error, Diagnostic.t()}
+  def validate_decoded_literal_bytes(payload, span \\ nil) when is_binary(payload) do
+    observed = byte_size(payload)
+
+    if observed <= configured(:decoded_literal_bytes) do
+      :ok
+    else
+      {:error, limit_diagnostic(:decoded_literal_bytes, observed, span: span)}
     end
   end
 
@@ -185,10 +198,12 @@ defmodule Catena.ImplementationLimits do
       case id do
         :callable_arity -> "callable arity exceeds the published implementation limit"
         :integer_literal_digits -> "integer literal exceeds the published digit limit"
+        :decoded_literal_bytes -> "decoded literal exceeds the published byte limit"
         :generated_beam_bytes -> "generated BEAM module exceeds the published size limit"
       end
 
     Diagnostic.new(diagnostic_id, Keyword.get(options, :message, default_message),
+      span: Keyword.get(options, :span),
       details: details(id, observed, options)
     )
   end

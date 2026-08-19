@@ -9,7 +9,9 @@ defmodule Catena do
   qualified names. Revision 0.1.11 resolves whitespace, separators, and line
   continuation over lexer-supplied token events. Revision 0.1.12 scans nested
   comments and attaches outer documentation comments to parser-supplied
-  declaration targets without yet supplying a complete lexer or parser.
+  declaration targets. Revision 0.1.13 scans one atomic literal with decoded
+  payload and exact source provenance without yet supplying a complete lexer
+  or parser.
   """
 
   alias Catena.{AST.Decoder, Compiler}
@@ -44,6 +46,10 @@ defmodule Catena do
   @spec resolve_comments([Catena.Comment.event()], keyword()) ::
           {:ok, Catena.Comment.Result.t()} | {:error, Catena.Diagnostic.t()}
   def resolve_comments(events, options \\ []), do: Catena.Comment.resolve(events, options)
+
+  @spec scan_literal(binary(), keyword()) ::
+          {:ok, Catena.Literal.ScanResult.t()} | {:error, Catena.Diagnostic.t()}
+  def scan_literal(source, options \\ []), do: Catena.Literal.scan(source, options)
 
   @spec check_json(binary(), keyword()) :: {:ok, map()} | {:error, Catena.Diagnostic.t()}
   def check_json(json, options \\ []) do

@@ -6,7 +6,7 @@ or semicolon normally separates forms, while token capabilities and delimiter
 frames can make a newline soft.
 
 This is an executable integration boundary, not a whole-source lexer or parser.
-Comments, literals, concrete operators, punctuation, and complete grammar
+Comments, concrete operators, punctuation, and complete grammar
 remain later language work.
 
 ## The whitespace repertoire
@@ -88,9 +88,10 @@ token requiring a left expression cannot begin input or follow a hard
 separator. A token requiring a right expression cannot be followed by a
 semicolon or EOF.
 
-No layout CLI is provided yet. Revision 0.1.12 now integrates comments through
-the separate abstract comment resolver, while literal and concrete-token rules
-remain unfinished. The event API makes the completed classification contract
+No layout CLI is provided yet. Revision 0.1.12 integrates comments through
+the separate abstract comment resolver, and revision 0.1.13 gives raw literal
+line breaks to the literal token rather than this layout stream. Concrete-token
+composition remains unfinished. The event API makes the completed classification contract
 executable without pretending those boundaries are settled. See
 [Comments and Documentation Comments](comments-and-documentation-comments.md).
 

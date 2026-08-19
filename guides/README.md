@@ -5,9 +5,9 @@ protocol, and the bootstrap compiler. They complement rather than replace the
 [normative language specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification).
 
 Catena does not yet have an ergonomic source lexer or parser. Revisions 0.1.9
-through 0.1.12 provide the strict source envelope, standalone Unicode name
-rules, layout classification, and abstract comment/documentation pipeline
-those later stages will consume. Code in a
+through 0.1.13 provide the strict source envelope, standalone Unicode name
+rules, layout classification, abstract comment/documentation pipeline, and
+atomic literal scanner that later stages will consume. Code in a
 `catena` fence is **illustrative source notation**: it teaches the selected
 language meaning but does not freeze punctuation or every keyword. Commands,
 JSON-AST examples, and the separately identified exact 0.1.8 kernel
@@ -30,7 +30,8 @@ flowchart TD
     Text --> Names[Identifiers]
     Names --> Layout[Whitespace and Layout]
     Layout --> Comments[Comments and Documentation]
-    Comments --> Editions[Editions and Previews]
+    Comments --> Literals[Literals]
+    Literals --> Editions[Editions and Previews]
     Editions --> Data[Variant Types]
     Data --> Match[Pattern Matching]
     Match --> Traits[Traits and Composition]
@@ -68,28 +69,30 @@ flowchart TD
 6. [Comments and Documentation Comments](language/comments-and-documentation-comments.md)
    — scan slash comments, classify nested comment line breaks, and attach
    normalized outer documentation at revision 0.1.12.
-7. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
+7. [Literals](language/literals.md) — scan Boolean, numeric, text, character,
+   and byte literals with exact decoding and provenance at revision 0.1.13.
+8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
-8. [Variant Types and Structured Data](language/algebraic-data-types.md) —
+9. [Variant Types and Structured Data](language/algebraic-data-types.md) —
    model a domain with nominal variants, explicit payloads, and controlled
    module boundaries.
-9. [Pattern Matching](language/pattern-matching.md) — consume data with
+10. [Pattern Matching](language/pattern-matching.md) — consume data with
    ordered, exhaustive clauses and safe conditions.
-10. [Traits and Composition](language/traits-and-composition.md) — use shared
+11. [Traits and Composition](language/traits-and-composition.md) — use shared
    behavior such as `map`, `map2`, and `and_then` without requiring category
    theory terminology.
-11. [Effects and Handlers](language/effects-and-handlers.md) — declare external
+12. [Effects and Handlers](language/effects-and-handlers.md) — declare external
    abilities, request them through lexical capabilities, and interpret them
    with deep affine handlers.
-12. [Formal Semantic Kernel](language/formal-semantic-kernel.md) — run the exact
+13. [Formal Semantic Kernel](language/formal-semantic-kernel.md) — run the exact
    0.1.8 conformance input and understand structural rows, the small-step
    machine, typed actors, fixed layouts, and normative conformance evidence.
-13. [Specifications](language/specifications.md) — attach typed rules and exact
+14. [Specifications](language/specifications.md) — attach typed rules and exact
    examples to named language subjects.
-14. [Governance](language/governance.md) — understand policy, evidence,
+15. [Governance](language/governance.md) — understand policy, evidence,
    approval, lifecycle, and protected package actions.
-15. [Catena and BEAM](language/catena-and-beam.md) — understand Abstract Format
+16. [Catena and BEAM](language/catena-and-beam.md) — understand Abstract Format
    lowering, module interfaces, companion modules, and the current
    interoperability boundary.
 
@@ -175,8 +178,9 @@ could also appear in the compiler.
 | 0.1.10 | Unicode 17 identifiers, NFC spelling, secure scripts, keywords, qualification, and confusable diagnostics |
 | 0.1.11 | non-semantic indentation, hard separators, abstract continuation, and lossless layout events |
 | 0.1.12 | slash comments, nested block comments, layout integration, and outer documentation attachment |
+| 0.1.13 | atomic Boolean, numeric, text, character, and byte literal spelling, decoding, and provenance |
 
-Versions 0.1.1 through 0.1.12 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.13 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

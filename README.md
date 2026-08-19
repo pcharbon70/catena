@@ -53,7 +53,11 @@ lossless lexer-event API. Normative C016 revision `0.1.12` adds slash comments,
 nested block comments, comment-internal layout classification, and outer
 documentation attachment through lexer- and parser-supplied events. It
 deliberately does not claim a complete lexer, parser, Markdown renderer, or
-doctest runner. The compiler release remains `0.1.0`.
+doctest runner. Normative C017 revision `0.1.13` adds Boolean, integer,
+decimal-float, text, character, and byte literal scanning with exact source
+provenance, strict escapes, arbitrary raw delimiters, and published refusal
+limits. It remains an atomic source-only API rather than a whole lexer or
+parser. The compiler release remains `0.1.0`.
 The bootstrap toolchain is written in
 Elixir 1.20.2 on Erlang/OTP 29.0.4 and targets only the BEAM VM. It does not
 reuse the historical proof-of-concept's compiler or language design.
@@ -72,8 +76,9 @@ Run `catena conformance-info` for the deterministic machine-readable form.
 
 To explore the language as a programmer, begin with the
 [Catena Language Tour](LANGUAGE-TOUR.md). It introduces the language model,
-shows how to validate source text and 0.1.10 names, resolve 0.1.11 layout and
-0.1.12 comment events, run the retained JSON-AST and exact kernel paths, and find the
+shows how to validate source text and 0.1.10 names, resolve 0.1.11 layout,
+scan 0.1.12 comments and 0.1.13 literals, run the retained JSON-AST and exact
+kernel paths, and find the
 authoritative `catena-research` documents.
 
 The [Catena Guides](guides/README.md) provide a detailed source-first learning
@@ -93,7 +98,8 @@ Normative C008 is implemented at `0.1.7`, normative C010 uses `0.1.8`, and
 normative C013 uses `0.1.9` for the source-text envelope. Normative C014 uses
 `0.1.10` for standalone identifier syntax and security. Normative C015 uses
 `0.1.11` for whitespace, separators, and line continuation. Normative C016
-uses `0.1.12` for comments and documentation comments.
+uses `0.1.12` for comments and documentation comments. Normative C017 uses
+`0.1.13` for atomic literal grammar and decoding.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -120,7 +126,8 @@ flowchart LR
     ST --> ID[Standalone identifiers and qualified names 0.1.10]
     ID --> LY[Layout over lexer-supplied events 0.1.11]
     LY --> CM[Comments and documentation attachment 0.1.12]
-    CM --> STOP[Classified events, attachments, and diagnostics]
+    CM --> LT[Atomic literal scanner 0.1.13]
+    LT --> STOP[Literal or classified events, attachments, and diagnostics]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
@@ -156,7 +163,9 @@ ergonomic syntax. Revision 0.1.10 defines names without scanning complete
 files. Revision 0.1.11 classifies lexer-supplied whitespace and token events
 without defining the lexer or parser. Revision 0.1.12 scans one comment at a
 lexer-supplied position and resolves comments against parser-supplied
-declaration targets without supplying either whole-source phase. The backend does not emit
+declaration targets without supplying either whole-source phase. Revision
+0.1.13 scans one atomic literal at a logical-unit position, but does not
+compose a whole-file token stream. The backend does not emit
 Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
 
@@ -297,7 +306,11 @@ include:
 - an iterative 0.1.12 comment scanner and resolver with nested block comments,
   lossless comment-internal LF classification, normalized outer documentation,
   explicit CommonMark/doctest policy metadata, and `CMT001`, `CMT002`, and
-  `DOC001` diagnostics.
+  `DOC001` diagnostics; and
+- a 0.1.13 atomic literal scanner with exact numeric components, strict cooked
+  escapes, arbitrary exact raw-string hashes, one-scalar characters, byte
+  payloads, token-owned line breaks, source pieces, and `LIT001`–`LIT003`,
+  `LIM002`, and `LIM004` refusals.
 
 This is not yet an ergonomic Catena source lexer or parser or a complete implementation of resource
 scopes, exception boundaries, general host-effect entry policy, scoped or
@@ -354,6 +367,11 @@ There is no whole-source comment or documentation command. Lexer integrations
 can call `Catena.scan_comment/2`, and lexer/parser integrations can pass
 comments and declaration targets to `Catena.resolve_comments/2`; see the
 [Comments and Documentation Comments guide](guides/language/comments-and-documentation-comments.md).
+
+There is no whole-source literal command. Lexer integrations can call
+`Catena.scan_literal/2` at a logical source-unit index and receive one decoded
+atomic literal plus exact provenance; see the
+[Literals guide](guides/language/literals.md).
 
 `compile-kernel` writes an OTP-generated `.beam` and deterministic 0.1.8
 `.cati.json` interface beside the input. A failed check or compilation

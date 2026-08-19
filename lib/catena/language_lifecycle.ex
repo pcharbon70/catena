@@ -88,6 +88,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "comments-and-documentation-comments/comment-lexing-and-layout.md#comment-lexing-and-layout"
         )
+      ),
+      feature(
+        "literal-grammar",
+        "0.1.13",
+        specification(
+          "literal-grammar/literal-forms-and-boundaries.md#literal-forms-and-boundaries"
+        )
       )
     ]
   end
@@ -420,6 +427,8 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("comments-and-documentation-comments"),
     do: ~w(source-acceptance static-meaning diagnostics)
 
+  defp affected_dimensions("literal-grammar"), do: ~w(source-acceptance diagnostics)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -439,6 +448,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("comments-and-documentation-comments"),
     do:
       "Select 0.1.12 to scan comments and attach outer documentation comments to parser-supplied declaration targets; retained frontends and persisted formats are unchanged."
+
+  defp migration("literal-grammar"),
+    do:
+      "Select 0.1.13 to scan one atomic literal with exact decoded payload and source provenance; retained full-language frontends and persisted formats are unchanged."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 

@@ -131,7 +131,8 @@ defmodule Catena.Comment do
     end
   end
 
-  defp resolve_selection(nil), do: require_comment_revision(LanguageVersion.current_selection())
+  defp resolve_selection(nil),
+    do: require_comment_revision(LanguageVersion.legacy_selection(@comment_revision))
 
   defp resolve_selection(selection) do
     with {:ok, resolved} <- LanguageVersion.resolve_selection(selection) do
