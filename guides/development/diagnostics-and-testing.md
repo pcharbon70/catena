@@ -144,6 +144,7 @@ and warnings in structured details.
 | `c015_whitespace_layout_test.exs` | layout whitespace, indentation invariance, separators, continuation, frames, spans, and diagnostics |
 | `c015_traceability_coverage_test.exs` | complete `LY-OBL-*` whitespace-and-layout obligation coverage |
 | `c016_comments_documentation_test.exs` | comment scanning, nesting, spans, layout integration, documentation normalization, attachment, and diagnostics |
+| `c017_literal_grammar_test.exs` | atomic literal forms, decoding, provenance, line ownership, exact limits, exclusions, and diagnostics |
 | `c016_traceability_coverage_test.exs` | complete `CM-OBL-*` comment and documentation obligation coverage |
 | `resumption_token_test.exs` | dynamic one-use continuation defense |
 

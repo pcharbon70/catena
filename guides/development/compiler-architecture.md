@@ -1,7 +1,7 @@
 # Compiler Architecture
 
 This guide explains the Elixir bootstrap compiler as an implementation of the
-C001 through C006, C008, C010, C013, C014, and C015 normative slices. The
+C001 through C006, C008, C010, and C013 through C017 normative slices. The
 compiler is intentionally small and explicit: semantic checks occur before
 backend lowering, independently rechecked evidence protects important
 boundaries, and OTP 29 owns `.beam` generation.
@@ -47,10 +47,11 @@ detail view should require the programmer to know those intermediate names.
 flowchart TD
     JSON[Versioned JSON AST] --> Decoder[Catena.AST.Decoder]
     Kernel[Exact 0.1.8 S-expression] --> KParser[Catena.Kernel.Parser]
-    Source[0.1.9 through 0.1.12 source bytes] --> SourceText[Catena.SourceText]
+    Source[0.1.9 through 0.1.13 source bytes] --> SourceText[Catena.SourceText]
     SourceText --> Names[Standalone 0.1.10 names]
     Names --> Layout[0.1.11 lexer-event layout]
     Layout --> Comments[0.1.12 comment and documentation events]
+    SourceText --> Literals[0.1.13 atomic literal scanner]
     Selection[Catena.LanguageSelection] --> Decoder
     Decoder --> Infer[Catena.Type.Infer]
     Infer --> Data[Data and coverage evidence]
@@ -118,11 +119,13 @@ returns the unified core and 0.1.8 interface in metadata.
 
 `Catena.decode_source_text/2`, the standalone identifier APIs,
 `Catena.resolve_layout/2`, `Catena.scan_comment/2`, and
-`Catena.resolve_comments/2` expose the source-only 0.1.9 through 0.1.12
+`Catena.resolve_comments/2`, and `Catena.scan_literal/2` expose the source-only
+0.1.9 through 0.1.13
 boundaries. Layout accepts opaque lexer-supplied events. Comment resolution
 also accepts parser-supplied declaration targets and returns a lossless stream
-plus documentation attachments. These APIs do not feed the retained semantic
-compiler yet.
+plus documentation attachments. The literal API returns one decoded token and
+its source pieces; it deliberately does not compose a whole token stream.
+These APIs do not feed the retained semantic compiler yet.
 
 ### CLI
 

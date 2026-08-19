@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.12` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.12`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.13` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.13`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -74,6 +74,12 @@ consume lexer- and parser-supplied boundaries; they define no whole-source CLI,
 Markdown rendering, or doctest execution. This source-only revision does not
 widen the retained or persisted format versions.
 
+Normative C017 uses `0.1.13` for atomic literal spelling, decoding, and source
+provenance. It adds `Catena.Literal`, `Catena.scan_literal/2`, `LIT001`–`LIT003`,
+and activates `LIM004`. It does not extend the retained JSON, kernel,
+interface, artifact, or signed-format sets and does not claim a whole lexer,
+parser, or runtime literal integration.
+
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
 choices and extensions, recommendation dispositions, bounded presentations,
@@ -112,7 +118,7 @@ silently treating a recommendation as either mandatory or irrelevant.
 | [Secondary diagnostic spans](https://github.com/pcharbon70/catena-research/blob/main/60-specification/type-system/diagnostics-and-conformance.md#diagnostic-contract) | Partially implemented | Every source-derived 0.1.8 syntax or static diagnostic has a primary source span. Standalone malformed-interface and forged-core results have no source form. Related secondary spans remain absent, and retained JSON inputs still carry stable paths. Tracked by P117. |
 | [Task-facing “clause condition” wording](https://github.com/pcharbon70/catena-research/blob/main/60-specification/clause-conditions/diagnostics-and-conformance.md#stable-diagnostics) | Current wording deviation | Some compiler details still use implementation-facing condition/guard terms. Public wording cleanup is tracked by P117. |
 | [Shared pattern matrices](https://github.com/pcharbon70/catena-research/blob/main/60-specification/data-and-patterns/match-semantics-and-coverage.md#usefulness-model) | Current performance deviation | The implementation may rebuild equivalent matrices. Required usefulness and coverage results are unchanged; sharing work is tracked by G138. |
-| [Original Catena source locations](https://github.com/pcharbon70/catena-research/blob/main/60-specification/type-system/typed-core-elaboration.md#beam-only-backend-boundary) | Implemented for the kernel and source/layout/comment boundaries; unavailable for JSON | The 0.1.8 parser preserves spans through verified core and Abstract Format annotations. The 0.1.9 decoder maps every logical scalar to original bytes, and the 0.1.11–0.1.12 event engines preserve those spans through layout and comment classification, but no ergonomic parser yet carries them into typed core. Retained JSON revisions still have paths. Tracked by P117 and the remaining ergonomic-source gaps. |
+| [Original Catena source locations](https://github.com/pcharbon70/catena-research/blob/main/60-specification/type-system/typed-core-elaboration.md#beam-only-backend-boundary) | Implemented for the kernel and source/layout/comment/literal boundaries; unavailable for JSON | The 0.1.8 parser preserves spans through verified core and Abstract Format annotations. The 0.1.9 decoder maps every logical scalar to original bytes, and the 0.1.11–0.1.13 event and literal engines preserve those spans, but no ergonomic parser yet carries them into typed core. Retained JSON revisions still have paths. Tracked by P117 and the remaining ergonomic-source gaps. |
 | [Stale-preview removal edit](https://github.com/pcharbon70/catena-research/blob/main/60-specification/editions-and-feature-lifecycle/feature-lifecycle-and-compatibility.md#preview-selection) | Not implemented | The compiler diagnoses stale preview selection but does not suggest the semantics-preserving removal edit. Tracked by P125. |
 
 No deviation in this table is permitted to change acceptance, safety,
@@ -150,7 +156,7 @@ behavior.
 | --- | --- | --- |
 | Source callable arity | 253 explicit arguments | Portable implementation limit: `LIM001`. Effectful kernel workers may add two hidden arguments and reach OTP arity 255. |
 | Integer literal magnitude | 4,096 decimal digits, excluding a leading minus sign | Portable implementation limit: `LIM002` |
-| Decoded text or binary literal payload | 65,536 bytes | Portable floor reserved for a future literal form; currently not applicable and owned by G017 |
+| Decoded text or byte literal payload | 65,536 bytes | Portable implementation limit: `LIM004` |
 | Generated BEAM module | 1,048,576 bytes per module | Portable implementation limit: `LIM003` |
 | Pattern usefulness and coverage | 20,000 analysis steps | Implementation limit: `M004` |
 | Condition normalization and transitive inlining | 20,000 nodes/steps | Implementation limit: `CND007` |

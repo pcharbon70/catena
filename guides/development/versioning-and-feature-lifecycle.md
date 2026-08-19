@@ -55,13 +55,14 @@ selection. `Catena.LanguageLifecycle` owns immutable feature IDs, state
 history, compatibility changes, diagnostic IDs, and structured migration
 edits. `Catena.LanguageInfo` exposes both registries without mutation.
 
-The executable registry currently ends at normative `0.1.12`. The JSON frontend
+The executable registry currently ends at normative `0.1.13`. The JSON frontend
 remains closed at `0.1.7`; `Catena.Kernel.Parser` alone accepts exact `0.1.8`
-S-expressions; `Catena.SourceText` accepts `0.1.9` through cumulative `0.1.12`
+S-expressions; `Catena.SourceText` accepts `0.1.9` through cumulative `0.1.13`
 source bytes; the 0.1.10 identifier frontend validates standalone names; and
 the exact 0.1.11 layout frontend classifies lexer-supplied token events. The
 exact 0.1.12 comment frontend scans comments and attaches documentation over
-lexer- and parser-supplied events. None of these source-only frontends emits an
+lexer- and parser-supplied events; and the exact 0.1.13 literal frontend scans
+one atomic literal with source provenance. None of these source-only frontends emits an
 interface or compiled artifact. A future
 candidate may be selectable for evidence runs without making its research
 chapters normative; promotion still requires its separately recorded
@@ -122,6 +123,10 @@ JSON, interface, artifact, or signed-format frontends accept 0.1.11.
 Normative 0.1.12 enables no previews. Its comment feature is a source-only
 event boundary and does not make the exact kernel, retained JSON, interface,
 artifact, or signed-format frontends accept 0.1.12.
+
+Normative 0.1.13 enables no previews. Its literal feature is a source-only
+atomic scanning boundary and does not make the exact kernel, retained JSON,
+interface, artifact, or signed-format frontends accept 0.1.13.
 
 When a real preview is added, compute `required_previews` from exported
 semantics. The enabled set alone is not the dependency contract. Validate

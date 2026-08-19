@@ -14,7 +14,7 @@ defmodule Catena.C012ImplementationLimitsTest do
     assert JSON.encode!(first) == JSON.encode!(second)
     assert first["format"] == "catena-conformance-info"
     assert first["version"] == 1
-    assert first["language"]["current_revision"] == "0.1.12"
+    assert first["language"]["current_revision"] == "0.1.13"
     assert first["implementation"]["release"] == "0.1.0"
 
     assert Enum.map(first["permissions"], & &1["id"]) == [
@@ -103,7 +103,18 @@ defmodule Catena.C012ImplementationLimitsTest do
   test "literal and generated-module bounds have explicit applicability and diagnostics" do
     literal = ImplementationLimits.fetch!(:decoded_literal_bytes)
     assert literal.portable_minimum == 65_536
-    assert literal.exhaustion == %{kind: :not_applicable, owner: "G017"}
+    assert literal.applies_to == "decoded text and byte literals"
+    assert literal.exhaustion == %{kind: :diagnostic, id: "LIM004"}
+
+    assert :ok =
+             ImplementationLimits.validate_decoded_literal_bytes(
+               :binary.copy(<<0>>, literal.configured)
+             )
+
+    assert {:error, %{id: "LIM004", details: %{observed: 65_537}}} =
+             ImplementationLimits.validate_decoded_literal_bytes(
+               :binary.copy(<<0>>, literal.configured + 1)
+             )
 
     limit = ImplementationLimits.configured(:generated_beam_bytes)
     assert :ok = ImplementationLimits.validate_generated_module(:binary.copy(<<0>>, limit))
