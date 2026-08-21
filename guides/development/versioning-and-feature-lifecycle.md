@@ -55,15 +55,17 @@ selection. `Catena.LanguageLifecycle` owns immutable feature IDs, state
 history, compatibility changes, diagnostic IDs, and structured migration
 edits. `Catena.LanguageInfo` exposes both registries without mutation.
 
-The executable registry currently ends at normative `0.1.14`. The JSON frontend
+The executable registry currently ends at normative `0.1.15`. The JSON frontend
 remains closed at `0.1.7`; `Catena.Kernel.Parser` alone accepts exact `0.1.8`
-S-expressions; `Catena.SourceText` accepts `0.1.9` through cumulative `0.1.14`
+S-expressions; `Catena.SourceText` accepts `0.1.9` through cumulative `0.1.15`
 source bytes; the 0.1.10 identifier frontend validates standalone names; and
 the exact 0.1.11 layout frontend classifies lexer-supplied token events. The
 exact 0.1.12 comment frontend scans comments and attaches documentation over
 lexer- and parser-supplied events; the exact 0.1.13 literal frontend scans
-one atomic literal with source provenance; and the exact 0.1.14 numeric
-frontend elaborates one scanned numeric token into a typed meaning. None of these source-only frontends emits an
+one atomic literal with source provenance; the exact 0.1.14 numeric
+frontend elaborates one scanned numeric token into a typed meaning; and the
+exact 0.1.15 operators-and-punctuation frontend tokenizes whole files and
+resolves operator expressions over the fixed ladder. None of these source-only frontends emits an
 interface or compiled artifact. A future
 candidate may be selectable for evidence runs without making its research
 chapters normative; promotion still requires its separately recorded
@@ -133,6 +135,11 @@ Normative 0.1.14 enables no previews. Its numeric meaning feature is a
 source-only elaboration boundary and does not make the exact kernel,
 retained JSON, interface, artifact, or signed-format frontends accept
 0.1.14.
+
+Normative 0.1.15 enables no previews. Its operators-and-punctuation feature
+is a source-only tokenization and expression-structure boundary and does not
+make the exact kernel, retained JSON, interface, artifact, or signed-format
+frontends accept 0.1.15.
 
 When a real preview is added, compute `required_previews` from exported
 semantics. The enabled set alone is not the dependency contract. Validate

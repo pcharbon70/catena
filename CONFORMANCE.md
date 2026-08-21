@@ -89,6 +89,18 @@ that round beyond the largest finite magnitude. Literal scanning stays pinned
 to exact `0.1.13`, and this source-only revision does not widen the retained
 JSON, kernel, interface, artifact, or signed-format sets.
 
+Normative C019 uses `0.1.15` for operators and punctuation. It adds
+`Catena.Tokenizer`, `Catena.Operator`, `Catena.tokenize_source/2`,
+`Catena.parse_operator_expression/1`, and `OPR001`–`OPR002`. The closed
+semantic-mapped token inventory is matched by maximal munch against every
+C014–C018 atom; concrete C015 capability and delimiter-frame assignments
+make multiline parenthesized and bracketed contents soft and brace contents
+newline-separated; the fixed precedence ladder rejects comparison chains,
+places prefix `-` and `!` above the binary levels, and binds `|>`
+left-associatively as the loosest operator. Reserved symbol spellings are
+rejected transactionally and no recovery exists. Every predecessor API
+retains its exact 0.1.10 through 0.1.14 selection and default.
+
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
 choices and extensions, recommendation dispositions, bounded presentations,

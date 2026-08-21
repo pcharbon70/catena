@@ -47,11 +47,13 @@ detail view should require the programmer to know those intermediate names.
 flowchart TD
     JSON[Versioned JSON AST] --> Decoder[Catena.AST.Decoder]
     Kernel[Exact 0.1.8 S-expression] --> KParser[Catena.Kernel.Parser]
-    Source[0.1.9 through 0.1.13 source bytes] --> SourceText[Catena.SourceText]
+    Source[0.1.9 through 0.1.15 source bytes] --> SourceText[Catena.SourceText]
     SourceText --> Names[Standalone 0.1.10 names]
     Names --> Layout[0.1.11 lexer-event layout]
     Layout --> Comments[0.1.12 comment and documentation events]
     SourceText --> Literals[0.1.13 atomic literal scanner]
+    Literals --> Numeric[0.1.14 numeric elaborator]
+    Numeric --> Tokens[0.1.15 tokenizer and operator expressions]
     Selection[Catena.LanguageSelection] --> Decoder
     Decoder --> Infer[Catena.Type.Infer]
     Infer --> Data[Data and coverage evidence]
@@ -119,9 +121,10 @@ returns the unified core and 0.1.8 interface in metadata.
 
 `Catena.decode_source_text/2`, the standalone identifier APIs,
 `Catena.resolve_layout/2`, `Catena.scan_comment/2`,
-`Catena.resolve_comments/2`, `Catena.scan_literal/2`, and
-`Catena.elaborate_numeric_literal/2` expose the source-only
-0.1.9 through 0.1.14
+`Catena.resolve_comments/2`, `Catena.scan_literal/2`,
+`Catena.elaborate_numeric_literal/2`, `Catena.tokenize_source/2`, and
+`Catena.parse_operator_expression/1` expose the source-only
+0.1.9 through 0.1.15
 boundaries. Layout accepts opaque lexer-supplied events. Comment resolution
 also accepts parser-supplied declaration targets and returns a lossless stream
 plus documentation attachments. The literal API returns one decoded token and
