@@ -65,8 +65,24 @@ these forms.
 Integer results include their base, underscore-free digits, and exact
 nonnegative mathematical value. Decimal-float results expose underscore-free
 integral, fractional, and exponent components plus the exponent sign; the
-scanner does not choose a runtime float type or perform rounding. Those
-semantic choices remain later numeric-type work.
+scanner does not choose a runtime float type or perform rounding.
+
+## Numeric meaning (0.1.14)
+
+Revision 0.1.14 elaborates those components into typed values through
+`Catena.elaborate_numeric_literal/2`:
+
+- an integer literal denotes its exact mathematical `Int` value, with no
+  overflow;
+- a decimal literal denotes its exact rational value rounded once to the
+  nearest finite binary64 `Float`, with ties to even significands; subnormal
+  results and underflow to signed zero are valid, and a magnitude that
+  rounds beyond the largest finite value is refused statically as `NUM001`;
+- literals are monomorphic `Int` or `Float` with no defaulting, constraints,
+  or implicit coercions, so mixed integer/decimal operands are ill-typed
+  until explicit conversions exist;
+- numeric negation is a total sign flip that produces `-0.0` from `0.0`; and
+- `Int` values map to Erlang integers and `Float` values to Erlang floats.
 
 ## Diagnostics and limits
 
@@ -75,18 +91,23 @@ semantic choices remain later numeric-type work.
 | `LIT001` | invalid unit index or the selected position is not an atomic literal |
 | `LIT002` | an opened cooked or raw delimiter reaches end of input |
 | `LIT003` | malformed numeric spelling, escape, scalar, character arity, or byte content |
+| `NUM001` | a decimal literal rounds beyond the finite binary64 range |
 | `LIM002` | an integer exceeds 4,096 mathematical decimal digits |
 | `LIM004` | decoded text or byte payload exceeds 65,536 bytes |
+| `LIM005` | decimal component digits exceed 4,096 across integral, fraction, and exponent |
 
 Limit exhaustion and malformed input return no successful literal. All
 source-derived failures carry original-byte spans.
 
 ## Current boundary
 
-The exact 0.1.13 API does not scan a file, combine comment and layout events,
-parse compound literals, assign numeric runtime types, interpret text, emit an
-interface, or compile BEAM code. The retained JSON AST and exact 0.1.8 kernel
+The exact 0.1.13 scanner does not scan a file, combine comment and layout
+events, parse compound literals, or interpret text. The exact 0.1.14
+elaborator does not lex, parse, type-check programs, evaluate arithmetic, or
+emit an interface or BEAM code. The retained JSON AST and exact 0.1.8 kernel
 remain the compilation inputs.
 
-The normative contract is the research repository's
-[Literal Grammar Specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/literal-grammar).
+The normative contracts are the research repository's
+[Literal Grammar Specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/literal-grammar)
+and
+[Numeric Literal Semantics Specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/numeric-literal-semantics).

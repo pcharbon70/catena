@@ -18,8 +18,10 @@ source-language distribution:
   semantic-kernel S-expression for compilation, while 0.1.9 validates source
   bytes and locations, 0.1.10 validates standalone names, and 0.1.11 resolves
   layout over lexer-supplied events. Revision 0.1.12 scans comments and attaches
-  outer documentation over supplied events, and revision 0.1.13 scans one
-  atomic literal without yet tokenizing or parsing complete source files;
+  outer documentation over supplied events, revision 0.1.13 scans one
+  atomic literal, and revision 0.1.14 elaborates that literal's numeric
+  meaning as a typed `Int` or finite binary64 `Float` value, without yet
+  tokenizing or parsing complete source files;
 - snippets in this tour are illustrative notation unless a linked
   specification says that a particular form is fixed;
 - public parser punctuation and several ordinary language facilities
@@ -344,8 +346,15 @@ character, and byte literal spelling. Cooked forms use a closed escape set;
 raw text and bytes use arbitrary exact hash delimiters. The scanner preserves
 the original units and spans, exposes decoded provenance pieces, and keeps raw
 literal line breaks inside the token rather than sending them to layout. It
-does not choose numeric runtime types, interpolate text, parse collections, or
-scan a whole file. Read the [Literals guide](guides/language/literals.md).
+does not interpolate text, parse collections, or scan a whole file.
+
+Revision 0.1.14 gives those numeric tokens their meaning: integer literals
+are exact mathematical `Int` values, decimal literals are finite binary64
+`Float` values produced by one correctly rounded exact conversion, mixed
+integer/decimal operands are ill-typed without coercions, negation is a
+total sign flip that can produce `-0.0`, and a decimal beyond the largest
+finite magnitude is refused statically as `NUM001`. Read the
+[Literals guide](guides/language/literals.md).
 
 ## The executable formal kernel and typed actors
 
@@ -384,6 +393,8 @@ layout events 0.1.11 → lossless soft/separator/blank classification
 comment events 0.1.12 → nested scanning and outer documentation attachment
                        ↓
 atomic literal 0.1.13 → decoded payload and exact source provenance
+                       ↓
+numeric meaning 0.1.14 → typed Int and finite binary64 Float values
                        (stops before the future whole-source lexer/parser)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8

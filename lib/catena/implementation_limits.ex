@@ -32,6 +32,15 @@ defmodule Catena.ImplementationLimits do
       exhaustion: %{kind: :diagnostic, id: "LIM004"}
     },
     %{
+      id: :decimal_literal_component_digits,
+      classification: :implementation_limit,
+      unit: :decimal_digits,
+      portable_minimum: 4_096,
+      configured: 4_096,
+      applies_to: "decimal literal integral, fractional, and exponent digits",
+      exhaustion: %{kind: :diagnostic, id: "LIM005"}
+    },
+    %{
       id: :generated_beam_bytes,
       classification: :implementation_limit,
       unit: :bytes,
@@ -140,6 +149,17 @@ defmodule Catena.ImplementationLimits do
     end
   end
 
+  @spec validate_decimal_component_digits(non_neg_integer(), Catena.SourceSpan.t() | nil) ::
+          :ok | {:error, Diagnostic.t()}
+  def validate_decimal_component_digits(observed, span \\ nil)
+      when is_integer(observed) and observed >= 0 do
+    if observed <= configured(:decimal_literal_component_digits) do
+      :ok
+    else
+      {:error, limit_diagnostic(:decimal_literal_component_digits, observed, span: span)}
+    end
+  end
+
   @spec validate_source_arities(term()) :: :ok | {:error, Diagnostic.t()}
   def validate_source_arities(value) do
     observed = largest_source_arity(value, 0)
@@ -196,10 +216,20 @@ defmodule Catena.ImplementationLimits do
 
     default_message =
       case id do
-        :callable_arity -> "callable arity exceeds the published implementation limit"
-        :integer_literal_digits -> "integer literal exceeds the published digit limit"
-        :decoded_literal_bytes -> "decoded literal exceeds the published byte limit"
-        :generated_beam_bytes -> "generated BEAM module exceeds the published size limit"
+        :callable_arity ->
+          "callable arity exceeds the published implementation limit"
+
+        :integer_literal_digits ->
+          "integer literal exceeds the published digit limit"
+
+        :decoded_literal_bytes ->
+          "decoded literal exceeds the published byte limit"
+
+        :decimal_literal_component_digits ->
+          "decimal literal exceeds the published component-digit limit"
+
+        :generated_beam_bytes ->
+          "generated BEAM module exceeds the published size limit"
       end
 
     Diagnostic.new(diagnostic_id, Keyword.get(options, :message, default_message),

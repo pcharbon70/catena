@@ -68,6 +68,10 @@ may improve without changing the contract.
 | `SYN...` / `PRC...` | exact kernel syntax/limits and typed process boundaries |
 | `SRC...` | source encoding, BOM, and newline-envelope failures |
 | `IDN...` | identifier spelling, normalization, security, qualification, and confusables |
+| `LAY...` | layout whitespace, separator, and continuation failures |
+| `CMT...` / `DOC...` | comment and documentation scanning/attachment failures |
+| `LIT...` | atomic literal spelling, delimiter, and escape failures |
+| `NUM...` | numeric literal meaning failures such as unrepresentable decimals |
 | `LIM...` | portable source and generated-artifact limits |
 | `B...` | OTP rejecting generated Erlang Abstract Format |
 | `I...` | inference-independent core invariant failure |
@@ -145,6 +149,9 @@ and warnings in structured details.
 | `c015_traceability_coverage_test.exs` | complete `LY-OBL-*` whitespace-and-layout obligation coverage |
 | `c016_comments_documentation_test.exs` | comment scanning, nesting, spans, layout integration, documentation normalization, attachment, and diagnostics |
 | `c017_literal_grammar_test.exs` | atomic literal forms, decoding, provenance, line ownership, exact limits, exclusions, and diagnostics |
+| `c017_traceability_coverage_test.exs` | complete `LT-OBL-*` literal obligation coverage |
+| `c018_numeric_literal_semantics_test.exs` | numeric domains, monomorphic typing, correct rounding, subnormals, overflow invalidity, negation, and the `LIM005` boundary |
+| `c018_traceability_coverage_test.exs` | complete `NM-OBL-*` numeric obligation coverage |
 | `c016_traceability_coverage_test.exs` | complete `CM-OBL-*` comment and documentation obligation coverage |
 | `resumption_token_test.exs` | dynamic one-use continuation defense |
 

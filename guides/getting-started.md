@@ -20,7 +20,7 @@ The repository contains an Elixir bootstrap compiler that can:
 - scan normative 0.1.12 comments and attach outer documentation over lexer-
   and parser-supplied events;
 - scan one normative 0.1.13 atomic literal with exact decoded payload and
-  source provenance;
+  source provenance, then elaborate it as a typed 0.1.14 numeric meaning;
 - infer and check types, data, patterns, conditions, traits, effects, and
   typed specifications;
 - independently verify its typed core;
@@ -100,8 +100,9 @@ The 0.1.12 comment contract is available through `Catena.scan_comment/2` and
 `Catena.resolve_comments/2`, also without a whole-source command. See
 [Comments and Documentation Comments](language/comments-and-documentation-comments.md).
 
-The 0.1.13 literal contract is available through `Catena.scan_literal/2`, also
-without a whole-source command. See [Literals](language/literals.md).
+The 0.1.13 literal contract is available through `Catena.scan_literal/2` and
+the 0.1.14 numeric meaning through `Catena.elaborate_numeric_literal/2`,
+also without a whole-source command. See [Literals](language/literals.md).
 
 Inspect the compiler's current default, retained revisions, feature states,
 and migrations before compiling a package:
@@ -192,6 +193,7 @@ flowchart LR
     Names --> Layout[0.1.11 layout over lexer events]
     Layout --> Comments[0.1.12 comments and documentation events]
     Comments --> Literals[0.1.13 atomic literals]
+    Literals --> Numeric[0.1.14 numeric meanings]
     Comments -. lexer and parser not implemented .-> JSON[Versioned JSON AST]
     Kernel[Exact 0.1.8 kernel S-expression] --> KDecode[Kernel parser]
     JSON --> Decode[Strict decoding]

@@ -118,13 +118,15 @@ normative 0.1.8 boundary. Kernel compilation always uses its fixed layout and
 returns the unified core and 0.1.8 interface in metadata.
 
 `Catena.decode_source_text/2`, the standalone identifier APIs,
-`Catena.resolve_layout/2`, `Catena.scan_comment/2`, and
-`Catena.resolve_comments/2`, and `Catena.scan_literal/2` expose the source-only
-0.1.9 through 0.1.13
+`Catena.resolve_layout/2`, `Catena.scan_comment/2`,
+`Catena.resolve_comments/2`, `Catena.scan_literal/2`, and
+`Catena.elaborate_numeric_literal/2` expose the source-only
+0.1.9 through 0.1.14
 boundaries. Layout accepts opaque lexer-supplied events. Comment resolution
 also accepts parser-supplied declaration targets and returns a lossless stream
 plus documentation attachments. The literal API returns one decoded token and
-its source pieces; it deliberately does not compose a whole token stream.
+its source pieces, and the numeric API elaborates one scanned numeric token
+into its typed meaning; neither composes a whole token stream.
 These APIs do not feed the retained semantic compiler yet.
 
 ### CLI
