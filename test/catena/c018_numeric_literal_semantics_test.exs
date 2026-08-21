@@ -13,10 +13,10 @@ defmodule Catena.C018NumericLiteralSemanticsTest do
 
   @tag obligations: ~w(NM-OBL-001 NM-OBL-014)
   test "0.1.14 is an exact deterministic numeric-meaning revision" do
-    assert LanguageVersion.latest() == "0.1.14"
+    assert LanguageVersion.latest() == "0.1.15"
 
     assert LanguageVersion.source_text_frontend_versions() ==
-             ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14)
+             ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15)
 
     refute "0.1.14" in LanguageVersion.compilable_revisions()
     refute "0.1.14" in LanguageVersion.interface_versions()

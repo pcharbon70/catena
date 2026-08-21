@@ -72,6 +72,7 @@ may improve without changing the contract.
 | `CMT...` / `DOC...` | comment and documentation scanning/attachment failures |
 | `LIT...` | atomic literal spelling, delimiter, and escape failures |
 | `NUM...` | numeric literal meaning failures such as unrepresentable decimals |
+| `OPR...` | reserved operator spellings and invalid operator-expression forms |
 | `LIM...` | portable source and generated-artifact limits |
 | `B...` | OTP rejecting generated Erlang Abstract Format |
 | `I...` | inference-independent core invariant failure |
@@ -152,6 +153,8 @@ and warnings in structured details.
 | `c017_traceability_coverage_test.exs` | complete `LT-OBL-*` literal obligation coverage |
 | `c018_numeric_literal_semantics_test.exs` | numeric domains, monomorphic typing, correct rounding, subnormals, overflow invalidity, negation, and the `LIM005` boundary |
 | `c018_traceability_coverage_test.exs` | complete `NM-OBL-*` numeric obligation coverage |
+| `c019_operators_test.exs` | closed inventory, maximal munch, capabilities, frames, ladder, chains, pipes, exclusions, and determinism |
+| `c019_traceability_coverage_test.exs` | complete `OP-OBL-*` operator obligation coverage |
 | `c016_traceability_coverage_test.exs` | complete `CM-OBL-*` comment and documentation obligation coverage |
 | `resumption_token_test.exs` | dynamic one-use continuation defense |
 

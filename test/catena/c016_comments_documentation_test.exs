@@ -7,10 +7,10 @@ defmodule Catena.C016CommentsDocumentationTest do
 
   @tag obligations: ~w(CM-OBL-001 CM-OBL-011 CM-OBL-012)
   test "0.1.12 is a source-only comment revision with exact abstract frontends" do
-    assert LanguageVersion.latest() == "0.1.14"
+    assert LanguageVersion.latest() == "0.1.15"
 
     assert LanguageVersion.source_text_frontend_versions() ==
-             ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14)
+             ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15)
 
     refute "0.1.12" in LanguageVersion.compilable_revisions()
     refute "0.1.12" in LanguageVersion.interface_versions()
@@ -38,7 +38,7 @@ defmodule Catena.C016CommentsDocumentationTest do
             }} = Catena.scan_comment("// old", language_selection: selection("0.1.11"))
 
     assert {:ok, %{selection: %{language_revision: "0.1.11"}}} = Catena.resolve_layout([])
-    assert {:ok, %{selection: %{language_revision: "0.1.14"}}} = Catena.decode_source_text("")
+    assert {:ok, %{selection: %{language_revision: "0.1.15"}}} = Catena.decode_source_text("")
     assert {:error, _diagnostic} = Interface.decode(forged_interface())
 
     assert Catena.scan_comment("// deterministic") == Catena.scan_comment("// deterministic")

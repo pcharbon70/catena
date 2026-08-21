@@ -13,7 +13,9 @@ defmodule Catena do
   payload and exact source provenance without yet supplying a complete lexer
   or parser. Revision 0.1.14 elaborates scanned numeric literals into typed
   `Int` and finite binary64 `Float` values through one correctly rounded
-  conversion.
+  conversion. Revision 0.1.15 tokenizes complete source files into the
+  whole-source token stream and resolves operator expressions over the fixed
+  precedence ladder.
   """
 
   alias Catena.{AST.Decoder, Compiler}
@@ -64,6 +66,28 @@ defmodule Catena do
           {:ok, Catena.Numeric.Meaning.t()} | {:error, Catena.Diagnostic.t()}
   def elaborate_numeric_literal(numeric, options \\ []),
     do: Catena.Numeric.elaborate(numeric, options)
+
+  @doc """
+  Tokenizes one complete Catena source at exact revision 0.1.15.
+
+  Returns the lossless whole-source token stream of names, comments,
+  literals, and operator/punctuation tokens with original-byte spans,
+  continuation capabilities, and delimiter frame events, or one stable
+  diagnostic.
+  """
+  @spec tokenize_source(binary(), keyword()) ::
+          {:ok, Catena.Tokenizer.Result.t()} | {:error, Catena.Diagnostic.t()}
+  def tokenize_source(source, options \\ []), do: Catena.Tokenizer.tokenize(source, options)
+
+  @doc """
+  Resolves one token-stream region into an operator-expression tree.
+
+  Applies the fixed 0.1.15 precedence ladder and returns the tree or exactly
+  one stable diagnostic; no recovery or partial output exists.
+  """
+  @spec parse_operator_expression([Catena.Tokenizer.Token.t()]) ::
+          {:ok, Catena.Operator.Expression.t()} | {:error, Catena.Diagnostic.t()}
+  def parse_operator_expression(tokens), do: Catena.Operator.parse(tokens)
 
   @spec check_json(binary(), keyword()) :: {:ok, map()} | {:error, Catena.Diagnostic.t()}
   def check_json(json, options \\ []) do

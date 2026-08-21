@@ -102,6 +102,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "numeric-literal-semantics/numeric-types-and-literal-typing.md#numeric-types-and-literal-typing"
         )
+      ),
+      feature(
+        "operators-and-punctuation",
+        "0.1.15",
+        specification(
+          "operators-and-punctuation/token-inventory-and-maximal-munch.md#token-inventory-and-maximal-munch"
+        )
       )
     ]
   end
@@ -439,6 +446,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("numeric-literal-semantics"),
     do: ~w(static-meaning diagnostics)
 
+  defp affected_dimensions("operators-and-punctuation"),
+    do: ~w(source-acceptance static-meaning diagnostics)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -466,6 +476,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("numeric-literal-semantics"),
     do:
       "Select 0.1.14 to elaborate scanned numeric literals into typed Int and Float values; literal scanning remains exact 0.1.13 and persisted formats are unchanged."
+
+  defp migration("operators-and-punctuation"),
+    do:
+      "Select 0.1.15 to tokenize complete source files and resolve operator expressions; identifier, layout, comment, literal, and numeric APIs retain their exact selections and persisted formats are unchanged."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 

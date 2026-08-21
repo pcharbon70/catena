@@ -59,8 +59,11 @@ provenance, strict escapes, arbitrary raw delimiters, and published refusal
 limits. Normative C018 revision `0.1.14` elaborates scanned numeric literals
 into typed `Int` and finite binary64 `Float` values through one correctly
 rounded conversion, with `NUM001` static overflow invalidity and the `LIM005`
-decimal-component digit limit. Both remain atomic source-only APIs rather
-than a whole lexer or parser. The compiler release remains `0.1.0`.
+decimal-component digit limit. Normative C019 revision `0.1.15` tokenizes
+complete source files into the whole-source token stream and resolves
+operator expressions over a fixed precedence ladder with non-associative
+comparisons, reserved-spelling rejection, and no recovery. The atomic
+scanning APIs remain source-only, and the compiler release remains `0.1.0`.
 The bootstrap toolchain is written in
 Elixir 1.20.2 on Erlang/OTP 29.0.4 and targets only the BEAM VM. It does not
 reuse the historical proof-of-concept's compiler or language design.
@@ -81,6 +84,7 @@ To explore the language as a programmer, begin with the
 [Catena Language Tour](LANGUAGE-TOUR.md). It introduces the language model,
 shows how to validate source text and 0.1.10 names, resolve 0.1.11 layout,
 scan 0.1.12 comments and 0.1.13 literals, elaborate 0.1.14 numeric meanings,
+tokenize 0.1.15 operator expressions,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -104,7 +108,8 @@ normative C013 uses `0.1.9` for the source-text envelope. Normative C014 uses
 `0.1.11` for whitespace, separators, and line continuation. Normative C016
 uses `0.1.12` for comments and documentation comments. Normative C017 uses
 `0.1.13` for atomic literal grammar and decoding. Normative C018 uses
-`0.1.14` for numeric literal semantics.
+`0.1.14` for numeric literal semantics. Normative C019 uses `0.1.15` for
+operators and punctuation.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -133,7 +138,8 @@ flowchart LR
     LY --> CM[Comments and documentation attachment 0.1.12]
     CM --> LT[Atomic literal scanner 0.1.13]
     LT --> NM[Numeric literal meaning 0.1.14]
-    NM --> STOP[Literal meanings, events, attachments, and diagnostics]
+    NM --> OP[Whole-source tokenizer and operator expressions 0.1.15]
+    OP --> STOP[Token stream, expression trees, and diagnostics]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
@@ -171,8 +177,9 @@ without defining the lexer or parser. Revision 0.1.12 scans one comment at a
 lexer-supplied position and resolves comments against parser-supplied
 declaration targets without supplying either whole-source phase. Revision
 0.1.13 scans one atomic literal at a logical-unit position and 0.1.14
-elaborates one scanned numeric token into its typed meaning, but neither
-composes a whole-file token stream. The backend does not emit
+elaborates one scanned numeric token into its typed meaning; 0.1.15 composes
+the whole-file token stream and resolves operator expressions but claims no
+declaration grammar, name resolution, typing, or evaluation. The backend does not emit
 Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
 
@@ -320,7 +327,12 @@ include:
   `LIM002`, and `LIM004` refusals; and
 - a 0.1.14 numeric elaborator with exact mathematical `Int` values, correctly
   rounded finite binary64 `Float` values, total negation, `NUM001` overflow
-  invalidity, and the `LIM005` decimal-component digit limit.
+  invalidity, and the `LIM005` decimal-component digit limit; and
+- a 0.1.15 whole-source tokenizer and operator-expression layer with the
+  closed semantic-mapped inventory, maximal munch, concrete C015 capability
+  and frame assignments, the fixed ladder with rejected comparison chains,
+  the left-associative `|>` pipe, `OPR001`–`OPR002`, and transactional
+  rejection without recovery.
 
 This is not yet an ergonomic Catena source lexer or parser or a complete implementation of resource
 scopes, exception boundaries, general host-effect entry policy, scoped or

@@ -19,9 +19,10 @@ source-language distribution:
   bytes and locations, 0.1.10 validates standalone names, and 0.1.11 resolves
   layout over lexer-supplied events. Revision 0.1.12 scans comments and attaches
   outer documentation over supplied events, revision 0.1.13 scans one
-  atomic literal, and revision 0.1.14 elaborates that literal's numeric
-  meaning as a typed `Int` or finite binary64 `Float` value, without yet
-  tokenizing or parsing complete source files;
+  atomic literal, revision 0.1.14 elaborates that literal's numeric
+  meaning as a typed `Int` or finite binary64 `Float` value, and revision
+  0.1.15 tokenizes complete source files and resolves operator expressions,
+  without yet fixing declaration grammar or name resolution;
 - snippets in this tour are illustrative notation unless a linked
   specification says that a particular form is fixed;
 - public parser punctuation and several ordinary language facilities
@@ -356,6 +357,16 @@ total sign flip that can produce `-0.0`, and a decimal beyond the largest
 finite magnitude is refused statically as `NUM001`. Read the
 [Literals guide](guides/language/literals.md).
 
+Revision 0.1.15 supplies the operators and punctuation: a closed
+semantic-mapped inventory (`+ - *`, comparisons and equalities, `! && ||`,
+`-> |> . , ; ( ) [ ] { }`) matched by maximal munch, concrete continuation
+capabilities and delimiter frames for 0.1.11 layout, and one fixed
+precedence ladder. Comparisons and equalities do not chain — `a < b < c` is
+rejected — prefix `-` and `!` bind tightest, and `|>` is the loosest,
+left-associative pipe applying its right operand to its left. Reserved
+spellings such as `/` and `=` are rejected as `OPR001`, invalid forms as
+`OPR002`, and no recovery or partial output exists.
+
 ## The executable formal kernel and typed actors
 
 Normative revision 0.1.8 integrates the executable portions of the earlier
@@ -395,7 +406,9 @@ comment events 0.1.12 → nested scanning and outer documentation attachment
 atomic literal 0.1.13 → decoded payload and exact source provenance
                        ↓
 numeric meaning 0.1.14 → typed Int and finite binary64 Float values
-                       (stops before the future whole-source lexer/parser)
+                       ↓
+operators 0.1.15 → whole-source token stream and operator-expression trees
+                       (stops before the future declaration grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓
