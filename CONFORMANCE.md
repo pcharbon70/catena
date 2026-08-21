@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.13` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.13`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.14` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.14`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -79,6 +79,15 @@ provenance. It adds `Catena.Literal`, `Catena.scan_literal/2`, `LIT001`–`LIT00
 and activates `LIM004`. It does not extend the retained JSON, kernel,
 interface, artifact, or signed-format sets and does not claim a whole lexer,
 parser, or runtime literal integration.
+
+Normative C018 uses `0.1.14` for numeric literal semantics. It adds
+`Catena.Numeric`, `Catena.elaborate_numeric_literal/2`, `NUM001`, and
+activates `LIM005`. Integer literals elaborate to exact mathematical `Int`
+values; decimal literals elaborate to finite binary64 `Float` values through
+one correctly rounded exact conversion, with static invalidity for decimals
+that round beyond the largest finite magnitude. Literal scanning stays pinned
+to exact `0.1.13`, and this source-only revision does not widen the retained
+JSON, kernel, interface, artifact, or signed-format sets.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
@@ -157,6 +166,7 @@ behavior.
 | Source callable arity | 253 explicit arguments | Portable implementation limit: `LIM001`. Effectful kernel workers may add two hidden arguments and reach OTP arity 255. |
 | Integer literal magnitude | 4,096 decimal digits, excluding a leading minus sign | Portable implementation limit: `LIM002` |
 | Decoded text or byte literal payload | 65,536 bytes | Portable implementation limit: `LIM004` |
+| Decimal literal component digits | 4,096 digits across integral, fractional, and exponent components | Portable implementation limit: `LIM005` |
 | Generated BEAM module | 1,048,576 bytes per module | Portable implementation limit: `LIM003` |
 | Pattern usefulness and coverage | 20,000 analysis steps | Implementation limit: `M004` |
 | Condition normalization and transitive inlining | 20,000 nodes/steps | Implementation limit: `CND007` |

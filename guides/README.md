@@ -5,9 +5,10 @@ protocol, and the bootstrap compiler. They complement rather than replace the
 [normative language specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification).
 
 Catena does not yet have an ergonomic source lexer or parser. Revisions 0.1.9
-through 0.1.13 provide the strict source envelope, standalone Unicode name
-rules, layout classification, abstract comment/documentation pipeline, and
-atomic literal scanner that later stages will consume. Code in a
+through 0.1.14 provide the strict source envelope, standalone Unicode name
+rules, layout classification, abstract comment/documentation pipeline,
+atomic literal scanner, and numeric literal meaning that later stages will
+consume. Code in a
 `catena` fence is **illustrative source notation**: it teaches the selected
 language meaning but does not freeze punctuation or every keyword. Commands,
 JSON-AST examples, and the separately identified exact 0.1.8 kernel
@@ -70,7 +71,8 @@ flowchart TD
    — scan slash comments, classify nested comment line breaks, and attach
    normalized outer documentation at revision 0.1.12.
 7. [Literals](language/literals.md) — scan Boolean, numeric, text, character,
-   and byte literals with exact decoding and provenance at revision 0.1.13.
+   and byte literals with exact decoding and provenance at revision 0.1.13,
+   then elaborate numeric meanings at revision 0.1.14.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -179,8 +181,9 @@ could also appear in the compiler.
 | 0.1.11 | non-semantic indentation, hard separators, abstract continuation, and lossless layout events |
 | 0.1.12 | slash comments, nested block comments, layout integration, and outer documentation attachment |
 | 0.1.13 | atomic Boolean, numeric, text, character, and byte literal spelling, decoding, and provenance |
+| 0.1.14 | numeric literal meaning: monomorphic `Int` and finite binary64 `Float`, correct rounding, static overflow invalidity, negation |
 
-Versions 0.1.1 through 0.1.13 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.14 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

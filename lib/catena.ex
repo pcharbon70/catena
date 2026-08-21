@@ -11,7 +11,9 @@ defmodule Catena do
   comments and attaches outer documentation comments to parser-supplied
   declaration targets. Revision 0.1.13 scans one atomic literal with decoded
   payload and exact source provenance without yet supplying a complete lexer
-  or parser.
+  or parser. Revision 0.1.14 elaborates scanned numeric literals into typed
+  `Int` and finite binary64 `Float` values through one correctly rounded
+  conversion.
   """
 
   alias Catena.{AST.Decoder, Compiler}
@@ -50,6 +52,18 @@ defmodule Catena do
   @spec scan_literal(binary(), keyword()) ::
           {:ok, Catena.Literal.ScanResult.t()} | {:error, Catena.Diagnostic.t()}
   def scan_literal(source, options \\ []), do: Catena.Literal.scan(source, options)
+
+  @doc """
+  Elaborates one scanned numeric literal at exact revision 0.1.14.
+
+  Accepts the exact `Catena.Literal.Numeric` components of one scanned token
+  and returns its typed meaning, or one stable diagnostic. Numeric unary
+  negation is available through `Catena.Numeric.negate/1`.
+  """
+  @spec elaborate_numeric_literal(Catena.Literal.Numeric.t(), keyword()) ::
+          {:ok, Catena.Numeric.Meaning.t()} | {:error, Catena.Diagnostic.t()}
+  def elaborate_numeric_literal(numeric, options \\ []),
+    do: Catena.Numeric.elaborate(numeric, options)
 
   @spec check_json(binary(), keyword()) :: {:ok, map()} | {:error, Catena.Diagnostic.t()}
   def check_json(json, options \\ []) do

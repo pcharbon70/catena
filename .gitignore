@@ -3,3 +3,6 @@
 /catena
 *.beam
 .elixir_ls/
+
+# Erlang crash dumps from local verification runs
+erl_crash.dump

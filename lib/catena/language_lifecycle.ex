@@ -95,6 +95,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "literal-grammar/literal-forms-and-boundaries.md#literal-forms-and-boundaries"
         )
+      ),
+      feature(
+        "numeric-literal-semantics",
+        "0.1.14",
+        specification(
+          "numeric-literal-semantics/numeric-types-and-literal-typing.md#numeric-types-and-literal-typing"
+        )
       )
     ]
   end
@@ -429,6 +436,9 @@ defmodule Catena.LanguageLifecycle do
 
   defp affected_dimensions("literal-grammar"), do: ~w(source-acceptance diagnostics)
 
+  defp affected_dimensions("numeric-literal-semantics"),
+    do: ~w(static-meaning diagnostics)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -452,6 +462,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("literal-grammar"),
     do:
       "Select 0.1.13 to scan one atomic literal with exact decoded payload and source provenance; retained full-language frontends and persisted formats are unchanged."
+
+  defp migration("numeric-literal-semantics"),
+    do:
+      "Select 0.1.14 to elaborate scanned numeric literals into typed Int and Float values; literal scanning remains exact 0.1.13 and persisted formats are unchanged."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 
