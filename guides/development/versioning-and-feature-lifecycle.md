@@ -55,9 +55,9 @@ selection. `Catena.LanguageLifecycle` owns immutable feature IDs, state
 history, compatibility changes, diagnostic IDs, and structured migration
 edits. `Catena.LanguageInfo` exposes both registries without mutation.
 
-The executable registry currently ends at normative `0.1.17`. The JSON frontend
+The executable registry currently ends at normative `0.1.18`. The JSON frontend
 remains closed at `0.1.7`; `Catena.Kernel.Parser` alone accepts exact `0.1.8`
-S-expressions; `Catena.SourceText` accepts `0.1.9` through cumulative `0.1.17`
+S-expressions; `Catena.SourceText` accepts `0.1.9` through cumulative `0.1.18`
 source bytes; the 0.1.10 identifier frontend validates standalone names; and
 the exact 0.1.11 layout frontend classifies lexer-supplied token events. The
 exact 0.1.12 comment frontend scans comments and attaches documentation over
@@ -69,7 +69,10 @@ resolves operator expressions over the fixed ladder; and the exact 0.1.16
 files-and-modules frontend resolves file units against filenames,
 declaration events, and generated markers; and the exact 0.1.17
 namespaces-and-shadowing frontend builds environments from scope events
-and resolves references with deterministic precedence. None of these source-only frontends emits an
+and resolves references with deterministic precedence; and the exact
+0.1.18 imports-and-exports frontend validates exports and imports
+against digest-bound export sets and reports unused-import warnings.
+None of these source-only frontends emits an
 interface or compiled artifact. A future
 candidate may be selectable for evidence runs without making its research
 chapters normative; promotion still requires its separately recorded
@@ -153,6 +156,11 @@ Normative 0.1.17 enables no previews. Its namespaces-and-shadowing feature
 is a source-only environment and resolution boundary and does not make the
 exact kernel, retained JSON, interface, artifact, or signed-format
 frontends accept 0.1.17.
+
+Normative 0.1.18 enables no previews. Its imports-and-exports feature is
+a source-only validation and analysis boundary and does not make the exact
+kernel, retained JSON, interface, artifact, or signed-format frontends
+accept 0.1.18.
 
 When a real preview is added, compute `required_previews` from exported
 semantics. The enabled set alone is not the dependency contract. Validate

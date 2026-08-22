@@ -27,6 +27,8 @@ The repository contains an Elixir bootstrap compiler that can:
   verified, with first-line generated markers;
 - build a namespace environment at 0.1.17 and resolve names with
   local-over-imported precedence;
+- validate imports against digest-bound export sets at 0.1.18 and report
+  unused admissions as deny-able warnings;
 - infer and check types, data, patterns, conditions, traits, effects, and
   typed specifications;
 - independently verify its typed core;
@@ -111,7 +113,8 @@ the 0.1.14 numeric meaning through `Catena.elaborate_numeric_literal/2`,
 the 0.1.15 token stream through `Catena.tokenize_source/2` and
 `Catena.parse_operator_expression/1`, the 0.1.16 file unit through
 `Catena.resolve_file_unit/4`, 0.1.17 names through
-`Catena.build_namespace_environment/2` and `Catena.resolve_name/2`,
+`Catena.build_namespace_environment/2` and `Catena.resolve_name/2`, 0.1.18
+imports through `Catena.check_unused_imports/2`,
 also without a whole-source command. See [Literals](language/literals.md).
 
 Inspect the compiler's current default, retained revisions, feature states,
@@ -207,6 +210,7 @@ flowchart LR
     Numeric --> Operators[0.1.15 tokens and operator expressions]
     Operators --> Files[0.1.16 file units]
     Files --> Names[0.1.17 namespaces]
+    Names --> Imports[0.1.18 imports and exports]
     Comments -. lexer and parser not implemented .-> JSON[Versioned JSON AST]
     Kernel[Exact 0.1.8 kernel S-expression] --> KDecode[Kernel parser]
     JSON --> Decode[Strict decoding]

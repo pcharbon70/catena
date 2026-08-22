@@ -56,6 +56,7 @@ flowchart TD
     Numeric --> Tokens[0.1.15 tokenizer and operator expressions]
     Tokens --> FileUnits[0.1.16 file-unit resolver]
     FileUnits --> Names[0.1.17 namespace resolver]
+    Names --> Imports[0.1.18 import/export validation]
     Selection[Catena.LanguageSelection] --> Decoder
     Decoder --> Infer[Catena.Type.Infer]
     Infer --> Data[Data and coverage evidence]
@@ -127,9 +128,10 @@ returns the unified core and 0.1.8 interface in metadata.
 `Catena.elaborate_numeric_literal/2`, `Catena.tokenize_source/2`, and
 `Catena.parse_operator_expression/1`, and
 `Catena.resolve_file_unit/4`,
-`Catena.build_namespace_environment/2`, and `Catena.resolve_name/2`
+`Catena.build_namespace_environment/2`,
+`Catena.resolve_name/2`, and `Catena.check_unused_imports/2`
 expose the source-only
-0.1.9 through 0.1.17
+0.1.9 through 0.1.18
 boundaries. Layout accepts opaque lexer-supplied events. Comment resolution
 also accepts parser-supplied declaration targets and returns a lossless stream
 plus documentation attachments. The literal API returns one decoded token and

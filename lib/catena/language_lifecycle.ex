@@ -4,7 +4,7 @@ defmodule Catena.LanguageLifecycle do
   alias Catena.{Diagnostic, LanguageSelection, LanguageVersion}
 
   @states ~w(preview stable withdrawn deprecated removed)
-  @warning_ids ~w(DEP001 EDN002 IDN007)
+  @warning_ids ~w(DEP001 EDN002 IDN007 IMP001)
   @classifications ~w(breaking compatible-addition compatible-correction)
   @dimensions ~w(source-acceptance static-meaning dynamic-behavior diagnostics interfaces artifacts)
   @identifier ~r/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
@@ -122,6 +122,13 @@ defmodule Catena.LanguageLifecycle do
         "0.1.17",
         specification(
           "namespaces-and-shadowing/namespace-inventory-and-spelling.md#namespace-inventory-and-spelling"
+        )
+      ),
+      feature(
+        "imports-and-exports",
+        "0.1.18",
+        specification(
+          "imports-and-exports/export-declarations-and-visibility.md#export-declarations-and-visibility"
         )
       )
     ]
@@ -469,6 +476,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("namespaces-and-shadowing"),
     do: ~w(static-meaning diagnostics)
 
+  defp affected_dimensions("imports-and-exports"),
+    do: ~w(static-meaning diagnostics)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -508,6 +518,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("namespaces-and-shadowing"),
     do:
       "Select 0.1.17 to build namespace environments from scope events and resolve references with local-over-imported precedence; import syntax remains future work and persisted formats are unchanged."
+
+  defp migration("imports-and-exports"),
+    do:
+      "Select 0.1.18 to validate exports and imports against digest-bound export sets and report deny-able unused-import warnings; the concrete use/export punctuation remains future grammar work and persisted formats are unchanged."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 

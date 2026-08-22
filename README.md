@@ -68,8 +68,12 @@ basename verification, first-line generated markers, and `FIL001`–`FIL005`.
 Normative C021 revision `0.1.17` resolves names through per-category
 namespaces with spelling classes, deterministic silent shadowing,
 type-variable scoping, and local-over-imported precedence with
-`NSP001`–`NSP005`. The atomic scanning APIs remain source-only, and the
-compiler release remains `0.1.0`.
+`NSP001`–`NSP005`. Normative C022 revision `0.1.18` validates imports
+against digest-bound export sets with private-by-default exports,
+explicit-list admission, declared exclusions, deny-able `IMP001`
+unused-import warnings, and `IMP002`–`IMP003`/`EXP001` rejections. The
+atomic scanning APIs remain source-only, and the compiler release remains
+`0.1.0`.
 The bootstrap toolchain is written in
 Elixir 1.20.2 on Erlang/OTP 29.0.4 and targets only the BEAM VM. It does not
 reuse the historical proof-of-concept's compiler or language design.
@@ -91,7 +95,7 @@ To explore the language as a programmer, begin with the
 shows how to validate source text and 0.1.10 names, resolve 0.1.11 layout,
 scan 0.1.12 comments and 0.1.13 literals, elaborate 0.1.14 numeric meanings,
 tokenize 0.1.15 operator expressions, resolve 0.1.16 file units, resolve
-names through 0.1.17 namespaces,
+names through 0.1.17 namespaces, validate 0.1.18 imports and exports,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -118,7 +122,7 @@ uses `0.1.12` for comments and documentation comments. Normative C017 uses
 `0.1.14` for numeric literal semantics. Normative C019 uses `0.1.15` for
 operators and punctuation. Normative C020 uses `0.1.16` for the
 file-to-module relationship. Normative C021 uses `0.1.17` for namespaces
-and shadowing.
+and shadowing. Normative C022 uses `0.1.18` for imports and exports.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -150,7 +154,8 @@ flowchart LR
     NM --> OP[Whole-source tokenizer and operator expressions 0.1.15]
     OP --> FU[File-unit resolution 0.1.16]
     FU --> NS[Namespace resolution 0.1.17]
-    NS --> STOP[File units, token streams, trees, identities, and diagnostics]
+    NS --> IM[Import and export validation 0.1.18]
+    IM --> STOP[Identities, boundaries, warnings, and diagnostics]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
@@ -193,8 +198,9 @@ the whole-file token stream and resolves operator expressions, and 0.1.16
 binds each `.cat` file to at most one declared module by name with
 first-line generated markers, and 0.1.17 resolves names through
 per-category namespaces with deterministic shadowing and
-local-over-imported precedence, but claims no
-declaration grammar, import syntax, typing, or evaluation. The backend does not emit
+local-over-imported precedence, while 0.1.18 validates imports against
+digest-bound export sets, but claims no
+declaration grammar, import punctuation, typing, or evaluation. The backend does not emit
 Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
 
@@ -357,7 +363,13 @@ include:
   innermost-wins shadowing, quantifier-scoped type variables,
   local-over-imported precedence with order-independent `NSP004`
   ambiguity rejection, governed-identity separation, two-segment
-  qualification, and `NSP001`–`NSP005` transactional rejection.
+  qualification, and `NSP001`–`NSP005` transactional rejection; and
+- a 0.1.18 import/export layer with private-by-default export events and
+  type transparency modes, provided-module export sets, import admission
+  through qualification plus explicit possibly-empty name lists, the
+  declared exclusion of wildcards, hiding, renaming, aliases, and
+  re-exports, `EXP001`/`IMP002`/`IMP003` validation, and the deny-able
+  `IMP001` unused-import analysis.
 
 This is not yet an ergonomic Catena source lexer or parser or a complete implementation of resource
 scopes, exception boundaries, general host-effect entry policy, scoped or
