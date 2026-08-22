@@ -51,8 +51,9 @@ admits deeper qualification with evidence.
 
 `Catena.build_namespace_environment/2` consumes scope events
 (declarations, scope boundaries, import sets) and
-`Catena.resolve_name/2` resolves references. Import and export syntax,
-visibility defaults, and the prelude remain future work; the resolver
+`Catena.resolve_name/2` resolves references. Export and import admission
+arrive at revision 0.1.18 (see [Imports](imports.md)); the prelude
+remains future work; the resolver
 does not parse source, tokenize, type-check, evaluate, or emit artifacts.
 
 The normative contract is the research repository's

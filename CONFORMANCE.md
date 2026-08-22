@@ -123,6 +123,17 @@ qualified reference is exactly two segments. Import syntax remains future
 work, and every predecessor API retains its exact 0.1.10 through 0.1.16
 selection and default.
 
+Normative C022 uses `0.1.18` for imports and exports. The namespace
+environment builder consumes export events (categories, spelling classes,
+and type transparency modes), provided-module events carrying
+digest-bound export sets, and import-module events admitting
+qualification plus an explicit possibly-empty unqualified name list. It
+adds `EXP001` for exports of undeclared names, `IMP002`/`IMP003` for
+invalid imports, the declared exclusions of wildcards, hiding, renaming,
+aliases, and re-exports, and `Catena.Namespace.check_unused_imports/2`
+whose deny-able `IMP001` warnings never affect acceptance. The concrete
+`use`/`export` punctuation remains future grammar work.
+
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
 choices and extensions, recommendation dispositions, bounded presentations,

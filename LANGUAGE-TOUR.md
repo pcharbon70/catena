@@ -22,8 +22,9 @@ source-language distribution:
   atomic literal, revision 0.1.14 elaborates that literal's numeric
   meaning as a typed `Int` or finite binary64 `Float` value, revision
   0.1.15 tokenizes complete source files and resolves operator expressions,
-  and revision 0.1.16 binds `.cat` files to at most one declared module,
-  all before declaration grammar or import syntax is fixed;
+  revision 0.1.16 binds `.cat` files to at most one declared module, and
+  revision 0.1.18 validates imports against digest-bound export sets, all
+  before declaration grammar or import punctuation is fixed;
 - snippets in this tour are illustrative notation unless a linked
   specification says that a particular form is fixed;
 - public parser punctuation and several ordinary language facilities
@@ -385,6 +386,14 @@ spelling are `NSP004` with both origins named until you qualify
 `Module.member`. Governed specification identities never resolve as
 program names.
 
+Revision 0.1.18 closes the module boundary: nothing is exported without an
+explicit export declaration (types choose transparent or abstract), an
+import admits a module for `Module.member` qualification against its
+digest-bound export set plus an explicit possibly-empty list of names
+admitted unqualified (the empty list is qualified-only), wildcards,
+renaming, and re-exports are excluded, and unused admissions surface as
+deny-able `IMP001` warnings.
+
 ## The executable formal kernel and typed actors
 
 Normative revision 0.1.8 integrates the executable portions of the earlier
@@ -430,6 +439,8 @@ operators 0.1.15 → whole-source token stream and operator-expression trees
 file units 0.1.16 → one module per .cat file, verified by basename
                        ↓
 namespaces 0.1.17 → per-category identities with deterministic precedence
+                       ↓
+imports 0.1.18 → export sets, admission lists, unused-import warnings
                        (stops before the future declaration grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8

@@ -17,7 +17,10 @@ defmodule Catena do
   whole-source token stream and resolves operator expressions over the fixed
   precedence ladder. Revision 0.1.16 binds `.cat` files to at most one
   declared module with basename verification and first-line generated
-  markers.
+  markers. Revision 0.1.17 resolves names through per-category namespaces
+  with deterministic shadowing and local-over-imported precedence, and
+  revision 0.1.18 validates imports against digest-bound export sets with
+  deny-able unused-import warnings.
   """
 
   alias Catena.{AST.Decoder, Compiler}
@@ -119,6 +122,16 @@ defmodule Catena do
   @spec resolve_name(Catena.Namespace.Environment.t(), map()) ::
           {:ok, Catena.Namespace.Resolution.t()} | {:error, Catena.Diagnostic.t()}
   def resolve_name(environment, reference), do: Catena.Namespace.resolve(environment, reference)
+
+  @doc """
+  Analyzes unused imports over a built namespace environment and a
+  reference set at exact revision 0.1.18, returning deny-able warnings
+  only.
+  """
+  @spec check_unused_imports(Catena.Namespace.Environment.t(), [map()]) ::
+          {:ok, [Catena.Namespace.ImportWarning.t()]}
+  def check_unused_imports(environment, references),
+    do: Catena.Namespace.check_unused_imports(environment, references)
 
   @spec check_json(binary(), keyword()) :: {:ok, map()} | {:error, Catena.Diagnostic.t()}
   def check_json(json, options \\ []) do
