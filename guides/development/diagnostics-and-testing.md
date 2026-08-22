@@ -74,6 +74,7 @@ may improve without changing the contract.
 | `NUM...` | numeric literal meaning failures such as unrepresentable decimals |
 | `OPR...` | reserved operator spellings and invalid operator-expression forms |
 | `FIL...` | file-unit failures: extension, module multiplicity, name spelling, basename mismatch, and generated markers |
+| `NSP...` | namespace failures: duplicates, spelling-class violations, unbound or ambiguous references, and qualification depth |
 | `LIM...` | portable source and generated-artifact limits |
 | `B...` | OTP rejecting generated Erlang Abstract Format |
 | `I...` | inference-independent core invariant failure |
@@ -158,6 +159,8 @@ and warnings in structured details.
 | `c019_traceability_coverage_test.exs` | complete `OP-OBL-*` operator obligation coverage |
 | `c020_file_unit_test.exs` | file units, extension, multiplicity, spelling, basename match, markers, and diagnostics |
 | `c020_traceability_coverage_test.exs` | complete `FU-OBL-*` file-unit obligation coverage |
+| `c021_namespaces_test.exs` | namespace categories, spelling classes, duplicates, shadowing, type variables, precedence, and ambiguity |
+| `c021_traceability_coverage_test.exs` | complete `NS-OBL-*` namespace obligation coverage |
 | `c016_traceability_coverage_test.exs` | complete `CM-OBL-*` comment and documentation obligation coverage |
 | `resumption_token_test.exs` | dynamic one-use continuation defense |
 

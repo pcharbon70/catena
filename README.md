@@ -65,8 +65,11 @@ operator expressions over a fixed precedence ladder with non-associative
 comparisons, reserved-spelling rejection, and no recovery. Normative C020
 revision `0.1.16` binds `.cat` files to at most one declared module with
 basename verification, first-line generated markers, and `FIL001`–`FIL005`.
-The atomic scanning APIs remain source-only, and the compiler release
-remains `0.1.0`.
+Normative C021 revision `0.1.17` resolves names through per-category
+namespaces with spelling classes, deterministic silent shadowing,
+type-variable scoping, and local-over-imported precedence with
+`NSP001`–`NSP005`. The atomic scanning APIs remain source-only, and the
+compiler release remains `0.1.0`.
 The bootstrap toolchain is written in
 Elixir 1.20.2 on Erlang/OTP 29.0.4 and targets only the BEAM VM. It does not
 reuse the historical proof-of-concept's compiler or language design.
@@ -87,7 +90,8 @@ To explore the language as a programmer, begin with the
 [Catena Language Tour](LANGUAGE-TOUR.md). It introduces the language model,
 shows how to validate source text and 0.1.10 names, resolve 0.1.11 layout,
 scan 0.1.12 comments and 0.1.13 literals, elaborate 0.1.14 numeric meanings,
-tokenize 0.1.15 operator expressions, resolve 0.1.16 file units,
+tokenize 0.1.15 operator expressions, resolve 0.1.16 file units, resolve
+names through 0.1.17 namespaces,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -113,7 +117,8 @@ uses `0.1.12` for comments and documentation comments. Normative C017 uses
 `0.1.13` for atomic literal grammar and decoding. Normative C018 uses
 `0.1.14` for numeric literal semantics. Normative C019 uses `0.1.15` for
 operators and punctuation. Normative C020 uses `0.1.16` for the
-file-to-module relationship.
+file-to-module relationship. Normative C021 uses `0.1.17` for namespaces
+and shadowing.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -144,7 +149,8 @@ flowchart LR
     LT --> NM[Numeric literal meaning 0.1.14]
     NM --> OP[Whole-source tokenizer and operator expressions 0.1.15]
     OP --> FU[File-unit resolution 0.1.16]
-    FU --> STOP[File units, token streams, expression trees, and diagnostics]
+    FU --> NS[Namespace resolution 0.1.17]
+    NS --> STOP[File units, token streams, trees, identities, and diagnostics]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
@@ -185,8 +191,10 @@ declaration targets without supplying either whole-source phase. Revision
 elaborates one scanned numeric token into its typed meaning; 0.1.15 composes
 the whole-file token stream and resolves operator expressions, and 0.1.16
 binds each `.cat` file to at most one declared module by name with
-first-line generated markers, but claims no
-declaration grammar, name resolution, typing, or evaluation. The backend does not emit
+first-line generated markers, and 0.1.17 resolves names through
+per-category namespaces with deterministic shadowing and
+local-over-imported precedence, but claims no
+declaration grammar, import syntax, typing, or evaluation. The backend does not emit
 Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
 
@@ -343,7 +351,13 @@ include:
 - a 0.1.16 file-unit resolver requiring the `.cat` extension, at most one
   module declaration with ASCII uppercase-initial spelling and basename
   verification, valid no-module files, exact first-line generated markers
-  with tool identifiers, and `FIL001`–`FIL005` transactional rejection.
+  with tool identifiers, and `FIL001`–`FIL005` transactional rejection; and
+- a 0.1.17 namespace resolver with per-category namespaces under the hard
+  spelling-class partition, flat constructor uniqueness, silent
+  innermost-wins shadowing, quantifier-scoped type variables,
+  local-over-imported precedence with order-independent `NSP004`
+  ambiguity rejection, governed-identity separation, two-segment
+  qualification, and `NSP001`–`NSP005` transactional rejection.
 
 This is not yet an ergonomic Catena source lexer or parser or a complete implementation of resource
 scopes, exception boundaries, general host-effect entry policy, scoped or

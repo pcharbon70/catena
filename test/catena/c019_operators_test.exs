@@ -6,10 +6,10 @@ defmodule Catena.C019OperatorsTest do
 
   @tag obligations: ~w(OP-OBL-001 OP-OBL-016)
   test "0.1.15 is an exact deterministic source-structure revision with predecessors pinned" do
-    assert LanguageVersion.latest() == "0.1.16"
+    assert LanguageVersion.latest() == "0.1.17"
 
     assert LanguageVersion.source_text_frontend_versions() ==
-             ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16)
+             ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17)
 
     refute "0.1.15" in LanguageVersion.compilable_revisions()
     refute "0.1.15" in LanguageVersion.interface_versions()

@@ -116,6 +116,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "files-and-modules/file-units-and-module-binding.md#file-units-and-module-binding"
         )
+      ),
+      feature(
+        "namespaces-and-shadowing",
+        "0.1.17",
+        specification(
+          "namespaces-and-shadowing/namespace-inventory-and-spelling.md#namespace-inventory-and-spelling"
+        )
       )
     ]
   end
@@ -459,6 +466,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("files-and-modules"),
     do: ~w(source-acceptance diagnostics)
 
+  defp affected_dimensions("namespaces-and-shadowing"),
+    do: ~w(static-meaning diagnostics)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -494,6 +504,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("files-and-modules"),
     do:
       "Select 0.1.16 to resolve one .cat file unit against its filename, module-declaration events, and generated marker; the concrete header syntax remains future grammar work and persisted formats are unchanged."
+
+  defp migration("namespaces-and-shadowing"),
+    do:
+      "Select 0.1.17 to build namespace environments from scope events and resolve references with local-over-imported precedence; import syntax remains future work and persisted formats are unchanged."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 

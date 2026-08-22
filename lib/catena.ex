@@ -103,6 +103,23 @@ defmodule Catena do
   def resolve_file_unit(source, filename, module_declarations, options \\ []),
     do: Catena.FileUnit.resolve(source, filename, module_declarations, options)
 
+  @doc """
+  Builds one namespace environment from a scope-event stream at exact
+  revision 0.1.17.
+  """
+  @spec build_namespace_environment([map() | atom()], keyword()) ::
+          {:ok, Catena.Namespace.Environment.t()} | {:error, Catena.Diagnostic.t()}
+  def build_namespace_environment(events, options \\ []),
+    do: Catena.Namespace.build_environment(events, options)
+
+  @doc """
+  Resolves one reference against a namespace environment at exact revision
+  0.1.17, returning its nominal identity or one stable diagnostic.
+  """
+  @spec resolve_name(Catena.Namespace.Environment.t(), map()) ::
+          {:ok, Catena.Namespace.Resolution.t()} | {:error, Catena.Diagnostic.t()}
+  def resolve_name(environment, reference), do: Catena.Namespace.resolve(environment, reference)
+
   @spec check_json(binary(), keyword()) :: {:ok, map()} | {:error, Catena.Diagnostic.t()}
   def check_json(json, options \\ []) do
     with {:ok, ast} <- Decoder.decode(json, options) do
