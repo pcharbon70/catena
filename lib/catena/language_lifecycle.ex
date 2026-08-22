@@ -109,6 +109,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "operators-and-punctuation/token-inventory-and-maximal-munch.md#token-inventory-and-maximal-munch"
         )
+      ),
+      feature(
+        "files-and-modules",
+        "0.1.16",
+        specification(
+          "files-and-modules/file-units-and-module-binding.md#file-units-and-module-binding"
+        )
       )
     ]
   end
@@ -449,6 +456,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("operators-and-punctuation"),
     do: ~w(source-acceptance static-meaning diagnostics)
 
+  defp affected_dimensions("files-and-modules"),
+    do: ~w(source-acceptance diagnostics)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -480,6 +490,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("operators-and-punctuation"),
     do:
       "Select 0.1.15 to tokenize complete source files and resolve operator expressions; identifier, layout, comment, literal, and numeric APIs retain their exact selections and persisted formats are unchanged."
+
+  defp migration("files-and-modules"),
+    do:
+      "Select 0.1.16 to resolve one .cat file unit against its filename, module-declaration events, and generated marker; the concrete header syntax remains future grammar work and persisted formats are unchanged."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 

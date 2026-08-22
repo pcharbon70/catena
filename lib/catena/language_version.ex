@@ -24,12 +24,13 @@ defmodule Catena.LanguageVersion do
     comments_and_documentation_comments: "0.1.12",
     literal_grammar: "0.1.13",
     numeric_literal_semantics: "0.1.14",
-    operators_and_punctuation: "0.1.15"
+    operators_and_punctuation: "0.1.15",
+    files_and_modules: "0.1.16"
   ]
   @ordered Keyword.values(@versions)
   @json_frontends ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7)
   @kernel_frontends ~w(0.1.8)
-  @source_text_frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15)
+  @source_text_frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16)
   @compilable @json_frontends ++ @kernel_frontends
   @interfaces ~w(0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8)
   @signed_formats ~w(0.1.6 0.1.7 0.1.8)
@@ -52,6 +53,7 @@ defmodule Catena.LanguageVersion do
           | :literal_grammar
           | :numeric_literal_semantics
           | :operators_and_punctuation
+          | :files_and_modules
 
   @spec all() :: [String.t()]
   def all, do: @ordered

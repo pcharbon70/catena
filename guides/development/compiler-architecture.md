@@ -54,6 +54,7 @@ flowchart TD
     SourceText --> Literals[0.1.13 atomic literal scanner]
     Literals --> Numeric[0.1.14 numeric elaborator]
     Numeric --> Tokens[0.1.15 tokenizer and operator expressions]
+    Tokens --> FileUnits[0.1.16 file-unit resolver]
     Selection[Catena.LanguageSelection] --> Decoder
     Decoder --> Infer[Catena.Type.Infer]
     Infer --> Data[Data and coverage evidence]
@@ -123,8 +124,9 @@ returns the unified core and 0.1.8 interface in metadata.
 `Catena.resolve_layout/2`, `Catena.scan_comment/2`,
 `Catena.resolve_comments/2`, `Catena.scan_literal/2`,
 `Catena.elaborate_numeric_literal/2`, `Catena.tokenize_source/2`, and
-`Catena.parse_operator_expression/1` expose the source-only
-0.1.9 through 0.1.15
+`Catena.parse_operator_expression/1`, and
+`Catena.resolve_file_unit/4` expose the source-only
+0.1.9 through 0.1.16
 boundaries. Layout accepts opaque lexer-supplied events. Comment resolution
 also accepts parser-supplied declaration targets and returns a lossless stream
 plus documentation attachments. The literal API returns one decoded token and
