@@ -73,6 +73,7 @@ may improve without changing the contract.
 | `LIT...` | atomic literal spelling, delimiter, and escape failures |
 | `NUM...` | numeric literal meaning failures such as unrepresentable decimals |
 | `OPR...` | reserved operator spellings and invalid operator-expression forms |
+| `FIL...` | file-unit failures: extension, module multiplicity, name spelling, basename mismatch, and generated markers |
 | `LIM...` | portable source and generated-artifact limits |
 | `B...` | OTP rejecting generated Erlang Abstract Format |
 | `I...` | inference-independent core invariant failure |
@@ -155,6 +156,8 @@ and warnings in structured details.
 | `c018_traceability_coverage_test.exs` | complete `NM-OBL-*` numeric obligation coverage |
 | `c019_operators_test.exs` | closed inventory, maximal munch, capabilities, frames, ladder, chains, pipes, exclusions, and determinism |
 | `c019_traceability_coverage_test.exs` | complete `OP-OBL-*` operator obligation coverage |
+| `c020_file_unit_test.exs` | file units, extension, multiplicity, spelling, basename match, markers, and diagnostics |
+| `c020_traceability_coverage_test.exs` | complete `FU-OBL-*` file-unit obligation coverage |
 | `c016_traceability_coverage_test.exs` | complete `CM-OBL-*` comment and documentation obligation coverage |
 | `resumption_token_test.exs` | dynamic one-use continuation defense |
 

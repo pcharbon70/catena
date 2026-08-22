@@ -15,7 +15,9 @@ defmodule Catena do
   `Int` and finite binary64 `Float` values through one correctly rounded
   conversion. Revision 0.1.15 tokenizes complete source files into the
   whole-source token stream and resolves operator expressions over the fixed
-  precedence ladder.
+  precedence ladder. Revision 0.1.16 binds `.cat` files to at most one
+  declared module with basename verification and first-line generated
+  markers.
   """
 
   alias Catena.{AST.Decoder, Compiler}
@@ -88,6 +90,18 @@ defmodule Catena do
   @spec parse_operator_expression([Catena.Tokenizer.Token.t()]) ::
           {:ok, Catena.Operator.Expression.t()} | {:error, Catena.Diagnostic.t()}
   def parse_operator_expression(tokens), do: Catena.Operator.parse(tokens)
+
+  @doc """
+  Resolves one `.cat` file unit at exact revision 0.1.16.
+
+  Accepts source bytes, a filename, and parser-supplied module-declaration
+  events, and returns the file unit — module or no-module, declared name,
+  generated flag, and tool identifier — or one stable diagnostic.
+  """
+  @spec resolve_file_unit(binary(), binary(), [Catena.FileUnit.ModuleDeclaration.t()], keyword()) ::
+          {:ok, Catena.FileUnit.Result.t()} | {:error, Catena.Diagnostic.t()}
+  def resolve_file_unit(source, filename, module_declarations, options \\ []),
+    do: Catena.FileUnit.resolve(source, filename, module_declarations, options)
 
   @spec check_json(binary(), keyword()) :: {:ok, map()} | {:error, Catena.Diagnostic.t()}
   def check_json(json, options \\ []) do
