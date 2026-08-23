@@ -130,6 +130,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "imports-and-exports/export-declarations-and-visibility.md#export-declarations-and-visibility"
         )
+      ),
+      feature(
+        "abstraction-boundaries",
+        "0.1.19",
+        specification(
+          "abstraction-boundaries/authority-and-representation-exclusions.md#authority-and-representation-exclusions"
+        )
       )
     ]
   end
@@ -479,6 +486,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("imports-and-exports"),
     do: ~w(static-meaning diagnostics)
 
+  defp affected_dimensions("abstraction-boundaries"),
+    do: ~w(static-meaning diagnostics)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -522,6 +532,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("imports-and-exports"),
     do:
       "Select 0.1.18 to validate exports and imports against digest-bound export sets and report deny-able unused-import warnings; the concrete use/export punctuation remains future grammar work and persisted formats are unchanged."
+
+  defp migration("abstraction-boundaries"),
+    do:
+      "Select 0.1.19 for the abstraction boundary: the transparent/abstract pair is the complete authority vocabulary, no stable-layout form exists, and abstract types with validating constructors are the sanctioned invariant idiom; nothing about accepted input changes."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 

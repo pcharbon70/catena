@@ -241,7 +241,8 @@ defmodule Catena.Namespace do
         spelling = Map.fetch!(event, :spelling)
         transparency = Map.get(event, :transparency)
 
-        with :ok <- require_program_category(category),
+        with :ok <- reject_extra_keys(event, [:event, :category, :spelling, :transparency]),
+             :ok <- require_program_category(category),
              :ok <- check_spelling_class(category, spelling),
              :ok <- check_transparency(category, transparency),
              :ok <- check_exported_declaration(scopes, category, spelling),

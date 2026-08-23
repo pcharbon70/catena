@@ -63,8 +63,10 @@ diagnostic work.
 ## Current boundary
 
 Exports and imports are validated as abstract declaration events over
-provided module interfaces; the concrete `use`/`export` punctuation, the
-prelude, module cycles, and package assembly remain future work. The
+provided module interfaces; the transparency pair's completeness and the
+stable-layout exclusion are confirmed at revision 0.1.19 (see
+[Abstraction](abstraction.md)); the concrete `use`/`export` punctuation,
+the prelude, module cycles, and package assembly remain future work. The
 resolver does not parse source, tokenize, type-check, evaluate, or emit
 interfaces or BEAM.
 
