@@ -23,8 +23,9 @@ source-language distribution:
   meaning as a typed `Int` or finite binary64 `Float` value, revision
   0.1.15 tokenizes complete source files and resolves operator expressions,
   revision 0.1.16 binds `.cat` files to at most one declared module, and
-  revision 0.1.18 validates imports against digest-bound export sets, and
-  revision 0.1.19 fixes the abstraction boundary, all before declaration
+  revision 0.1.18 validates imports against digest-bound export sets,
+  revision 0.1.19 fixes the abstraction boundary, and revision 0.1.20
+  compiles dependency cycles as components, all before declaration
   grammar or import punctuation is fixed;
 - snippets in this tour are illustrative notation unless a linked
   specification says that a particular form is fixed;
@@ -404,6 +405,17 @@ abstract, export a validating constructor returning a typed failure
 clients cover abstract scrutinees with a wildcard. Selective exposure and
 views stay future work owned by the views and data-model gaps.
 
+Revision 0.1.20 admits module dependency cycles: each
+strongly-connected component is one checking and caching unit. Inside a
+component, references resolve against companions' declared signatures —
+no digests circulate — and presenting a digest for a companion or
+exporting an unsigned name is `CYC001`. Across components, imports stay
+digest-bound exactly as before, and the whole component gets one joint
+digest, invariant to member order. Modules contribute definitions only,
+so loading per component is the whole initialization story. When a cycle
+is convenience rather than mutual definition, invert the dependency:
+pass the collaborator as a function value.
+
 ## The executable formal kernel and typed actors
 
 Normative revision 0.1.8 integrates the executable portions of the earlier
@@ -453,6 +465,8 @@ namespaces 0.1.17 → per-category identities with deterministic precedence
 imports 0.1.18 → export sets, admission lists, unused-import warnings
                        ↓
 abstraction 0.1.19 → no stable layout, binary authority, invariant idiom
+                       ↓
+cycles 0.1.20 → SCC units, signature regimes, joint digests
                        (stops before the future declaration grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8

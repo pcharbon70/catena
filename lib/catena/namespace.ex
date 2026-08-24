@@ -1,32 +1,45 @@
 defmodule Catena.Namespace do
   @moduledoc """
   The source-only Catena 0.1.17 namespace resolver extended at 0.1.18
-  with imports and exports.
+  with imports and exports and at 0.1.20 with module dependency cycles.
 
   An ordered scope-event stream (declarations, scope boundaries, import
   sets, and at 0.1.18 export, provided-module, and import-module events)
   is resolved into one environment, and references resolve to nominal
-  identities or exactly one stable diagnostic. Unused-import analysis
+  identities or exactly one stable diagnostic. At 0.1.20 the stream may
+  describe a module import graph with cycles: provide-module events carry
+  optional dependency and declared-signature lists, an optional
+  current-module identity attaches import edges to the consumer, the
+  graph partitions into strongly-connected components, intra-component
+  imports must be digest-free, and component members must cover their
+  exports with declared signatures (`CYC001`). Unused-import analysis
   returns deny-able `IMP001` warnings only. It does not parse source,
   tokenize, check types, evaluate, or compile.
   """
 
   alias Catena.{Diagnostic, LanguageSelection, LanguageVersion}
 
-  @namespace_revision "0.1.18"
+  @namespace_revision "0.1.20"
 
   defmodule Environment do
     @moduledoc "One resolved scope-event stream."
 
-    @enforce_keys [:scopes, :imports, :exports, :provided, :module_imports]
+    @enforce_keys [:scopes, :imports, :exports, :provided, :module_imports, :sccs]
     defstruct @enforce_keys
 
     @type t :: %__MODULE__{
             scopes: [%{optional({atom(), String.t()}) => String.t()}],
             imports: %{{atom(), String.t()} => [String.t()]},
             exports: [{atom(), String.t(), atom() | nil}],
-            provided: %{optional(String.t()) => %{digest: String.t(), exports: MapSet.t()}},
-            module_imports: [map()]
+            provided: %{
+              optional(String.t()) => %{
+                digest: String.t(),
+                exports: MapSet.t(),
+                signatures: MapSet.t()
+              }
+            },
+            module_imports: [map()],
+            sccs: %{optional(String.t()) => [String.t()]}
           }
   end
 
@@ -74,8 +87,11 @@ defmodule Catena.Namespace do
           {:ok, Environment.t()} | {:error, Diagnostic.t()}
   def build_environment(events, options \\ [])
       when is_list(events) and is_list(options) do
-    with {:ok, _selection} <- resolve_selection(Keyword.get(options, :language_selection)) do
-      build(events, [%{}], %{}, [], %{}, [], 0)
+    current_module = Keyword.get(options, :current_module)
+
+    with {:ok, _selection} <- resolve_selection(Keyword.get(options, :language_selection)),
+         :ok <- validate_current_module(current_module) do
+      build(events, [%{}], %{}, [], %{}, [], %{}, [], current_module, 0)
     end
   end
 
@@ -176,27 +192,79 @@ defmodule Catena.Namespace do
      )}
   end
 
-  defp build([], scopes, imports, exports, provided, module_imports, _depth),
-    do:
+  defp build(
+         [],
+         scopes,
+         imports,
+         exports,
+         provided,
+         module_imports,
+         graph,
+         import_edges,
+         current_module,
+         _depth
+       ) do
+    nodes = graph_nodes(graph, provided, current_module)
+    sccs = strongly_connected_components(nodes, graph)
+    member_of = component_membership(sccs)
+
+    with :ok <- check_regime_mixing(import_edges, member_of),
+         :ok <- check_signature_gaps(provided, sccs, graph) do
       {:ok,
        %Environment{
          scopes: scopes,
          imports: imports,
          exports: exports,
          provided: provided,
-         module_imports: module_imports
+         module_imports: module_imports,
+         sccs: sccs
        }}
+    end
+  end
 
-  defp build([event | rest], scopes, imports, exports, provided, module_imports, depth)
+  defp build(
+         [event | rest],
+         scopes,
+         imports,
+         exports,
+         provided,
+         module_imports,
+         graph,
+         import_edges,
+         current_module,
+         depth
+       )
        when event in @scope_events do
     case event do
       :open_scope ->
-        build(rest, [%{} | scopes], imports, exports, provided, module_imports, depth + 1)
+        build(
+          rest,
+          [%{} | scopes],
+          imports,
+          exports,
+          provided,
+          module_imports,
+          graph,
+          import_edges,
+          current_module,
+          depth + 1
+        )
 
       :close_scope ->
         case scopes do
           [_current | outer] when outer != [] ->
-            build(rest, outer, imports, exports, provided, module_imports, depth - 1)
+            build(
+              rest,
+              outer,
+              imports,
+              exports,
+              provided,
+              module_imports,
+              graph,
+              import_edges,
+              current_module,
+              depth - 1
+            )
 
           [_only] ->
             {:error,
@@ -213,7 +281,18 @@ defmodule Catena.Namespace do
     end
   end
 
-  defp build([event | rest], scopes, imports, exports, provided, module_imports, depth)
+  defp build(
+         [event | rest],
+         scopes,
+         imports,
+         exports,
+         provided,
+         module_imports,
+         graph,
+         import_edges,
+         current_module,
+         depth
+       )
        when is_map(event) do
     case Map.get(event, :event) do
       :declare ->
@@ -232,6 +311,9 @@ defmodule Catena.Namespace do
             exports,
             provided,
             module_imports,
+            graph,
+            import_edges,
+            current_module,
             depth
           )
         end
@@ -254,6 +336,9 @@ defmodule Catena.Namespace do
             [{category, spelling, transparency} | exports],
             provided,
             module_imports,
+            graph,
+            import_edges,
+            current_module,
             depth
           )
         end
@@ -262,10 +347,43 @@ defmodule Catena.Namespace do
         module = Map.fetch!(event, :module)
         digest = Map.get(event, :digest, "")
         export_list = Map.get(event, :exports, [])
+        dependencies = Map.get(event, :dependencies, [])
+        signature_list = Map.get(event, :signatures, [])
 
-        with {:ok, export_set} <- normalize_provided_exports(export_list) do
-          provided = Map.put(provided, module, %{digest: digest, exports: export_set})
-          build(rest, scopes, imports, exports, provided, module_imports, depth)
+        with :ok <-
+               reject_extra_keys(event, [
+                 :event,
+                 :module,
+                 :digest,
+                 :exports,
+                 :dependencies,
+                 :signatures
+               ]),
+             {:ok, signature_set} <- normalize_signatures(signature_list),
+             {:ok, dependency_edges} <- normalize_dependencies(dependencies),
+             {:ok, export_set} <- normalize_provided_exports(export_list) do
+          provided =
+            Map.put(provided, module, %{
+              digest: digest,
+              exports: export_set,
+              signatures: signature_set
+            })
+
+          graph =
+            Enum.reduce(dependency_edges, graph, fn dep, acc -> add_edge(acc, module, dep) end)
+
+          build(
+            rest,
+            scopes,
+            imports,
+            exports,
+            provided,
+            module_imports,
+            graph,
+            import_edges,
+            current_module,
+            depth
+          )
         end
 
       :import_module ->
@@ -293,7 +411,27 @@ defmodule Catena.Namespace do
             admitted: validated
           }
 
-          build(rest, scopes, imports, exports, provided, [admission | module_imports], depth)
+          graph =
+            if current_module do
+              add_edge(graph, current_module, module)
+            else
+              graph
+            end
+
+          import_edges = [%{from: current_module, to: module, digest: digest} | import_edges]
+
+          build(
+            rest,
+            scopes,
+            imports,
+            exports,
+            provided,
+            [admission | module_imports],
+            graph,
+            import_edges,
+            current_module,
+            depth
+          )
         end
 
       @import_event ->
@@ -306,7 +444,18 @@ defmodule Catena.Namespace do
             Enum.uniq(existing ++ names)
           end)
 
-        build(rest, scopes, imports, exports, provided, module_imports, depth)
+        build(
+          rest,
+          scopes,
+          imports,
+          exports,
+          provided,
+          module_imports,
+          graph,
+          import_edges,
+          current_module,
+          depth
+        )
 
       nil ->
         {:error,
@@ -315,7 +464,18 @@ defmodule Catena.Namespace do
          )}
 
       other when other in @scope_events ->
-        build([other | rest], scopes, imports, exports, provided, module_imports, depth)
+        build(
+          [other | rest],
+          scopes,
+          imports,
+          exports,
+          provided,
+          module_imports,
+          graph,
+          import_edges,
+          current_module,
+          depth
+        )
 
       other ->
         {:error,
@@ -325,7 +485,18 @@ defmodule Catena.Namespace do
     end
   end
 
-  defp build([event | _], _scopes, _imports, _exports, _provided, _module_imports, _depth) do
+  defp build(
+         [event | _],
+         _scopes,
+         _imports,
+         _exports,
+         _provided,
+         _module_imports,
+         _graph,
+         _import_edges,
+         _current_module,
+         _depth
+       ) do
     {:error,
      Diagnostic.new("NSP001", "a scope event must be a map",
        details: %{reason: "invalid_event", event: inspect(event)}
@@ -525,6 +696,200 @@ defmodule Catena.Namespace do
     else
       :ok
     end
+  end
+
+  defp validate_current_module(nil), do: :ok
+
+  defp validate_current_module(module) when is_binary(module) and module != "",
+    do: :ok
+
+  defp validate_current_module(_),
+    do:
+      {:error,
+       Diagnostic.new("NSP001", "the current module identity must be a module name",
+         details: %{reason: "invalid_current_module"}
+       )}
+
+  defp normalize_signatures(signature_list) do
+    if is_list(signature_list) and
+         Enum.all?(signature_list, fn
+           {category, spelling} when is_atom(category) and is_binary(spelling) ->
+             true
+
+           %{category: category, spelling: spelling}
+           when is_atom(category) and is_binary(spelling) ->
+             true
+
+           _ ->
+             false
+         end) do
+      set =
+        MapSet.new(signature_list, fn
+          {category, spelling} -> {category, spelling}
+          %{category: category, spelling: spelling} -> {category, spelling}
+        end)
+
+      {:ok, set}
+    else
+      {:error,
+       Diagnostic.new("NSP001", "declared signatures must be category and spelling pairs",
+         details: %{reason: "invalid_event"}
+       )}
+    end
+  end
+
+  defp normalize_dependencies(dependencies) do
+    if is_list(dependencies) and Enum.all?(dependencies, &is_binary/1) do
+      {:ok, dependencies}
+    else
+      {:error,
+       Diagnostic.new("NSP001", "module dependencies must be a list of module names",
+         details: %{reason: "invalid_event"}
+       )}
+    end
+  end
+
+  defp add_edge(graph, from, to),
+    do: Map.update(graph, from, MapSet.new([to]), &MapSet.put(&1, to))
+
+  defp graph_nodes(graph, provided, current_module) do
+    nodes =
+      graph
+      |> Enum.flat_map(fn {from, tos} -> [from | MapSet.to_list(tos)] end)
+      |> MapSet.new()
+
+    nodes =
+      MapSet.union(nodes, MapSet.new(Map.keys(provided)))
+
+    if current_module, do: MapSet.put(nodes, current_module), else: nodes
+  end
+
+  defp strongly_connected_components(nodes, graph) do
+    reach = Map.new(nodes, fn node -> {node, reachable_from(node, graph)} end)
+
+    nodes
+    |> Enum.reduce({%{}, MapSet.new()}, fn node, {components, assigned} ->
+      if MapSet.member?(assigned, node) do
+        {components, assigned}
+      else
+        members =
+          nodes
+          |> Enum.filter(fn other ->
+            other != node and
+              MapSet.member?(reach[node], other) and
+              MapSet.member?(reach[other], node)
+          end)
+          |> Kernel.++([node])
+          |> Enum.sort()
+
+        Enum.reduce(members, {Map.put(components, List.first(members), members), assigned}, fn
+          member, {comps, seen} -> {comps, MapSet.put(seen, member)}
+        end)
+      end
+    end)
+    |> elem(0)
+  end
+
+  defp reachable_from(node, graph) do
+    do_reachable(MapSet.new([node]), graph, [node])
+  end
+
+  defp do_reachable(visited, _graph, []), do: visited
+
+  defp do_reachable(visited, graph, [node | rest]) do
+    next =
+      graph
+      |> Map.get(node, MapSet.new())
+      |> MapSet.to_list()
+      |> Enum.reject(&MapSet.member?(visited, &1))
+
+    do_reachable(MapSet.union(visited, MapSet.new(next)), graph, next ++ rest)
+  end
+
+  defp component_membership(sccs) do
+    Enum.flat_map(sccs, fn {_key, members} -> Enum.map(members, &{&1, members}) end)
+    |> Map.new()
+  end
+
+  defp check_regime_mixing(import_edges, member_of) do
+    import_edges
+    |> Enum.reverse()
+    |> Enum.find_value(:ok, fn %{from: from, to: to, digest: digest} ->
+      companions =
+        case {from, Map.fetch(member_of, to)} do
+          {nil, _} -> nil
+          {_, {:ok, members}} -> members
+          _ -> nil
+        end
+
+      cond do
+        from == nil ->
+          nil
+
+        companions != nil and from in companions and digest not in ["", nil] ->
+          {:error, cycle_error("regime_mixing", %{from: from, to: to, digest: digest})}
+
+        true ->
+          nil
+      end
+    end)
+  end
+
+  defp check_signature_gaps(provided, sccs, graph) do
+    cyclic_components =
+      sccs
+      |> Enum.filter(fn {_key, members} ->
+        length(members) > 1 or self_loop?(members, graph)
+      end)
+
+    cyclic_components
+    |> Enum.flat_map(fn {_key, members} -> members end)
+    |> Enum.sort()
+    |> Enum.find_value(:ok, fn module ->
+      meta = Map.get(provided, module)
+
+      if meta == nil do
+        nil
+      else
+        missing =
+          Enum.find(meta.exports, fn {category, spelling} ->
+            not MapSet.member?(meta.signatures, {category, spelling})
+          end)
+
+        case missing do
+          nil ->
+            nil
+
+          {category, spelling} ->
+            {:error,
+             cycle_error("signature_gap", %{
+               module: module,
+               category: category,
+               spelling: spelling
+             })}
+        end
+      end
+    end)
+  end
+
+  defp self_loop?([member], graph) do
+    graph
+    |> Map.get(member, MapSet.new())
+    |> MapSet.member?(member)
+  end
+
+  defp self_loop?(_members, _graph), do: false
+
+  defp cycle_error(reason, details) do
+    Diagnostic.new(
+      "CYC001",
+      "an SCC-internal violation: " <>
+        case reason do
+          "regime_mixing" -> "a digest-bound import presented for a component companion"
+          "signature_gap" -> "a component member exports a name without a declared signature"
+        end,
+      details: Map.merge(%{reason: reason}, details)
+    )
   end
 
   defp check_transparency(:types, mode) when mode in [nil, :transparent, :abstract], do: :ok

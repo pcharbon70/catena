@@ -20,7 +20,9 @@ defmodule Catena do
   markers. Revision 0.1.17 resolves names through per-category namespaces
   with deterministic shadowing and local-over-imported precedence, and
   revision 0.1.18 validates imports against digest-bound export sets with
-  deny-able unused-import warnings.
+  deny-able unused-import warnings. Revision 0.1.19 fixes the abstraction
+  boundary, and revision 0.1.20 compiles module dependency cycles as
+  strongly-connected components with joint digests.
   """
 
   alias Catena.{AST.Decoder, Compiler}
@@ -132,6 +134,20 @@ defmodule Catena do
           {:ok, [Catena.Namespace.ImportWarning.t()]}
   def check_unused_imports(environment, references),
     do: Catena.Namespace.check_unused_imports(environment, references)
+
+  @doc """
+  Compiles one strongly-connected component of mutually dependent modules
+  at exact revision 0.1.20.
+
+  Every member is checked and compiled against its companions' declared
+  provisional interfaces and outside digest-bound interfaces; the component
+  yields its members' binaries and interfaces plus one deterministic joint
+  digest, or exactly one diagnostic.
+  """
+  @spec compile_scc([binary()], keyword()) ::
+          {:ok, Catena.Scc.Result.t()} | {:error, Catena.Diagnostic.t()}
+  def compile_scc(sources, options \\ []),
+    do: Catena.Scc.compile(sources, options)
 
   @spec check_json(binary(), keyword()) :: {:ok, map()} | {:error, Catena.Diagnostic.t()}
   def check_json(json, options \\ []) do

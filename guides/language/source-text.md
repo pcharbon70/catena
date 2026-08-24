@@ -15,7 +15,7 @@ mix escript.build
 ```
 
 Successful output is a deterministic JSON object containing edition `0.1`,
-the selected source-capable revision (`0.1.19` by default), and byte,
+the selected source-capable revision (`0.1.20` by default), and byte,
 logical-scalar, and logical-newline counts.
 No `.beam` or `.cati.json` file is created.
 

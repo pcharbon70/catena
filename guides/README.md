@@ -5,7 +5,7 @@ protocol, and the bootstrap compiler. They complement rather than replace the
 [normative language specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification).
 
 Catena does not yet have an ergonomic source lexer or parser. Revisions 0.1.9
-through 0.1.19 provide the strict source envelope, standalone Unicode name
+through 0.1.20 provide the strict source envelope, standalone Unicode name
 rules, layout classification, abstract comment/documentation pipeline,
 atomic literal scanner, and numeric literal meaning that later stages will
 consume. Code in a
@@ -88,6 +88,9 @@ flowchart TD
 12. [Abstraction](language/abstraction.md) — confirm the binary authority
    vocabulary, the stable-layout exclusion, and the smart-constructor
    invariant idiom at revision 0.1.19.
+13. [Module Cycles](language/module-cycles.md) — compile dependency cycles
+   as strongly-connected components with signature regimes and joint
+   digests at revision 0.1.20.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -202,8 +205,9 @@ could also appear in the compiler.
 | 0.1.17 | namespaces: per-category namespaces with spelling classes, silent shadowing, type variables, local-over-imported precedence |
 | 0.1.18 | imports and exports: private-by-default exports with transparency modes, qualification-plus-list admission, declared exclusions, `IMP001` warnings |
 | 0.1.19 | abstraction boundaries: binary authority vocabulary, no stable layout, smart-constructor invariant idiom |
+| 0.1.20 | module dependency cycles: SCC admission, signature regimes, joint digests, inversion alternative |
 
-Versions 0.1.1 through 0.1.19 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.20 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

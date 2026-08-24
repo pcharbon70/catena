@@ -65,8 +65,10 @@ diagnostic work.
 Exports and imports are validated as abstract declaration events over
 provided module interfaces; the transparency pair's completeness and the
 stable-layout exclusion are confirmed at revision 0.1.19 (see
-[Abstraction](abstraction.md)); the concrete `use`/`export` punctuation,
-the prelude, module cycles, and package assembly remain future work. The
+[Abstraction](abstraction.md)); cyclic imports across a component are
+admitted at revision 0.1.20 (see
+[Module Cycles](module-cycles.md)); the concrete `use`/`export`
+punctuation, the prelude, and package assembly remain future work. The
 resolver does not parse source, tokenize, type-check, evaluate, or emit
 interfaces or BEAM.
 

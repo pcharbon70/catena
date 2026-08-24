@@ -55,9 +55,9 @@ selection. `Catena.LanguageLifecycle` owns immutable feature IDs, state
 history, compatibility changes, diagnostic IDs, and structured migration
 edits. `Catena.LanguageInfo` exposes both registries without mutation.
 
-The executable registry currently ends at normative `0.1.19`. The JSON frontend
+The executable registry currently ends at normative `0.1.20`. The JSON frontend
 remains closed at `0.1.7`; `Catena.Kernel.Parser` alone accepts exact `0.1.8`
-S-expressions; `Catena.SourceText` accepts `0.1.9` through cumulative `0.1.19`
+S-expressions; `Catena.SourceText` accepts `0.1.9` through cumulative `0.1.20`
 source bytes; the 0.1.10 identifier frontend validates standalone names; and
 the exact 0.1.11 layout frontend classifies lexer-supplied token events. The
 exact 0.1.12 comment frontend scans comments and attaches documentation over
@@ -73,7 +73,9 @@ and resolves references with deterministic precedence; and the exact
 0.1.18 imports-and-exports frontend validates exports and imports
 against digest-bound export sets and reports unused-import warnings; and
 the exact 0.1.19 abstraction-boundaries corpus proves the authority and
-representation exclusions over the same paths.
+representation exclusions over the same paths; and the exact 0.1.20
+module-dependency-cycles layer groups SCCs in the environment builder
+and compiles whole components with joint digests.
 None of these source-only frontends emits an
 interface or compiled artifact. A future
 candidate may be selectable for evidence runs without making its research
@@ -168,6 +170,11 @@ Normative 0.1.19 enables no previews. Its abstraction-boundaries feature
 is a source-only exclusion and idiom corpus that changes no accepted
 input and does not make the exact kernel, retained JSON, interface,
 artifact, or signed-format frontends accept 0.1.19.
+
+Normative 0.1.20 enables no previews. Its module-dependency-cycles
+feature admits cyclic event graphs and compiles components with joint
+digests; member interfaces remain ordinary digest-bound interfaces and
+no kernel, retained-JSON, artifact, or signed-format version changes.
 
 When a real preview is added, compute `required_previews` from exported
 semantics. The enabled set alone is not the dependency contract. Validate
