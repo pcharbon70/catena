@@ -97,6 +97,9 @@ flowchart TD
 15. [Prelude](language/prelude.md) — select a prelude, understand its
    ordinary precedence and the zero-implicit-names guarantee at revision
    0.1.22.
+16. [Entry Points](language/entry-points.md) — declare effect-closed
+   entries, derive libraries, and launch an entry whose returned value is
+   the shutdown result at revision 0.1.23.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -214,8 +217,9 @@ could also appear in the compiler.
 | 0.1.20 | module dependency cycles: SCC admission, signature regimes, joint digests, inversion alternative |
 | 0.1.21 | packages: manifest dependencies, SemVer exact/caret/tilde, single-version resolution, `catena.lock`, bundle digests |
 | 0.1.22 | prelude: opt-in manifest selection, ordinary-origin precedence, absent/null opt-out, zero-implicit-names guarantee |
+| 0.1.23 | entry points: named zero-argument effect-closed entries, derived libraries, one launch marker, invocation-only launch with return-is-shutdown |
 
-Versions 0.1.1 through 0.1.22 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.23 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

@@ -35,6 +35,7 @@ defmodule Catena.Package.Linker do
          :ok <- LanguageLifecycle.validate_interfaces(manifest.selection, imported_interfaces),
          {:ok, interfaces, prepared_modules} <-
            compile_modules(manifest, directory, imported_interfaces, options),
+         {:ok, entries} <- Catena.Entry.validate(Map.get(manifest, :entries), prepared_modules),
          {:ok, module, companion_binary, metadata} <-
            link(manifest, interfaces, Keyword.put(options, :source, path)),
          {:ok, result} <-
@@ -58,6 +59,8 @@ defmodule Catena.Package.Linker do
          specialization_keys: metadata.specialization_keys,
          selection: manifest.selection,
          artifact_version: manifest.artifact_version,
+         entries: entries,
+         entry_modules: entry_modules(entries, prepared_modules),
          diagnostics: manifest.advisories ++ Enum.flat_map(prepared_modules, & &1.diagnostics),
          evidence_erased: true,
          assurance: result.assurance,
@@ -175,7 +178,7 @@ defmodule Catena.Package.Linker do
       case source
            |> File.read!()
            |> Catena.compile_json(compile_options) do
-        {:ok, _module, binary, metadata} ->
+        {:ok, beam_module, binary, metadata} ->
           beam = resolve(declaration["beam"], directory)
           interface = resolve(declaration["interface"], directory)
 
@@ -185,6 +188,7 @@ defmodule Catena.Package.Linker do
               %{
                 beam: beam,
                 beam_relative: declaration["beam"],
+                beam_module: beam_module,
                 interface: interface,
                 interface_relative: declaration["interface"],
                 beam_binary: binary,
@@ -487,6 +491,15 @@ defmodule Catena.Package.Linker do
 
   defp module_output_records(modules),
     do: Enum.map(modules, &%{beam: &1.beam, interface: &1.interface})
+
+  defp entry_modules(entries, modules) do
+    module_by_atom = Map.new(modules, &{&1.beam_module, &1})
+
+    Map.new(entries, fn entry ->
+      module = Map.fetch!(module_by_atom, entry.module)
+      {entry.name, %{module: entry.module, binary: module.beam_binary}}
+    end)
+  end
 
   defp commit_outputs(outputs) do
     nonce = System.unique_integer([:positive, :monotonic])

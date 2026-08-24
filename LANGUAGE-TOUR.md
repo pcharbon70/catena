@@ -436,6 +436,13 @@ origins until qualified, and absent or `null` means no prelude at all.
 Edition 0.1 guarantees zero implicit names: nothing enters scope that
 was not asked for.
 
+Revision 0.1.23 fixes entry points: a manifest's optional `entries`
+array names existing zero-argument, effect-closed exports with at most
+one launch marker; zero entries means a library; and launching an entry
+invokes it to completion, reporting its returned value as the shutdown
+result or the trap identity on failure. No supervision, spawning, or
+exit codes exist at this layer.
+
 ## The executable formal kernel and typed actors
 
 Normative revision 0.1.8 integrates the executable portions of the earlier
@@ -491,6 +498,8 @@ cycles 0.1.20 → SCC units, signature regimes, joint digests
 packages 0.1.21 → requirements, single-version resolution, locks
                        ↓
 prelude 0.1.22 → opt-in origin, ordinary precedence, zero implicit names
+                       ↓
+entries 0.1.23 → effect-closed entries, derived libraries, launch
                        (stops before the future declaration grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
@@ -600,6 +609,10 @@ Elixir, so read them for semantics and diagnostics rather than surface syntax:
 9. [`c013_source_text_test.exs`](test/catena/c013_source_text_test.exs) — strict
    UTF-8, BOM and newline failures, normalization preservation, original-byte
    spans, source-only version separation, and deterministic CLI validation.
+10. [`c027_entry_points_test.exs`](test/catena/c027_entry_points_test.exs) —
+   entry declaration shapes, library derivation, effect-closure
+   validation, invocation-only launch, return-is-shutdown reports, and
+   the `ENT001`–`ENT003` families.
 
 ## Continue in catena-research
 

@@ -178,6 +178,20 @@ decoder validates the field (`PRE001` on malformed shapes); and
 ordinary dependency. Edition 0.1 guarantees zero implicit names; a future
 default prelude requires an explicit lifecycle record.
 
+Normative C027 uses `0.1.23` for entry points. A manifest's optional
+`entries` array declares named, zero-argument, total, effect-closed
+exports with a recorded result spelling and at most one `launch: true`
+marker (`ENT001` on malformed shapes at decode and on unknown, ambiguous,
+non-zero-arity, non-closed, or result-mismatched declarations at package
+validation). A package with zero declared entries is a library, derived,
+with absent, `null`, and `[]` equivalent. `Catena.Entry.launch/2`
+invokes one declared entry to completion under the unchanged kernel
+semantics — introducing no scope and spawning no process — reporting
+`completed` with the entry's returned value as the shutdown result, or
+`ENT002` for undeclared names and `ENT003` with the trap identity for
+failures. Compilation roots, supervision, and tooling are unchanged and
+remain future work.
+
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
 choices and extensions, recommendation dispositions, bounded presentations,

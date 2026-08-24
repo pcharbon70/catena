@@ -126,6 +126,7 @@ defmodule Catena.Package.Manifest do
          true <- is_nil(governance) or is_binary(governance),
          {:ok, dependencies} <- dependencies(Map.get(value, "dependencies", %{})),
          {:ok, prelude} <- prelude(Map.get(value, "prelude")),
+         {:ok, entries} <- entries(Map.get(value, "entries")),
          {:ok, denied_diagnostics} <- diagnostics(Map.get(value, "diagnostics", %{})) do
       {:ok,
        %{
@@ -145,7 +146,8 @@ defmodule Catena.Package.Manifest do
          roots: roots,
          output: output,
          dependencies: dependencies,
-         prelude: prelude
+         prelude: prelude,
+         entries: entries
        }}
     else
       {:error, %Diagnostic{} = diagnostic} ->
@@ -227,6 +229,68 @@ defmodule Catena.Package.Manifest do
       path: "$.prelude"
     )
   end
+
+  defp entries(nil), do: {:ok, []}
+
+  defp entries(list) when is_list(list) do
+    with {:ok, parsed} <- entry_objects(list),
+         :ok <- unique_names(parsed),
+         :ok <- single_launch_marker(parsed) do
+      {:ok, parsed}
+    end
+  end
+
+  defp entries(_),
+    do: {:error, entry_error("entries must be an array of entry objects", "$.entries")}
+
+  defp entry_objects(list) do
+    Enum.reduce_while(list, {:ok, []}, fn value, {:ok, parsed} ->
+      case value do
+        %{"name" => name, "result" => result} = entry
+        when is_binary(name) and is_binary(result) ->
+          launch = Map.get(entry, "launch")
+
+          if Regex.match?(@value_name, name) and launch in [nil, true] do
+            {:cont, {:ok, [%{name: name, result: result, launch: launch == true} | parsed]}}
+          else
+            {:halt,
+             {:error,
+              entry_error("entry names must be value names and launch must be true", "$.entries")}}
+          end
+
+        _ ->
+          {:halt,
+           {:error, entry_error("each entry must be a name and result object", "$.entries")}}
+      end
+    end)
+    |> case do
+      {:ok, parsed} -> {:ok, Enum.reverse(parsed)}
+      error -> error
+    end
+  end
+
+  defp unique_names(parsed) do
+    names = Enum.map(parsed, & &1.name)
+
+    if length(names) == length(Enum.uniq(names)) do
+      :ok
+    else
+      {:error, entry_error("entry names must be unique", "$.entries")}
+    end
+  end
+
+  defp single_launch_marker(parsed) do
+    if count(parsed, & &1.launch) <= 1 do
+      :ok
+    else
+      {:error, entry_error("at most one entry may carry the launch marker", "$.entries")}
+    end
+  end
+
+  defp count(parsed, fun), do: parsed |> Enum.count(fun)
+
+  defp entry_error(reason, path),
+    do: Diagnostic.new("ENT001", reason, path: path, details: %{reason: reason})
 
   defp diagnostics(%{} = diagnostics) do
     denied = Map.get(diagnostics, "deny", [])
