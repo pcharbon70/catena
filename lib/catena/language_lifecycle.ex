@@ -137,6 +137,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "abstraction-boundaries/authority-and-representation-exclusions.md#authority-and-representation-exclusions"
         )
+      ),
+      feature(
+        "module-dependency-cycles",
+        "0.1.20",
+        specification(
+          "module-dependency-cycles/scc-admission-and-resolution.md#scc-admission-and-resolution"
+        )
       )
     ]
   end
@@ -489,6 +496,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("abstraction-boundaries"),
     do: ~w(static-meaning diagnostics)
 
+  defp affected_dimensions("module-dependency-cycles"),
+    do: ~w(source-acceptance static-meaning diagnostics interfaces)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -536,6 +546,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("abstraction-boundaries"),
     do:
       "Select 0.1.19 for the abstraction boundary: the transparent/abstract pair is the complete authority vocabulary, no stable-layout form exists, and abstract types with validating constructors are the sanctioned invariant idiom; nothing about accepted input changes."
+
+  defp migration("module-dependency-cycles"),
+    do:
+      "Select 0.1.20 to admit module dependency cycles as strongly-connected components: intra-component imports resolve against declared signatures without digests, cross-component imports stay digest-bound, and each component checks, caches, and digests as one unit."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 

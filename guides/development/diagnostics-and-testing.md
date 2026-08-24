@@ -77,6 +77,7 @@ may improve without changing the contract.
 | `NSP...` | namespace failures: duplicates, spelling-class violations, unbound or ambiguous references, and qualification depth |
 | `IMP...`/`EXP...` | import/export failures: invalid imports, unknown modules, and undeclared exports; `IMP001` unused-import warnings |
 | `AB...` | none — abstraction-boundary exclusions surface through `EXP001`, coverage, and invalid-event diagnostics |
+| `CYC...` | SCC-internal violations: digest-presented companion imports (regime mixing) and unsigned component exports (signature gaps) |
 | `LIM...` | portable source and generated-artifact limits |
 | `B...` | OTP rejecting generated Erlang Abstract Format |
 | `I...` | inference-independent core invariant failure |
@@ -167,6 +168,8 @@ and warnings in structured details.
 | `c022_traceability_coverage_test.exs` | complete `IM-OBL-*` import/export obligation coverage |
 | `c023_abstraction_test.exs` | authority closure, stable-layout exclusion, smart-constructor idiom, wildcard coverage, and interface unreachability |
 | `c023_traceability_coverage_test.exs` | complete `AB-OBL-*` abstraction obligation coverage |
+| `c024_module_cycles_test.exs` | SCC grouping, regime enforcement, joint digests, component execution, and outsider admission |
+| `c024_traceability_coverage_test.exs` | complete `CY-OBL-*` cycles obligation coverage |
 | `c016_traceability_coverage_test.exs` | complete `CM-OBL-*` comment and documentation obligation coverage |
 | `resumption_token_test.exs` | dynamic one-use continuation defense |
 

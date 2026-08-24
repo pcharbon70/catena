@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.19` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.19`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.20` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.20`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -142,6 +142,18 @@ validating-constructor-plus-observer invariant idiom whose abstract
 constructors stay unconstructible and unmatchable through digest-bound
 interfaces. No accepted input, diagnostic family, or persisted format
 changes.
+
+Normative C024 uses `0.1.20` for module dependency cycles. The namespace
+environment builder partitions provide/import event graphs into
+strongly-connected components, rejects intra-component digest presentation
+and signature gaps as `CYC001` at the closing transaction, and records
+membership; `Catena.compile_scc/2` compiles all members of a component
+together — each member checked and compiled against its companions'
+provisional interfaces built from declared types, then cross-verified —
+and yields the members' binaries and interfaces plus one deterministic
+joint digest, invariant to member order and layout. Intra-component
+imports carry no digests; cross-component imports stay digest-bound
+exactly as C022 fixed them.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared

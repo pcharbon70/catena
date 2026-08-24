@@ -40,10 +40,10 @@ defmodule Catena.C023AbstractionTest do
 
   @tag obligations: ~w(AB-OBL-001 AB-OBL-007)
   test "0.1.19 is an exact registered revision with no new frontend surface" do
-    assert LanguageVersion.latest() == "0.1.19"
+    assert LanguageVersion.latest() == "0.1.20"
 
     assert LanguageVersion.source_text_frontend_versions() ==
-             ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19)
+             ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20)
 
     refute "0.1.19" in LanguageVersion.compilable_revisions()
     refute "0.1.19" in LanguageVersion.interface_versions()
@@ -68,7 +68,7 @@ defmodule Catena.C023AbstractionTest do
     assert {:error,
             %{
               id: "EDN001",
-              details: %{frontend: "namespaces-and-shadowing", required: "0.1.18"}
+              details: %{frontend: "namespaces-and-shadowing", required: "0.1.20"}
             }} =
              Catena.build_namespace_environment([], language_selection: selection("0.1.17"))
 

@@ -31,6 +31,8 @@ The repository contains an Elixir bootstrap compiler that can:
   unused admissions as deny-able warnings;
 - confirm the abstraction boundary at 0.1.19: binary authority, no stable
   layout, and the smart-constructor invariant idiom;
+- compile module dependency cycles at 0.1.20 as strongly-connected
+  components with joint digests;
 - infer and check types, data, patterns, conditions, traits, effects, and
   typed specifications;
 - independently verify its typed core;
@@ -116,8 +118,9 @@ the 0.1.15 token stream through `Catena.tokenize_source/2` and
 `Catena.parse_operator_expression/1`, the 0.1.16 file unit through
 `Catena.resolve_file_unit/4`, 0.1.17 names through
 `Catena.build_namespace_environment/2` and `Catena.resolve_name/2`, 0.1.18
-imports through `Catena.check_unused_imports/2`, and 0.1.19's
-abstraction-boundary exclusions through the idiom corpus,
+imports through `Catena.check_unused_imports/2`, 0.1.19's
+abstraction-boundary exclusions through the idiom corpus, and 0.1.20's
+dependency cycles through `Catena.compile_scc/2`,
 also without a whole-source command. See [Literals](language/literals.md).
 
 Inspect the compiler's current default, retained revisions, feature states,
@@ -215,6 +218,7 @@ flowchart LR
     Files --> Names[0.1.17 namespaces]
     Names --> Imports[0.1.18 imports and exports]
     Imports --> Abstraction[0.1.19 abstraction boundaries]
+    Abstraction --> Cycles[0.1.20 dependency cycles]
     Comments -. lexer and parser not implemented .-> JSON[Versioned JSON AST]
     Kernel[Exact 0.1.8 kernel S-expression] --> KDecode[Kernel parser]
     JSON --> Decode[Strict decoding]
