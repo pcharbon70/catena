@@ -78,7 +78,10 @@ form, and sanctions the smart-constructor invariant idiom. Normative C024
 revision `0.1.20` admits module dependency cycles as
 strongly-connected components with signature-based intra-component
 resolution, digest-bound cross-component imports, joint component
-digests, and `CYC001` regime enforcement. The
+digests, and `CYC001` regime enforcement. Normative C025 revision
+`0.1.21` adds the package dependency engine: SemVer exact/caret/tilde
+requirements, single-version resolution, generated `catena.lock` replay,
+and registry-neutral bundle digests over the Hex transport profile. The
 atomic scanning APIs remain source-only, and the compiler release remains
 `0.1.0`.
 The bootstrap toolchain is written in
@@ -104,6 +107,7 @@ scan 0.1.12 comments and 0.1.13 literals, elaborate 0.1.14 numeric meanings,
 tokenize 0.1.15 operator expressions, resolve 0.1.16 file units, resolve
 names through 0.1.17 namespaces, validate 0.1.18 imports and exports,
 confirm 0.1.19 abstraction boundaries, compile 0.1.20 dependency cycles,
+resolve 0.1.21 package dependencies,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -132,7 +136,8 @@ operators and punctuation. Normative C020 uses `0.1.16` for the
 file-to-module relationship. Normative C021 uses `0.1.17` for namespaces
 and shadowing. Normative C022 uses `0.1.18` for imports and exports. Normative C023
 uses `0.1.19` for abstraction boundaries. Normative C024 uses `0.1.20`
-for module dependency cycles.
+for module dependency cycles. Normative C025 uses `0.1.21` for package
+identity and dependency resolution.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -167,7 +172,8 @@ flowchart LR
     NS --> IM[Import and export validation 0.1.18]
     IM --> AB[Abstraction boundaries 0.1.19]
     AB --> CY[SCC compilation 0.1.20]
-    CY --> STOP[Identities, boundaries, components, and diagnostics]
+    CY --> PK[Package resolution 0.1.21]
+    PK --> STOP[Identities, components, locks, and digests]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
@@ -212,7 +218,8 @@ first-line generated markers, and 0.1.17 resolves names through
 per-category namespaces with deterministic shadowing and
 local-over-imported precedence, while 0.1.18 validates imports against
 digest-bound export sets, 0.1.19 fixes the abstraction boundary, and
-0.1.20 compiles dependency cycles as components, but claims no
+0.1.20 compiles dependency cycles as components, and 0.1.21 resolves
+package dependencies with lockfiles, but claims no
 declaration grammar, import punctuation, typing, or evaluation. The backend does not emit
 Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
@@ -392,7 +399,13 @@ include:
   and `Catena.compile_scc/2` compiling two- and three-module components
   end-to-end in both layouts with deterministic, member-order-invariant
   joint digests, degenerate acyclic equivalence, and outsider digest
-  admission from component members.
+  admission from component members; and
+- a 0.1.21 dependency engine in `Catena.Package.Deps` with vendored
+  SemVer grammar and precedence, exact/caret/tilde operators with the
+  Cargo 0.x rule and pre-release restriction, single-version
+  highest-satisfying order-independent resolution, `catena.lock`
+  generation and exact-pin replay with `PKG001`–`PKG005`, registry-
+  neutral bundle digests, and optional manifest `dependencies`.
 
 This is not yet an ergonomic Catena source lexer or parser or a complete implementation of resource
 scopes, exception boundaries, general host-effect entry policy, scoped or

@@ -59,6 +59,7 @@ flowchart TD
     Names --> Imports[0.1.18 import/export validation]
     Imports --> Abstraction[0.1.19 abstraction-boundary corpus]
     Abstraction --> Cycles[0.1.20 SCC compilation]
+    Cycles --> Packages[0.1.21 dependency engine]
     Selection[Catena.LanguageSelection] --> Decoder
     Decoder --> Infer[Catena.Type.Infer]
     Infer --> Data[Data and coverage evidence]
@@ -133,9 +134,10 @@ returns the unified core and 0.1.8 interface in metadata.
 `Catena.build_namespace_environment/2`,
 `Catena.resolve_name/2`, and `Catena.check_unused_imports/2`
 expose the source-only
-0.1.9 through 0.1.20
-boundaries; the 0.1.19 abstraction corpus and 0.1.20 SCC compilation
-prove the boundary over the same compiler paths. Layout accepts opaque lexer-supplied events. Comment resolution
+0.1.1 through 0.1.21
+boundaries; the 0.1.19 abstraction corpus, 0.1.20 SCC compilation, and
+0.1.21 dependency engine prove the boundary over the same compiler
+paths. Layout accepts opaque lexer-supplied events. Comment resolution
 also accepts parser-supplied declaration targets and returns a lossless stream
 plus documentation attachments. The literal API returns one decoded token and
 its source pieces, and the numeric API elaborates one scanned numeric token
