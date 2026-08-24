@@ -158,6 +158,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "prelude-policy/prelude-selection-and-admission.md#prelude-selection-and-admission"
         )
+      ),
+      feature(
+        "entry-points",
+        "0.1.23",
+        specification(
+          "entry-points/entry-declarations.md#entry-declarations"
+        )
       )
     ]
   end
@@ -519,6 +526,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("prelude-policy"),
     do: ~w(static-meaning diagnostics interfaces)
 
+  defp affected_dimensions("entry-points"),
+    do: ~w(static-meaning diagnostics)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -574,6 +584,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("prelude-policy"),
     do:
       "Select 0.1.22 to admit an explicitly selected prelude origin at ordinary import precedence with absent/null opt-out and the zero-implicit-names edition guarantee; contents remain future standard-library work."
+
+  defp migration("entry-points"),
+    do:
+      "Select 0.1.23 to declare named zero-argument effect-closed entry exports in the manifest, derive libraries from zero declared entries, and launch an entry as one completed invocation whose returned value is the shutdown result; supervision, scheduling, and tooling remain future runtime work."
 
   defp migration("package-identity-and-dependencies"),
     do:

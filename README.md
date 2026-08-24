@@ -84,7 +84,10 @@ requirements, single-version resolution, generated `catena.lock` replay,
 and registry-neutral bundle digests over the Hex transport profile.
 Normative C026 revision `0.1.22` adds the prelude origin: an opt-in
 manifest selection admitted at ordinary import precedence with the
-zero-implicit-names edition guarantee. The
+zero-implicit-names edition guarantee. Normative C027 revision `0.1.23`
+adds entry points: named zero-argument effect-closed entry exports in
+the manifest, libraries derived from zero declared entries, and
+invocation-only launch whose returned value is the shutdown result. The
 atomic scanning APIs remain source-only, and the compiler release remains
 `0.1.0`.
 The bootstrap toolchain is written in
@@ -110,7 +113,8 @@ scan 0.1.12 comments and 0.1.13 literals, elaborate 0.1.14 numeric meanings,
 tokenize 0.1.15 operator expressions, resolve 0.1.16 file units, resolve
 names through 0.1.17 namespaces, validate 0.1.18 imports and exports,
 confirm 0.1.19 abstraction boundaries, compile 0.1.20 dependency cycles,
-resolve 0.1.21 package dependencies, select 0.1.22 preludes,
+resolve 0.1.21 package dependencies, select 0.1.22 preludes, declare and
+launch 0.1.23 entries,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -141,7 +145,8 @@ and shadowing. Normative C022 uses `0.1.18` for imports and exports. Normative C
 uses `0.1.19` for abstraction boundaries. Normative C024 uses `0.1.20`
 for module dependency cycles. Normative C025 uses `0.1.21` for package
 identity and dependency resolution. Normative C026 uses `0.1.22` for the
-prelude.
+prelude. Normative C027 uses `0.1.23` for entry points and application
+structure.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -178,7 +183,8 @@ flowchart LR
     AB --> CY[SCC compilation 0.1.20]
     CY --> PK[Package resolution 0.1.21]
     PK --> PL[Prelude selection 0.1.22]
-    PL --> STOP[Identities, locks, origins, and digests]
+    PL --> EN[Entry declarations and launch 0.1.23]
+    EN --> STOP[Identities, locks, origins, and digests]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
@@ -225,7 +231,7 @@ local-over-imported precedence, while 0.1.18 validates imports against
 digest-bound export sets, 0.1.19 fixes the abstraction boundary, and
 0.1.20 compiles dependency cycles as components, and 0.1.21 resolves
 package dependencies with lockfiles, and 0.1.22 admits prelude
-selections, but claims no
+selections, and 0.1.23 declares and validates entry exports, but claims no
 declaration grammar, import punctuation, typing, or evaluation. The backend does not emit
 Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
@@ -415,7 +421,12 @@ include:
 - a 0.1.22 prelude origin: opt-in manifest `prelude` selection,
   ordinary import-class precedence with `NSP004` collisions naming both
   origins, absent/`null` opt-out, `PRE001` for malformed shapes, and the
-  zero-implicit-names edition guarantee.
+  zero-implicit-names edition guarantee; and
+- 0.1.23 entry points: manifest `entries` naming existing zero-argument
+  effect-closed exports with `ENT001` validation, libraries derived from
+  zero declared entries, one optional launch marker, and
+  `Catena.Entry.launch/2` reporting the entry's value or `ENT002` unknown
+  names and `ENT003` trap failures.
 
 This is not yet an ergonomic Catena source lexer or parser or a complete implementation of resource
 scopes, exception boundaries, general host-effect entry policy, scoped or
