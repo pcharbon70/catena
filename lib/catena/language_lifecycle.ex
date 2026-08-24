@@ -151,6 +151,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "package-identity-and-dependencies/manifest-dependencies-and-versions.md#manifest-dependencies-and-versions"
         )
+      ),
+      feature(
+        "prelude-policy",
+        "0.1.22",
+        specification(
+          "prelude-policy/prelude-selection-and-admission.md#prelude-selection-and-admission"
+        )
       )
     ]
   end
@@ -509,6 +516,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("package-identity-and-dependencies"),
     do: ~w(static-meaning diagnostics interfaces)
 
+  defp affected_dimensions("prelude-policy"),
+    do: ~w(static-meaning diagnostics interfaces)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -560,6 +570,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("module-dependency-cycles"),
     do:
       "Select 0.1.20 to admit module dependency cycles as strongly-connected components: intra-component imports resolve against declared signatures without digests, cross-component imports stay digest-bound, and each component checks, caches, and digests as one unit."
+
+  defp migration("prelude-policy"),
+    do:
+      "Select 0.1.22 to admit an explicitly selected prelude origin at ordinary import precedence with absent/null opt-out and the zero-implicit-names edition guarantee; contents remain future standard-library work."
 
   defp migration("package-identity-and-dependencies"),
     do:

@@ -142,12 +142,27 @@ defmodule Catena.Package.Deps do
   """
   @spec resolve(map(), map()) :: {:ok, [map()]} | {:error, Diagnostic.t()}
   def resolve(root, environment) do
-    with {:ok, root_deps} <-
-           normalize_dependencies(
-             Map.get(root, :dependencies) || Map.get(root, "dependencies") || %{}
-           ),
-         {:ok, gathered} <- gather(root_deps, environment) do
+    root_deps_raw = Map.get(root, :dependencies) || Map.get(root, "dependencies") || %{}
+    prelude_raw = Map.get(root, :prelude) || Map.get(root, "prelude")
+
+    with {:ok, root_deps} <- normalize_dependencies(root_deps_raw),
+         {:ok, merged_deps} <- merge_prelude(root_deps, prelude_raw),
+         {:ok, gathered} <- gather(merged_deps, environment) do
       resolve_gathered(gathered, environment)
+    end
+  end
+
+  defp merge_prelude(deps, nil), do: {:ok, deps}
+
+  defp merge_prelude(deps, %{"package" => package, "requirement" => requirement}) do
+    case Map.get(deps, package) do
+      nil ->
+        with {:ok, parsed} <- parse_requirement(requirement) do
+          {:ok, Map.put(deps, package, parsed)}
+        end
+
+      existing ->
+        {:ok, Map.put(deps, package, existing)}
     end
   end
 

@@ -25,8 +25,9 @@ source-language distribution:
   revision 0.1.16 binds `.cat` files to at most one declared module, and
   revision 0.1.18 validates imports against digest-bound export sets,
   revision 0.1.19 fixes the abstraction boundary, revision 0.1.20
-  compiles dependency cycles as components, and revision 0.1.21 resolves
-  package dependencies, all before declaration
+  compiles dependency cycles as components, revision 0.1.21 resolves
+  package dependencies, and revision 0.1.22 admits prelude selections,
+  all before declaration
   grammar or import punctuation is fixed;
 - snippets in this tour are illustrative notation unless a linked
   specification says that a particular form is fixed;
@@ -428,6 +429,13 @@ with hex.pm as the bootstrap transport whose tarball checksum must equal
 the bundle digest. Pre-releases match only requirements that name
 pre-releases.
 
+Revision 0.1.22 fixes the prelude: a manifest's optional `prelude` field
+names one package; its exports enter scope as an ordinary import-class
+origin — locals win, collisions with explicit imports reject naming both
+origins until qualified, and absent or `null` means no prelude at all.
+Edition 0.1 guarantees zero implicit names: nothing enters scope that
+was not asked for.
+
 ## The executable formal kernel and typed actors
 
 Normative revision 0.1.8 integrates the executable portions of the earlier
@@ -481,6 +489,8 @@ abstraction 0.1.19 → no stable layout, binary authority, invariant idiom
 cycles 0.1.20 → SCC units, signature regimes, joint digests
                        ↓
 packages 0.1.21 → requirements, single-version resolution, locks
+                       ↓
+prelude 0.1.22 → opt-in origin, ordinary precedence, zero implicit names
                        (stops before the future declaration grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8

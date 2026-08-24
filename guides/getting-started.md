@@ -35,6 +35,8 @@ The repository contains an Elixir bootstrap compiler that can:
   components with joint digests;
 - declare and resolve package dependencies at 0.1.21 with SemVer
   requirements, `catena.lock`, and bundle digests;
+- select a prelude at 0.1.22 through the manifest's optional `prelude`
+  field with ordinary import precedence;
 - infer and check types, data, patterns, conditions, traits, effects, and
   typed specifications;
 - independently verify its typed core;
@@ -122,8 +124,9 @@ the 0.1.15 token stream through `Catena.tokenize_source/2` and
 `Catena.build_namespace_environment/2` and `Catena.resolve_name/2`, 0.1.18
 imports through `Catena.check_unused_imports/2`, 0.1.19's
 abstraction-boundary exclusions through the idiom corpus, 0.1.20's
-dependency cycles through `Catena.compile_scc/2`, and 0.1.21's packages
-through `Catena.Package.Deps`,
+dependency cycles through `Catena.compile_scc/2`, 0.1.21's packages
+through `Catena.Package.Deps`, and 0.1.22's prelude through the
+`prelude:` option,
 also without a whole-source command. See [Literals](language/literals.md).
 
 Inspect the compiler's current default, retained revisions, feature states,
@@ -223,6 +226,7 @@ flowchart LR
     Imports --> Abstraction[0.1.19 abstraction boundaries]
     Abstraction --> Cycles[0.1.20 dependency cycles]
     Cycles --> Packages[0.1.21 package resolution]
+    Packages --> Prelude[0.1.22 prelude origin]
     Comments -. lexer and parser not implemented .-> JSON[Versioned JSON AST]
     Kernel[Exact 0.1.8 kernel S-expression] --> KDecode[Kernel parser]
     JSON --> Decode[Strict decoding]
