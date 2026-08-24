@@ -33,6 +33,8 @@ The repository contains an Elixir bootstrap compiler that can:
   layout, and the smart-constructor invariant idiom;
 - compile module dependency cycles at 0.1.20 as strongly-connected
   components with joint digests;
+- declare and resolve package dependencies at 0.1.21 with SemVer
+  requirements, `catena.lock`, and bundle digests;
 - infer and check types, data, patterns, conditions, traits, effects, and
   typed specifications;
 - independently verify its typed core;
@@ -119,8 +121,9 @@ the 0.1.15 token stream through `Catena.tokenize_source/2` and
 `Catena.resolve_file_unit/4`, 0.1.17 names through
 `Catena.build_namespace_environment/2` and `Catena.resolve_name/2`, 0.1.18
 imports through `Catena.check_unused_imports/2`, 0.1.19's
-abstraction-boundary exclusions through the idiom corpus, and 0.1.20's
-dependency cycles through `Catena.compile_scc/2`,
+abstraction-boundary exclusions through the idiom corpus, 0.1.20's
+dependency cycles through `Catena.compile_scc/2`, and 0.1.21's packages
+through `Catena.Package.Deps`,
 also without a whole-source command. See [Literals](language/literals.md).
 
 Inspect the compiler's current default, retained revisions, feature states,
@@ -219,6 +222,7 @@ flowchart LR
     Names --> Imports[0.1.18 imports and exports]
     Imports --> Abstraction[0.1.19 abstraction boundaries]
     Abstraction --> Cycles[0.1.20 dependency cycles]
+    Cycles --> Packages[0.1.21 package resolution]
     Comments -. lexer and parser not implemented .-> JSON[Versioned JSON AST]
     Kernel[Exact 0.1.8 kernel S-expression] --> KDecode[Kernel parser]
     JSON --> Decode[Strict decoding]

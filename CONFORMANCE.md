@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.20` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.20`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.21` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.21`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -154,6 +154,18 @@ and yields the members' binaries and interfaces plus one deterministic
 joint digest, invariant to member order and layout. Intra-component
 imports carry no digests; cross-component imports stay digest-bound
 exactly as C022 fixed them.
+
+Normative C025 uses `0.1.21` for package identity and dependency
+resolution. `Catena.Package.Deps` vendors the SemVer 2.0.0 grammar and
+precedence, the exact/caret/tilde requirement operators with Cargo-style
+0.x semantics and Hex's pre-release operand restriction, single-version
+highest-satisfying order-independent resolution with `PKG003` requirer
+lists, `PKG002` package-graph cycle rejection, byte-deterministic
+generated `catena.lock` records that replay as exact pins with `PKG005`
+stale/tamper separation, and registry-neutral SHA-256 bundle digests
+binding manifest semantics plus member and C024 component digests. The
+0.1.7 manifest decoder accepts an optional `dependencies` object; the
+engine fetches and signs nothing.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared

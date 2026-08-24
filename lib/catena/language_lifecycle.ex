@@ -144,6 +144,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "module-dependency-cycles/scc-admission-and-resolution.md#scc-admission-and-resolution"
         )
+      ),
+      feature(
+        "package-identity-and-dependencies",
+        "0.1.21",
+        specification(
+          "package-identity-and-dependencies/manifest-dependencies-and-versions.md#manifest-dependencies-and-versions"
+        )
       )
     ]
   end
@@ -499,6 +506,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("module-dependency-cycles"),
     do: ~w(source-acceptance static-meaning diagnostics interfaces)
 
+  defp affected_dimensions("package-identity-and-dependencies"),
+    do: ~w(static-meaning diagnostics interfaces)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -550,6 +560,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("module-dependency-cycles"),
     do:
       "Select 0.1.20 to admit module dependency cycles as strongly-connected components: intra-component imports resolve against declared signatures without digests, cross-component imports stay digest-bound, and each component checks, caches, and digests as one unit."
+
+  defp migration("package-identity-and-dependencies"),
+    do:
+      "Select 0.1.21 to declare package dependencies with SemVer exact/caret/tilde requirements, resolve one version per name, generate and replay catena.lock, and identify packages by registry-neutral bundle digests; fetch and build tooling remains future work."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 

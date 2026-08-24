@@ -124,6 +124,7 @@ defmodule Catena.Package.Manifest do
            Map.get(value, "profile", "static"),
          governance <- Map.get(value, "governance"),
          true <- is_nil(governance) or is_binary(governance),
+         {:ok, dependencies} <- dependencies(Map.get(value, "dependencies", %{})),
          {:ok, denied_diagnostics} <- diagnostics(Map.get(value, "diagnostics", %{})) do
       {:ok,
        %{
@@ -141,7 +142,8 @@ defmodule Catena.Package.Manifest do
          modules: modules,
          interfaces: interfaces,
          roots: roots,
-         output: output
+         output: output,
+         dependencies: dependencies
        }}
     else
       {:error, %Diagnostic{} = diagnostic} ->
@@ -185,6 +187,29 @@ defmodule Catena.Package.Manifest do
   end
 
   defp valid_root?(_root), do: false
+
+  defp dependencies(%{} = deps) do
+    valid? =
+      Enum.all?(deps, fn {name, req} ->
+        is_binary(name) and is_binary(req) and name != "" and req != ""
+      end)
+
+    if valid? do
+      {:ok, deps}
+    else
+      {:error,
+       Diagnostic.new("PKG001", "dependencies must map package names to requirement strings",
+         path: "$.dependencies"
+       )}
+    end
+  end
+
+  defp dependencies(_) do
+    {:error,
+     Diagnostic.new("PKG001", "dependencies must map package names to requirement strings",
+       path: "$.dependencies"
+     )}
+  end
 
   defp diagnostics(%{} = diagnostics) do
     denied = Map.get(diagnostics, "deny", [])

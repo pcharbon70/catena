@@ -78,6 +78,7 @@ may improve without changing the contract.
 | `IMP...`/`EXP...` | import/export failures: invalid imports, unknown modules, and undeclared exports; `IMP001` unused-import warnings |
 | `AB...` | none — abstraction-boundary exclusions surface through `EXP001`, coverage, and invalid-event diagnostics |
 | `CYC...` | SCC-internal violations: digest-presented companion imports (regime mixing) and unsigned component exports (signature gaps) |
+| `PKG...` | package failures: malformed versions/requirements/locks, dependency cycles, unsatisfiable sets, unknown names, and stale or tampered lockfiles |
 | `LIM...` | portable source and generated-artifact limits |
 | `B...` | OTP rejecting generated Erlang Abstract Format |
 | `I...` | inference-independent core invariant failure |
@@ -170,6 +171,8 @@ and warnings in structured details.
 | `c023_traceability_coverage_test.exs` | complete `AB-OBL-*` abstraction obligation coverage |
 | `c024_module_cycles_test.exs` | SCC grouping, regime enforcement, joint digests, component execution, and outsider admission |
 | `c024_traceability_coverage_test.exs` | complete `CY-OBL-*` cycles obligation coverage |
+| `c025_package_deps_test.exs` | grammar and precedence matrices, satisfaction boundaries, resolution determinism, conflicts, locks, digests, and manifest integration |
+| `c025_traceability_coverage_test.exs` | complete `PK-OBL-*` package obligation coverage |
 | `c016_traceability_coverage_test.exs` | complete `CM-OBL-*` comment and documentation obligation coverage |
 | `resumption_token_test.exs` | dynamic one-use continuation defense |
 
