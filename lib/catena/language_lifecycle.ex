@@ -162,8 +162,13 @@ defmodule Catena.LanguageLifecycle do
       feature(
         "entry-points",
         "0.1.23",
+        specification("entry-points/entry-declarations.md#entry-declarations")
+      ),
+      feature(
+        "api-and-abi-compatibility",
+        "0.1.24",
         specification(
-          "entry-points/entry-declarations.md#entry-declarations"
+          "api-and-abi-compatibility/compatibility-layers-and-versions.md#compatibility-layers-and-versions"
         )
       )
     ]
@@ -529,6 +534,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("entry-points"),
     do: ~w(static-meaning diagnostics)
 
+  defp affected_dimensions("api-and-abi-compatibility"),
+    do: ~w(static-meaning diagnostics)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -588,6 +596,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("entry-points"),
     do:
       "Select 0.1.23 to declare named zero-argument effect-closed entry exports in the manifest, derive libraries from zero declared entries, and launch an entry as one completed invocation whose returned value is the shutdown result; supervision, scheduling, and tooling remain future runtime work."
+
+  defp migration("api-and-abi-compatibility"),
+    do:
+      "Select 0.1.24 to classify interface changes with the strict breaking-change matrix, validate version claims (major-as-breaking at 1.0+, minor-as-breaking under 0.x), and rely on the declared behavior and BEAM ABI absences; migration engines and tooling remain future work."
 
   defp migration("package-identity-and-dependencies"),
     do:

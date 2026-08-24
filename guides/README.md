@@ -100,6 +100,10 @@ flowchart TD
 16. [Entry Points](language/entry-points.md) — declare effect-closed
    entries, derive libraries, and launch an entry whose returned value is
    the shutdown result at revision 0.1.23.
+17. [API and ABI Compatibility](language/api-compatibility.md) —
+   classify interface changes under the strict matrix, validate SemVer
+   claims, and rely on the declared behavior and ABI absences at
+   revision 0.1.24.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -218,8 +222,9 @@ could also appear in the compiler.
 | 0.1.21 | packages: manifest dependencies, SemVer exact/caret/tilde, single-version resolution, `catena.lock`, bundle digests |
 | 0.1.22 | prelude: opt-in manifest selection, ordinary-origin precedence, absent/null opt-out, zero-implicit-names guarantee |
 | 0.1.23 | entry points: named zero-argument effect-closed entries, derived libraries, one launch marker, invocation-only launch with return-is-shutdown |
+| 0.1.24 | API compatibility: strict interface diff matrix, SemVer claim validation, declared behavior and BEAM ABI absences |
 
-Versions 0.1.1 through 0.1.23 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.24 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;
