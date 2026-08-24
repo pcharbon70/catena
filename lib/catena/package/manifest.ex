@@ -125,6 +125,7 @@ defmodule Catena.Package.Manifest do
          governance <- Map.get(value, "governance"),
          true <- is_nil(governance) or is_binary(governance),
          {:ok, dependencies} <- dependencies(Map.get(value, "dependencies", %{})),
+         {:ok, prelude} <- prelude(Map.get(value, "prelude")),
          {:ok, denied_diagnostics} <- diagnostics(Map.get(value, "diagnostics", %{})) do
       {:ok,
        %{
@@ -143,7 +144,8 @@ defmodule Catena.Package.Manifest do
          interfaces: interfaces,
          roots: roots,
          output: output,
-         dependencies: dependencies
+         dependencies: dependencies,
+         prelude: prelude
        }}
     else
       {:error, %Diagnostic{} = diagnostic} ->
@@ -209,6 +211,21 @@ defmodule Catena.Package.Manifest do
      Diagnostic.new("PKG001", "dependencies must map package names to requirement strings",
        path: "$.dependencies"
      )}
+  end
+
+  defp prelude(nil), do: {:ok, nil}
+
+  defp prelude(%{"package" => package, "requirement" => requirement})
+       when is_binary(package) and is_binary(requirement) do
+    {:ok, %{"package" => package, "requirement" => requirement}}
+  end
+
+  defp prelude(_), do: {:error, prelude_error()}
+
+  defp prelude_error do
+    Diagnostic.new("PRE001", "prelude must be a package and requirement object",
+      path: "$.prelude"
+    )
   end
 
   defp diagnostics(%{} = diagnostics) do

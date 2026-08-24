@@ -5,7 +5,7 @@ protocol, and the bootstrap compiler. They complement rather than replace the
 [normative language specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification).
 
 Catena does not yet have an ergonomic source lexer or parser. Revisions 0.1.9
-through 0.1.21 provide the strict source envelope, standalone Unicode name
+through 0.1.22 provide the strict source envelope, standalone Unicode name
 rules, layout classification, abstract comment/documentation pipeline,
 atomic literal scanner, and numeric literal meaning that later stages will
 consume. Code in a
@@ -94,6 +94,9 @@ flowchart TD
 14. [Packages](language/packages.md) — declare dependencies, resolve
    versions, generate and replay `catena.lock`, and identify packages by
    bundle digest at revision 0.1.21.
+15. [Prelude](language/prelude.md) — select a prelude, understand its
+   ordinary precedence and the zero-implicit-names guarantee at revision
+   0.1.22.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -210,8 +213,9 @@ could also appear in the compiler.
 | 0.1.19 | abstraction boundaries: binary authority vocabulary, no stable layout, smart-constructor invariant idiom |
 | 0.1.20 | module dependency cycles: SCC admission, signature regimes, joint digests, inversion alternative |
 | 0.1.21 | packages: manifest dependencies, SemVer exact/caret/tilde, single-version resolution, `catena.lock`, bundle digests |
+| 0.1.22 | prelude: opt-in manifest selection, ordinary-origin precedence, absent/null opt-out, zero-implicit-names guarantee |
 
-Versions 0.1.1 through 0.1.21 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.22 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

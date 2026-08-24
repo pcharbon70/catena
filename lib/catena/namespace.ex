@@ -1,7 +1,8 @@
 defmodule Catena.Namespace do
   @moduledoc """
   The source-only Catena 0.1.17 namespace resolver extended at 0.1.18
-  with imports and exports and at 0.1.20 with module dependency cycles.
+  with imports and exports, at 0.1.20 with module dependency cycles,
+  and at 0.1.22 with the prelude origin.
 
   An ordered scope-event stream (declarations, scope boundaries, import
   sets, and at 0.1.18 export, provided-module, and import-module events)
@@ -19,7 +20,7 @@ defmodule Catena.Namespace do
 
   alias Catena.{Diagnostic, LanguageSelection, LanguageVersion}
 
-  @namespace_revision "0.1.20"
+  @namespace_revision "0.1.22"
 
   defmodule Environment do
     @moduledoc "One resolved scope-event stream."
@@ -88,12 +89,53 @@ defmodule Catena.Namespace do
   def build_environment(events, options \\ [])
       when is_list(events) and is_list(options) do
     current_module = Keyword.get(options, :current_module)
+    prelude = normalize_prelude_option(Keyword.get(options, :prelude))
 
     with {:ok, _selection} <- resolve_selection(Keyword.get(options, :language_selection)),
-         :ok <- validate_current_module(current_module) do
-      build(events, [%{}], %{}, [], %{}, [], %{}, [], current_module, 0)
+         :ok <- validate_current_module(current_module),
+         :ok <- validate_prelude(prelude) do
+      build(events, [%{}], %{}, [], %{}, [], %{}, [], current_module, 0, prelude)
     end
   end
+
+  defp normalize_prelude_option(nil), do: nil
+
+  defp normalize_prelude_option(%{package: p, requirement: r}),
+    do: %{package: p, requirement: r}
+
+  defp normalize_prelude_option(%{"package" => p, "requirement" => r}),
+    do: %{package: p, requirement: r}
+
+  defp normalize_prelude_option(other), do: {:malformed, other}
+
+  defp validate_prelude(nil), do: :ok
+
+  defp validate_prelude({:malformed, other}) do
+    {:error,
+     Diagnostic.new("PRE001", "a prelude selection must be a package and requirement object",
+       details: %{reason: "malformed_prelude", selection: inspect(other)}
+     )}
+  end
+
+  defp validate_prelude(%{package: package, requirement: requirement})
+       when is_binary(package) and is_binary(requirement) do
+    with {:ok, _req} <- Catena.Package.Deps.parse_requirement(requirement) do
+      :ok
+    else
+      {:error, %Diagnostic{id: "PKG001"} = diag} ->
+        {:error,
+         Diagnostic.new("PRE001", "a prelude requirement is malformed",
+           details: %{reason: "malformed_prelude_requirement", cause: diag.details}
+         )}
+    end
+  end
+
+  defp validate_prelude(_),
+    do:
+      {:error,
+       Diagnostic.new("PRE001", "a prelude selection must be a package and requirement object",
+         details: %{reason: "malformed_prelude"}
+       )}
 
   @spec resolve(Environment.t(), map()) ::
           {:ok, Resolution.t()} | {:error, Diagnostic.t()}
@@ -202,23 +244,26 @@ defmodule Catena.Namespace do
          graph,
          import_edges,
          current_module,
-         _depth
+         _depth,
+         prelude
        ) do
-    nodes = graph_nodes(graph, provided, current_module)
-    sccs = strongly_connected_components(nodes, graph)
-    member_of = component_membership(sccs)
+    with {:ok, imports} <- inject_prelude(prelude, provided, imports) do
+      nodes = graph_nodes(graph, provided, current_module)
+      sccs = strongly_connected_components(nodes, graph)
+      member_of = component_membership(sccs)
 
-    with :ok <- check_regime_mixing(import_edges, member_of),
-         :ok <- check_signature_gaps(provided, sccs, graph) do
-      {:ok,
-       %Environment{
-         scopes: scopes,
-         imports: imports,
-         exports: exports,
-         provided: provided,
-         module_imports: module_imports,
-         sccs: sccs
-       }}
+      with :ok <- check_regime_mixing(import_edges, member_of),
+           :ok <- check_signature_gaps(provided, sccs, graph) do
+        {:ok,
+         %Environment{
+           scopes: scopes,
+           imports: imports,
+           exports: exports,
+           provided: provided,
+           module_imports: module_imports,
+           sccs: sccs
+         }}
+      end
     end
   end
 
@@ -232,7 +277,8 @@ defmodule Catena.Namespace do
          graph,
          import_edges,
          current_module,
-         depth
+         depth,
+         prelude
        )
        when event in @scope_events do
     case event do
@@ -247,7 +293,8 @@ defmodule Catena.Namespace do
           graph,
           import_edges,
           current_module,
-          depth + 1
+          depth + 1,
+          prelude
         )
 
       :close_scope ->
@@ -263,7 +310,8 @@ defmodule Catena.Namespace do
               graph,
               import_edges,
               current_module,
-              depth - 1
+              depth - 1,
+              prelude
             )
 
           [_only] ->
@@ -291,7 +339,8 @@ defmodule Catena.Namespace do
          graph,
          import_edges,
          current_module,
-         depth
+         depth,
+         prelude
        )
        when is_map(event) do
     case Map.get(event, :event) do
@@ -314,7 +363,8 @@ defmodule Catena.Namespace do
             graph,
             import_edges,
             current_module,
-            depth
+            depth,
+            prelude
           )
         end
 
@@ -339,7 +389,8 @@ defmodule Catena.Namespace do
             graph,
             import_edges,
             current_module,
-            depth
+            depth,
+            prelude
           )
         end
 
@@ -382,7 +433,8 @@ defmodule Catena.Namespace do
             graph,
             import_edges,
             current_module,
-            depth
+            depth,
+            prelude
           )
         end
 
@@ -430,7 +482,8 @@ defmodule Catena.Namespace do
             graph,
             import_edges,
             current_module,
-            depth
+            depth,
+            prelude
           )
         end
 
@@ -454,7 +507,8 @@ defmodule Catena.Namespace do
           graph,
           import_edges,
           current_module,
-          depth
+          depth,
+          prelude
         )
 
       nil ->
@@ -474,7 +528,8 @@ defmodule Catena.Namespace do
           graph,
           import_edges,
           current_module,
-          depth
+          depth,
+          prelude
         )
 
       other ->
@@ -495,7 +550,8 @@ defmodule Catena.Namespace do
          _graph,
          _import_edges,
          _current_module,
-         _depth
+         _depth,
+         _prelude
        ) do
     {:error,
      Diagnostic.new("NSP001", "a scope event must be a map",
@@ -809,6 +865,28 @@ defmodule Catena.Namespace do
   defp component_membership(sccs) do
     Enum.flat_map(sccs, fn {_key, members} -> Enum.map(members, &{&1, members}) end)
     |> Map.new()
+  end
+
+  defp inject_prelude(nil, _provided, imports), do: {:ok, imports}
+
+  defp inject_prelude(%{package: package}, provided, imports) do
+    case Map.get(provided, package) do
+      nil ->
+        {:error,
+         Diagnostic.new("PKG004", "a declared prelude package is absent from the environment",
+           details: %{name: package, requirer: "<prelude>"}
+         )}
+
+      %{exports: export_set} ->
+        merged =
+          Enum.reduce(export_set, imports, fn {category, spelling}, acc ->
+            Map.update(acc, {category, package}, [spelling], fn existing ->
+              if spelling in existing, do: existing, else: [spelling | existing]
+            end)
+          end)
+
+        {:ok, merged}
+    end
   end
 
   defp check_regime_mixing(import_edges, member_of) do

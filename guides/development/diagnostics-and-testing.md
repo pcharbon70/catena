@@ -79,6 +79,7 @@ may improve without changing the contract.
 | `AB...` | none — abstraction-boundary exclusions surface through `EXP001`, coverage, and invalid-event diagnostics |
 | `CYC...` | SCC-internal violations: digest-presented companion imports (regime mixing) and unsigned component exports (signature gaps) |
 | `PKG...` | package failures: malformed versions/requirements/locks, dependency cycles, unsatisfiable sets, unknown names, and stale or tampered lockfiles |
+| `PRE...` | prelude failures: malformed manifest `prelude` selections (shape or requirement grammar) |
 | `LIM...` | portable source and generated-artifact limits |
 | `B...` | OTP rejecting generated Erlang Abstract Format |
 | `I...` | inference-independent core invariant failure |
@@ -173,6 +174,8 @@ and warnings in structured details.
 | `c024_traceability_coverage_test.exs` | complete `CY-OBL-*` cycles obligation coverage |
 | `c025_package_deps_test.exs` | grammar and precedence matrices, satisfaction boundaries, resolution determinism, conflicts, locks, digests, and manifest integration |
 | `c025_traceability_coverage_test.exs` | complete `PK-OBL-*` package obligation coverage |
+| `c026_prelude_policy_test.exs` | prelude selection, admission, precedence, collisions, opt-out, locks, and determinism |
+| `c026_traceability_coverage_test.exs` | complete `PL-OBL-*` prelude obligation coverage |
 | `c016_traceability_coverage_test.exs` | complete `CM-OBL-*` comment and documentation obligation coverage |
 | `resumption_token_test.exs` | dynamic one-use continuation defense |
 
