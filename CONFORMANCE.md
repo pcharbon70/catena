@@ -192,6 +192,21 @@ semantics — introducing no scope and spawning no process — reporting
 failures. Compilation roots, supervision, and tooling are unchanged and
 remain future work.
 
+Normative C028 uses `0.1.24` for API compatibility. `Catena.Package
+Compat.diff/2` classifies the ordered diff of two decoded semantic
+interfaces under the strict matrix — export, datatype, trait, instance,
+effect-family, and handler removals, renames, and signature changes and
+effect-row widening are breaking (`CMP002` on malformed input, `CMP003`
+on unclassifiable drift); additions and row narrowing are minor;
+representation and digest changes never break alone. `diff_entries/2`
+classifies manifest entry sets (additions minor; removals and result
+changes breaking). `validate_claim/3` enforces version claims — a
+breaking diff requires major at 1.0.0+ and minor below it, with `CMP001`
+for under-claims. Behavior compatibility and any BEAM ABI, wire, or
+serialization contract are declared absences: the deterministic kernel
+is the behavior contract, and compiled binaries are deterministic
+outputs, not compatibility surfaces.
+
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
 choices and extensions, recommendation dispositions, bounded presentations,

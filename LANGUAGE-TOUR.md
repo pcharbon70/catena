@@ -443,6 +443,14 @@ invokes it to completion, reporting its returned value as the shutdown
 result or the trap identity on failure. No supervision, spawning, or
 exit codes exist at this layer.
 
+Revision 0.1.24 fixes API compatibility: interface changes classify
+under a strict diff matrix (removals, renames, scheme changes, and
+effect-row widening are breaking; additions are minor; representation
+never breaks alone), version claims are validated against it — breaking
+requires major at 1.0+ and minor below — and behavior and BEAM ABI
+compatibility are declared absences: the kernel is the behavior
+contract and binaries are deterministic outputs, not surfaces.
+
 ## The executable formal kernel and typed actors
 
 Normative revision 0.1.8 integrates the executable portions of the earlier
@@ -500,6 +508,8 @@ packages 0.1.21 → requirements, single-version resolution, locks
 prelude 0.1.22 → opt-in origin, ordinary precedence, zero implicit names
                        ↓
 entries 0.1.23 → effect-closed entries, derived libraries, launch
+                       ↓
+compat 0.1.24 → strict diff matrix, claim validation, declared absences
                        (stops before the future declaration grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
@@ -613,6 +623,10 @@ Elixir, so read them for semantics and diagnostics rather than surface syntax:
    entry declaration shapes, library derivation, effect-closure
    validation, invocation-only launch, return-is-shutdown reports, and
    the `ENT001`–`ENT003` families.
+11. [`c028_api_compat_test.exs`](test/catena/c028_api_compat_test.exs) —
+   the full breaking matrix, entry-set classification, SemVer claim
+   validation across the 0.x and 1.0+ rules, the declared absences, and
+   the `CMP001`–`CMP003` families.
 
 ## Continue in catena-research
 

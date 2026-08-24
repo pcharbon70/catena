@@ -87,7 +87,11 @@ manifest selection admitted at ordinary import precedence with the
 zero-implicit-names edition guarantee. Normative C027 revision `0.1.23`
 adds entry points: named zero-argument effect-closed entry exports in
 the manifest, libraries derived from zero declared entries, and
-invocation-only launch whose returned value is the shutdown result. The
+invocation-only launch whose returned value is the shutdown result.
+Normative C028 revision `0.1.24` adds API compatibility: a strict
+interface diff matrix, SemVer claim validation (major-as-breaking at
+1.0+, minor-as-breaking under 0.x), and declared behavior and BEAM ABI
+absences. The
 atomic scanning APIs remain source-only, and the compiler release remains
 `0.1.0`.
 The bootstrap toolchain is written in
@@ -114,7 +118,7 @@ tokenize 0.1.15 operator expressions, resolve 0.1.16 file units, resolve
 names through 0.1.17 namespaces, validate 0.1.18 imports and exports,
 confirm 0.1.19 abstraction boundaries, compile 0.1.20 dependency cycles,
 resolve 0.1.21 package dependencies, select 0.1.22 preludes, declare and
-launch 0.1.23 entries,
+launch 0.1.23 entries, classify 0.1.24 compatibility,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -146,7 +150,7 @@ uses `0.1.19` for abstraction boundaries. Normative C024 uses `0.1.20`
 for module dependency cycles. Normative C025 uses `0.1.21` for package
 identity and dependency resolution. Normative C026 uses `0.1.22` for the
 prelude. Normative C027 uses `0.1.23` for entry points and application
-structure.
+structure. Normative C028 uses `0.1.24` for API and ABI compatibility.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -184,7 +188,8 @@ flowchart LR
     CY --> PK[Package resolution 0.1.21]
     PK --> PL[Prelude selection 0.1.22]
     PL --> EN[Entry declarations and launch 0.1.23]
-    EN --> STOP[Identities, locks, origins, and digests]
+    EN --> CP[Interface diff and claims 0.1.24]
+    CP --> STOP[Identities, locks, origins, and digests]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
@@ -231,7 +236,8 @@ local-over-imported precedence, while 0.1.18 validates imports against
 digest-bound export sets, 0.1.19 fixes the abstraction boundary, and
 0.1.20 compiles dependency cycles as components, and 0.1.21 resolves
 package dependencies with lockfiles, and 0.1.22 admits prelude
-selections, and 0.1.23 declares and validates entry exports, but claims no
+selections, and 0.1.23 declares and validates entry exports, and 0.1.24
+classifies interface compatibility, but claims no
 declaration grammar, import punctuation, typing, or evaluation. The backend does not emit
 Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
@@ -426,7 +432,14 @@ include:
   effect-closed exports with `ENT001` validation, libraries derived from
   zero declared entries, one optional launch marker, and
   `Catena.Entry.launch/2` reporting the entry's value or `ENT002` unknown
-  names and `ENT003` trap failures.
+  names and `ENT003` trap failures; and
+- 0.1.24 API compatibility: `Catena.Package.Compat.diff/2` classifying
+  decoded-interface changes under the strict matrix (removals, renames,
+  scheme changes, and effect-row widening breaking; additions minor;
+  representation never breaking alone), `diff_entries/2`, and
+  `validate_claim/3` enforcing SemVer claims with `CMP001` under-bumps,
+  `CMP002` malformed shapes, and `CMP003` unclassifiable drift —
+  behavior and BEAM ABI are declared absences.
 
 This is not yet an ergonomic Catena source lexer or parser or a complete implementation of resource
 scopes, exception boundaries, general host-effect entry policy, scoped or
