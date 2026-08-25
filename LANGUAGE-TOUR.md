@@ -451,6 +451,14 @@ requires major at 1.0+ and minor below — and behavior and BEAM ABI
 compatibility are declared absences: the kernel is the behavior
 contract and binaries are deterministic outputs, not surfaces.
 
+Revision 0.1.26 fixes evaluation order: one closed ordered-forms table
+covers every existing compound — the kernel's list plus curried
+application, trait calls, handler installation, and annotate — with
+trace-observable semantics: the reference evaluator and compiled BEAM
+produce equal effect-request traces, order is never advisory, and a
+future-form entry rule keeps collections and interpolation unordered
+until their own slices.
+
 Revision 0.1.25 fixes the value model: a closed ten-form value grammar
 (the kernel's nine plus Float), uniformly first-class, with resumptions
 and traps among the never-values; and a strictness invariant — every
@@ -519,6 +527,8 @@ entries 0.1.23 → effect-closed entries, derived libraries, launch
 compat 0.1.24 → strict diff matrix, claim validation, declared absences
                        ↓
 values 0.1.25 → closed grammar, first-class values, strictness gate
+                       ↓
+order 0.1.26 → closed table, entry rule, trace observability
                        (stops before the future declaration grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
@@ -640,6 +650,10 @@ Elixir, so read them for semantics and diagnostics rather than surface syntax:
    closed value grammar with Float, the non-value reasons, uniform
    first-classness witnesses, strictness terminals over the kernel
    stepper, and the zero-diagnostics definitional stance.
+13. [`c030_evaluation_order_test.exs`](test/catena/c030_evaluation_order_test.exs) —
+   dual reference/BEAM trace agreement for every ordered form,
+   curried application, the `and`/`or` skips, handler installation,
+   and determinism.
 
 ## Continue in catena-research
 

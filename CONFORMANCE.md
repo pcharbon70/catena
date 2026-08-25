@@ -220,6 +220,20 @@ multi-evaluation form gated behind an edition record. `Catena.Values`
 is the total classifier over typed-core and kernel terms; the slice is
 definitional and adds zero new diagnostic families.
 
+Normative C030 uses `0.1.26` for evaluation order. One closed
+ordered-forms table fixes when every existing compound evaluates: the
+kernel's list elevated verbatim, plus the typed-core completions —
+curried multi-argument application as repeated unary left-to-right,
+trait-call subject then arguments, handler installation before body,
+annotate transparency. Order is observable semantics: a conforming
+implementation's effect-request trace equals the declared order's
+trace, with reference-evaluator and compiled-BEAM traces agreeing per
+program (the C005 dual-agreement pattern, generalized). A future-form
+entry rule keeps collections and interpolation unordered until their
+own slices declare entries; the `and`/`or` skips remain the only
+exceptions under C029's edition-record gate. The slice is definitional:
+no new public API and zero new diagnostic families.
+
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
 choices and extensions, recommendation dispositions, bounded presentations,
