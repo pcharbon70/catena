@@ -104,6 +104,10 @@ flowchart TD
    classify interface changes under the strict matrix, validate SemVer
    claims, and rely on the declared behavior and ABI absences at
    revision 0.1.24.
+18. [Values and Evaluation](language/values.md) — the closed ten-form
+   value grammar with Float, uniform first-classness, the strictness
+   invariant with its edition-record gate, and value-or-trap terminals
+   at revision 0.1.25.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -223,8 +227,9 @@ could also appear in the compiler.
 | 0.1.22 | prelude: opt-in manifest selection, ordinary-origin precedence, absent/null opt-out, zero-implicit-names guarantee |
 | 0.1.23 | entry points: named zero-argument effect-closed entries, derived libraries, one launch marker, invocation-only launch with return-is-shutdown |
 | 0.1.24 | API compatibility: strict interface diff matrix, SemVer claim validation, declared behavior and BEAM ABI absences |
+| 0.1.25 | values and evaluation: closed ten-form value grammar with Float, uniform first-classness, strictness invariant with edition-record gate, value-or-trap terminals |
 
-Versions 0.1.1 through 0.1.24 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.25 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

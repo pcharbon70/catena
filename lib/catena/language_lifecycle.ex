@@ -170,6 +170,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "api-and-abi-compatibility/compatibility-layers-and-versions.md#compatibility-layers-and-versions"
         )
+      ),
+      feature(
+        "values-and-evaluation",
+        "0.1.25",
+        specification(
+          "values-and-evaluation/value-forms-and-first-classness.md#value-forms-and-first-classness"
+        )
       )
     ]
   end
@@ -537,6 +544,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("api-and-abi-compatibility"),
     do: ~w(static-meaning diagnostics)
 
+  defp affected_dimensions("values-and-evaluation"),
+    do: ~w(static-meaning)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -600,6 +610,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("api-and-abi-compatibility"),
     do:
       "Select 0.1.24 to classify interface changes with the strict breaking-change matrix, validate version claims (major-as-breaking at 1.0+, minor-as-breaking under 0.x), and rely on the declared behavior and BEAM ABI absences; migration engines and tooling remain future work."
+
+  defp migration("values-and-evaluation"),
+    do:
+      "Select 0.1.25 for the closed ten-form value grammar with Float, uniform first-classness, the strictness invariant with its two named exceptions and edition-record gate, and value-or-trap terminal outcomes; kernel rules and diagnostics are unchanged."
 
   defp migration("package-identity-and-dependencies"),
     do:

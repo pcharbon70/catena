@@ -91,7 +91,10 @@ invocation-only launch whose returned value is the shutdown result.
 Normative C028 revision `0.1.24` adds API compatibility: a strict
 interface diff matrix, SemVer claim validation (major-as-breaking at
 1.0+, minor-as-breaking under 0.x), and declared behavior and BEAM ABI
-absences. The
+absences. Normative C029 revision `0.1.25` adds the value model: a
+closed ten-form value grammar with Float, uniform first-classness, the
+strictness invariant with its two named exceptions and edition-record
+gate, and value-or-trap terminal outcomes. The
 atomic scanning APIs remain source-only, and the compiler release remains
 `0.1.0`.
 The bootstrap toolchain is written in
@@ -118,7 +121,8 @@ tokenize 0.1.15 operator expressions, resolve 0.1.16 file units, resolve
 names through 0.1.17 namespaces, validate 0.1.18 imports and exports,
 confirm 0.1.19 abstraction boundaries, compile 0.1.20 dependency cycles,
 resolve 0.1.21 package dependencies, select 0.1.22 preludes, declare and
-launch 0.1.23 entries, classify 0.1.24 compatibility,
+launch 0.1.23 entries, classify 0.1.24 compatibility, and check 0.1.25
+value classification,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -151,6 +155,7 @@ for module dependency cycles. Normative C025 uses `0.1.21` for package
 identity and dependency resolution. Normative C026 uses `0.1.22` for the
 prelude. Normative C027 uses `0.1.23` for entry points and application
 structure. Normative C028 uses `0.1.24` for API and ABI compatibility.
+Normative C029 uses `0.1.25` for values and evaluation.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -189,7 +194,8 @@ flowchart LR
     PK --> PL[Prelude selection 0.1.22]
     PL --> EN[Entry declarations and launch 0.1.23]
     EN --> CP[Interface diff and claims 0.1.24]
-    CP --> STOP[Identities, locks, origins, and digests]
+    CP --> VA[Value classification 0.1.25]
+    VA --> STOP[Identities, locks, origins, and digests]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
@@ -237,7 +243,8 @@ digest-bound export sets, 0.1.19 fixes the abstraction boundary, and
 0.1.20 compiles dependency cycles as components, and 0.1.21 resolves
 package dependencies with lockfiles, and 0.1.22 admits prelude
 selections, and 0.1.23 declares and validates entry exports, and 0.1.24
-classifies interface compatibility, but claims no
+classifies interface compatibility, and 0.1.25 fixes the closed value
+grammar and strictness invariant, but claims no
 declaration grammar, import punctuation, typing, or evaluation. The backend does not emit
 Core Erlang, BEAM assembly, or `.beam` files directly; OTP's
 supported compiler interface is the sole binary-generation boundary.
@@ -439,7 +446,13 @@ include:
   representation never breaking alone), `diff_entries/2`, and
   `validate_claim/3` enforcing SemVer claims with `CMP001` under-bumps,
   `CMP002` malformed shapes, and `CMP003` unclassifiable drift —
-  behavior and BEAM ABI are declared absences.
+  behavior and BEAM ABI are declared absences; and
+- 0.1.25 values and evaluation: `Catena.Values` implementing the closed
+  ten-form value grammar (the kernel's nine forms plus Float), the
+  closed non-value list, uniform first-classness, the strictness
+  invariant with the `and`/`or` exceptions and an edition-record gate
+  for any future lazy form, and value-or-trap terminal outcomes — a
+  definitional slice adding zero new diagnostic families.
 
 This is not yet an ergonomic Catena source lexer or parser or a complete implementation of resource
 scopes, exception boundaries, general host-effect entry policy, scoped or

@@ -451,6 +451,13 @@ requires major at 1.0+ and minor below — and behavior and BEAM ABI
 compatibility are declared absences: the kernel is the behavior
 contract and binaries are deterministic outputs, not surfaces.
 
+Revision 0.1.25 fixes the value model: a closed ten-form value grammar
+(the kernel's nine plus Float), uniformly first-class, with resumptions
+and traps among the never-values; and a strictness invariant — every
+subexpression evaluates at most once, to a value or a terminal trap,
+before use — with `and`/`or` as the only skips and an edition-record
+gate against any future lazy form.
+
 ## The executable formal kernel and typed actors
 
 Normative revision 0.1.8 integrates the executable portions of the earlier
@@ -510,6 +517,8 @@ prelude 0.1.22 → opt-in origin, ordinary precedence, zero implicit names
 entries 0.1.23 → effect-closed entries, derived libraries, launch
                        ↓
 compat 0.1.24 → strict diff matrix, claim validation, declared absences
+                       ↓
+values 0.1.25 → closed grammar, first-class values, strictness gate
                        (stops before the future declaration grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
@@ -627,6 +636,10 @@ Elixir, so read them for semantics and diagnostics rather than surface syntax:
    the full breaking matrix, entry-set classification, SemVer claim
    validation across the 0.x and 1.0+ rules, the declared absences, and
    the `CMP001`–`CMP003` families.
+12. [`c029_values_test.exs`](test/catena/c029_values_test.exs) — the
+   closed value grammar with Float, the non-value reasons, uniform
+   first-classness witnesses, strictness terminals over the kernel
+   stepper, and the zero-diagnostics definitional stance.
 
 ## Continue in catena-research
 
