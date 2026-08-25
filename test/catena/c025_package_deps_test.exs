@@ -15,10 +15,10 @@ defmodule Catena.C025PackageDepsTest do
 
   @tag obligations: ~w(PK-OBL-001 PK-OBL-012)
   test "0.1.21 is an exact registered revision with predecessors pinned" do
-    assert LanguageVersion.latest() == "0.1.24"
+    assert LanguageVersion.latest() == "0.1.25"
 
     assert LanguageVersion.source_text_frontend_versions() ==
-             ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24)
+             ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25)
 
     refute "0.1.21" in LanguageVersion.compilable_revisions()
     refute "0.1.21" in LanguageVersion.artifact_versions()

@@ -207,6 +207,19 @@ serialization contract are declared absences: the deterministic kernel
 is the behavior contract, and compiled binaries are deterministic
 outputs, not compatibility surfaces.
 
+Normative C029 uses `0.1.25` for values and evaluation. Values are the
+closed ten-form grammar — the kernel's integer, Boolean, Unit, tuple,
+closure, constructor-value, record, injection, and opaque
+process-handle forms plus Float — uniformly first-class with no tiers;
+evidence, handler declarations, capability names, resumptions, traps,
+effect rows, and signatures are never values. The strictness invariant
+holds that every subexpression evaluates at most once, to a value or a
+terminal trap, before use, with the kernel's `and`/`or` right-operand
+skips as the only named exceptions and every future lazy or
+multi-evaluation form gated behind an edition record. `Catena.Values`
+is the total classifier over typed-core and kernel terms; the slice is
+definitional and adds zero new diagnostic families.
+
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
 choices and extensions, recommendation dispositions, bounded presentations,

@@ -14,7 +14,7 @@ defmodule Catena.C012ImplementationLimitsTest do
     assert JSON.encode!(first) == JSON.encode!(second)
     assert first["format"] == "catena-conformance-info"
     assert first["version"] == 1
-    assert first["language"]["current_revision"] == "0.1.24"
+    assert first["language"]["current_revision"] == "0.1.25"
     assert first["implementation"]["release"] == "0.1.0"
 
     assert Enum.map(first["permissions"], & &1["id"]) == [
