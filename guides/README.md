@@ -108,6 +108,9 @@ flowchart TD
    value grammar with Float, uniform first-classness, the strictness
    invariant with its edition-record gate, and value-or-trap terminals
    at revision 0.1.25.
+19. [Evaluation Order](language/evaluation-order.md) — the closed
+   ordered-forms table with typed-core completions, the future-form
+   entry rule, and trace-observable order at revision 0.1.26.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -228,8 +231,9 @@ could also appear in the compiler.
 | 0.1.23 | entry points: named zero-argument effect-closed entries, derived libraries, one launch marker, invocation-only launch with return-is-shutdown |
 | 0.1.24 | API compatibility: strict interface diff matrix, SemVer claim validation, declared behavior and BEAM ABI absences |
 | 0.1.25 | values and evaluation: closed ten-form value grammar with Float, uniform first-classness, strictness invariant with edition-record gate, value-or-trap terminals |
+| 0.1.26 | evaluation order: closed ordered-forms table with typed-core completions, future-form entry rule, trace-observable order with reference/BEAM agreement |
 
-Versions 0.1.1 through 0.1.25 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.26 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

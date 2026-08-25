@@ -177,6 +177,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "values-and-evaluation/value-forms-and-first-classness.md#value-forms-and-first-classness"
         )
+      ),
+      feature(
+        "evaluation-order",
+        "0.1.26",
+        specification(
+          "evaluation-order/ordered-forms-and-entry-rule.md#ordered-forms-and-entry-rule"
+        )
       )
     ]
   end
@@ -547,6 +554,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("values-and-evaluation"),
     do: ~w(static-meaning)
 
+  defp affected_dimensions("evaluation-order"),
+    do: ~w(static-meaning)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -614,6 +624,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("values-and-evaluation"),
     do:
       "Select 0.1.25 for the closed ten-form value grammar with Float, uniform first-classness, the strictness invariant with its two named exceptions and edition-record gate, and value-or-trap terminal outcomes; kernel rules and diagnostics are unchanged."
+
+  defp migration("evaluation-order"),
+    do:
+      "Select 0.1.26 for the closed ordered-forms table with typed-core completions, the future-form entry rule, and trace-observable order with reference/BEAM agreement; kernel and fragment rules are unchanged and no new diagnostics appear."
 
   defp migration("package-identity-and-dependencies"),
     do:
