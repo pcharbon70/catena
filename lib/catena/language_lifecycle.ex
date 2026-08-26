@@ -191,6 +191,11 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "bindings-and-sequencing/binding-structure-and-scope.md#binding-structure-and-scope"
         )
+      ),
+      feature(
+        "functions-and-calls",
+        "0.1.28",
+        specification("functions-and-calls/arity-and-application.md#arity-and-application")
       )
     ]
   end
@@ -567,6 +572,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("bindings-and-sequencing"),
     do: ~w(static-meaning diagnostics)
 
+  defp affected_dimensions("functions-and-calls"),
+    do: ~w(static-meaning)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -642,6 +650,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("bindings-and-sequencing"),
     do:
       "Select 0.1.27 for the elevated binding account — non-recursive local lets, sequential-lexical scope with silent innermost shadowing, definitions-only recursion with SCC mutual recursion, the let idiom as sequencing — plus the deny-able BS001 warning for non-underscore-prefixed unused binders; kernel rules are unchanged."
+
+  defp migration("functions-and-calls"),
+    do:
+      "Select 0.1.28 for the function model: every function is semantically unary with multi-parameter definitions as nested-unary sugar, partial application yields first-class closure values, capture is lexical and immutable, the let-bound closure is the local-function form, and the proper-tail-call guarantee holds on every target; no new diagnostics appear."
 
   defp migration("package-identity-and-dependencies"),
     do:

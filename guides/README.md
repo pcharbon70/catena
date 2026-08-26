@@ -115,6 +115,10 @@ flowchart TD
    local bindings, silent shadowing, definitions-only recursion, the
    sequencing idiom, and the deny-able `BS001` warning at revision
    0.1.27.
+21. [Functions and Calls](language/functions.md) — the semantic-unary
+   curried model, free partial application, lexical immutable capture,
+   let-bound local functions, and proper tail calls at revision
+   0.1.28.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -237,8 +241,9 @@ could also appear in the compiler.
 | 0.1.25 | values and evaluation: closed ten-form value grammar with Float, uniform first-classness, strictness invariant with edition-record gate, value-or-trap terminals |
 | 0.1.26 | evaluation order: closed ordered-forms table with typed-core completions, future-form entry rule, trace-observable order with reference/BEAM agreement |
 | 0.1.27 | bindings and sequencing: non-recursive local lets, silent innermost shadowing, definitions-only recursion, sequencing idiom, deny-able `BS001` with `_`-prefix exemption |
+| 0.1.28 | functions and calls: semantic-unary currying, free partial application, lexical immutable capture, let-bound local functions, elevated proper-tail-call guarantee |
 
-Versions 0.1.1 through 0.1.27 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.28 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

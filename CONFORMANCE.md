@@ -245,6 +245,18 @@ the let idiom (`let _ = e1; e2`) is the normative sequencing form.
 non-underscore-prefixed binders that never occur in their body;
 denial through the manifest promotes it to an error.
 
+Normative C032 uses `0.1.28` for functions and calls. Every function
+is semantically unary — multi-parameter definitions desugar to nested
+unary functions and multi-argument calls are repeated unary
+application — so no arity mismatch exists to diagnose. Any prefix
+application is a first-class closure value (free partial application);
+capture is lexical and immutable; the let-bound closure is the
+local-function form under all of C031's rules; and the kernel's
+proper-tail-call guarantee is elevated verbatim, witnessed by a
+five-million-iteration match-dispatched tail recursion completing on
+compiled BEAM with the stepper terminating within its budget. Zero
+new diagnostic families.
+
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
 choices and extensions, recommendation dispositions, bounded presentations,
