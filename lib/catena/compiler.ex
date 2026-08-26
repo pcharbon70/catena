@@ -30,6 +30,7 @@ defmodule Catena.Compiler do
            core <- Infer.module(ast, options) |> Map.put(:source, ast.source),
            specifications <- Specification.elaborate!(ast, core),
            core <- Map.put(core, :specifications, specifications),
+           core <- Map.update!(core, :diagnostics, &(&1 ++ bindings_warnings(core))),
            :ok <- enforce_diagnostics(core.diagnostics, options) do
         case Verifier.verify(core) do
           :ok ->
@@ -109,6 +110,10 @@ defmodule Catena.Compiler do
       language_revision: ast.language_revision,
       previews: ast.previews
     }
+  end
+
+  defp bindings_warnings(core) do
+    Enum.flat_map(core.definitions, &Catena.Bindings.unused_binding_warnings(&1, &1.name))
   end
 
   defp enforce_diagnostics(diagnostics, options) do
