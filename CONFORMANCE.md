@@ -257,6 +257,17 @@ five-million-iteration match-dispatched tail recursion completing on
 compiled BEAM with the stepper terminating within its budget. Zero
 new diagnostic families.
 
+Normative C033 uses `0.1.29` for conditionals and branching. Match is
+the single branch form: scrutinee once, source-order clauses with
+pattern-before-condition, exactly-once `Bool` conditions, false
+fallthrough, irreversible commitment, clause bodies unifying with the
+match's type, `M001` non-exhaustive witnesses and redundancy rejection
+unchanged from C002. The conditional sugar promise fixes that any
+future `if` spelling desugars to a Bool-pattern match, and
+statement-like control forms are declared absent — everything is an
+expression, effects sequence through the let idiom. Zero new
+diagnostic families.
+
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
 choices and extensions, recommendation dispositions, bounded presentations,
