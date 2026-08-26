@@ -6,10 +6,10 @@ defmodule Catena.C017LiteralGrammarTest do
 
   @tag obligations: ~w(LT-OBL-001 LT-OBL-010 LT-OBL-011 LT-OBL-012)
   test "0.1.13 is an exact deterministic source-only literal revision" do
-    assert LanguageVersion.latest() == "0.1.28"
+    assert LanguageVersion.latest() == "0.1.29"
 
     assert LanguageVersion.source_text_frontend_versions() ==
-             ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28)
+             ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29)
 
     refute "0.1.13" in LanguageVersion.compilable_revisions()
     refute "0.1.13" in LanguageVersion.interface_versions()

@@ -451,6 +451,12 @@ requires major at 1.0+ and minor below — and behavior and BEAM ABI
 compatibility are declared absences: the kernel is the behavior
 contract and binaries are deterministic outputs, not surfaces.
 
+Revision 0.1.29 fixes branching: match is the only branch form, an
+`if`-like conditional is promised to desugar to a Bool-pattern match,
+the consolidated rules keep their citing areas' homes, and
+statement-like control forms are declared absent — everything is an
+expression.
+
 Revision 0.1.28 fixes functions and calls: every function is
 semantically unary (multi-parameter definitions are nested-unary
 sugar), partial application is free — any prefix application is a
@@ -549,6 +555,8 @@ order 0.1.26 → closed table, entry rule, trace observability
 bindings 0.1.27 → non-recursive lets, sequencing idiom, BS001
                        ↓
 functions 0.1.28 → semantic-unary currying, closures, proper tails
+                       ↓
+branching 0.1.29 → match-only dispatch, sugar promise, no statements
                        (stops before the future declaration grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
@@ -682,6 +690,10 @@ Elixir, so read them for semantics and diagnostics rather than surface syntax:
    curried application agreement, partial application as a callable
    value, immutable capture, let-bound local closures, exported named
    functions, and the deep tail-call witness on BEAM.
+16. [`c033_branching_test.exs`](test/catena/c033_branching_test.exs) —
+   Bool-pattern dispatch as the conditional, guarded fallthrough,
+   commitment traces, `M001` unchanged, and the statement-form
+   absence.
 
 ## Continue in catena-research
 

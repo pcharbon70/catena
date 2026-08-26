@@ -196,6 +196,13 @@ defmodule Catena.LanguageLifecycle do
         "functions-and-calls",
         "0.1.28",
         specification("functions-and-calls/arity-and-application.md#arity-and-application")
+      ),
+      feature(
+        "branching",
+        "0.1.29",
+        specification(
+          "branching/the-branch-form-and-its-desugaring.md#the-branch-form-and-its-desugaring"
+        )
       )
     ]
   end
@@ -575,6 +582,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("functions-and-calls"),
     do: ~w(static-meaning)
 
+  defp affected_dimensions("branching"),
+    do: ~w(static-meaning)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -654,6 +664,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("functions-and-calls"),
     do:
       "Select 0.1.28 for the function model: every function is semantically unary with multi-parameter definitions as nested-unary sugar, partial application yields first-class closure values, capture is lexical and immutable, the let-bound closure is the local-function form, and the proper-tail-call guarantee holds on every target; no new diagnostics appear."
+
+  defp migration("branching"),
+    do:
+      "Select 0.1.29 for the branching model: match is the single branch form, any future conditional spelling desugars to a Bool-pattern match, the consolidated rules keep their citing areas' homes, and statement-like control forms are declared absent; no new diagnostics appear."
 
   defp migration("package-identity-and-dependencies"),
     do:
