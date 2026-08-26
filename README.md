@@ -122,7 +122,8 @@ names through 0.1.17 namespaces, validate 0.1.18 imports and exports,
 confirm 0.1.19 abstraction boundaries, compile 0.1.20 dependency cycles,
 resolve 0.1.21 package dependencies, select 0.1.22 preludes, declare and
 launch 0.1.23 entries, classify 0.1.24 compatibility, check 0.1.25
-value classification, and witness 0.1.26 evaluation order,
+value classification, witness 0.1.26 evaluation order, and check
+0.1.27 bindings,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -156,7 +157,8 @@ identity and dependency resolution. Normative C026 uses `0.1.22` for the
 prelude. Normative C027 uses `0.1.23` for entry points and application
 structure. Normative C028 uses `0.1.24` for API and ABI compatibility.
 Normative C029 uses `0.1.25` for values and evaluation.
-Normative C030 uses `0.1.26` for evaluation order.
+Normative C030 uses `0.1.26` for evaluation order. Normative C031
+uses `0.1.27` for bindings and sequencing.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -197,7 +199,8 @@ flowchart LR
     EN --> CP[Interface diff and claims 0.1.24]
     CP --> VA[Value classification 0.1.25]
     VA --> EO[Ordered-form traces 0.1.26]
-    EO --> STOP[Identities, locks, origins, and digests]
+    EO --> BS[Binding structure and BS001 0.1.27]
+    BS --> STOP[Identities, locks, origins, and digests]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]

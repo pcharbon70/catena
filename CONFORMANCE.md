@@ -234,6 +234,17 @@ own slices declare entries; the `and`/`or` skips remain the only
 exceptions under C029's edition-record gate. The slice is definitional:
 no new public API and zero new diagnostic families.
 
+Normative C031 uses `0.1.27` for bindings and sequencing. Local `let`
+bindings are strictly non-recursive (a self-referential right-hand side
+is `T001` unbound), scope is sequential-lexical with silent
+innermost-wins shadowing of any in-scope name, recursion is
+definitions-only with C024's SCC as mutual recursion's home, an unused
+binding stays valid with its right-hand side's effects preserved, and
+the let idiom (`let _ = e1; e2`) is the normative sequencing form.
+`Catena.Bindings` emits the deny-able `BS001` warning for
+non-underscore-prefixed binders that never occur in their body;
+denial through the manifest promotes it to an error.
+
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
 choices and extensions, recommendation dispositions, bounded presentations,

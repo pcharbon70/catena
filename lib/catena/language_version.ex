@@ -35,12 +35,13 @@ defmodule Catena.LanguageVersion do
     entry_points: "0.1.23",
     api_and_abi_compatibility: "0.1.24",
     values_and_evaluation: "0.1.25",
-    evaluation_order: "0.1.26"
+    evaluation_order: "0.1.26",
+    bindings_and_sequencing: "0.1.27"
   ]
   @ordered Keyword.values(@versions)
   @json_frontends ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7)
   @kernel_frontends ~w(0.1.8)
-  @source_text_frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26)
+  @source_text_frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27)
   @compilable @json_frontends ++ @kernel_frontends
   @interfaces ~w(0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8)
   @signed_formats ~w(0.1.6 0.1.7 0.1.8)
@@ -74,6 +75,7 @@ defmodule Catena.LanguageVersion do
           | :api_and_abi_compatibility
           | :values_and_evaluation
           | :evaluation_order
+          | :bindings_and_sequencing
 
   @spec all() :: [String.t()]
   def all, do: @ordered

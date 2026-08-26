@@ -111,6 +111,10 @@ flowchart TD
 19. [Evaluation Order](language/evaluation-order.md) — the closed
    ordered-forms table with typed-core completions, the future-form
    entry rule, and trace-observable order at revision 0.1.26.
+20. [Bindings and Sequencing](language/bindings.md) — non-recursive
+   local bindings, silent shadowing, definitions-only recursion, the
+   sequencing idiom, and the deny-able `BS001` warning at revision
+   0.1.27.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -232,8 +236,9 @@ could also appear in the compiler.
 | 0.1.24 | API compatibility: strict interface diff matrix, SemVer claim validation, declared behavior and BEAM ABI absences |
 | 0.1.25 | values and evaluation: closed ten-form value grammar with Float, uniform first-classness, strictness invariant with edition-record gate, value-or-trap terminals |
 | 0.1.26 | evaluation order: closed ordered-forms table with typed-core completions, future-form entry rule, trace-observable order with reference/BEAM agreement |
+| 0.1.27 | bindings and sequencing: non-recursive local lets, silent innermost shadowing, definitions-only recursion, sequencing idiom, deny-able `BS001` with `_`-prefix exemption |
 
-Versions 0.1.1 through 0.1.26 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.27 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

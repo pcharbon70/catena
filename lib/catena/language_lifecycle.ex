@@ -4,7 +4,7 @@ defmodule Catena.LanguageLifecycle do
   alias Catena.{Diagnostic, LanguageSelection, LanguageVersion}
 
   @states ~w(preview stable withdrawn deprecated removed)
-  @warning_ids ~w(DEP001 EDN002 IDN007 IMP001)
+  @warning_ids ~w(BS001 DEP001 EDN002 IDN007 IMP001)
   @classifications ~w(breaking compatible-addition compatible-correction)
   @dimensions ~w(source-acceptance static-meaning dynamic-behavior diagnostics interfaces artifacts)
   @identifier ~r/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
@@ -183,6 +183,13 @@ defmodule Catena.LanguageLifecycle do
         "0.1.26",
         specification(
           "evaluation-order/ordered-forms-and-entry-rule.md#ordered-forms-and-entry-rule"
+        )
+      ),
+      feature(
+        "bindings-and-sequencing",
+        "0.1.27",
+        specification(
+          "bindings-and-sequencing/binding-structure-and-scope.md#binding-structure-and-scope"
         )
       )
     ]
@@ -557,6 +564,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("evaluation-order"),
     do: ~w(static-meaning)
 
+  defp affected_dimensions("bindings-and-sequencing"),
+    do: ~w(static-meaning diagnostics)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -628,6 +638,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("evaluation-order"),
     do:
       "Select 0.1.26 for the closed ordered-forms table with typed-core completions, the future-form entry rule, and trace-observable order with reference/BEAM agreement; kernel and fragment rules are unchanged and no new diagnostics appear."
+
+  defp migration("bindings-and-sequencing"),
+    do:
+      "Select 0.1.27 for the elevated binding account — non-recursive local lets, sequential-lexical scope with silent innermost shadowing, definitions-only recursion with SCC mutual recursion, the let idiom as sequencing — plus the deny-able BS001 warning for non-underscore-prefixed unused binders; kernel rules are unchanged."
 
   defp migration("package-identity-and-dependencies"),
     do:
