@@ -451,6 +451,12 @@ requires major at 1.0+ and minor below — and behavior and BEAM ABI
 compatibility are declared absences: the kernel is the behavior
 contract and binaries are deterministic outputs, not surfaces.
 
+Revision 0.1.30 fixes equality and ordering: the comparable set is
+closed — Int, Bool, Float, plus structural composites — float
+equality is bit-exact (`-0.0 != 0.0`), comparison is monomorphic,
+closures and handles never compare (`EQN001`), and guards keep C003's
+frozen fragment.
+
 Revision 0.1.29 fixes branching: match is the only branch form, an
 `if`-like conditional is promised to desugar to a Bool-pattern match,
 the consolidated rules keep their citing areas' homes, and
@@ -557,6 +563,8 @@ bindings 0.1.27 → non-recursive lets, sequencing idiom, BS001
 functions 0.1.28 → semantic-unary currying, closures, proper tails
                        ↓
 branching 0.1.29 → match-only dispatch, sugar promise, no statements
+                       ↓
+equality 0.1.30 → comparable set, bit-exact floats, EQN001
                        (stops before the future declaration grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
@@ -694,6 +702,10 @@ Elixir, so read them for semantics and diagnostics rather than surface syntax:
    Bool-pattern dispatch as the conditional, guarded fallthrough,
    commitment traces, `M001` unchanged, and the statement-form
    absence.
+17. [`c035_equality_test.exs`](test/catena/c035_equality_test.exs) —
+   the comparable-set classifier with signed-zero ordering, tuple and
+   constructor-value equality on both targets, `EQN001` exclusions,
+   monomorphism, and the guard split.
 
 ## Continue in catena-research
 

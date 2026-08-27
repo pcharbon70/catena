@@ -2,6 +2,7 @@ defmodule Catena.TypedCore.Verifier do
   @moduledoc "An inference-independent structural verifier for C001-C005 typed core."
 
   alias Catena.Condition
+  alias Catena.Data
   alias Catena.Effect.Row
   alias Catena.Pattern.Coverage
   alias Catena.Type
@@ -208,14 +209,53 @@ defmodule Catena.TypedCore.Verifier do
        ) do
     expected =
       cond do
-        operator in [:and, :or] -> {:boolean, :boolean}
-        operator in [:add, :subtract, :multiply] -> {:integer, :integer}
-        operator in [:less, :less_equal, :greater, :greater_equal] -> {:integer, :boolean}
-        operator in [:equal, :not_equal] -> {Map.get(left, :type), :boolean}
-        true -> :invalid
+        operator in [:and, :or] ->
+          {:boolean, :boolean}
+
+        operator in [:add, :subtract, :multiply] ->
+          {:integer, :integer}
+
+        operator in [:less, :less_equal, :greater, :greater_equal] ->
+          {Map.get(left, :type), :boolean}
+
+        operator in [:equal, :not_equal] ->
+          {Map.get(left, :type), :boolean}
+
+        true ->
+          :invalid
       end
 
+    comparable_or_numeric? = fn operand_type, operator ->
+      cond do
+        operator in [:less, :less_equal, :greater, :greater_equal] ->
+          operand_type in [:integer, :float]
+
+        operator in [:equal, :not_equal] ->
+          operand_type in [:integer, :boolean, :float] or
+            Data.comparable_type?(operand_type, data)
+
+        true ->
+          false
+      end
+    end
+
+    ordering? = operator in [:less, :less_equal, :greater, :greater_equal]
+
     case expected do
+      {operand_type, ^result_type}
+      when operand_type != nil and operand_type != :integer and
+             (operand_type != :boolean or ordering?) ->
+        if comparable_or_numeric?.(operand_type, operator) do
+          with {:ok, ^operand_type} <- verify_expression(left, environment, data),
+               {:ok, ^operand_type} <- verify_expression(right, environment, data) do
+            {:ok, result_type}
+          else
+            _ -> {:error, "condition operator operand types are inconsistent"}
+          end
+        else
+          {:error, "condition operator metadata is inconsistent"}
+        end
+
       {operand_type, ^result_type} when operand_type in [:integer, :boolean] ->
         with {:ok, ^operand_type} <- verify_expression(left, environment, data),
              {:ok, ^operand_type} <- verify_expression(right, environment, data) do

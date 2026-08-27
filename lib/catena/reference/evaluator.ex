@@ -116,10 +116,10 @@ defmodule Catena.Reference.Evaluator do
     case operator do
       :equal -> left === right
       :not_equal -> left !== right
-      :less -> left < right
-      :less_equal -> left <= right
-      :greater -> left > right
-      :greater_equal -> left >= right
+      :less -> ordered(left, right, :less)
+      :less_equal -> ordered(left, right, :less_equal)
+      :greater -> ordered(left, right, :greater)
+      :greater_equal -> ordered(left, right, :greater_equal)
       :add -> left + right
       :subtract -> left - right
       :multiply -> left * right
@@ -331,4 +331,31 @@ defmodule Catena.Reference.Evaluator do
         end
     end
   end
+
+  defp ordered(left, right, operator) when is_float(left) and is_float(right) do
+    less =
+      case operator do
+        :greater -> total_order_less?(right, left)
+        :greater_equal -> total_order_less?(right, left) or right === left
+        _other -> total_order_less?(left, right)
+      end
+
+    case operator do
+      :less -> less
+      :less_equal -> less or left === right
+      :greater -> less
+      :greater_equal -> less
+    end
+  end
+
+  defp ordered(left, right, operator) do
+    case operator do
+      :less -> left < right
+      :less_equal -> left <= right
+      :greater -> left > right
+      :greater_equal -> left >= right
+    end
+  end
+
+  defp total_order_less?(a, b), do: a < b or (a === -0.0 and b === 0.0)
 end

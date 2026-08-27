@@ -203,6 +203,11 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "branching/the-branch-form-and-its-desugaring.md#the-branch-form-and-its-desugaring"
         )
+      ),
+      feature(
+        "equality-and-ordering",
+        "0.1.30",
+        specification("equality-and-ordering/the-comparable-set.md#the-comparable-set")
       )
     ]
   end
@@ -585,6 +590,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("branching"),
     do: ~w(static-meaning)
 
+  defp affected_dimensions("equality-and-ordering"),
+    do: ~w(static-meaning diagnostics)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -668,6 +676,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("branching"),
     do:
       "Select 0.1.29 for the branching model: match is the single branch form, any future conditional spelling desugars to a Bool-pattern match, the consolidated rules keep their citing areas' homes, and statement-like control forms are declared absent; no new diagnostics appear."
+
+  defp migration("equality-and-ordering"),
+    do:
+      "Select 0.1.30 for the comparison model: equality admits the closed comparable set (Int, Bool, Float, plus structural tuples, records, injections, and constructor values), ordering admits Int and Float monomorphically, float equality is bit-exact with distinct signed zeros, closures and handles never compare (EQN001), and guards keep C003's frozen Int/Bool fragment."
 
   defp migration("package-identity-and-dependencies"),
     do:

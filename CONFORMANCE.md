@@ -268,6 +268,20 @@ statement-like control forms are declared absent — everything is an
 expression, effects sequence through the let idiom. Zero new
 diagnostic families.
 
+Normative C035 uses `0.1.30` for equality and ordering. Equality
+admits the closed comparable set — Int, Bool, Float, plus structural
+recursion over tuples, records, variant injections, and constructor
+values — with both operands monomorphic (mixed Int/Float comparison
+is the existing type error). Float equality is bit-exact with
+`-0.0 != 0.0` and float ordering is total with `-0.0 < 0.0`; no NaN
+exists under C018's finite-only contract. Closures and process
+handles never compare (`EQN001`, one new family); the frozen JSON AST
+carries no float expressions, so float comparison is witnessed at the
+`Catena.Values` level (`comparable?/1`, `orderable?/1`, `compare/2`)
+while the evaluator and BEAM lowering ship correct-but-dormant
+total-order forms for the first float-bearing frontend. Guards keep
+C003's Int/Bool fragment, independently enforced.
+
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
 choices and extensions, recommendation dispositions, bounded presentations,

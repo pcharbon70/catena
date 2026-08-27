@@ -51,13 +51,7 @@ defmodule Catena.Values do
   end
 
   def classify(%{tag: tag} = expression) when tag in @container_tags do
-    contents =
-      case tag do
-        :tuple -> Map.get(expression, :elements, [])
-        :record -> Enum.map(Map.get(expression, :fields, []), & &1.expression)
-        :construct -> Map.get(expression, :arguments, [])
-        :inject -> [Map.get(expression, :payload)]
-      end
+    contents = container_contents(expression)
 
     if Enum.all?(contents, &value?/1), do: true, else: {:computation, tag}
   end
@@ -127,6 +121,93 @@ defmodule Catena.Values do
     do: ~w(evidence handler_declaration capability_name resumption trap effect_row signature)a
 
   @doc """
+  True when the term belongs to the closed comparable set at 0.1.30:
+  Int, Bool, and Float primitives, plus structural recursion over
+  tuples, records, variant injections, and constructor values. Closures
+  and process handles are never comparable; neither are Unit,
+  computations, traps, effect rows, signatures, evidence, and every
+  other non-value or excluded form.
+  """
+  @spec comparable?(term()) :: boolean()
+  def comparable?(term)
+
+  def comparable?(%{tag: tag} = expression) when tag in @value_tags do
+    case tag do
+      :integer -> true
+      :boolean -> true
+      :float -> is_float(expression.value)
+      _other -> false
+    end
+  end
+
+  def comparable?(%{tag: tag} = expression) when tag in @container_tags,
+    do: container_contents(expression) |> Enum.all?(&comparable?/1)
+
+  def comparable?(%{tag: _}), do: false
+
+  def comparable?(term) when is_integer(term), do: true
+  def comparable?(term) when is_boolean(term), do: true
+  def comparable?(term) when is_float(term), do: true
+
+  def comparable?({:catena_variant, _label, payload}), do: comparable?(payload)
+
+  def comparable?({:catena_constructor, _name, fields})
+      when is_tuple(fields),
+      do: fields |> Tuple.to_list() |> Enum.all?(&comparable?/1)
+
+  def comparable?(term) when is_tuple(term),
+    do: term |> Tuple.to_list() |> Enum.all?(&comparable?/1)
+
+  def comparable?(term) when is_map(term),
+    do: term |> Map.values() |> Enum.all?(&comparable?/1)
+
+  def comparable?(_other), do: false
+
+  @doc """
+  True when the term belongs to the closed orderable set at 0.1.30:
+  Int and Float only, in both the typed-core and runtime carriers.
+  """
+  @spec orderable?(term()) :: boolean()
+  def orderable?(%{tag: :integer}), do: true
+  def orderable?(%{tag: :float, value: value}), do: is_float(value)
+  def orderable?(term) when is_integer(term), do: true
+  def orderable?(term) when is_float(term), do: true
+  def orderable?(_other), do: false
+
+  @doc """
+  The normative total order over one orderable kind: `:lt`, `:eq`, or
+  `:gt`. Floats order bit-exactly — the two signed zeros are distinct
+  with `-0.0 < 0.0` — and no NaN exists. Raises `ArgumentError` for
+  mixed kinds or non-orderable terms: comparison is monomorphic by
+  contract.
+  """
+  @spec compare(term(), term()) :: :lt | :eq | :gt
+  def compare(a, b)
+
+  def compare(a, b) when is_integer(a) and is_integer(b) do
+    cond do
+      a < b -> :lt
+      a > b -> :gt
+      true -> :eq
+    end
+  end
+
+  def compare(a, b) when is_float(a) and is_float(b) do
+    cond do
+      bit_exact_equal?(a, b) -> :eq
+      total_order_less?(a, b) -> :lt
+      true -> :gt
+    end
+  end
+
+  def compare(a, b),
+    do: raise(ArgumentError, "comparison is monomorphic: #{inspect(a)} vs #{inspect(b)}")
+
+  defp bit_exact_equal?(a, b), do: a === b
+
+  defp total_order_less?(a, b), do: a < b or (a === -0.0 and b === 0.0)
+
+  @doc """
   Every terminal the kernel stepper produces carries a value or a
   trap; this predicate witnesses the terminal-outcome rule over
   stepper results.
@@ -139,4 +220,16 @@ defmodule Catena.Values do
   def terminal_witness({:value, value}), do: {:value, value}
 
   defp struct?(term, module), do: is_struct(term, module)
+
+  defp container_contents(%{tag: :tuple} = expression),
+    do: Map.get(expression, :elements, [])
+
+  defp container_contents(%{tag: :record} = expression),
+    do: expression |> Map.get(:fields, []) |> Enum.map(& &1.expression)
+
+  defp container_contents(%{tag: :construct} = expression),
+    do: Map.get(expression, :arguments, [])
+
+  defp container_contents(%{tag: :inject} = expression),
+    do: [Map.get(expression, :payload)]
 end
