@@ -123,8 +123,8 @@ confirm 0.1.19 abstraction boundaries, compile 0.1.20 dependency cycles,
 resolve 0.1.21 package dependencies, select 0.1.22 preludes, declare and
 launch 0.1.23 entries, classify 0.1.24 compatibility, check 0.1.25
 value classification, witness 0.1.26 evaluation order, check
-0.1.27 bindings, curry 0.1.28 functions, and dispatch 0.1.29
-branches,
+0.1.27 bindings, curry 0.1.28 functions, dispatch 0.1.29 branches, and compare
+0.1.30 values,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -161,7 +161,7 @@ Normative C029 uses `0.1.25` for values and evaluation.
 Normative C030 uses `0.1.26` for evaluation order. Normative C031
 uses `0.1.27` for bindings and sequencing. Normative C032 uses `0.1.28`
 for functions and calls. Normative C033 uses `0.1.29` for conditionals
-and branching.
+and branching. Normative C035 uses `0.1.30` for equality and ordering.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -205,7 +205,8 @@ flowchart LR
     EO --> BS[Binding structure and BS001 0.1.27]
     BS --> FC[Semantic-unary functions 0.1.28]
     FC --> BR[Match-only branching 0.1.29]
-    BR --> STOP[Identities, locks, origins, and digests]
+    BR --> EQ[Comparable-set equality 0.1.30]
+    EQ --> STOP[Identities, locks, origins, and digests]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]

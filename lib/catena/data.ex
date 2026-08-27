@@ -32,6 +32,51 @@ defmodule Catena.Data do
     }
   end
 
+  @doc """
+  True when one type belongs to the closed comparable set at 0.1.30:
+  `Int`, `Bool`, `Float`, tuples of comparable element types, and
+  nominal types whose every constructor field type is comparable after
+  argument substitution. Functions, variables, abstract types without
+  visible constructors, and everything else are non-comparable.
+  """
+  @spec comparable_type?(Catena.Type.t(), environment()) :: boolean()
+  def comparable_type?(:integer, _environment), do: true
+  def comparable_type?(:boolean, _environment), do: true
+  def comparable_type?(:float, _environment), do: true
+
+  def comparable_type?({:tuple, elements}, environment),
+    do: Enum.all?(elements, &comparable_type?(&1, environment))
+
+  def comparable_type?({:nominal, id, arguments}, environment) do
+    with %{} = datatype <- Map.get(environment.types_by_id, id),
+         [_ | _] = constructors <- Map.get(datatype, :constructors, []) do
+      Enum.all?(constructors, fn constructor ->
+        substitution =
+          case Map.get(constructor, :result) do
+            {:nominal, _, parameter_types} ->
+              parameter_types
+              |> Enum.zip(arguments)
+              |> Enum.flat_map(fn
+                {{:var, variable}, argument} -> [{variable, argument}]
+                _other -> []
+              end)
+              |> Map.new()
+
+            _other ->
+              %{}
+          end
+
+        constructor
+        |> Map.get(:fields, [])
+        |> Enum.all?(&comparable_type?(Catena.Type.apply(&1.type, substitution), environment))
+      end)
+    else
+      _other -> false
+    end
+  end
+
+  def comparable_type?(_type, _environment), do: false
+
   @spec resolve_constructor!(environment(), String.t(), String.t() | nil) :: map()
   def resolve_constructor!(environment, reference, path \\ nil) do
     case Map.fetch(environment.constructors, reference) do

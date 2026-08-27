@@ -122,6 +122,10 @@ flowchart TD
 22. [Branching](language/branching.md) — match as the single branch
    form, the conditional sugar promise, the consolidated rules, and
    the statement-form absence at revision 0.1.29.
+23. [Equality and Ordering](language/equality.md) — the closed
+   comparable set with structural recursion, bit-exact float equality,
+   monomorphic comparison, and the `EQN001` exclusion at revision
+   0.1.30.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -246,8 +250,9 @@ could also appear in the compiler.
 | 0.1.27 | bindings and sequencing: non-recursive local lets, silent innermost shadowing, definitions-only recursion, sequencing idiom, deny-able `BS001` with `_`-prefix exemption |
 | 0.1.28 | functions and calls: semantic-unary currying, free partial application, lexical immutable capture, let-bound local functions, elevated proper-tail-call guarantee |
 | 0.1.29 | branching: match-only dispatch, conditional sugar promise, consolidated rules, statement forms declared absent |
+| 0.1.30 | equality and ordering: closed comparable set with structural recursion, bit-exact float equality (`-0.0 != 0.0`), monomorphic comparison, `EQN001` exclusion |
 
-Versions 0.1.1 through 0.1.29 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.30 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

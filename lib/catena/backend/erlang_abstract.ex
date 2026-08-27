@@ -424,15 +424,19 @@ defmodule Catena.Backend.ErlangAbstract do
   end
 
   defp lower_expression(
-         %{tag: :binary, operator: operator, left: left, right: right},
+         %{tag: :binary, operator: operator, left: left, right: right} = expression,
          environment,
          globals,
          annotation,
          layout
        ) do
-    {:op, annotation, erlang_operator(operator),
-     lower_expression(left, environment, globals, annotation, layout),
-     lower_expression(right, environment, globals, annotation, layout)}
+    comparison_operation(
+      operator,
+      Map.get(expression, :operand_type),
+      lower_expression(left, environment, globals, annotation, layout),
+      lower_expression(right, environment, globals, annotation, layout),
+      annotation
+    )
   end
 
   defp lower_expression(%{tag: :variable, name: name}, environment, globals, annotation, _layout) do
@@ -712,7 +716,7 @@ defmodule Catena.Backend.ErlangAbstract do
   end
 
   defp lower_cps(
-         %{tag: :binary, operator: operator, left: left, right: right},
+         %{tag: :binary, operator: operator, left: left, right: right} = expression,
          environment,
          handlers,
          globals,
@@ -720,6 +724,8 @@ defmodule Catena.Backend.ErlangAbstract do
          layout,
          continuation
        ) do
+    operand_type = Map.get(expression, :operand_type)
+
     lower_cps_values(
       [left, right],
       environment,
@@ -730,7 +736,7 @@ defmodule Catena.Backend.ErlangAbstract do
       fn [left_value, right_value] ->
         apply_cps_continuation(
           continuation,
-          {:op, annotation, erlang_operator(operator), left_value, right_value},
+          comparison_operation(operator, operand_type, left_value, right_value, annotation),
           annotation
         )
       end
@@ -1754,6 +1760,7 @@ defmodule Catena.Backend.ErlangAbstract do
 
   defp erlang_operator(:not), do: :not
   defp erlang_operator(:negate), do: :-
+
   defp erlang_operator(:and), do: :andalso
   defp erlang_operator(:or), do: :orelse
   defp erlang_operator(:equal), do: :"=:="
@@ -1765,6 +1772,37 @@ defmodule Catena.Backend.ErlangAbstract do
   defp erlang_operator(:add), do: :+
   defp erlang_operator(:subtract), do: :-
   defp erlang_operator(:multiply), do: :*
+
+  defp comparison_operation(operator, :float, left, right, annotation)
+       when operator in [:less, :less_equal, :greater, :greater_equal] do
+    float_comparison(operator, left, right, annotation)
+  end
+
+  defp comparison_operation(operator, _operand_type, left, right, annotation),
+    do: {:op, annotation, erlang_operator(operator), left, right}
+
+  defp float_comparison(:less, left, right, annotation) do
+    {:op, annotation, :orelse, {:op, annotation, :<, left, right},
+     signed_zero_pair(left, right, annotation)}
+  end
+
+  defp float_comparison(:less_equal, left, right, annotation) do
+    exact = {:op, annotation, :"=:=", left, right}
+
+    {:op, annotation, :orelse, {:op, annotation, :<, left, right},
+     {:op, annotation, :orelse, exact, signed_zero_pair(left, right, annotation)}}
+  end
+
+  defp float_comparison(:greater, left, right, annotation),
+    do: float_comparison(:less, right, left, annotation)
+
+  defp float_comparison(:greater_equal, left, right, annotation),
+    do: float_comparison(:less_equal, right, left, annotation)
+
+  defp signed_zero_pair(left, right, annotation) do
+    {:op, annotation, :andalso, {:op, annotation, :"=:=", left, {:float, annotation, -0.0}},
+     {:op, annotation, :"=:=", right, {:float, annotation, 0.0}}}
+  end
 
   defp curried_global(name, 0, annotation),
     do: {:fun, annotation, {:function, safe_atom(name), 0}}

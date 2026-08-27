@@ -301,26 +301,36 @@ defmodule Catena.Type.Infer do
           {:boolean, :boolean, %{state | substitution: substitution}}
 
         operator
-        when operator in [
-               :add,
-               :subtract,
-               :multiply,
-               :less,
-               :less_equal,
-               :greater,
-               :greater_equal
-             ] ->
+        when operator in [:add, :subtract, :multiply] ->
           substitution = Unify.unify(left_type, :integer, state.substitution, path)
           substitution = Unify.unify(right_type, :integer, substitution, path)
-          result = if operator in [:add, :subtract, :multiply], do: :integer, else: :boolean
-          {:integer, result, %{state | substitution: substitution}}
+          {:integer, :integer, %{state | substitution: substitution}}
+
+        operator
+        when operator in [:less, :less_equal, :greater, :greater_equal] ->
+          substitution = Unify.unify(left_type, right_type, state.substitution, path)
+          resolved = Type.apply(left_type, substitution)
+
+          {operand_type, substitution} =
+            if resolved == :float do
+              {:float, substitution}
+            else
+              substitution = Unify.unify(resolved, :integer, substitution, path)
+              {:integer, substitution}
+            end
+
+          {operand_type, :boolean, %{state | substitution: substitution}}
 
         operator when operator in [:equal, :not_equal] ->
           substitution = Unify.unify(left_type, right_type, state.substitution, path)
           compared = Type.apply(left_type, substitution)
 
-          unless compared in [:integer, :boolean] do
-            fail("CND003", "condition equality is defined only for Int and Bool", path)
+          unless Data.comparable_type?(compared, context.data) do
+            fail(
+              "EQN001",
+              "equality is defined only for comparable values: Int, Bool, Float, and comparable composites",
+              path
+            )
           end
 
           {compared, :boolean, %{state | substitution: substitution}}
