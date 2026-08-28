@@ -215,6 +215,11 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "recursion-and-termination/program-recursion-is-unrestricted.md#program-recursion-is-unrestricted"
         )
+      ),
+      feature(
+        "runtime-failure-taxonomy",
+        "0.1.32",
+        specification("runtime-failure-taxonomy/the-single-outcome.md#the-single-outcome")
       )
     ]
   end
@@ -603,6 +608,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("recursion-and-termination"),
     do: ~w(static-meaning)
 
+  defp affected_dimensions("runtime-failure-taxonomy"),
+    do: ~w(static-meaning)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -694,6 +702,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("recursion-and-termination"),
     do:
       "Select 0.1.31 for the recursion stance: program recursion is unrestricted with divergence as non-termination (never a trap), the tail guarantee remains the only stack promise, no totality checking exists, every meta-level evaluator stays total-or-bounded per its cited regime, and compile-time evaluation must arrive total-or-bounded or not at all."
+
+  defp migration("runtime-failure-taxonomy"),
+    do:
+      "Select 0.1.32 for the failure taxonomy: trap(reason) is the single runtime failure outcome with kinded reasons, typed failure stays a value (not a failure), VM termination stays operational, and arithmetic/assertion/foreign kinds arrive with their producers classified as trap(reason) — trap observability stays kernel-verbatim."
 
   defp migration("package-identity-and-dependencies"),
     do:
