@@ -451,6 +451,13 @@ requires major at 1.0+ and minor below — and behavior and BEAM ABI
 compatibility are declared absences: the kernel is the behavior
 contract and binaries are deterministic outputs, not surfaces.
 
+Revision 0.1.31 fixes recursion and termination: program recursion is
+unrestricted — divergence is non-termination, never a trap — the tail
+guarantee is the only stack promise, no totality checking exists, and
+every meta-level evaluator (conditions, specification examples, laws)
+is total-or-bounded, with compile-time evaluation gated to arrive the
+same way or not at all.
+
 Revision 0.1.30 fixes equality and ordering: the comparable set is
 closed — Int, Bool, Float, plus structural composites — float
 equality is bit-exact (`-0.0 != 0.0`), comparison is monomorphic,
@@ -565,6 +572,8 @@ functions 0.1.28 → semantic-unary currying, closures, proper tails
 branching 0.1.29 → match-only dispatch, sugar promise, no statements
                        ↓
 equality 0.1.30 → comparable set, bit-exact floats, EQN001
+                       ↓
+recursion 0.1.31 → unrestricted programs, bounded meta evaluators
                        (stops before the future declaration grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
@@ -706,6 +715,10 @@ Elixir, so read them for semantics and diagnostics rather than surface syntax:
    the comparable-set classifier with signed-zero ordering, tuple and
    constructor-value equality on both targets, `EQN001` exclusions,
    monomorphism, and the guard split.
+18. [`c034_recursion_test.exs`](test/catena/c034_recursion_test.exs) —
+   non-tail recursion at 10,000 depth on BEAM, the stepper's
+   budget-exhaustion divergence witness, tail termination, the
+   `CND004` regression, and the bounded-regime matrix.
 
 ## Continue in catena-research
 
