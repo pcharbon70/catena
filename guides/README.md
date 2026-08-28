@@ -132,6 +132,10 @@ flowchart TD
 25. [Failure Taxonomy](language/failure.md) — the single `trap`
    outcome with kinded reasons, the six-category mapping, and the
    per-producer entry rule at revision 0.1.32.
+26. [Resource Observability](language/observability.md) — the six-way
+   non-observability classification, semantic identity, the
+   two-clause identity rule, and the finalization gate at revision
+   0.1.33.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -259,8 +263,9 @@ could also appear in the compiler.
 | 0.1.30 | equality and ordering: closed comparable set with structural recursion, bit-exact float equality (`-0.0 != 0.0`), monomorphic comparison, `EQN001` exclusion |
 | 0.1.31 | recursion and termination: unrestricted program recursion, divergence as non-termination, cited separation table, G038 entry rule |
 | 0.1.32 | runtime failure taxonomy: single `trap(reason)` outcome, kinded reasons, six-category mapping, per-producer entry rule, kernel-verbatim observability |
+| 0.1.33 | resource observability: six-way non-observability classification, semantic identity, two-clause identity rule, gated finalization absence |
 
-Versions 0.1.1 through 0.1.32 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.33 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;
