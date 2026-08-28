@@ -451,6 +451,12 @@ requires major at 1.0+ and minor below — and behavior and BEAM ABI
 compatibility are declared absences: the kernel is the behavior
 contract and binaries are deterministic outputs, not surfaces.
 
+Revision 0.1.32 fixes the runtime failure taxonomy: `trap(reason)`
+is the single failure outcome with kinded reasons; typed failure is a
+value; arithmetic, assertion, and foreign kinds are reserved with a
+per-producer gate; and a trap discards the mailbox, signals nothing,
+and spares its spawner.
+
 Revision 0.1.31 fixes recursion and termination: program recursion is
 unrestricted — divergence is non-termination, never a trap — the tail
 guarantee is the only stack promise, no totality checking exists, and
@@ -574,6 +580,8 @@ branching 0.1.29 → match-only dispatch, sugar promise, no statements
 equality 0.1.30 → comparable set, bit-exact floats, EQN001
                        ↓
 recursion 0.1.31 → unrestricted programs, bounded meta evaluators
+                       ↓
+failure 0.1.32 → one trap outcome, kinded reasons, reserved kinds
                        (stops before the future declaration grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
@@ -719,6 +727,11 @@ Elixir, so read them for semantics and diagnostics rather than surface syntax:
    non-tail recursion at 10,000 depth on BEAM, the stepper's
    budget-exhaustion divergence witness, tail termination, the
    `CND004` regression, and the bounded-regime matrix.
+19. [`c036_failure_test.exs`](test/catena/c036_failure_test.exs) —
+   trap reason agreement across stepper and BEAM, the
+   process-context witness (trapping child, spared spawner,
+   discarded mailbox), the partition at the classifier, and the
+   reserved-kind absences.
 
 ## Continue in catena-research
 
