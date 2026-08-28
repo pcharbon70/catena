@@ -208,6 +208,13 @@ defmodule Catena.LanguageLifecycle do
         "equality-and-ordering",
         "0.1.30",
         specification("equality-and-ordering/the-comparable-set.md#the-comparable-set")
+      ),
+      feature(
+        "recursion-and-termination",
+        "0.1.31",
+        specification(
+          "recursion-and-termination/program-recursion-is-unrestricted.md#program-recursion-is-unrestricted"
+        )
       )
     ]
   end
@@ -593,6 +600,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("equality-and-ordering"),
     do: ~w(static-meaning diagnostics)
 
+  defp affected_dimensions("recursion-and-termination"),
+    do: ~w(static-meaning)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -680,6 +690,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("equality-and-ordering"),
     do:
       "Select 0.1.30 for the comparison model: equality admits the closed comparable set (Int, Bool, Float, plus structural tuples, records, injections, and constructor values), ordering admits Int and Float monomorphically, float equality is bit-exact with distinct signed zeros, closures and handles never compare (EQN001), and guards keep C003's frozen Int/Bool fragment."
+
+  defp migration("recursion-and-termination"),
+    do:
+      "Select 0.1.31 for the recursion stance: program recursion is unrestricted with divergence as non-termination (never a trap), the tail guarantee remains the only stack promise, no totality checking exists, every meta-level evaluator stays total-or-bounded per its cited regime, and compile-time evaluation must arrive total-or-bounded or not at all."
 
   defp migration("package-identity-and-dependencies"),
     do:

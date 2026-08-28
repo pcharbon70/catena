@@ -126,6 +126,9 @@ flowchart TD
    comparable set with structural recursion, bit-exact float equality,
    monomorphic comparison, and the `EQN001` exclusion at revision
    0.1.30.
+24. [Recursion and Termination](language/recursion.md) — unrestricted
+   program recursion with divergence as non-termination, the cited
+   separation table, and the G038 entry rule at revision 0.1.31.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -251,8 +254,9 @@ could also appear in the compiler.
 | 0.1.28 | functions and calls: semantic-unary currying, free partial application, lexical immutable capture, let-bound local functions, elevated proper-tail-call guarantee |
 | 0.1.29 | branching: match-only dispatch, conditional sugar promise, consolidated rules, statement forms declared absent |
 | 0.1.30 | equality and ordering: closed comparable set with structural recursion, bit-exact float equality (`-0.0 != 0.0`), monomorphic comparison, `EQN001` exclusion |
+| 0.1.31 | recursion and termination: unrestricted program recursion, divergence as non-termination, cited separation table, G038 entry rule |
 
-Versions 0.1.1 through 0.1.30 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.31 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;
