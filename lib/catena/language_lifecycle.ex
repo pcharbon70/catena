@@ -220,6 +220,11 @@ defmodule Catena.LanguageLifecycle do
         "runtime-failure-taxonomy",
         "0.1.32",
         specification("runtime-failure-taxonomy/the-single-outcome.md#the-single-outcome")
+      ),
+      feature(
+        "resource-observability",
+        "0.1.33",
+        specification("resource-observability/the-observability-model.md#the-observability-model")
       )
     ]
   end
@@ -611,6 +616,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("runtime-failure-taxonomy"),
     do: ~w(static-meaning)
 
+  defp affected_dimensions("resource-observability"),
+    do: ~w(static-meaning)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -706,6 +714,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("runtime-failure-taxonomy"),
     do:
       "Select 0.1.32 for the failure taxonomy: trap(reason) is the single runtime failure outcome with kinded reasons, typed failure stays a value (not a failure), VM termination stays operational, and arithmetic/assertion/foreign kinds arrive with their producers classified as trap(reason) — trap observability stays kernel-verbatim."
+
+  defp migration("resource-observability"),
+    do:
+      "Select 0.1.33 for the observability model: allocation addresses, sharing, garbage collection, and object identity are unobservable except process identity (fresh per spawn, never comparable), stack use is observable only through the tail guarantee, finalization is declared absent and gated, and values carry semantic identity — equal values are interchangeable."
 
   defp migration("package-identity-and-dependencies"),
     do:
