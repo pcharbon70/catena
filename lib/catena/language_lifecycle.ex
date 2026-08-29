@@ -232,6 +232,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "compile-time-evaluation/the-compile-time-stance.md#the-compile-time-stance"
         )
+      ),
+      feature(
+        "built-in-data-model",
+        "0.1.35",
+        specification(
+          "built-in-data-model/the-twelve-way-classification.md#the-twelve-way-classification"
+        )
       )
     ]
   end
@@ -629,6 +636,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("compile-time-evaluation"),
     do: ~w(static-meaning)
 
+  defp affected_dimensions("built-in-data-model"),
+    do: ~w(static-meaning)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -732,6 +742,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("compile-time-evaluation"),
     do:
       "Select 0.1.34 for the compile-time decision: constants never execute, attribute and macro systems do not exist, generated derivations are compiler-internal template generation executing no user code, and the gate plus the three shipped budgets form the complete totality and determinism regime — any arriving evaluator ships total-or-bounded in its own slice."
+
+  defp migration("built-in-data-model"),
+    do:
+      "Select 0.1.35 for the built-in data model: Text, Character, and Bytes elaborate from C017's scanned literals by the C018 pattern with content-based equality and total orders, list/map/set stay library territory (G101), and references stay excluded (G084) — the types live at the meaning and classifier level until a frontend encodes their literals."
 
   defp migration("package-identity-and-dependencies"),
     do:

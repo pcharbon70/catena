@@ -7,13 +7,13 @@ defmodule Catena.C029ValuesTest do
   alias Catena.Effect.Row
   alias Catena.Type.Scheme
 
-  @frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34)
+  @frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35)
   @fixture "test/fixtures/c010-kernel.catena"
 
   describe "revision registration" do
     @tag obligations: ~w(VA-OBL-001 VA-OBL-008)
     test "0.1.25 is an exact registered revision with predecessors pinned" do
-      assert LanguageVersion.latest() == "0.1.34"
+      assert LanguageVersion.latest() == "0.1.35"
       assert LanguageVersion.source_text_frontend_versions() == @frontends
       refute "0.1.25" in LanguageVersion.compilable_revisions()
       refute "0.1.25" in LanguageVersion.artifact_versions()
@@ -35,7 +35,7 @@ defmodule Catena.C029ValuesTest do
              )
 
       assert {:ok, %{selection: %{language_revision: "0.1.13"}}} = Catena.scan_literal("1.0")
-      assert {:ok, %{selection: %{language_revision: "0.1.34"}}} = Catena.decode_source_text("")
+      assert {:ok, %{selection: %{language_revision: "0.1.35"}}} = Catena.decode_source_text("")
       assert {:ok, _} = Catena.build_namespace_environment([])
       assert {:ok, _} = Catena.compile_scc([])
       assert {:ok, _} = Catena.Package.Deps.parse_version("1.0.0")
@@ -111,9 +111,9 @@ defmodule Catena.C029ValuesTest do
 
       refute Values.value?({1, :trap})
       refute Values.value?(nil)
-      refute Values.value?("string")
+      assert Values.value?("string")
       refute Values.value?([1, 2])
-      assert :unknown_form = Values.classify("string")
+      assert true = Values.classify("string")
       assert :unknown_form = Values.classify([1, 2])
 
       assert Values.non_value_kinds() ==
@@ -194,7 +194,7 @@ defmodule Catena.C029ValuesTest do
         %{tag: :call, callee: %{tag: :variable, name: "f"}, arguments: []},
         %Row{entries: [], tail: nil},
         {:catena_variant, :some, 1.5},
-        "string",
+        :atom_not_string,
         {:trap, :crash}
       ]
 

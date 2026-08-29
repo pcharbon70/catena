@@ -103,11 +103,14 @@ defmodule Catena.Values do
       struct?(term, Row) -> :effect_row
       struct?(term, Scheme) -> :signature
       struct?(term, ResumptionToken) -> :resumption
+      is_struct(term, Catena.Text.Meaning) -> true
       is_map_key(term, :evidence) or is_map_key(term, "evidence") -> :evidence
       term == %{} or Enum.all?(Map.values(term), &value?/1) -> true
       true -> :unknown_form
     end
   end
+
+  def classify(term) when is_binary(term), do: true
 
   def classify(_other), do: :unknown_form
 
@@ -148,6 +151,8 @@ defmodule Catena.Values do
   def comparable?(term) when is_integer(term), do: true
   def comparable?(term) when is_boolean(term), do: true
   def comparable?(term) when is_float(term), do: true
+  def comparable?(term) when is_binary(term), do: true
+  def comparable?(term) when is_struct(term, Catena.Text.Meaning), do: true
 
   def comparable?({:catena_variant, _label, payload}), do: comparable?(payload)
 
@@ -172,6 +177,8 @@ defmodule Catena.Values do
   def orderable?(%{tag: :float, value: value}), do: is_float(value)
   def orderable?(term) when is_integer(term), do: true
   def orderable?(term) when is_float(term), do: true
+  def orderable?(term) when is_binary(term), do: true
+  def orderable?(term) when is_struct(term, Catena.Text.Meaning), do: true
   def orderable?(_other), do: false
 
   @doc """
@@ -196,6 +203,14 @@ defmodule Catena.Values do
     cond do
       bit_exact_equal?(a, b) -> :eq
       total_order_less?(a, b) -> :lt
+      true -> :gt
+    end
+  end
+
+  def compare(a, b) when is_binary(a) and is_binary(b) do
+    cond do
+      a == b -> :eq
+      a < b -> :lt
       true -> :gt
     end
   end
