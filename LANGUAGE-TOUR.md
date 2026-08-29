@@ -451,6 +451,11 @@ requires major at 1.0+ and minor below — and behavior and BEAM ABI
 compatibility are declared absences: the kernel is the behavior
 contract and binaries are deterministic outputs, not surfaces.
 
+Revision 0.1.36 fixes structural records and variants: the
+seven-operation table elevates the kernel calculus — closed literals,
+duplicate-label rejection, type-position tails, semantic maps — with
+the kernel path the only frontend until P109.
+
 Revision 0.1.35 fixes the built-in data model: Text, Character, and
 Bytes elaborate from C017's scanned literals by the C018 pattern with
 content-based equality and total orders; list, map, and set stay
@@ -607,6 +612,8 @@ identity 0.1.33 → semantic identity, gated finalization, G124 channel
 compile 0.1.34 → generation not execution, gated arrivals
                        ↓
 data 0.1.35 → Text/Character/Bytes elaborated, collections library
+                       ↓
+records 0.1.36 → seven operations, closed rows, semantic maps
                        (stops before the future declaration grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
@@ -770,6 +777,10 @@ Elixir, so read them for semantics and diagnostics rather than surface syntax:
    cooked/raw/text/character/bytes elaboration with determinism, the
    classifier matrix, content orders, and the collection and
    reference absences.
+23. [`c041_records_test.exs`](test/catena/c041_records_test.exs) —
+   the fixture's operation round-trip on stepper and BEAM, variant
+   dispatch agreement, duplicate-label rejection, type-position
+   tails, and the frontend absence.
 
 ## Continue in catena-research
 
