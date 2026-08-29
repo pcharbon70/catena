@@ -239,6 +239,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "built-in-data-model/the-twelve-way-classification.md#the-twelve-way-classification"
         )
+      ),
+      feature(
+        "structural-records-and-variants",
+        "0.1.36",
+        specification(
+          "structural-records-and-variants/the-operation-table.md#the-operation-table"
+        )
       )
     ]
   end
@@ -639,6 +646,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("built-in-data-model"),
     do: ~w(static-meaning)
 
+  defp affected_dimensions("structural-records-and-variants"),
+    do: ~w(static-meaning)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -746,6 +756,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("built-in-data-model"),
     do:
       "Select 0.1.35 for the built-in data model: Text, Character, and Bytes elaborate from C017's scanned literals by the C018 pattern with content-based equality and total orders, list/map/set stay library territory (G101), and references stay excluded (G084) — the types live at the meaning and classifier level until a frontend encodes their literals."
+
+  defp migration("structural-records-and-variants"),
+    do:
+      "Select 0.1.36 for structural records and variants: the seven-operation table (literal, select, update, extend, restrict, inject, match) elevated from the kernel with closed literals, duplicate-label rejection, type-position tails, semantic-map representation, and the frontend absence until P109."
 
   defp migration("package-identity-and-dependencies"),
     do:

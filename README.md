@@ -125,7 +125,8 @@ launch 0.1.23 entries, classify 0.1.24 compatibility, check 0.1.25
 value classification, witness 0.1.26 evaluation order, check
 0.1.27 bindings, curry 0.1.28 functions, dispatch 0.1.29 branches, compare
 0.1.30 values, recurse 0.1.31 freely, trap 0.1.32 once, observe 0.1.33 semantics only, compile
-0.1.34 without execution, and elaborate 0.1.35 text,
+0.1.34 without execution, elaborate 0.1.35 text, and update 0.1.36
+records,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -217,7 +218,8 @@ flowchart LR
     FT --> RO[Semantic identity 0.1.33]
     RO --> CE[Generation not execution 0.1.34]
     CE --> BM[Text Character Bytes types 0.1.35]
-    BM --> STOP[Identities, locks, origins, and digests]
+    BM --> SR[Structural records 0.1.36]
+    SR --> STOP[Identities, locks, origins, and digests]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]
