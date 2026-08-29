@@ -451,6 +451,12 @@ requires major at 1.0+ and minor below — and behavior and BEAM ABI
 compatibility are declared absences: the kernel is the behavior
 contract and binaries are deterministic outputs, not surfaces.
 
+Revision 0.1.34 fixes compile-time evaluation: constants never
+execute, attribute and macro systems do not exist, and generated
+derivations are compiler-internal generation executing no user code —
+the gate plus the three shipped budgets form the complete regime, and
+any arriving evaluator ships total-or-bounded in its own slice.
+
 Revision 0.1.33 fixes resource observability: addresses, sharing,
 GC, and object identity are unobservable — process identity excepted,
 fresh per spawn and never comparable — stack use observes only
@@ -592,6 +598,8 @@ recursion 0.1.31 → unrestricted programs, bounded meta evaluators
 failure 0.1.32 → one trap outcome, kinded reasons, reserved kinds
                        ↓
 identity 0.1.33 → semantic identity, gated finalization, G124 channel
+                       ↓
+compile 0.1.34 → generation not execution, gated arrivals
                        (stops before the future declaration grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
@@ -747,6 +755,10 @@ Elixir, so read them for semantics and diagnostics rather than surface syntax:
    results, fresh process identity per spawn, the handle
    non-comparability, the finalization absence, and the stack
    boundary.
+21. [`c038_compile_time_test.exs`](test/catena/c038_compile_time_test.exs) —
+   derived folds with `compiler_derived` provenance recompiling
+   byte-identically, the three budget regressions, and the absence
+   matrix.
 
 ## Continue in catena-research
 
