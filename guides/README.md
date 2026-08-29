@@ -136,6 +136,9 @@ flowchart TD
    non-observability classification, semantic identity, the
    two-clause identity rule, and the finalization gate at revision
    0.1.33.
+27. [Compile-Time Evaluation](language/compile-time.md) — the
+   absence-plus-gate stance, derivations as generation, and the cited
+   restriction table at revision 0.1.34.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -264,8 +267,9 @@ could also appear in the compiler.
 | 0.1.31 | recursion and termination: unrestricted program recursion, divergence as non-termination, cited separation table, G038 entry rule |
 | 0.1.32 | runtime failure taxonomy: single `trap(reason)` outcome, kinded reasons, six-category mapping, per-producer entry rule, kernel-verbatim observability |
 | 0.1.33 | resource observability: six-way non-observability classification, semantic identity, two-clause identity rule, gated finalization absence |
+| 0.1.34 | compile-time evaluation: constants never execute, attributes and macros absent, derivations as gated-free generation, cited restriction table |
 
-Versions 0.1.1 through 0.1.33 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.34 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

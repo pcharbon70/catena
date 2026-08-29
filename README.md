@@ -124,8 +124,8 @@ resolve 0.1.21 package dependencies, select 0.1.22 preludes, declare and
 launch 0.1.23 entries, classify 0.1.24 compatibility, check 0.1.25
 value classification, witness 0.1.26 evaluation order, check
 0.1.27 bindings, curry 0.1.28 functions, dispatch 0.1.29 branches, compare
-0.1.30 values, recurse 0.1.31 freely, trap 0.1.32 once, and observe 0.1.33
-semantics only,
+0.1.30 values, recurse 0.1.31 freely, trap 0.1.32 once, observe 0.1.33 semantics only, and compile
+0.1.34 without execution,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -165,7 +165,8 @@ for functions and calls. Normative C033 uses `0.1.29` for conditionals
 and branching. Normative C035 uses `0.1.30` for equality and ordering.
 Normative C034 uses `0.1.31` for recursion and termination. Normative
 C036 uses `0.1.32` for the runtime failure taxonomy. Normative C037
-uses `0.1.33` for resource observability.
+uses `0.1.33` for resource observability. Normative C038 uses
+`0.1.34` for compile-time evaluation.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -213,7 +214,8 @@ flowchart LR
     EQ --> RT[Unrestricted recursion 0.1.31]
     RT --> FT[Single trap outcome 0.1.32]
     FT --> RO[Semantic identity 0.1.33]
-    RO --> STOP[Identities, locks, origins, and digests]
+    RO --> CE[Generation not execution 0.1.34]
+    CE --> STOP[Identities, locks, origins, and digests]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]

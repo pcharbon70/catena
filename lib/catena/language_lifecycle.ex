@@ -225,6 +225,13 @@ defmodule Catena.LanguageLifecycle do
         "resource-observability",
         "0.1.33",
         specification("resource-observability/the-observability-model.md#the-observability-model")
+      ),
+      feature(
+        "compile-time-evaluation",
+        "0.1.34",
+        specification(
+          "compile-time-evaluation/the-compile-time-stance.md#the-compile-time-stance"
+        )
       )
     ]
   end
@@ -619,6 +626,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("resource-observability"),
     do: ~w(static-meaning)
 
+  defp affected_dimensions("compile-time-evaluation"),
+    do: ~w(static-meaning)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -718,6 +728,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("resource-observability"),
     do:
       "Select 0.1.33 for the observability model: allocation addresses, sharing, garbage collection, and object identity are unobservable except process identity (fresh per spawn, never comparable), stack use is observable only through the tail guarantee, finalization is declared absent and gated, and values carry semantic identity — equal values are interchangeable."
+
+  defp migration("compile-time-evaluation"),
+    do:
+      "Select 0.1.34 for the compile-time decision: constants never execute, attribute and macro systems do not exist, generated derivations are compiler-internal template generation executing no user code, and the gate plus the three shipped budgets form the complete totality and determinism regime — any arriving evaluator ships total-or-bounded in its own slice."
 
   defp migration("package-identity-and-dependencies"),
     do:
