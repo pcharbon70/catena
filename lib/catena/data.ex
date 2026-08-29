@@ -43,6 +43,9 @@ defmodule Catena.Data do
   def comparable_type?(:integer, _environment), do: true
   def comparable_type?(:boolean, _environment), do: true
   def comparable_type?(:float, _environment), do: true
+  def comparable_type?(:Text, _environment), do: true
+  def comparable_type?(:Character, _environment), do: true
+  def comparable_type?(:Bytes, _environment), do: true
 
   def comparable_type?({:tuple, elements}, environment),
     do: Enum.all?(elements, &comparable_type?(&1, environment))

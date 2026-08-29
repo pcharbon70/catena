@@ -139,6 +139,9 @@ flowchart TD
 27. [Compile-Time Evaluation](language/compile-time.md) — the
    absence-plus-gate stance, derivations as generation, and the cited
    restriction table at revision 0.1.34.
+28. [Built-In Data Model](language/data-model.md) — the twelve-way
+   classification, Text/Character/Bytes elaboration, and
+   content-based comparability at revision 0.1.35.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -268,8 +271,9 @@ could also appear in the compiler.
 | 0.1.32 | runtime failure taxonomy: single `trap(reason)` outcome, kinded reasons, six-category mapping, per-producer entry rule, kernel-verbatim observability |
 | 0.1.33 | resource observability: six-way non-observability classification, semantic identity, two-clause identity rule, gated finalization absence |
 | 0.1.34 | compile-time evaluation: constants never execute, attributes and macros absent, derivations as gated-free generation, cited restriction table |
+| 0.1.35 | built-in data model: twelve-way classification, Text/Character/Bytes elaborated from scanned literals, collections as library territory, references excluded |
 
-Versions 0.1.1 through 0.1.34 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.35 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;
