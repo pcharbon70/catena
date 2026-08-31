@@ -302,9 +302,18 @@ defmodule Catena.Type.Infer do
 
         operator
         when operator in [:add, :subtract, :multiply] ->
-          substitution = Unify.unify(left_type, :integer, state.substitution, path)
-          substitution = Unify.unify(right_type, :integer, substitution, path)
-          {:integer, :integer, %{state | substitution: substitution}}
+          substitution = Unify.unify(left_type, right_type, state.substitution, path)
+          resolved = Type.apply(left_type, substitution)
+
+          {operand_type, substitution} =
+            if resolved == :float do
+              {:float, substitution}
+            else
+              substitution = Unify.unify(resolved, :integer, substitution, path)
+              {:integer, substitution}
+            end
+
+          {operand_type, operand_type, %{state | substitution: substitution}}
 
         operator
         when operator in [:less, :less_equal, :greater, :greater_equal] ->

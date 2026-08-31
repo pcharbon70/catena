@@ -263,6 +263,11 @@ defmodule Catena.LanguageLifecycle do
         "list-comprehensions",
         "0.1.39",
         specification("list-comprehensions/the-surface-contract.md#the-grammars-semantic-roles")
+      ),
+      feature(
+        "numeric-relationships",
+        "0.1.40",
+        specification("numeric-relationships/the-closed-set-instantiation-rule.md#the-rule")
       )
     ]
   end
@@ -673,6 +678,9 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(static-meaning)
 
   defp affected_dimensions("list-comprehensions"),
+    do: ~w(static-meaning)
+
+  defp affected_dimensions("numeric-relationships"),
     do: ~w(static-meaning)
 
   defp migration("editions-and-feature-lifecycle"),

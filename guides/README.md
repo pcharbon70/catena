@@ -155,6 +155,9 @@ flowchart TD
    dormant elaboration boundary for `for ... yield` at revision
    0.1.39: qualifier trees, the fused worker chain, and the `LCP`
    families.
+33. [Numeric Relationships](language/numeric-relationships.md) —
+   closed-set instantiation over `{Int, Float}` at revision
+   0.1.40: same-type operands, no dispatch, division to G105.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -289,8 +292,9 @@ could also appear in the compiler.
 | 0.1.37 | collection construction and update: six-topic decision, miss as typed failure as a value, complexity excluded from the language layer |
 | 0.1.38 | pattern contexts: three context classes, irrefutable-only default, public-receive reservation, exception-clause and programmable-pattern exclusions |
 | 0.1.39 | list comprehensions: for-yield surface contract, qualifier rules, sequential execution, dormant qualifier-tree elaboration to a fused worker chain |
+| 0.1.40 | numeric relationships: closed-set instantiation over {Int, Float}, same-type arithmetic, no dispatch, division and remainder to G105 |
 
-Versions 0.1.1 through 0.1.39 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.40 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;
