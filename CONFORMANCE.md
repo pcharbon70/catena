@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.37` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.37`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, and collections revisions `0.1.23`–`0.1.37` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.38` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.38`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, and pattern-contexts revisions `0.1.23`–`0.1.38` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -328,6 +328,19 @@ equality and ordering ride `0.1.30`'s comparable set, duplicate-key
 behavior is a G101 declaration obligation, and no complexity bound is
 a language-level promise — no collection built-in, update operator,
 or complexity surface exists. Zero new diagnostic families.
+
+Normative C044 uses `0.1.38` for pattern contexts. Three classes —
+match the only exhaustive context (C045's usefulness relation and
+`M001`/`M002` unchanged), irrefutable-only the default for binding
+positions, explicit-failure the only honest refutability. `let`
+binders and function parameters stay plain names (a pattern-position
+`let` binder rejects as `SYN002`; the JSON-AST `let` keeps its
+`name` binder), handler clauses keep plain parameters plus the
+resumption binder, the generator principle is fixed with grammar
+deferred to its owning slice, public receives are reserved as
+exhaustive-or-explicit-fallback, and exception clauses and
+programmable patterns are excluded with arrival conditions recorded.
+Zero new diagnostic families and no new public API.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared

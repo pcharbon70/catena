@@ -253,6 +253,11 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "collection-construction-and-update/the-six-topic-decision.md#the-six-topic-decision"
         )
+      ),
+      feature(
+        "pattern-contexts",
+        "0.1.38",
+        specification("pattern-contexts/the-three-context-classes.md#the-classification")
       )
     ]
   end
@@ -659,6 +664,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("collection-construction-and-update"),
     do: ~w(static-meaning)
 
+  defp affected_dimensions("pattern-contexts"),
+    do: ~w(static-meaning)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -774,6 +782,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("collection-construction-and-update"),
     do:
       "Select 0.1.37 for collection construction and update: persistent update is constructor application and match recursion, duplicate-key behavior is a G101 declaration obligation, ordering and key equality ride C035's comparable set, a lookup miss is typed failure as a value (never a trap), and complexity is excluded from the language layer — documentation is G101's."
+
+  defp migration("pattern-contexts"),
+    do:
+      "Select 0.1.38 for pattern contexts: three classes — match the only exhaustive context (C045 unchanged), irrefutable-only the default for binding positions, explicit-failure the only honest refutability. Let binders and parameters stay plain-named, generator principle fixed with grammar deferred to its owning slice, public receives reserved, handler clauses on plain binders, exception clauses excluded under C036, programmable patterns excluded with arrival conditions recorded."
 
   defp migration("package-identity-and-dependencies"),
     do:

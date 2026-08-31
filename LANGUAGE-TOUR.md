@@ -465,6 +465,16 @@ G101 declaration obligation; and complexity stays a library-level
 documentation concern — representation is invisible, so a language
 cost bound would make it observable.
 
+Revision 0.1.38 fixes pattern contexts: three classes — match the
+only exhaustive context (C045 unchanged), irrefutable-only the
+default for binding positions, explicit-failure the only honest
+refutability. Let binders and parameters stay plain-named, the
+generator principle is fixed with grammar deferred, public receives
+are reserved as exhaustive-or-explicit-fallback, handler clauses
+keep plain binders, exception clauses are excluded under 0.1.32's
+terminal trap, and programmable patterns are excluded with arrival
+conditions recorded.
+
 Revision 0.1.35 fixes the built-in data model: Text, Character, and
 Bytes elaborate from C017's scanned literals by the C018 pattern with
 content-based equality and total orders; list, map, and set stay
@@ -628,6 +638,11 @@ records 0.1.36 → seven operations, closed rows, semantic maps
 collections 0.1.37 → constructor application and match recursion,
                        miss as value, no language-level complexity
                        (stops before G101's declared collections)
+                       ↓
+pattern contexts 0.1.38 → three refutability classes,
+                       irrefutable-only default, exclusions for
+                       exception clauses and programmable patterns
+                       (stops before P051's generator grammar)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓

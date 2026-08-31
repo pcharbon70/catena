@@ -25,7 +25,7 @@ defmodule Catena.C008EditionsLifecycleTest do
 
     assert info["current"] == %{
              "edition" => "0.1",
-             "language_revision" => "0.1.37",
+             "language_revision" => "0.1.38",
              "previews" => []
            }
 
@@ -58,7 +58,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     assert edition_change["fixes"] |> Enum.map(& &1["path"]) ==
              ["$.version", "$.edition", "$.language_revision", "$.previews"]
 
-    assert List.last(info["changes"])["to"] == "0.1.37"
+    assert List.last(info["changes"])["to"] == "0.1.38"
     assert List.last(info["changes"])["fixes"] == []
 
     assert Enum.all?(info["changes"], fn change ->
@@ -109,7 +109,7 @@ defmodule Catena.C008EditionsLifecycleTest do
     assert {:ok, %LanguageSelection{}} =
              LanguageVersion.resolve_selection(selection("0.1.7"))
 
-    for value <- ["0.1", "0.1.7-preview", "0.1.07", "latest", "0.1.38"] do
+    for value <- ["0.1", "0.1.7-preview", "0.1.07", "latest", "0.1.39"] do
       assert {:error, %{id: "EDN001", path: "$.language_revision"}} =
                LanguageVersion.resolve_selection(selection(value))
     end

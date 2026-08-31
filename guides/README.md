@@ -148,6 +148,9 @@ flowchart TD
 30. [Collections](language/collections.md) — construction as constructor
    application, miss as value, and the complexity exclusion at revision
    0.1.37.
+31. [Pattern Contexts](language/pattern-contexts.md) — the three
+   refutability classes, per-context rules and reservations, and the
+   programmable-pattern exclusion at revision 0.1.38.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -280,8 +283,9 @@ could also appear in the compiler.
 | 0.1.35 | built-in data model: twelve-way classification, Text/Character/Bytes elaborated from scanned literals, collections as library territory, references excluded |
 | 0.1.36 | structural records and variants: seven-operation table, closed literals with duplicate-label rejection, type-position tails, semantic maps |
 | 0.1.37 | collection construction and update: six-topic decision, miss as typed failure as a value, complexity excluded from the language layer |
+| 0.1.38 | pattern contexts: three context classes, irrefutable-only default, public-receive reservation, exception-clause and programmable-pattern exclusions |
 
-Versions 0.1.1 through 0.1.37 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.38 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;
