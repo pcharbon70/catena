@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.38` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.38`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, and pattern-contexts revisions `0.1.23`–`0.1.38` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.39` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.39`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, and list-comprehensions revisions `0.1.23`–`0.1.39` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -341,6 +341,25 @@ deferred to its owning slice, public receives are reserved as
 exhaustive-or-explicit-fallback, and exception clauses and
 programmable patterns are excluded with arrival conditions recorded.
 Zero new diagnostic families and no new public API.
+
+Normative C047–C058 use `0.1.39` for list comprehensions. The
+`for ... yield` contract — eager ordered `List A` to `List B`
+production, total generators, `case` mismatch-as-skip filtering
+generators, typed `when` filters, exhaustive `let` bindings,
+visible effects, sequential depth-first traversal — is implemented
+as a dormant elaboration boundary: `Catena.Comprehension.elaborate/1`
+maps a caller-built qualifier tree to a kernel module whose fused
+tail-recursive worker chain (one definition per generator depth,
+one shared accumulator, a final ordering pass) checks, runs on the
+kernel stepper, and compiles to BEAM agreeing on values with
+hand-written recursion (the C030 methodology). No frozen frontend
+carries comprehension expressions; surface adoption is the
+grammar capstone's. Three new `LCP` families (same-comprehension
+rebinding, never-matching filtering pattern, unnecessary filtering
+marker); non-total generators and refutable bindings reuse `M001`,
+type mismatches reuse the typing families, unused bindings reuse
+`BS001`. Iterators, streams, lazy production, parallel traversal,
+and non-list targets are excluded.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared

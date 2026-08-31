@@ -475,6 +475,17 @@ keep plain binders, exception clauses are excluded under 0.1.32's
 terminal trap, and programmable patterns are excluded with arrival
 conditions recorded.
 
+Revision 0.1.39 fixes list comprehensions as a dormant contract: an
+eager, ordered, list-to-list `for ... yield` expression with total
+generators, `case` mismatch-as-skip filtering generators, typed
+`when` filters, exhaustive `let` bindings, visible effects, and
+sequential depth-first traversal. No frozen frontend carries the
+form — `Catena.Comprehension.elaborate/1` maps a qualifier tree to
+a kernel fused worker chain agreeing on stepper and BEAM, and the
+surface tokens adopt with the future grammar capstone. Three `LCP`
+diagnostic families arrive; iterators, streams, lazy production,
+parallelism, and non-list targets stay excluded.
+
 Revision 0.1.35 fixes the built-in data model: Text, Character, and
 Bytes elaborate from C017's scanned literals by the C018 pattern with
 content-based equality and total orders; list, map, and set stay
@@ -643,6 +654,11 @@ pattern contexts 0.1.38 → three refutability classes,
                        irrefutable-only default, exclusions for
                        exception clauses and programmable patterns
                        (stops before P051's generator grammar)
+                       ↓
+comprehensions 0.1.39 → for-yield contract with qualifier rules,
+                       sequential order, and the dormant elaboration
+                       to a fused worker chain
+                       (stops before the P109 surface tokens)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓

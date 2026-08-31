@@ -151,6 +151,10 @@ flowchart TD
 31. [Pattern Contexts](language/pattern-contexts.md) — the three
    refutability classes, per-context rules and reservations, and the
    programmable-pattern exclusion at revision 0.1.38.
+32. [List Comprehensions](language/list-comprehensions.md) — the
+   dormant elaboration boundary for `for ... yield` at revision
+   0.1.39: qualifier trees, the fused worker chain, and the `LCP`
+   families.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -284,8 +288,9 @@ could also appear in the compiler.
 | 0.1.36 | structural records and variants: seven-operation table, closed literals with duplicate-label rejection, type-position tails, semantic maps |
 | 0.1.37 | collection construction and update: six-topic decision, miss as typed failure as a value, complexity excluded from the language layer |
 | 0.1.38 | pattern contexts: three context classes, irrefutable-only default, public-receive reservation, exception-clause and programmable-pattern exclusions |
+| 0.1.39 | list comprehensions: for-yield surface contract, qualifier rules, sequential execution, dormant qualifier-tree elaboration to a fused worker chain |
 
-Versions 0.1.1 through 0.1.38 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.39 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;
