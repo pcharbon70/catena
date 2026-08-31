@@ -451,7 +451,7 @@ defmodule Catena.Comprehension do
 
   defp inner_suffix(
          [next_generator | _],
-         spec,
+         _spec,
          prefix,
          depth,
          binds,
