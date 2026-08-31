@@ -128,7 +128,8 @@ value classification, witness 0.1.26 evaluation order, check
 0.1.34 without execution, elaborate 0.1.35 text, update 0.1.36
 records, settle 0.1.37 collection construction and update, and
 classify 0.1.38 pattern contexts, then elaborate 0.1.39
-comprehensions dormantly,
+comprehensions dormantly, and instantiate 0.1.40 numerics over
+the closed set,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -174,7 +175,8 @@ for the built-in data model. Normative C041 uses `0.1.36` for
 structural records and variants. Normative C042 uses `0.1.37` for
 collection construction and update. Normative C044 uses `0.1.38`
 for pattern contexts. Normative C047–C058 use `0.1.39` for list
-comprehensions.
+comprehensions. Normative C061 uses `0.1.40` for numeric
+relationships.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -228,7 +230,8 @@ flowchart LR
     SR --> CO[Collections 0.1.37]
     CO --> PC[Pattern contexts 0.1.38]
     PC --> LC[List comprehensions 0.1.39]
-    LC --> STOP[Identities, locks, origins, and digests]
+    LC --> NR[Numeric relationships 0.1.40]
+    NR --> STOP[Identities, locks, origins, and digests]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]

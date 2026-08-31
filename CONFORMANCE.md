@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.39` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.39`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, and list-comprehensions revisions `0.1.23`–`0.1.39` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.40` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.40`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, and numeric-relationships revisions `0.1.23`–`0.1.40` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -360,6 +360,20 @@ marker); non-total generators and refutable bindings reuse `M001`,
 type mismatches reuse the typing families, unused bindings reuse
 `BS001`. Iterators, streams, lazy production, parallel traversal,
 and non-list targets are excluded.
+
+Normative C061 uses `0.1.40` for numeric relationships. Numeric
+operators instantiate over the closed set `{Int, Float}`: operands
+unify with each other, arithmetic results carry the operand type,
+and ordering, equality, and negation are unchanged. Arithmetic on
+`Float` is correct-but-dormant — no frozen frontend carries a
+float type or literal spelling — witnessed by driving the
+inference engine directly with float-typed operands (`Infer.infer`
+with `Scheme.mono(:float)`); the evaluator's arithmetic computes
+Elixir floats natively when operands first reach it. No dispatch,
+user overloadability, defaulting, implicit coercion, or literal
+constraints; division, remainder, checked and decimal arithmetic,
+and conversions remain the numeric library's. Zero new diagnostic
+families and no new public API.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared

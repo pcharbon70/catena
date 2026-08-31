@@ -486,6 +486,16 @@ surface tokens adopt with the future grammar capstone. Three `LCP`
 diagnostic families arrive; iterators, streams, lazy production,
 parallelism, and non-list targets stay excluded.
 
+Revision 0.1.40 fixes numeric relationships: closed-set
+instantiation — the operands unify with each other and operators
+instantiate over exactly `Int` and `Float`. Arithmetic joins
+ordering and negation over `Float`, correct-but-dormant until a
+float-bearing frontend (no frozen frontend carries a float type or
+literal spelling). No dispatch, no user overloadability, no
+defaulting, no implicit coercion, no literal constraints; division,
+remainder, checked and decimal arithmetic, and conversions remain
+the numeric library's.
+
 Revision 0.1.35 fixes the built-in data model: Text, Character, and
 Bytes elaborate from C017's scanned literals by the C018 pattern with
 content-based equality and total orders; list, map, and set stay
@@ -659,6 +669,11 @@ comprehensions 0.1.39 → for-yield contract with qualifier rules,
                        sequential order, and the dormant elaboration
                        to a fused worker chain
                        (stops before the P109 surface tokens)
+                       ↓
+numerics 0.1.40 → closed-set instantiation over {Int, Float},
+                       same-type arithmetic dormant until a
+                       float-bearing frontend, division to G105
+                       (stops before the numeric library)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓

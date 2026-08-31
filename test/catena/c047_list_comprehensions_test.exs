@@ -3,14 +3,14 @@ defmodule Catena.C047ListComprehensionsTest do
 
   alias Catena.{Comprehension, LanguageLifecycle, LanguageVersion}
 
-  @frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35 0.1.36 0.1.37 0.1.38 0.1.39)
+  @frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35 0.1.36 0.1.37 0.1.38 0.1.39 0.1.40)
 
   @option_type "(data Option (params a) (constructor None (fields)) (constructor Some (fields a)))"
 
   describe "revision registration" do
     @tag obligations: ~w(LC-OBL-001)
     test "0.1.39 is an exact registered revision with the elaboration boundary declared" do
-      assert LanguageVersion.latest() == "0.1.39"
+      assert LanguageVersion.latest() == "0.1.40"
       assert LanguageVersion.source_text_frontend_versions() == @frontends
       refute "0.1.39" in LanguageVersion.compilable_revisions()
       refute "0.1.39" in LanguageVersion.artifact_versions()
@@ -33,9 +33,10 @@ defmodule Catena.C047ListComprehensionsTest do
 
       assert {:ok, %{selection: %{language_revision: "0.1.13"}}} = Catena.scan_literal("1.0")
 
-      assert {:ok, %{selection: %{language_revision: "0.1.39"}}} =
+      assert {:ok, %{selection: %{language_revision: "0.1.40"}}} =
                Catena.decode_source_text("")
 
+      assert {:module, _} = Code.ensure_loaded(Comprehension)
       assert true = function_exported?(Comprehension, :elaborate, 1)
       assert true = function_exported?(Comprehension, :new, 1)
     end
