@@ -246,6 +246,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "structural-records-and-variants/the-operation-table.md#the-operation-table"
         )
+      ),
+      feature(
+        "collection-construction-and-update",
+        "0.1.37",
+        specification(
+          "collection-construction-and-update/the-six-topic-decision.md#the-six-topic-decision"
+        )
       )
     ]
   end
@@ -649,6 +656,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("structural-records-and-variants"),
     do: ~w(static-meaning)
 
+  defp affected_dimensions("collection-construction-and-update"),
+    do: ~w(static-meaning)
+
   defp migration("editions-and-feature-lifecycle"),
     do:
       "Upgrade the manifest format to 0.1.7 and add explicit edition, language_revision, and previews fields."
@@ -760,6 +770,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("structural-records-and-variants"),
     do:
       "Select 0.1.36 for structural records and variants: the seven-operation table (literal, select, update, extend, restrict, inject, match) elevated from the kernel with closed literals, duplicate-label rejection, type-position tails, semantic-map representation, and the frontend absence until P109."
+
+  defp migration("collection-construction-and-update"),
+    do:
+      "Select 0.1.37 for collection construction and update: persistent update is constructor application and match recursion, duplicate-key behavior is a G101 declaration obligation, ordering and key equality ride C035's comparable set, a lookup miss is typed failure as a value (never a trap), and complexity is excluded from the language layer — documentation is G101's."
 
   defp migration("package-identity-and-dependencies"),
     do:
