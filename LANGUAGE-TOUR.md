@@ -456,6 +456,15 @@ seven-operation table elevates the kernel calculus — closed literals,
 duplicate-label rejection, type-position tails, semantic maps — with
 the kernel path the only frontend until P109.
 
+Revision 0.1.37 fixes collection construction and update: building,
+consuming, and updating a collection is constructor application and
+match-based recursion over declared nominal ADTs; a lookup miss is
+typed failure as a value (total, never a trap); key equality and
+ordering ride 0.1.30's comparable set; duplicate-key behavior is a
+G101 declaration obligation; and complexity stays a library-level
+documentation concern — representation is invisible, so a language
+cost bound would make it observable.
+
 Revision 0.1.35 fixes the built-in data model: Text, Character, and
 Bytes elaborate from C017's scanned literals by the C018 pattern with
 content-based equality and total orders; list, map, and set stay
@@ -615,6 +624,10 @@ data 0.1.35 → Text/Character/Bytes elaborated, collections library
                        ↓
 records 0.1.36 → seven operations, closed rows, semantic maps
                        (stops before the future declaration grammar)
+                       ↓
+collections 0.1.37 → constructor application and match recursion,
+                       miss as value, no language-level complexity
+                       (stops before G101's declared collections)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓

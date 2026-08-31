@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.22` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.22`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.37` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.37`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, and collections revisions `0.1.23`–`0.1.37` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -281,6 +281,53 @@ carries no float expressions, so float comparison is witnessed at the
 while the evaluator and BEAM lowering ship correct-but-dormant
 total-order forms for the first float-bearing frontend. Guards keep
 C003's Int/Bool fragment, independently enforced.
+
+Normative C036 uses `0.1.32` for the runtime failure taxonomy. Dynamic
+failure is the single `trap reason` outcome with kinded reasons;
+a trapping process terminates without a result while its spawner
+observes the trap identity — witnessed on the kernel stepper and a
+compiled process-context fixture. Typed failure remains a value and VM
+termination an operational concern; arithmetic, assertion, and foreign
+reasons stay reserved. Zero new diagnostic families.
+
+Normative C037 uses `0.1.33` for resource observability. The six-way
+non-observability classification holds: no memory, time, stack, file,
+network, or environment observation exists in the language, and process
+identity is alone observable — fresh per spawn, never comparable, with
+gated finalization absent. Debugging observes the implementation, not
+the language. Zero new diagnostic families.
+
+Normative C038 uses `0.1.34` for compile-time evaluation. Constants
+never execute; attributes, macros, and staged compilation are absent
+behind recorded gates; derivations are compiler-internal generation
+with `compiler_derived` provenance and byte-identical recompilation
+for unchanged sources. Zero new diagnostic families.
+
+Normative C040 uses `0.1.35` for the built-in data model. The
+twelve-way classification fixes Text, Character, and Bytes as values
+elaborated from `0.1.13` scanned literals (`Catena.Text.elaborate`,
+character payload the code-point integer); lists, maps, and sets are
+library territory over nominal declarations; references are excluded.
+Zero new diagnostic families.
+
+Normative C041 uses `0.1.36` for structural records and variants. The
+seven-operation table — literal, select, update, extend, restrict,
+inject, match — ships kernel rows verbatim on `check_kernel` and
+`compile_kernel`, with closed literals, duplicate-label rejection,
+type-position tails, and the semantic-map representation clause. The
+frozen JSON AST carries no record expressions; the general frontend
+remains P109's. Zero new diagnostic families.
+
+Normative C042 uses `0.1.37` for collection construction and update.
+Construction and update are constructor application and match-based
+recursion over declared nominal ADTs — witnessed end-to-end by a
+declared List (construction, head/tail, length, replace-head) and a
+Pair-keyed lookup agreeing on the kernel stepper and compiled BEAM.
+A lookup miss is typed failure as a value (total, never a trap), key
+equality and ordering ride `0.1.30`'s comparable set, duplicate-key
+behavior is a G101 declaration obligation, and no complexity bound is
+a language-level promise — no collection built-in, update operator,
+or complexity surface exists. Zero new diagnostic families.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
