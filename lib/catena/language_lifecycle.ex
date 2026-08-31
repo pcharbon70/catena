@@ -258,6 +258,11 @@ defmodule Catena.LanguageLifecycle do
         "pattern-contexts",
         "0.1.38",
         specification("pattern-contexts/the-three-context-classes.md#the-classification")
+      ),
+      feature(
+        "list-comprehensions",
+        "0.1.39",
+        specification("list-comprehensions/the-surface-contract.md#the-grammars-semantic-roles")
       )
     ]
   end
@@ -665,6 +670,9 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(static-meaning)
 
   defp affected_dimensions("pattern-contexts"),
+    do: ~w(static-meaning)
+
+  defp affected_dimensions("list-comprehensions"),
     do: ~w(static-meaning)
 
   defp migration("editions-and-feature-lifecycle"),
