@@ -46,12 +46,13 @@ defmodule Catena.LanguageVersion do
     compile_time_evaluation: "0.1.34",
     built_in_data_model: "0.1.35",
     structural_records_and_variants: "0.1.36",
-    collection_construction_and_update: "0.1.37"
+    collection_construction_and_update: "0.1.37",
+    pattern_contexts: "0.1.38"
   ]
   @ordered Keyword.values(@versions)
   @json_frontends ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7)
   @kernel_frontends ~w(0.1.8)
-  @source_text_frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35 0.1.36 0.1.37)
+  @source_text_frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35 0.1.36 0.1.37 0.1.38)
   @compilable @json_frontends ++ @kernel_frontends
   @interfaces ~w(0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8)
   @signed_formats ~w(0.1.6 0.1.7 0.1.8)
@@ -96,6 +97,7 @@ defmodule Catena.LanguageVersion do
           | :built_in_data_model
           | :structural_records_and_variants
           | :collection_construction_and_update
+          | :pattern_contexts
 
   @spec all() :: [String.t()]
   def all, do: @ordered
