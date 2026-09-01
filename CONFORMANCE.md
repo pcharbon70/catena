@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.40` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.40`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, and numeric-relationships revisions `0.1.23`–`0.1.40` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.41` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.41`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, numeric-relationships, and aliases-and-newtypes revisions `0.1.23`–`0.1.41` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -374,6 +374,20 @@ user overloadability, defaulting, implicit coercion, or literal
 constraints; division, remainder, checked and decimal arithmetic,
 and conversions remain the numeric library's. Zero new diagnostic
 families and no new public API.
+
+Normative C062 uses `0.1.41` for aliases and newtypes. Transparent
+type aliases are excluded from edition `0.1` with four recorded
+arrival conditions (identity-sharing, comparability interaction,
+compatibility treatment, error-message naming). An opaque type is
+C022's `abstract` export routed, not redefined. A newtype is the
+nominal single-constructor single-field datatype — witnessed
+constructing, matching, comparing, and passing through a
+smart-constructor idiom on the kernel stepper, the reference
+evaluator, and compiled BEAM — with its own identity, no implicit
+coercion (constructor wraps, pattern unwraps, confusion rejects),
+explicit-target deriving only with no instance flow through the
+wrapper, nominal-spelled diagnostics, and no cost or layout
+promises. Zero new diagnostic families and no new public API.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared

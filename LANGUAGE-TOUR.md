@@ -496,6 +496,14 @@ defaulting, no implicit coercion, no literal constraints; division,
 remainder, checked and decimal arithmetic, and conversions remain
 the numeric library's.
 
+Revision 0.1.41 fixes aliases and newtypes: transparent aliases are
+excluded with four recorded arrival conditions; an opaque type is
+the `abstract` export of C022 routed, not redefined; a newtype is
+the nominal single-constructor single-field datatype with its own
+identity, no implicit coercion, explicit-target deriving only —
+instances never flow through the wrapper — nominal-spelled
+diagnostics, and no cost or layout promises.
+
 Revision 0.1.35 fixes the built-in data model: Text, Character, and
 Bytes elaborate from C017's scanned literals by the C018 pattern with
 content-based equality and total orders; list, map, and set stay
@@ -674,6 +682,11 @@ numerics 0.1.40 → closed-set instantiation over {Int, Float},
                        same-type arithmetic dormant until a
                        float-bearing frontend, division to G105
                        (stops before the numeric library)
+                       ↓
+newtypes 0.1.41 → aliases excluded with arrival conditions,
+                       opaque = abstract export, the newtype a
+                       declared nominal form with explicit deriving
+                       (stops before any new surface spelling)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓
