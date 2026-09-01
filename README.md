@@ -131,6 +131,7 @@ classify 0.1.38 pattern contexts, then elaborate 0.1.39
 comprehensions dormantly, and instantiate 0.1.40 numerics over
 the closed set, then exclude 0.1.41 aliases in favor of declared
 newtypes, and pin 0.1.42 resolution to scope structure alone,
+then wall 0.1.43 unsafety out of the source language,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -179,6 +180,7 @@ for pattern contexts. Normative C047–C058 use `0.1.39` for list
 comprehensions. Normative C061 uses `0.1.40` for numeric
 relationships. Normative C062 uses `0.1.41` for aliases and
 newtypes. Normative C066 uses `0.1.42` for name resolution.
+Normative C067 uses `0.1.43` for dynamic and unsafe boundaries.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -235,7 +237,8 @@ flowchart LR
     LC --> NR[Numeric relationships 0.1.40]
     NR --> AN[Aliases and newtypes 0.1.41]
     AN --> RN[Name resolution 0.1.42]
-    RN --> STOP[Identities, locks, origins, and digests]
+    RN --> DU[Unsafe boundaries 0.1.43]
+    DU --> STOP[Identities, locks, origins, and digests]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]

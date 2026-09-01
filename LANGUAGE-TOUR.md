@@ -513,6 +513,16 @@ by visibility, literals by spelling, operators by closed-set
 instantiation. No overloading by type, no expected-type
 adaptation, no inference-directed field access.
 
+Revision 0.1.43 fixes dynamic and unsafe boundaries: no casts, no
+runtime type inspection, no unchecked operations, no compiler
+intrinsics, and no reflection exist in edition 0.1 — unsafety
+cannot be written in Catena source. Erasure leaves no runtime type
+material, the failure taxonomy has no cast kind, and the guard
+fragment still rejects the dynamic vocabulary. Any future form
+must amend erasure, taxonomy, visibility, and evidence in its own
+revision; dynamic values enter only through a visible, typed,
+failure-classified foreign boundary owned by G095, G096, or G098.
+
 Revision 0.1.35 fixes the built-in data model: Text, Character, and
 Bytes elaborate from C017's scanned literals by the C018 pattern with
 content-based equality and total orders; list, map, and set stay
@@ -700,6 +710,11 @@ newtypes 0.1.41 → aliases excluded with arrival conditions,
 resolution 0.1.42 → type-independent names, the five-way table,
                        evidence selection carved out, order-safe
                        (stops before any overload machinery)
+                       ↓
+unsafe 0.1.43 → casts, inspection, intrinsics, reflection all
+                       excluded with arrival conditions; dynamic
+                       entry routed to the foreign boundaries
+                       (stops before G095/G096/G098)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓

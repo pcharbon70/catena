@@ -164,6 +164,10 @@ flowchart TD
 35. [Name Resolution](language/name-resolution.md) — the
    type-independence invariant with the five-way classification
    and the evidence-selection carve-out at revision 0.1.42.
+36. [Dynamic and Unsafe Boundaries](language/dynamic-and-unsafe-boundaries.md)
+   — the intralanguage exclusions (no casts, inspection,
+   intrinsics, reflection) with the foreign visibility routing at
+   revision 0.1.43.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -301,8 +305,9 @@ could also appear in the compiler.
 | 0.1.40 | numeric relationships: closed-set instantiation over {Int, Float}, same-type arithmetic, no dispatch, division and remainder to G105 |
 | 0.1.41 | aliases and newtypes: transparent aliases excluded with arrival conditions, opaque = abstract export, newtype = nominal single-field ADT, explicit-only deriving |
 | 0.1.42 | name resolution: type-independent invariant, five-way classification, evidence selection carved out from resolution |
+| 0.1.43 | dynamic and unsafe boundaries: five intralanguage exclusions with arrival conditions, visibility routed to the foreign owners |
 
-Versions 0.1.1 through 0.1.42 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.43 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;
