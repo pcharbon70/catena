@@ -504,6 +504,15 @@ identity, no implicit coercion, explicit-target deriving only —
 instances never flow through the wrapper — nominal-spelled
 diagnostics, and no cost or layout promises.
 
+Revision 0.1.42 fixes name resolution: type-independent — every
+name resolves as a function of scope structure alone, and
+annotations never change a name's target. Field labels are not
+resolved names, trait instance selection is evidence settled at
+the instance (never deferred to call sites), constructors resolve
+by visibility, literals by spelling, operators by closed-set
+instantiation. No overloading by type, no expected-type
+adaptation, no inference-directed field access.
+
 Revision 0.1.35 fixes the built-in data model: Text, Character, and
 Bytes elaborate from C017's scanned literals by the C018 pattern with
 content-based equality and total orders; list, map, and set stay
@@ -687,6 +696,10 @@ newtypes 0.1.41 → aliases excluded with arrival conditions,
                        opaque = abstract export, the newtype a
                        declared nominal form with explicit deriving
                        (stops before any new surface spelling)
+                       ↓
+resolution 0.1.42 → type-independent names, the five-way table,
+                       evidence selection carved out, order-safe
+                       (stops before any overload machinery)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓

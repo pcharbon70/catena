@@ -161,6 +161,9 @@ flowchart TD
 34. [Aliases and Newtypes](language/aliases-and-newtypes.md) — the
    alias exclusion, the abstract-export opaque routing, and the
    newtype as the nominal single-field ADT at revision 0.1.41.
+35. [Name Resolution](language/name-resolution.md) — the
+   type-independence invariant with the five-way classification
+   and the evidence-selection carve-out at revision 0.1.42.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -297,8 +300,9 @@ could also appear in the compiler.
 | 0.1.39 | list comprehensions: for-yield surface contract, qualifier rules, sequential execution, dormant qualifier-tree elaboration to a fused worker chain |
 | 0.1.40 | numeric relationships: closed-set instantiation over {Int, Float}, same-type arithmetic, no dispatch, division and remainder to G105 |
 | 0.1.41 | aliases and newtypes: transparent aliases excluded with arrival conditions, opaque = abstract export, newtype = nominal single-field ADT, explicit-only deriving |
+| 0.1.42 | name resolution: type-independent invariant, five-way classification, evidence selection carved out from resolution |
 
-Versions 0.1.1 through 0.1.41 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.42 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;
