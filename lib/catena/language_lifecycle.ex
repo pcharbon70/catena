@@ -268,6 +268,11 @@ defmodule Catena.LanguageLifecycle do
         "numeric-relationships",
         "0.1.40",
         specification("numeric-relationships/the-closed-set-instantiation-rule.md#the-rule")
+      ),
+      feature(
+        "aliases-and-newtypes",
+        "0.1.41",
+        specification("aliases-and-newtypes/the-newtype-form.md#the-newtype-is-a-declared-form")
       )
     ]
   end
@@ -681,6 +686,9 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(static-meaning)
 
   defp affected_dimensions("numeric-relationships"),
+    do: ~w(static-meaning)
+
+  defp affected_dimensions("aliases-and-newtypes"),
     do: ~w(static-meaning)
 
   defp migration("editions-and-feature-lifecycle"),
