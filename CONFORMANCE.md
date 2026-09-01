@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.41` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.41`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, numeric-relationships, and aliases-and-newtypes revisions `0.1.23`–`0.1.41` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.42` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.42`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, numeric-relationships, aliases-and-newtypes, and name-resolution revisions `0.1.23`–`0.1.42` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -388,6 +388,20 @@ coercion (constructor wraps, pattern unwraps, confusion rejects),
 explicit-target deriving only with no instance flow through the
 wrapper, nominal-spelled diagnostics, and no cost or layout
 promises. Zero new diagnostic families and no new public API.
+
+Normative C066 uses `0.1.42` for name resolution. Resolution is
+type-independent: every name resolves as a function of scope
+structure alone, and annotations never change a name's target.
+Witnessed by annotation-invariance pairs on the kernel stepper,
+scope-structural shadowing (`13`), trait calls running through
+instance evidence with missing evidence rejecting at the instance
+(`TRT005`), literals by spelling, and unknown constructors
+rejecting `A004` — with import collision rejecting rather than
+disambiguating by type. Field labels are not resolved names;
+trait instance selection is evidence, not resolution; no
+overloading by type, expected-type adaptation, call-site deferral,
+or inference-directed field access. Zero new diagnostic families
+and no new public API.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared

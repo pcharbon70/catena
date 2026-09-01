@@ -273,6 +273,11 @@ defmodule Catena.LanguageLifecycle do
         "aliases-and-newtypes",
         "0.1.41",
         specification("aliases-and-newtypes/the-newtype-form.md#the-newtype-is-a-declared-form")
+      ),
+      feature(
+        "name-resolution",
+        "0.1.42",
+        specification("name-resolution/the-resolution-invariant.md#the-invariant")
       )
     ]
   end
@@ -689,6 +694,9 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(static-meaning)
 
   defp affected_dimensions("aliases-and-newtypes"),
+    do: ~w(static-meaning)
+
+  defp affected_dimensions("name-resolution"),
     do: ~w(static-meaning)
 
   defp migration("editions-and-feature-lifecycle"),
