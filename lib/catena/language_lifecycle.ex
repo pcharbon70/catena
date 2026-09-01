@@ -278,6 +278,13 @@ defmodule Catena.LanguageLifecycle do
         "name-resolution",
         "0.1.42",
         specification("name-resolution/the-resolution-invariant.md#the-invariant")
+      ),
+      feature(
+        "dynamic-and-unsafe-boundaries",
+        "0.1.43",
+        specification(
+          "dynamic-and-unsafe-boundaries/the-intralanguage-exclusions.md#the-exclusions"
+        )
       )
     ]
   end
@@ -697,6 +704,9 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(static-meaning)
 
   defp affected_dimensions("name-resolution"),
+    do: ~w(static-meaning)
+
+  defp affected_dimensions("dynamic-and-unsafe-boundaries"),
     do: ~w(static-meaning)
 
   defp migration("editions-and-feature-lifecycle"),
