@@ -285,6 +285,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "dynamic-and-unsafe-boundaries/the-intralanguage-exclusions.md#the-exclusions"
         )
+      ),
+      feature(
+        "excluded-advanced-type-features",
+        "0.1.44",
+        specification(
+          "excluded-advanced-type-features/the-exclusion-table-and-gate.md#the-exclusion-table"
+        )
       )
     ]
   end
@@ -707,6 +714,9 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(static-meaning)
 
   defp affected_dimensions("dynamic-and-unsafe-boundaries"),
+    do: ~w(static-meaning)
+
+  defp affected_dimensions("excluded-advanced-type-features"),
     do: ~w(static-meaning)
 
   defp migration("editions-and-feature-lifecycle"),

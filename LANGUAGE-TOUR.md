@@ -523,6 +523,17 @@ must amend erasure, taxonomy, visibility, and evidence in its own
 revision; dynamic values enter only through a visible, typed,
 failure-classified foreign boundary owned by G095, G096, or G098.
 
+Revision 0.1.44 fixes the excluded advanced type features' gate:
+impredicativity, inferred higher rank, first-class existentials
+beyond declared constructors, general linear types, dependent
+types, unrestricted type families, higher-kinded polymorphism,
+and unrestricted GADT inference stay excluded (C001 unchanged),
+with C068's checked profile unchanged and rejections identifying
+the profile boundary. Any arriving form must state seven points —
+problem, repeated-use evidence, interaction audit, formal
+semantics, operational contract, diagnostic story, and a library
+comparison — independently; no omnibus revision.
+
 Revision 0.1.35 fixes the built-in data model: Text, Character, and
 Bytes elaborate from C017's scanned literals by the C018 pattern with
 content-based equality and total orders; list, map, and set stay
@@ -715,6 +726,11 @@ unsafe 0.1.43 → casts, inspection, intrinsics, reflection all
                        excluded with arrival conditions; dynamic
                        entry routed to the foreign boundaries
                        (stops before G095/G096/G098)
+                       ↓
+advanced 0.1.44 → the seven excluded forms from 0.1.1 with the
+                       seven-point arrival gate made normative;
+                       the checked profile unchanged
+                       (Section 7 complete: 10/10)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓

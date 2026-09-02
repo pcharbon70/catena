@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.43` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.43`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, numeric-relationships, aliases-and-newtypes, name-resolution, and dynamic-and-unsafe-boundaries revisions `0.1.23`–`0.1.43` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.44` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.44`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, numeric-relationships, aliases-and-newtypes, name-resolution, dynamic-and-unsafe-boundaries, and excluded-advanced-type-features revisions `0.1.23`–`0.1.44` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -416,6 +416,22 @@ visibility, and evidence interaction in its own revision; dynamic
 or unsafe values enter only through a visible, typed,
 failure-classified foreign boundary owned by G095, G096, or G098.
 Zero new diagnostic families and no new public API.
+
+Normative C140 uses `0.1.44` for excluded advanced type features.
+Impredicative instantiation, inferred higher rank, first-class
+existential packages beyond declared constructors, general linear
+types, dependent types, unrestricted type families, higher-kinded
+polymorphism over arbitrary kinds, and unrestricted GADT
+inference stay excluded (C001 unchanged), with C068's checked
+profile unchanged. Witnessed by profile-boundary rejections (`T012`
+for excluded type spellings, `T010` for unannotated GADT matches,
+`T009` for existential escapes) and a signature-directed GADT
+program evaluating unchanged. Any arriving form must state the
+seven-point gate — problem statement, repeated-use evidence,
+interaction audit, formal semantics, operational contract,
+diagnostic story, and a library comparison — independently; no
+omnibus advanced-features revision. Zero new diagnostic families
+and no new public API.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
