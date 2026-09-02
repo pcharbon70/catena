@@ -171,6 +171,9 @@ flowchart TD
 37. [Excluded Advanced Type Features](language/excluded-advanced-type-features.md)
    — the seven-form exclusion table with the seven-point arrival
    gate at revision 0.1.44, completing Section 7.
+38. [Progress and Preservation](language/progress-and-preservation.md)
+   — the effects-and-failure targets and the composed integrated
+   theorem with its routed proof obligation at revision 0.1.45.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -310,8 +313,9 @@ could also appear in the compiler.
 | 0.1.42 | name resolution: type-independent invariant, five-way classification, evidence selection carved out from resolution |
 | 0.1.43 | dynamic and unsafe boundaries: five intralanguage exclusions with arrival conditions, visibility routed to the foreign owners |
 | 0.1.44 | excluded advanced type features: the seven-form table from C001 with the seven-point arrival gate made normative |
+| 0.1.45 | progress and preservation: effects-and-failure targets, the composed integrated theorem, conditional process and foreign extensions |
 
-Versions 0.1.1 through 0.1.44 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.45 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

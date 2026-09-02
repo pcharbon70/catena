@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.44` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.44`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, numeric-relationships, aliases-and-newtypes, name-resolution, dynamic-and-unsafe-boundaries, and excluded-advanced-type-features revisions `0.1.23`–`0.1.44` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.45` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.45`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, numeric-relationships, aliases-and-newtypes, name-resolution, dynamic-and-unsafe-boundaries, excluded-advanced-type-features, and progress-and-preservation revisions `0.1.23`–`0.1.45` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -432,6 +432,18 @@ interaction audit, formal semantics, operational contract,
 diagnostic story, and a library comparison — independently; no
 omnibus advanced-features revision. Zero new diagnostic families
 and no new public API.
+
+Normative C132 uses `0.1.45` for progress and preservation. The
+effects-and-failure targets cover the shipped handler calculus
+(installation, resume-once, return-clause preservation; effect
+progress; trap terminality with kernel-verbatim reasons), witnessed
+by handler programs agreeing on stepper and BEAM, trap fixtures,
+and the C030 dual-agreement discipline. The integrated theorem is
+a composed statement: the standing component theorems plus a
+composition lemma that is a routed proof obligation owned by the
+formal-validation program — never a claim. Public-process and
+foreign-value extensions are conditional on G084/G085 and
+G095/G096. Zero new diagnostic families and no new public API.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared

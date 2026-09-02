@@ -534,6 +534,15 @@ problem, repeated-use evidence, interaction audit, formal
 semantics, operational contract, diagnostic story, and a library
 comparison — independently; no omnibus revision.
 
+Revision 0.1.45 fixes progress and preservation: effects-and-
+failure targets over the shipped handler calculus (installation,
+resume-once, and return-clause preservation; effect progress; trap
+terminality with kernel-verbatim reasons), and the integrated
+theorem as a composed statement — the standing component theorems
+plus a composition lemma that is a routed proof obligation, never
+a claim. Public-process and foreign-value extensions are
+conditional on G084/G085 and G095/G096 respectively.
+
 Revision 0.1.35 fixes the built-in data model: Text, Character, and
 Bytes elaborate from C017's scanned literals by the C018 pattern with
 content-based equality and total orders; list, map, and set stay
@@ -731,6 +740,11 @@ advanced 0.1.44 → the seven excluded forms from 0.1.1 with the
                        seven-point arrival gate made normative;
                        the checked profile unchanged
                        (Section 7 complete: 10/10)
+                       ↓
+safety 0.1.45 → effects-and-failure targets stated with
+                       evidence, the composed theorem with its
+                       routed lemma, conditional extensions
+                       (Section 16 opens; proof era later)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓

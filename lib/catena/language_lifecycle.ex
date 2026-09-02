@@ -292,6 +292,11 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "excluded-advanced-type-features/the-exclusion-table-and-gate.md#the-exclusion-table"
         )
+      ),
+      feature(
+        "progress-and-preservation",
+        "0.1.45",
+        specification("progress-and-preservation/the-effects-and-failure-targets.md#the-targets")
       )
     ]
   end
@@ -717,6 +722,9 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(static-meaning)
 
   defp affected_dimensions("excluded-advanced-type-features"),
+    do: ~w(static-meaning)
+
+  defp affected_dimensions("progress-and-preservation"),
     do: ~w(static-meaning)
 
   defp migration("editions-and-feature-lifecycle"),
