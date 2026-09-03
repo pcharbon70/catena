@@ -174,6 +174,9 @@ flowchart TD
 38. [Progress and Preservation](language/progress-and-preservation.md)
    — the effects-and-failure targets and the composed integrated
    theorem with its routed proof obligation at revision 0.1.45.
+39. [Selective Receive](language/selective-receive.md) — the
+   receive rule set with honest starvation cost and four routed
+   interfaces at revision 0.1.46.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -314,8 +317,9 @@ could also appear in the compiler.
 | 0.1.43 | dynamic and unsafe boundaries: five intralanguage exclusions with arrival conditions, visibility routed to the foreign owners |
 | 0.1.44 | excluded advanced type features: the seven-form table from C001 with the seven-point arrival gate made normative |
 | 0.1.45 | progress and preservation: effects-and-failure targets, the composed integrated theorem, conditional process and foreign extensions |
+| 0.1.46 | selective receive: FIFO scan, preservation, one-time removal, honest starvation cost, interfaces routed to P109/G088/G087/G085 |
 
-Versions 0.1.1 through 0.1.45 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.46 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

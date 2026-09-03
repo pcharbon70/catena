@@ -543,6 +543,17 @@ plus a composition lemma that is a routed proof obligation, never
 a claim. Public-process and foreign-value extensions are
 conditional on G084/G085 and G095/G096 respectively.
 
+Revision 0.1.46 fixes selective receive: FIFO scan from the oldest
+message, rejected messages preserved in position, one-time removal
+before the body, one closed message type, an effect-free receive
+form, and portable conditions only. Starvation is honest — a
+stable rejected prefix starves the receive and each attempt's scan
+cost is proportional to its rejected prefix, with no fairness
+guarantee beyond scan order. Public syntax routes to P109 (the
+timeout clause is C044's explicit total fallback), timeouts and
+cancellation to G088, typed protocols to G087, send-side semantics
+to G085.
+
 Revision 0.1.35 fixes the built-in data model: Text, Character, and
 Bytes elaborate from C017's scanned literals by the C018 pattern with
 content-based equality and total orders; list, map, and set stay
@@ -745,6 +756,11 @@ safety 0.1.45 → effects-and-failure targets stated with
                        evidence, the composed theorem with its
                        routed lemma, conditional extensions
                        (Section 16 opens; proof era later)
+                       ↓
+receive 0.1.46 → FIFO scan, preservation, one-time removal,
+                       honest starvation cost, interfaces routed
+                       to P109, G088, G087, and G085
+                       (Section 9 at 5/8; timeouts later)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓

@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.45` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.45`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, numeric-relationships, aliases-and-newtypes, name-resolution, dynamic-and-unsafe-boundaries, excluded-advanced-type-features, and progress-and-preservation revisions `0.1.23`–`0.1.45` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.46` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.46`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, numeric-relationships, aliases-and-newtypes, name-resolution, dynamic-and-unsafe-boundaries, excluded-advanced-type-features, progress-and-preservation, and selective-receive revisions `0.1.23`–`0.1.46` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -444,6 +444,22 @@ composition lemma that is a routed proof obligation owned by the
 formal-validation program — never a claim. Public-process and
 foreign-value extensions are conditional on G084/G085 and
 G095/G096. Zero new diagnostic families and no new public API.
+
+Normative C086 uses `0.1.46` for selective receive. The rule set:
+FIFO scan from the oldest message, rejected messages preserved in
+position, one-time removal before the body, one closed message
+type, an effect-free receive form, portable conditions only
+(`CND006` unchanged). Starvation is honest: a stable rejected
+prefix starves the receive and each attempt's scan cost is
+proportional to its rejected prefix — no fairness guarantee
+beyond scan order. Witnessed by the blocked-holder fixture
+(`waiting` with both messages retained in order, quiescent on the
+stepper), the C010 launch selection trace re-pinned with its BEAM
+twin, and the harness `CND006` rejections (or-pattern expansion,
+non-closed message types). Public syntax routes to P109 (the
+timeout clause is C044's explicit total fallback), timeouts and
+cancellation to G088, typed protocols to G087, send-side semantics
+to G085. Zero new diagnostic families and no new public API.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared

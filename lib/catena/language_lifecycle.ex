@@ -297,6 +297,11 @@ defmodule Catena.LanguageLifecycle do
         "progress-and-preservation",
         "0.1.45",
         specification("progress-and-preservation/the-effects-and-failure-targets.md#the-targets")
+      ),
+      feature(
+        "selective-receive",
+        "0.1.46",
+        specification("selective-receive/the-receive-rule-set.md#the-rules")
       )
     ]
   end
@@ -725,6 +730,9 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(static-meaning)
 
   defp affected_dimensions("progress-and-preservation"),
+    do: ~w(static-meaning)
+
+  defp affected_dimensions("selective-receive"),
     do: ~w(static-meaning)
 
   defp migration("editions-and-feature-lifecycle"),
