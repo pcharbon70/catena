@@ -134,7 +134,8 @@ newtypes, and pin 0.1.42 resolution to scope structure alone,
 then wall 0.1.43 unsafety out of the source language, and gate
 0.1.44 advanced type features behind seven stated points, then
 compose 0.1.45 safety from stated targets, and fix 0.1.46
-selective receive's scan and preservation,
+selective receive's scan and preservation, then partition 0.1.47
+exceptions into values, effects, and traps,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -186,7 +187,8 @@ newtypes. Normative C066 uses `0.1.42` for name resolution.
 Normative C067 uses `0.1.43` for dynamic and unsafe boundaries.
 Normative C140 uses `0.1.44` for excluded advanced type features.
 Normative C132 uses `0.1.45` for progress and preservation.
-Normative C086 uses `0.1.46` for selective receive.
+Normative C086 uses `0.1.46` for selective receive. Normative
+C081 uses `0.1.47` for the exception boundary.
 `Catena.LanguageVersion` is the
 executable exact-revision registry, while edition `0.1` names the surrounding
 compatibility track. The Mix application version remains `0.1.0`; it
@@ -247,7 +249,8 @@ flowchart LR
     DU --> EA[Advanced exclusions 0.1.44]
     EA --> PP[Progress and preservation 0.1.45]
     PP --> RC[Selective receive 0.1.46]
-    RC --> STOP[Identities, locks, origins, and digests]
+    RC --> XB[Exception boundary 0.1.47]
+    XB --> STOP[Identities, locks, origins, and digests]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]

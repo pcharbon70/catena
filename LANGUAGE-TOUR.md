@@ -554,6 +554,17 @@ timeout clause is C044's explicit total fallback), timeouts and
 cancellation to G088, typed protocols to G087, send-side semantics
 to G085.
 
+Revision 0.1.47 fixes the exception boundary: a partition into
+three visibly distinct mechanisms — typed failure is a value,
+exception-style catching is the effect pattern (a handler
+declining to resume aborts to its result, a library idiom over
+unchanged C005), and `trap(reason)` is the one terminal mechanism,
+never catchable. Panics are traps with the reserved kind, entering
+with their producers; process exits, foreign failures,
+cancellation, library faults, and outcome types route to G084,
+G095/G096, G088, G105, and G103; a language exception form exists
+only through C044's reopening door.
+
 Revision 0.1.35 fixes the built-in data model: Text, Character, and
 Bytes elaborate from C017's scanned literals by the C018 pattern with
 content-based equality and total orders; list, map, and set stay
@@ -761,6 +772,11 @@ receive 0.1.46 → FIFO scan, preservation, one-time removal,
                        honest starvation cost, interfaces routed
                        to P109, G088, G087, and G085
                        (Section 9 at 5/8; timeouts later)
+                       ↓
+exceptions 0.1.47 → values, the effect pattern, and the terminal
+                       trap as visibly distinct mechanisms; panics
+                       as trap kinds; neighbors routed
+                       (Section 9 at 6/8; no catch ever)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓
