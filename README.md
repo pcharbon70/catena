@@ -135,7 +135,8 @@ then wall 0.1.43 unsafety out of the source language, and gate
 0.1.44 advanced type features behind seven stated points, then
 compose 0.1.45 safety from stated targets, and fix 0.1.46
 selective receive's scan and preservation, then partition 0.1.47
-exceptions into values, effects, and traps,
+exceptions into values, effects, and traps, and silence 0.1.48
+the application top level,
 run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
@@ -250,7 +251,8 @@ flowchart LR
     EA --> PP[Progress and preservation 0.1.45]
     PP --> RC[Selective receive 0.1.46]
     RC --> XB[Exception boundary 0.1.47]
-    XB --> STOP[Identities, locks, origins, and digests]
+    XB --> TL[Top-level effects 0.1.48]
+    TL --> STOP[Identities, locks, origins, and digests]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]
     W --> C[Condition safety and fact normalization]

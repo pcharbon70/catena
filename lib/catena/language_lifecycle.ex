@@ -307,6 +307,11 @@ defmodule Catena.LanguageLifecycle do
         "exception-boundary",
         "0.1.47",
         specification("exception-boundary/the-mechanism-partition.md#the-partition")
+      ),
+      feature(
+        "top-level-effects",
+        "0.1.48",
+        specification("top-level-effects/the-top-level-boundary.md#the-boundary")
       )
     ]
   end
@@ -741,6 +746,9 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(static-meaning)
 
   defp affected_dimensions("exception-boundary"),
+    do: ~w(static-meaning)
+
+  defp affected_dimensions("top-level-effects"),
     do: ~w(static-meaning)
 
   defp migration("editions-and-feature-lifecycle"),
