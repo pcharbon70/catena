@@ -180,6 +180,9 @@ flowchart TD
 40. [Exception Boundary](language/exception-boundary.md) — the
    three-way mechanism partition with the blessed effect pattern
    and the routing table at revision 0.1.47.
+41. [Top-Level Effects](language/top-level-effects.md) — the
+   silent top level: nothing unhandled, nobody interpreting, the
+   G106 capability interface at revision 0.1.48.
 8. [Editions, Revisions, and Previews](language/editions-and-previews.md) —
    pin one exact language contract, inspect retained revisions, understand
    named feature lifecycle, and read migration diagnostics.
@@ -322,8 +325,9 @@ could also appear in the compiler.
 | 0.1.45 | progress and preservation: effects-and-failure targets, the composed integrated theorem, conditional process and foreign extensions |
 | 0.1.46 | selective receive: FIFO scan, preservation, one-time removal, honest starvation cost, interfaces routed to P109/G088/G087/G085 |
 | 0.1.47 | exception boundary: values, the effect pattern, and the terminal trap as visibly distinct mechanisms; panics as trap kinds |
+| 0.1.48 | top-level effects: the silent top level — nothing unhandled, no ambient interpreter, capabilities explicit via G106 or absent |
 
-Versions 0.1.1 through 0.1.47 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.48 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

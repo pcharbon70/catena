@@ -565,6 +565,17 @@ cancellation, library faults, and outcome types route to G084,
 G095/G096, G088, G105, and G103; a language exception form exists
 only through C044's reopening door.
 
+Revision 0.1.48 fixes top-level effects: the silent top level. An
+entry leaves nothing unhandled (effect-closed, `ENT001`
+unchanged), nobody interprets unhandled requests because none
+exist, no ambient host handler exists or is reserved, and launch
+is invocation only — to completion, no scope, no injection.
+Capabilities reach an entry only as explicit typed values through
+a channel G106 defines; the zero-argument and effect-closed rules
+bind until then. G084's supervision interprets process failure,
+never requests; widening the entry form amends C027 explicitly
+with who-interprets-what stated.
+
 Revision 0.1.35 fixes the built-in data model: Text, Character, and
 Bytes elaborate from C017's scanned literals by the C018 pattern with
 content-based equality and total orders; list, map, and set stay
@@ -777,6 +788,11 @@ exceptions 0.1.47 → values, the effect pattern, and the terminal
                        trap as visibly distinct mechanisms; panics
                        as trap kinds; neighbors routed
                        (Section 9 at 6/8; no catch ever)
+                       ↓
+top level 0.1.48 → the silent boundary: nothing unhandled, no
+                       ambient interpreter, launch as invocation;
+                       capabilities via G106 or absent
+                       (Section 9 at 7/8; G080 remains)
 
 retained JSON AST 0.1.1–0.1.7  OR  exact kernel S-expression 0.1.8
         ↓

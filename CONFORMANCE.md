@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.47` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.47`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, numeric-relationships, aliases-and-newtypes, name-resolution, dynamic-and-unsafe-boundaries, excluded-advanced-type-features, progress-and-preservation, selective-receive, and exception-boundary revisions `0.1.23`–`0.1.47` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.48` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.48`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, numeric-relationships, aliases-and-newtypes, name-resolution, dynamic-and-unsafe-boundaries, excluded-advanced-type-features, progress-and-preservation, selective-receive, exception-boundary, and top-level-effects revisions `0.1.23`–`0.1.48` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -475,6 +475,19 @@ rule), cancellation to G088, library faults to G105, outcome
 types to G103. No raise/catch/try/rescue form exists on any
 frontend; C044's reopening door is the only amendment route. Zero
 new diagnostic families and no new public API.
+
+Normative C082 uses `0.1.48` for top-level effects. The silent
+top level: an entry leaves nothing unhandled (effect-closed,
+`ENT001` unchanged — witnessed by `Entry.validate` rejecting a
+non-effect-closed export), nobody interprets unhandled requests
+because none exist, no ambient host handler exists or is
+reserved, and launch is invocation only (an effect-closed entry
+launched to completion, repeatedly, via `Catena.Entry.launch/2`).
+Capabilities reach an entry only as explicit typed values through
+a channel G106 defines; the zero-argument and effect-closed rules
+bind until then. G084's supervision interprets process failure,
+never requests. Zero new diagnostic families and no new public
+API.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared
