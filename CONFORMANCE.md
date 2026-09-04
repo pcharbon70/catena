@@ -27,8 +27,8 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.46` |
-| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.46`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, numeric-relationships, aliases-and-newtypes, name-resolution, dynamic-and-unsafe-boundaries, excluded-advanced-type-features, progress-and-preservation, and selective-receive revisions `0.1.23`–`0.1.46` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.47` |
+| Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.47`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, numeric-relationships, aliases-and-newtypes, name-resolution, dynamic-and-unsafe-boundaries, excluded-advanced-type-features, progress-and-preservation, selective-receive, and exception-boundary revisions `0.1.23`–`0.1.47` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
 
@@ -460,6 +460,21 @@ non-closed message types). Public syntax routes to P109 (the
 timeout clause is C044's explicit total fallback), timeouts and
 cancellation to G088, typed protocols to G087, send-side semantics
 to G085. Zero new diagnostic families and no new public API.
+
+Normative C081 uses `0.1.47` for the exception boundary. The
+partition: typed failure is a value; exception-style catching is
+the effect pattern — a handler declining to resume aborts to its
+result, visible in the effect row, witnessed by a declining
+handler agreeing on stepper and BEAM (`0`, not `100`); and
+`trap(reason)` is the one terminal mechanism, never catchable (the
+C036 fixture re-pinned). Panics are traps with the reserved
+assertion/panic kind, entering with their producers. Process exits
+route to G084 (C010's spared-spawner re-pinned), foreign failures
+map to `trap` at the visible boundary (G095/G096 with C067's
+rule), cancellation to G088, library faults to G105, outcome
+types to G103. No raise/catch/try/rescue form exists on any
+frontend; C044's reopening door is the only amendment route. Zero
+new diagnostic families and no new public API.
 
 `catena conformance-info` writes one JSON object to standard output. The
 document reports implementation identity, supported revisions, declared

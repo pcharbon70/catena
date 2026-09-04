@@ -302,6 +302,11 @@ defmodule Catena.LanguageLifecycle do
         "selective-receive",
         "0.1.46",
         specification("selective-receive/the-receive-rule-set.md#the-rules")
+      ),
+      feature(
+        "exception-boundary",
+        "0.1.47",
+        specification("exception-boundary/the-mechanism-partition.md#the-partition")
       )
     ]
   end
@@ -733,6 +738,9 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(static-meaning)
 
   defp affected_dimensions("selective-receive"),
+    do: ~w(static-meaning)
+
+  defp affected_dimensions("exception-boundary"),
     do: ~w(static-meaning)
 
   defp migration("editions-and-feature-lifecycle"),
