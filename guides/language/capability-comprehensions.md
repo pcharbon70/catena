@@ -32,3 +32,8 @@ The implementation supports closed, explicitly selected slots. It does not
 provide a general open-row solver, a new public parser or a package-linking
 interface. The governing rules are in the research archive's
 [closed capability-kernel specification](https://github.com/pcharbon70/catena-research/blob/main/60-specification/closed-capability-kernel/identity-rows-and-comprehension-target.md).
+
+Effectful context definitions execute at each reached reference, including
+earlier context dependencies; they are not implicitly memoized or eagerly
+forced. Dependent case patterns preserve source effects before selecting
+elements. Unnecessary case-marker advisories use the selected 0.1.50 checker.
