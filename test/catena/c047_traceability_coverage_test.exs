@@ -14,7 +14,7 @@ defmodule Catena.C047TraceabilityCoverageTest do
            "tagged obligations not in the LC-OBL set: #{inspect(MapSet.to_list(unknown))}"
   end
 
-  test "every list-comprehensions obligation has focused executable coverage" do
+  test "every list-comprehensions obligation has an evidence inventory tag" do
     covered = MapSet.new(covered_obligations())
     expected = MapSet.new(@expected_obligations)
     uncovered = MapSet.difference(expected, covered)
@@ -24,7 +24,14 @@ defmodule Catena.C047TraceabilityCoverageTest do
   end
 
   defp covered_obligations do
-    source = File.read!("test/catena/c047_list_comprehensions_test.exs")
+    # Tags route evidence; they do not establish that every clause is complete.
+    # The research ledger retains the open effect-row and abort-scope gaps.
+    source =
+      [
+        "test/catena/c047_list_comprehensions_test.exs",
+        "test/catena/c047_effects_completion_test.exs"
+      ]
+      |> Enum.map_join("\n", &File.read!/1)
 
     ~r/@tag\s+obligations:\s*~w\(([^)]*)\)/
     |> Regex.scan(source, capture: :all_but_first)

@@ -140,10 +140,15 @@ Kernel code has no operation that reveals the PID representation.
 
 ## Effect-directed CPS lowering
 
-Ordinary effect control—`request`, `handle`, and `resume`—requires captured
-continuations. Definitions containing that control are lowered through an
-explicit continuation-passing path. Generated workers receive a handler map
-and continuation in addition to their ordinary curried arguments.
+Ordinary effect control (`request`, `handle`, and `resume`) requires captured
+continuations. Definitions containing that control or carrying ordinary
+effects in verified expression rows or callable result types use an explicit
+continuation-passing path. This includes indirect calls and function aliases
+whose own syntax contains no request. Merely accepting an unused effectful
+function parameter does not select CPS. The reserved Process row alone
+retains direct lowering.
+Generated workers receive a handler map and continuation in addition to
+their ordinary curried arguments.
 
 At a high level:
 
@@ -159,6 +164,21 @@ Handler return clauses run after the handled computation returns normally.
 Operation clauses use the outer handler environment for their own effect-free
 bodies, while a resumed computation reinstalls the installed handler, giving
 deep rather than shallow handling.
+
+Callable representation follows each arrow's immediate checked effect row.
+A pure or Process-only stage is a unary function; a stage with ordinary
+effects also receives handlers and a continuation. A pure stage can return
+an effectful callable without changing its own convention, including when
+that result type is polymorphic. The construction context does not change
+the convention, so pure callbacks work across direct and CPS callers.
+
+Each application stage runs before the next argument is evaluated. A request
+or decline in an early stage therefore stays under that stage's installed
+handler and can abandon later arguments. Aliases, lets and partial results
+use private value factories to evaluate the original definition at lookup
+and apply its actual unary stages. A complete syntactic lambda chain can
+retain the saturated shortcut because its earlier stages only construct
+closures. Public exports retain their checked arity.
 
 The direct and CPS paths must preserve the same left-to-right evaluation order.
 Helpers that lower lists of expressions chain continuations explicitly so

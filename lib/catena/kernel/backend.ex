@@ -46,7 +46,12 @@ defmodule Catena.Kernel.Backend do
     globals =
       Map.new(core.definitions, fn definition ->
         {definition.name,
-         %{arity: definition.arity, effectful?: effect_control?(definition.expression)}}
+         %{
+           arity: definition.arity,
+           type: definition.expression.type,
+           effectful?: effect_control?(definition.expression),
+           staged?: staged_definition?(definition)
+         }}
       end)
 
     value_exports =
@@ -81,11 +86,60 @@ defmodule Catena.Kernel.Backend do
   end
 
   defp lower_definition(definition, globals) do
-    if effect_control?(definition.expression) do
-      lower_effect_definition(definition, globals)
-    else
-      [lower_direct_definition(definition, globals)]
+    cond do
+      staged_definition?(definition) -> lower_staged_definition(definition, globals)
+      effect_control?(definition.expression) -> lower_effect_definition(definition, globals)
+      true -> [lower_direct_definition(definition, globals)]
     end
+  end
+
+  # Only a complete syntactic lambda chain makes every intermediate application
+  # inert. A let, alias or other residual expression must run at its actual stage.
+  defp staged_definition?(definition) do
+    {parameters, _body} = unwrap_functions(definition.expression, definition.arity, [])
+    length(parameters) < definition.arity
+  end
+
+  defp lower_staged_definition(definition, globals) do
+    annotation = annotation(definition.span)
+    handlers = {:var, annotation, :__Catena_Kernel_Handlers}
+    k = {:var, annotation, :__Catena_Kernel_Continuation}
+    factory_name = value_factory_atom(definition.name)
+    body = lower_cps(definition.expression, %{}, globals, nil, handlers, k)
+    factory_clause = {:clause, annotation, [handlers, k], [], [body]}
+    factory = {:function, annotation, factory_name, 2, [factory_clause]}
+
+    arguments =
+      Enum.map(1..definition.arity, fn index ->
+        {:var, annotation, String.to_atom("__Catena_Arg#{index}")}
+      end)
+
+    value = cps_variable("GlobalValue", definition.span, 0)
+    outer_handlers = {:map, annotation, []}
+
+    continuation =
+      continuation_fun(
+        value,
+        apply_cps_values(
+          {:var, annotation, value},
+          definition.expression.type,
+          arguments,
+          outer_handlers,
+          identity_fun(annotation),
+          annotation
+        ),
+        annotation
+      )
+
+    wrapper_body =
+      {:call, annotation, {:atom, annotation, factory_name}, [outer_handlers, continuation]}
+
+    wrapper_clause = {:clause, annotation, arguments, [], [wrapper_body]}
+
+    wrapper =
+      {:function, annotation, safe_atom(definition.name), definition.arity, [wrapper_clause]}
+
+    [wrapper, factory]
   end
 
   defp lower_direct_definition(definition, globals) do
@@ -182,9 +236,16 @@ defmodule Catena.Kernel.Backend do
         {:var, annotation, variable}
 
       :error ->
-        case Map.fetch!(globals, name).arity do
-          0 -> {:call, annotation, {:atom, annotation, safe_atom(name)}, []}
-          arity -> curried_global(name, arity, annotation)
+        case Map.fetch!(globals, name) do
+          %{staged?: true} ->
+            {:call, annotation, {:atom, annotation, value_factory_atom(name)},
+             [{:map, annotation, []}, identity_fun(annotation)]}
+
+          %{arity: 0} ->
+            {:call, annotation, {:atom, annotation, safe_atom(name)}, []}
+
+          %{arity: arity} ->
+            curried_global(name, arity, annotation)
         end
     end
   end
@@ -214,7 +275,7 @@ defmodule Catena.Kernel.Backend do
     annotation = annotation(expression.span)
 
     case {Map.has_key?(environment, name), Map.get(globals, name)} do
-      {false, %{arity: arity}} when arity == length(arguments) ->
+      {false, %{arity: arity, staged?: false}} when arity == length(arguments) ->
         {:call, annotation, {:atom, annotation, safe_atom(name)},
          Enum.map(arguments, &lower_expression(&1, environment, globals, module))}
 
@@ -492,6 +553,10 @@ defmodule Catena.Kernel.Backend do
         global = Map.fetch!(globals, expression.name)
 
         cond do
+          global.staged? ->
+            {:call, annotation, {:atom, annotation, value_factory_atom(expression.name)},
+             [handlers, k]}
+
           global.arity == 0 and global.effectful? ->
             {:call, annotation, {:atom, annotation, cps_worker_atom(expression.name)},
              [handlers, k]}
@@ -501,7 +566,7 @@ defmodule Catena.Kernel.Backend do
             call_continuation(k, value, annotation)
 
           true ->
-            value = curried_cps_global(expression.name, global, handlers, annotation)
+            value = curried_cps_global(expression.name, global, expression.type, annotation)
             call_continuation(k, value, annotation)
         end
     end
@@ -512,6 +577,19 @@ defmodule Catena.Kernel.Backend do
     argument_variable = variable_atom(expression.parameter, expression.span)
     handlers_variable = String.to_atom("__Catena_LambdaHandlers_#{expression.span.byte_start}")
     continuation_variable = String.to_atom("__Catena_LambdaK_#{expression.span.byte_start}")
+    cps? = cps_callable?(expression.type)
+
+    {arguments, handlers, continuation} =
+      if cps? do
+        {[
+           {:var, annotation, argument_variable},
+           {:var, annotation, handlers_variable},
+           {:var, annotation, continuation_variable}
+         ], {:var, annotation, handlers_variable}, {:var, annotation, continuation_variable}}
+      else
+        {[{:var, annotation, argument_variable}], {:map, annotation, []},
+         identity_fun(annotation)}
+      end
 
     body =
       lower_cps(
@@ -519,17 +597,11 @@ defmodule Catena.Kernel.Backend do
         Map.put(environment, expression.parameter, argument_variable),
         globals,
         module,
-        {:var, annotation, handlers_variable},
-        {:var, annotation, continuation_variable}
+        handlers,
+        continuation
       )
 
-    clause =
-      {:clause, annotation,
-       [
-         {:var, annotation, argument_variable},
-         {:var, annotation, handlers_variable},
-         {:var, annotation, continuation_variable}
-       ], [], [body]}
+    clause = {:clause, annotation, arguments, [], [body]}
 
     call_continuation(k, {:fun, annotation, {:clauses, [clause]}}, annotation)
   end
@@ -543,7 +615,7 @@ defmodule Catena.Kernel.Backend do
          k
        ) do
     case {Map.has_key?(environment, name), Map.get(globals, name)} do
-      {false, %{arity: arity} = global} when arity == length(arguments) ->
+      {false, %{arity: arity, staged?: false} = global} when arity == length(arguments) ->
         lower_values_cps(arguments, environment, globals, module, handlers, fn values ->
           annotation = annotation(expression.span)
 
@@ -774,7 +846,12 @@ defmodule Catena.Kernel.Backend do
     call =
       Map.merge(expression, %{
         tag: :call,
-        callee: %{tag: :variable, name: expression.selected_definition}
+        callee: %{
+          tag: :variable,
+          name: expression.selected_definition,
+          span: expression.span,
+          type: Map.fetch!(globals, expression.selected_definition).type
+        }
       })
 
     lower_cps(call, environment, globals, module, handlers, k)
@@ -942,20 +1019,82 @@ defmodule Catena.Kernel.Backend do
     continuation =
       continuation_fun(
         callee,
-        lower_values_cps(
+        lower_cps_application(
+          {:var, annotation, callee},
+          expression.callee.type,
           expression.arguments,
           environment,
           globals,
           module,
           handlers,
-          fn arguments ->
-            apply_cps_values({:var, annotation, callee}, arguments, handlers, k, annotation)
-          end
+          k,
+          annotation
         ),
         annotation
       )
 
     lower_cps(expression.callee, environment, globals, module, handlers, continuation)
+  end
+
+  defp lower_cps_application(
+         function,
+         _type,
+         [],
+         _environment,
+         _globals,
+         _module,
+         _handlers,
+         k,
+         annotation
+       ),
+       do: call_continuation(k, function, annotation)
+
+  defp lower_cps_application(
+         function,
+         {:function, _parameter, _effects, result} = type,
+         [argument | rest],
+         environment,
+         globals,
+         module,
+         handlers,
+         k,
+         annotation
+       ) do
+    value = cps_variable("Argument", argument.span, length(rest))
+    next = cps_variable("Applied", argument.span, length(rest))
+
+    applied =
+      continuation_fun(
+        next,
+        lower_cps_application(
+          {:var, annotation, next},
+          result,
+          rest,
+          environment,
+          globals,
+          module,
+          handlers,
+          k,
+          annotation
+        ),
+        annotation
+      )
+
+    evaluated =
+      continuation_fun(
+        value,
+        apply_cps_values(
+          function,
+          type,
+          [{:var, annotation, value}],
+          handlers,
+          applied,
+          annotation
+        ),
+        annotation
+      )
+
+    lower_cps(argument, environment, globals, module, handlers, evaluated)
   end
 
   defp lower_values_cps(expressions, environment, globals, module, handlers, callback),
@@ -994,23 +1133,35 @@ defmodule Catena.Kernel.Backend do
     lower_cps(expression, environment, globals, module, handlers, continuation)
   end
 
-  defp apply_cps_values(function, [], _handlers, k, annotation),
+  defp apply_cps_values(function, _type, [], _handlers, k, annotation),
     do: call_continuation(k, function, annotation)
 
-  defp apply_cps_values(function, [argument], handlers, k, annotation),
-    do: {:call, annotation, function, [argument, handlers, k]}
+  defp apply_cps_values(function, type, [argument], handlers, k, annotation) do
+    if cps_callable?(type) do
+      {:call, annotation, function, [argument, handlers, k]}
+    else
+      call_continuation(k, {:call, annotation, function, [argument]}, annotation)
+    end
+  end
 
-  defp apply_cps_values(function, [argument | rest], handlers, k, annotation) do
+  defp apply_cps_values(
+         function,
+         {:function, _parameter, _effects, result} = type,
+         [argument | rest],
+         handlers,
+         k,
+         annotation
+       ) do
     next = String.to_atom("__Catena_CpsApplied_#{length(rest)}_#{annotation}")
 
     continuation =
       continuation_fun(
         next,
-        apply_cps_values({:var, annotation, next}, rest, handlers, k, annotation),
+        apply_cps_values({:var, annotation, next}, result, rest, handlers, k, annotation),
         annotation
       )
 
-    {:call, annotation, function, [argument, handlers, continuation]}
+    apply_cps_values(function, type, [argument], handlers, continuation, annotation)
   end
 
   defp lower_cps_clauses(clauses, environment, globals, module, handlers, k) do
@@ -1105,7 +1256,7 @@ defmodule Catena.Kernel.Backend do
     {:fun, annotation, {:clauses, [clause]}}
   end
 
-  defp curried_cps_global(name, global, handlers, annotation) do
+  defp curried_cps_global(name, global, type, annotation) do
     variables = Enum.map(1..global.arity, &String.to_atom("__Catena_CpsCurry#{&1}_#{annotation}"))
 
     continuation_variables =
@@ -1114,8 +1265,19 @@ defmodule Catena.Kernel.Backend do
     handler_variables =
       Enum.map(1..global.arity, &String.to_atom("__Catena_CpsCurryH#{&1}_#{annotation}"))
 
-    final_handlers = {:var, annotation, List.last(handler_variables)}
-    final_k = {:var, annotation, List.last(continuation_variables)}
+    stage_types = callable_stages(type, global.arity)
+    final_cps? = cps_callable?(List.last(stage_types))
+
+    final_handlers =
+      if final_cps?,
+        do: {:var, annotation, List.last(handler_variables)},
+        else: {:map, annotation, []}
+
+    final_k =
+      if final_cps?,
+        do: {:var, annotation, List.last(continuation_variables)},
+        else: identity_fun(annotation)
+
     arguments = Enum.map(variables, &{:var, annotation, &1})
 
     body =
@@ -1129,23 +1291,42 @@ defmodule Catena.Kernel.Backend do
 
     variables
     |> Enum.zip(Enum.zip(handler_variables, continuation_variables))
+    |> Enum.with_index()
     |> Enum.reverse()
-    |> Enum.reduce(body, fn {variable, {handler_variable, continuation_variable}}, inner ->
-      clause =
-        {:clause, annotation,
-         [
-           {:var, annotation, variable},
-           {:var, annotation, handler_variable},
-           {:var, annotation, continuation_variable}
-         ], [], [inner]}
+    |> Enum.reduce(body, fn {{variable, {handler_variable, continuation_variable}}, index},
+                            inner ->
+      # A partial application returns its next closure through the caller's
+      # continuation; only the final stage enters the worker with its handlers.
+      cps? = cps_callable?(Enum.at(stage_types, index))
+
+      stage_body =
+        if index == global.arity - 1 or not cps? do
+          inner
+        else
+          call_continuation({:var, annotation, continuation_variable}, inner, annotation)
+        end
+
+      arguments =
+        if cps? do
+          [
+            {:var, annotation, variable},
+            {:var, annotation, handler_variable},
+            {:var, annotation, continuation_variable}
+          ]
+        else
+          [{:var, annotation, variable}]
+        end
+
+      clause = {:clause, annotation, arguments, [], [stage_body]}
 
       {:fun, annotation, {:clauses, [clause]}}
     end)
-    |> then(fn fun ->
-      _ = handlers
-      fun
-    end)
   end
+
+  defp callable_stages(_type, 0), do: []
+
+  defp callable_stages({:function, _parameter, _effects, result} = type, remaining),
+    do: [type | callable_stages(result, remaining - 1)]
 
   defp unwrap_functions(expression, 0, parameters), do: {Enum.reverse(parameters), expression}
 
@@ -1179,6 +1360,7 @@ defmodule Catena.Kernel.Backend do
     do: String.to_atom("__Catena_#{prefix}_#{span.byte_start}_#{index}")
 
   defp cps_worker_atom(name), do: safe_atom("__catena_kernel_cps_#{name}")
+  defp value_factory_atom(name), do: safe_atom("__catena_kernel_value_#{name}")
 
   defp lower_general_call(expression, environment, globals, module) do
     annotation = annotation(expression.span)
@@ -1373,9 +1555,29 @@ defmodule Catena.Kernel.Backend do
   defp effect_control?(%{tag: tag}) when tag in [:request, :handle, :resume], do: true
   defp effect_control?(%Catena.SourceSpan{}), do: false
 
-  defp effect_control?(%{} = value),
-    do: value |> Map.values() |> Enum.any?(&effect_control?/1)
+  defp effect_control?(%{} = value) do
+    # Verified rows carry ordinary effects through global references and calls,
+    # even when their expression tree contains no request/control node. Process
+    # alone retains its direct BEAM operations and needs no handler environment.
+    ordinary_effects?(Map.get(value, :effects, [])) or
+      latent_ordinary_effects?(Map.get(value, :type)) or
+      Enum.any?(Map.values(value), &effect_control?/1)
+  end
 
   defp effect_control?(values) when is_list(values), do: Enum.any?(values, &effect_control?/1)
   defp effect_control?(_value), do: false
+
+  defp ordinary_effects?(effects), do: Enum.any?(effects, &match?({:effect, _}, &1))
+
+  # A callable's ABI follows its own arrow row, independently of where it is
+  # constructed. Its result may itself be a callable with a different ABI.
+  defp cps_callable?({:function, _parameter, effects, _result}),
+    do: ordinary_effects?(effects)
+
+  # Follow callable results, not parameter types: merely accepting an effectful
+  # function does not require CPS when the function is never invoked or returned.
+  defp latent_ordinary_effects?({:function, _parameter, effects, result}),
+    do: ordinary_effects?(effects) or latent_ordinary_effects?(result)
+
+  defp latent_ordinary_effects?(_type), do: false
 end

@@ -312,6 +312,13 @@ defmodule Catena.LanguageLifecycle do
         "top-level-effects",
         "0.1.48",
         specification("top-level-effects/the-top-level-boundary.md#the-boundary")
+      ),
+      feature(
+        "selective-receive-correction",
+        "0.1.49",
+        specification(
+          "selective-receive-correction/waiting-and-scan-cost-amendment.md#waiting-and-selection"
+        )
       )
     ]
   end
@@ -323,7 +330,7 @@ defmodule Catena.LanguageLifecycle do
         "id" => entry["change"],
         "from" => previous_revision(entry["introduced"]),
         "to" => entry["introduced"],
-        "classification" => "compatible-addition",
+        "classification" => change_classification(entry["id"]),
         "affects" => affected_dimensions(entry["id"]),
         "summary" => "Introduces " <> String.replace(entry["id"], "-", " "),
         "specification" => entry["specification"],
@@ -615,6 +622,11 @@ defmodule Catena.LanguageLifecycle do
     Enum.at(revisions, index - 1)
   end
 
+  defp change_classification("selective-receive-correction"), do: "compatible-correction"
+  defp change_classification(_id), do: "compatible-addition"
+
+  defp affected_dimensions("selective-receive-correction"), do: ~w(static-meaning)
+
   defp affected_dimensions("editions-and-feature-lifecycle"),
     do: ~w(diagnostics interfaces artifacts)
 
@@ -874,6 +886,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("package-identity-and-dependencies"),
     do:
       "Select 0.1.21 to declare package dependencies with SemVer exact/caret/tilde requirements, resolve one version per name, generate and replay catena.lock, and identify packages by registry-neutral bundle digests; fetch and build tooling remains future work."
+
+  defp migration("selective-receive-correction"),
+    do:
+      "Select 0.1.49 to adopt no-match suspension and rejected-prefix bypass with examined-candidate scan cost. Historical selections and persisted formats remain unchanged; retained C010 witnesses still select 0.1.8."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 

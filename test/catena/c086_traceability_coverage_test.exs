@@ -14,7 +14,7 @@ defmodule Catena.C086TraceabilityCoverageTest do
            "tagged obligations not in the RC-OBL set: #{inspect(MapSet.to_list(unknown))}"
   end
 
-  test "every selective-receive obligation has focused executable coverage" do
+  test "every selective-receive obligation has a focused test tag (inventory, not semantic proof)" do
     covered = MapSet.new(covered_obligations())
     expected = MapSet.new(@expected_obligations)
     uncovered = MapSet.difference(expected, covered)
@@ -24,7 +24,12 @@ defmodule Catena.C086TraceabilityCoverageTest do
   end
 
   defp covered_obligations do
-    source = File.read!("test/catena/c086_selective_receive_test.exs")
+    source =
+      [
+        "test/catena/c086_selective_receive_test.exs",
+        "test/catena/c086_receive_completion_test.exs"
+      ]
+      |> Enum.map_join("\n", &File.read!/1)
 
     ~r/@tag\s+obligations:\s*~w\(([^)]*)\)/
     |> Regex.scan(source, capture: :all_but_first)
