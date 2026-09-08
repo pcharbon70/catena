@@ -337,7 +337,8 @@ defmodule Catena.Task.Reference do
       put(c, %{
         p
         | status: :running,
-          control: {:value, {:catena_variant, Map.fetch!(m.labels, role), payload}}
+          control:
+            {:value, {:catena_variant, String.to_atom(Map.fetch!(m.labels, role)), payload}}
       })
     else
       stop(c, p, {:trap, :inactive_task_monitor})
