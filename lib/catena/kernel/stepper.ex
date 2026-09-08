@@ -47,6 +47,10 @@ defmodule Catena.Kernel.Stepper do
     end
   end
 
+  def advance_resource_clock(%{core: %{version: version}} = configuration, now)
+      when version in ["0.1.52", :owned_task_experiment],
+      do: Catena.Task.Reference.advance(configuration, now)
+
   def advance_resource_clock(%{core: %{version: "0.1.51"}} = configuration, now)
       when is_integer(now) do
     if now >= Map.get(configuration, :resource_clock, 0),
@@ -54,7 +58,8 @@ defmodule Catena.Kernel.Stepper do
       else: {:error, :clock_reversed}
   end
 
-  def expire_resource_release(%{core: %{version: "0.1.51"}} = configuration, pid) do
+  def expire_resource_release(%{core: %{version: version}} = configuration, pid)
+      when version in ["0.1.51", "0.1.52", :owned_task_experiment] do
     process = Map.fetch!(configuration.processes, pid)
     deadline = Map.get(process, :release_deadline)
 
@@ -78,10 +83,18 @@ defmodule Catena.Kernel.Stepper do
     with {:ok, process} <- Map.fetch(configuration.processes, pid),
          true <- runnable?(process, configuration) do
       configuration =
-        case process.status do
-          :waiting -> resume_receive(configuration, process)
-          :running -> local_step(configuration, process)
+        case Catena.Task.Reference.before(configuration, process) do
+          {:handled, next} ->
+            next
+
+          :ordinary ->
+            case process.status do
+              :waiting -> resume_receive(configuration, process)
+              :running -> local_step(configuration, process)
+            end
         end
+
+      configuration = Catena.Task.Reference.after_step(configuration)
 
       {:ok, %{configuration | steps: configuration.steps + 1}}
     else
@@ -171,7 +184,15 @@ defmodule Catena.Kernel.Stepper do
     result = outcome(configuration)
 
     cond do
-      Enum.any?(configuration.processes, fn {_pid, process} -> process.status == :waiting end) ->
+      Enum.any?(configuration.processes, fn {_pid, process} ->
+        process.status in [
+          :waiting,
+          :task_joining,
+          :task_sleeping,
+          :task_observing,
+          :managed_observing
+        ]
+      end) ->
         {:quiescent, result}
 
       root.status == :trapped ->
@@ -191,10 +212,58 @@ defmodule Catena.Kernel.Stepper do
     end
   end
 
+  def task_release(configuration, process, id, outcome, rest, after_action),
+    do:
+      start_cleanup(
+        configuration,
+        process,
+        [id],
+        outcome,
+        {:task_actions, rest, after_action, process.stack}
+      )
+
+  def task_stop(configuration, process, {:exit, reason}),
+    do:
+      start_cleanup(
+        configuration,
+        process,
+        active_resources(process),
+        {:exited, reason},
+        :terminal
+      )
+
+  def task_stop(configuration, process, {:cancelled, reason}),
+    do:
+      start_cleanup(
+        configuration,
+        process,
+        active_resources(process),
+        {:cancelled, reason},
+        :terminal
+      )
+
+  def task_stop(configuration, process, {:trap, reason}),
+    do: trap_process(configuration, process, reason)
+
+  defp runnable?(%{status: :task_observing} = process, configuration),
+    do: Catena.Task.Reference.observing_ready?(configuration, process)
+
+  defp runnable?(%{status: :task_sleeping} = process, configuration),
+    do: Catena.Task.Reference.sleeping_ready?(configuration, process)
+
+  defp runnable?(%{status: :task_joining} = process, _),
+    do: Map.get(process, :task_pending) != nil
+
   defp runnable?(%{status: :running}, _configuration), do: true
 
+  defp runnable?(%{status: :managed_observing} = process, configuration),
+    do: Catena.Task.ManagedReference.ready?(configuration, process)
+
   defp runnable?(%{status: :waiting} = process, configuration),
-    do: not is_nil(find_receive(process, configuration))
+    do:
+      Map.get(process, :task_pending) != nil or
+        Catena.Task.ManagedReference.signals?(configuration, process) or
+        not is_nil(find_receive(process, configuration)) or receive_due?(process, configuration)
 
   defp runnable?(_process, _configuration), do: false
 
@@ -294,6 +363,25 @@ defmodule Catena.Kernel.Stepper do
 
         put_control(configuration, process, {:expr, call, environment})
 
+      tag
+      when tag in [
+             :task_scope,
+             :task_start,
+             :task_cancel,
+             :task_sleep,
+             :task_monitor,
+             :task_observe,
+             :task_demonitor,
+             :managed_spawn,
+             :managed_send,
+             :managed_self,
+             :managed_link,
+             :managed_unlink,
+             :managed_observe,
+             :managed_trapping
+           ] ->
+        Catena.Task.Reference.evaluate(configuration, process, expression, environment)
+
       :resource_exit ->
         push_expression(configuration, process, expression.resource, environment, [
           {:resource_exit_handle, expression.reason, environment}
@@ -346,6 +434,11 @@ defmodule Catena.Kernel.Stepper do
       :send ->
         push_expression(configuration, process, expression.left, environment, [
           {:send_target, expression.right, environment}
+        ])
+
+      :timed_receive ->
+        push_expression(configuration, process, expression.duration, environment, [
+          {:timed_receive_duration, expression, environment}
         ])
 
       :receive ->
@@ -477,6 +570,43 @@ defmodule Catena.Kernel.Stepper do
       {:match, clauses, environment} ->
         select_match(configuration, process, value, clauses, environment)
 
+      frame
+      when is_tuple(frame) and
+             elem(frame, 0) in [
+               :task_monitor_scope,
+               :task_monitor_target,
+               :task_observe,
+               :task_demonitor,
+               :task_sleep_scope,
+               :task_sleep_duration,
+               :task_end,
+               :task_start_scope,
+               :task_start_body,
+               :task_cancel_handle,
+               :task_cancel_reason,
+               :task_operation_exit,
+               :managed_arguments,
+               :managed_send_target,
+               :managed_send_message,
+               :managed_link_target,
+               :managed_unlink,
+               :managed_observe,
+               :managed_restore
+             ] ->
+        Catena.Task.Reference.returned(configuration, process, frame, value)
+
+      {:timed_receive_duration, expression, environment} ->
+        if is_integer(value) and value >= 0 do
+          process =
+            process
+            |> Map.put(:receive_deadline, Map.get(configuration, :task_clock, 0) + value)
+            |> Map.put(:receive_fallback, expression.fallback)
+
+          attempt_receive(configuration, process, expression.clauses, environment)
+        else
+          trap_process(configuration, process, :invalid_duration)
+        end
+
       {:resource_release_function, expression, environment} ->
         push_expression(configuration, process, expression.acquire, environment, [
           {:resource_acquired, expression, environment, value}
@@ -484,10 +614,22 @@ defmodule Catena.Kernel.Stepper do
 
       {:resource_acquired, expression, environment, release} ->
         id = Map.get(configuration, :next_resource, 0)
-        entry = %{payload: value, release: release, active: true, grace_ns: expression.grace_ns}
+
+        entry = %{
+          payload: value,
+          release: release,
+          active: true,
+          grace_ns: expression.grace_ns,
+          lifetime_order: Map.get(configuration, :next_lifetime, 0)
+        }
+
         resources = Map.put(Map.get(process, :resources, %{}), id, entry)
         process = process |> Map.put(:resources, resources) |> push_frames([{:resource_end, id}])
-        configuration = Map.put(configuration, :next_resource, id + 1)
+
+        configuration =
+          configuration
+          |> Map.put(:next_resource, id + 1)
+          |> Map.put(:next_lifetime, Map.get(configuration, :next_lifetime, 0) + 1)
 
         environment =
           if is_nil(expression.binder),
@@ -512,13 +654,17 @@ defmodule Catena.Kernel.Stepper do
         end
 
       :resource_exit_reason ->
-        start_cleanup(
-          configuration,
-          process,
-          active_resources(process),
-          {:exited, value},
-          :terminal
-        )
+        if Catena.Task.Reference.active?(process) do
+          Catena.Task.Reference.stop(configuration, process, {:exit, value})
+        else
+          start_cleanup(
+            configuration,
+            process,
+            active_resources(process),
+            {:exited, value},
+            :terminal
+          )
+        end
 
       {:resource_cancel_handle, reason, environment} ->
         case value do
@@ -536,13 +682,17 @@ defmodule Catena.Kernel.Stepper do
         end
 
       :resource_cancel_reason ->
-        start_cleanup(
-          configuration,
-          process,
-          active_resources(process),
-          {:cancelled, value},
-          :terminal
-        )
+        if Catena.Task.Reference.active?(process) do
+          Catena.Task.Reference.stop(configuration, process, {:cancelled, value})
+        else
+          start_cleanup(
+            configuration,
+            process,
+            active_resources(process),
+            {:cancelled, value},
+            :terminal
+          )
+        end
 
       :resource_read ->
         case value do
@@ -738,15 +888,41 @@ defmodule Catena.Kernel.Stepper do
       Map.merge(process, %{receive_clauses: clauses, receive_environment: environment})
 
     case find_receive(process, configuration) do
-      nil -> put_process(configuration, %{process | status: :waiting})
+      nil -> receive_without_match(configuration, process)
       match -> accept_receive(configuration, process, match)
     end
   end
 
   defp resume_receive(configuration, process) do
     case find_receive(process, configuration) do
-      nil -> configuration
+      nil -> receive_without_match(configuration, process)
       match -> accept_receive(configuration, process, match)
+    end
+  end
+
+  defp receive_due?(process, configuration),
+    do:
+      is_integer(Map.get(process, :receive_deadline)) and
+        process.receive_deadline <= Map.get(configuration, :task_clock, 0)
+
+  defp receive_without_match(configuration, process) do
+    if receive_due?(process, configuration) do
+      fallback = process.receive_fallback
+      env = process.receive_environment
+
+      process =
+        process
+        |> Map.drop([
+          :receive_deadline,
+          :receive_fallback,
+          :receive_clauses,
+          :receive_environment
+        ])
+        |> Map.merge(%{status: :running, control: {:expr, fallback, env}})
+
+      put_process(configuration, process)
+    else
+      put_process(configuration, %{process | status: :waiting})
     end
   end
 
@@ -775,7 +951,7 @@ defmodule Catena.Kernel.Stepper do
 
     process =
       process
-      |> Map.drop([:receive_clauses, :receive_environment])
+      |> Map.drop([:receive_clauses, :receive_environment, :receive_deadline, :receive_fallback])
       |> Map.merge(%{
         status: :running,
         mailbox: mailbox,
@@ -984,6 +1160,23 @@ defmodule Catena.Kernel.Stepper do
             do: outer_stack,
             else: [{:resource_operation_exit, id, captured_resources} | outer_stack]
 
+        captured_tasks =
+          Enum.filter(captured, fn frame ->
+            is_tuple(frame) and elem(frame, 0) in [:task_end, :managed_restore]
+          end)
+
+        exit_stack =
+          if captured_tasks == [],
+            do: exit_stack,
+            else: [
+              {:task_operation_exit, id,
+               Enum.filter(captured, fn frame ->
+                 is_tuple(frame) and
+                   elem(frame, 0) in [:task_end, :resource_end, :managed_restore]
+               end)}
+              | outer_stack
+            ]
+
         process = %{process | stack: exit_stack, control: {:expr, clause.body, environment}}
 
         configuration
@@ -1105,12 +1298,16 @@ defmodule Catena.Kernel.Stepper do
         begin_cleanup(configuration, process, remaining, outcome, after_cleanup)
 
       nil ->
-        case active_resources(process) do
-          [] ->
-            terminal_trap(configuration, process, reason)
+        if Catena.Task.Reference.active?(process) do
+          Catena.Task.Reference.stop(configuration, process, {:trap, reason})
+        else
+          case active_resources(process) do
+            [] ->
+              terminal_trap(configuration, process, reason)
 
-          resources ->
-            start_cleanup(configuration, process, resources, {:trap, reason}, :terminal)
+            resources ->
+              start_cleanup(configuration, process, resources, {:trap, reason}, :terminal)
+          end
         end
     end
   end
@@ -1126,6 +1323,15 @@ defmodule Catena.Kernel.Stepper do
     process = process |> Map.put(:release_deadline, nil) |> Map.put(:stack, [])
 
     case {outcome, after_cleanup} do
+      {actual, {:task_actions, rest, after_action, stack}} ->
+        Catena.Task.Reference.actions(
+          configuration,
+          %{process | stack: stack},
+          rest,
+          actual,
+          after_action
+        )
+
       {{:exited, reason}, :terminal} ->
         process = %{process | status: :exited, result: reason, control: nil, mailbox: []}
 

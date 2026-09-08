@@ -333,6 +333,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "resource-scopes/owned-lifetime-and-mandatory-cleanup.md#status-and-authority"
         )
+      ),
+      feature(
+        "owned-task-lifetimes",
+        "0.1.52",
+        specification(
+          "process-lifetimes/owned-tasks-and-managed-relationships.md#status-and-authority"
+        )
       )
     ]
   end
@@ -639,6 +646,9 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("owned-task-lifetimes"),
+    do: ~w(source-acceptance static-meaning dynamic-behavior artifacts)
+
   defp affected_dimensions("resource-scopes"),
     do: ~w(source-acceptance static-meaning dynamic-behavior artifacts)
 
@@ -914,6 +924,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("owned-task-lifetimes"),
+    do:
+      "Select exact 0.1.52 through the checked task-tree boundary for explicit owned children, typed monitoring and managed relationships. Raw spawn, old interfaces and signed formats retain their contracts; general time and foreign ownership require separate admission."
 
   defp migration("resource-scopes"),
     do:

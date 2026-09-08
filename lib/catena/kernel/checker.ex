@@ -76,6 +76,8 @@ defmodule Catena.Kernel.Checker do
         diagnostics: [],
         profile:
           case module.version do
+            :owned_task_experiment -> :owned_task_experiment
+            "0.1.52" -> :owned_task_lifetimes
             "0.1.51" -> :resource_scopes
             "0.1.50" -> :closed_capability_kernel
             _ -> :formal_semantic_kernel
@@ -88,7 +90,7 @@ defmodule Catena.Kernel.Checker do
           do: Map.put(core, :capabilities, module.capabilities),
           else: core
 
-      if core.version in ["0.1.50", "0.1.51"] do
+      if core.version in ["0.1.50", "0.1.51", "0.1.52", :owned_task_experiment] do
         case Catena.Kernel.CapabilityKernel.verify_scope(core) do
           :ok -> :ok
           {:error, reason} -> fail!("EFX003", reason, module.span)
@@ -327,7 +329,9 @@ defmodule Catena.Kernel.Checker do
   defp nominal_names({tag, %{fields: fields}}) when tag in [:record, :variant],
     do: fields |> Map.values() |> Enum.flat_map(&nominal_names/1)
 
-  defp nominal_names({:process, mailbox}), do: nominal_names(mailbox)
+  defp nominal_names({tag, mailbox}) when tag in [:process, :managed_process],
+    do: nominal_names(mailbox)
+
   defp nominal_names(_type), do: []
 
   defp check_handlers!(handlers, globals, context, state) do
@@ -564,6 +568,104 @@ defmodule Catena.Kernel.Checker do
      type, effects, state}
   end
 
+  defp do_infer(%{tag: :task_scope} = expression, environment, context, state, expected) do
+    unless is_integer(expression.grace_ns) and expression.grace_ns >= 0 and
+             is_binary(expression.binder) and expression.binder != "",
+           do: fail!("T002", "invalid task scope binder or shutdown grace", expression.span)
+
+    environment =
+      Map.put(environment, expression.binder, {:mono, {:task_scope, expression.task_scope_id}})
+
+    {body, result, effects, state} = infer(expression.body, environment, context, state, expected)
+
+    if MapSet.member?(
+         Catena.Resource.Kernel.resource_ids(apply_type(result, state)),
+         expression.task_scope_id
+       ),
+       do: fail!("T002", "task lifetime handle escapes its scope", expression.span)
+
+    {%{expression | body: body}, result, effects, state}
+  end
+
+  defp do_infer(%{tag: :task_sleep} = expression, environment, context, state, _expected) do
+    {scope, type, effects, state} = infer(expression.scope, environment, context, state)
+
+    unless match?({:task_scope, _}, apply_type(type, state)),
+      do: fail!("T002", "sleep requires an explicit owned scope", expression.span)
+
+    {duration, _, duration_effects, state} =
+      infer(expression.duration, environment, context, state, :integer)
+
+    {%{expression | scope: scope, duration: duration}, :unit,
+     combine_effects(effects, duration_effects), state}
+  end
+
+  defp do_infer(%{tag: :task_monitor} = expression, environment, context, state, _expected) do
+    {scope, type, effects, state} = infer(expression.scope, environment, context, state)
+
+    id =
+      case apply_type(type, state) do
+        {:task_scope, id} -> id
+        _ -> fail!("T002", "monitoring requires an explicit scope", expression.span)
+      end
+
+    unless Catena.Task.Monitor.valid_labels?(expression.labels),
+      do: fail!("T002", "invalid monitor outcome labels", expression.span)
+
+    {target, type, target_effects, state} = infer(expression.target, environment, context, state)
+
+    unless match?({tag, _} when tag in [:process, :managed_process], apply_type(type, state)),
+      do: fail!("T002", "monitor target requires a typed process handle", expression.span)
+
+    {%{expression | scope: scope, target: target}, {:task_monitor, id, expression.labels},
+     combine_effects(effects, target_effects), state}
+  end
+
+  defp do_infer(%{tag: tag} = expression, environment, context, state, _expected)
+       when tag in [:task_observe, :task_demonitor] do
+    {monitor, type, effects, state} = infer(expression.monitor, environment, context, state)
+
+    result =
+      case apply_type(type, state) do
+        {:task_monitor, _, labels} ->
+          if tag == :task_observe, do: Catena.Task.Monitor.type(labels), else: :unit
+
+        _ ->
+          fail!("T002", "observation requires a scoped monitor", expression.span)
+      end
+
+    {Map.put(expression, :monitor, monitor), result, effects, state}
+  end
+
+  defp do_infer(%{tag: :task_start} = expression, environment, context, state, _expected) do
+    {scope, type, effects, state} = infer(expression.scope, environment, context, state)
+
+    id =
+      case apply_type(type, state) do
+        {:task_scope, id} -> id
+        _ -> fail!("T002", "owned task creation requires a scope handle", expression.span)
+      end
+
+    {body, _, formation, state} =
+      infer(expression.body, environment, context, state, {:function, :unit, [], :unit})
+
+    {%{expression | scope: scope, body: body}, {:owned_task, id},
+     combine_effects(effects, formation), state}
+  end
+
+  defp do_infer(%{tag: :task_cancel} = expression, environment, context, state, _expected) do
+    {task, type, effects, state} = infer(expression.task, environment, context, state)
+
+    unless match?({:owned_task, _}, apply_type(type, state)),
+      do: fail!("T002", "task cancellation requires an owned handle", expression.span)
+
+    {reason, _, reason_effects, state} =
+      infer(expression.reason, environment, context, state, :integer)
+
+    {%{expression | task: task, reason: reason}, :unit, combine_effects(effects, reason_effects),
+     state}
+  end
+
   defp do_infer(%{tag: :resource_scope} = expression, environment, context, state, expected) do
     unless is_integer(expression.grace_ns) and expression.grace_ns >= 0 do
       fail!("T002", "resource release grace must be a nonnegative integer", expression.span)
@@ -696,7 +798,7 @@ defmodule Catena.Kernel.Checker do
     environment = Map.put(environment, name, {:mono, apply_type(parameter, state)})
 
     {body, result, body_effects, state} =
-      infer(body, environment, context, state, expected_result)
+      infer(body, environment, Map.delete(context, :managed_trapping), state, expected_result)
 
     if Catena.Resource.Kernel.captures?(body, environment) do
       fail!(
@@ -1110,6 +1212,100 @@ defmodule Catena.Kernel.Checker do
      effects, state}
   end
 
+  defp do_infer(%{tag: :managed_spawn} = expression, environment, context, state, expected) do
+    unless is_integer(expression.grace_ns) and expression.grace_ns >= 0,
+      do: fail!("T002", "managed shutdown grace must be nonnegative", expression.span)
+
+    {typed, {:process, mailbox}, effects, state} =
+      do_infer(%{expression | tag: :spawn}, environment, context, state, expected)
+
+    if typed.selected_entry.imported?,
+      do: fail!("PRC003", "managed spawn requires a local checked entry", expression.span)
+
+    {%{typed | tag: :managed_spawn}, {:managed_process, mailbox}, effects, state}
+  end
+
+  defp do_infer(%{tag: :managed_self} = expression, _environment, context, state, _expected) do
+    if is_nil(context.mailbox),
+      do: fail!("PRC003", "managed identity requires a process entry", expression.span)
+
+    {expression, {:managed_process, context.mailbox}, [], state}
+  end
+
+  defp do_infer(%{tag: :managed_send} = expression, environment, context, state, _expected) do
+    {target, type, effects, state} = infer(expression.left, environment, context, state)
+
+    mailbox =
+      case apply_type(type, state) do
+        {:managed_process, mailbox} -> mailbox
+        _ -> fail!("PRC003", "managed send requires a managed process handle", expression.span)
+      end
+
+    {message, _, sent, state} = infer(expression.right, environment, context, state, mailbox)
+
+    {Map.merge(expression, %{left: target, right: message, mailbox: mailbox}), :unit,
+     combine_effects(effects, sent, [:process]), state}
+  end
+
+  defp do_infer(%{tag: :managed_trapping} = expression, environment, context, state, expected) do
+    if is_nil(context.mailbox),
+      do: fail!("PRC003", "trapping requires a managed process entry", expression.span)
+
+    {body, type, effects, state} =
+      infer(
+        expression.body,
+        environment,
+        Map.put(context, :managed_trapping, true),
+        state,
+        expected
+      )
+
+    {%{expression | body: body}, type, combine_effects(effects, [:process]), state}
+  end
+
+  defp do_infer(%{tag: :managed_link} = expression, environment, context, state, _expected) do
+    if is_nil(context.mailbox) or not Catena.Task.Monitor.valid_labels?(expression.labels),
+      do:
+        fail!(
+          "PRC003",
+          "link requires a managed entry and complete outcome labels",
+          expression.span
+        )
+
+    {target, type, effects, state} = infer(expression.target, environment, context, state)
+
+    unless match?({:managed_process, _}, apply_type(type, state)),
+      do: fail!("PRC003", "link target is not managed", expression.span)
+
+    {%{expression | target: target}, {:managed_link, expression.labels},
+     combine_effects(effects, [:process]), state}
+  end
+
+  defp do_infer(%{tag: tag} = expression, environment, context, state, _expected)
+       when tag in [:managed_unlink, :managed_observe] do
+    if is_nil(context.mailbox) or
+         (tag == :managed_observe and not Map.get(context, :managed_trapping, false)),
+       do:
+         fail!(
+           "PRC003",
+           "link observation requires an explicit trapping region in this function",
+           expression.span
+         )
+
+    {link, type, effects, state} = infer(expression.link, environment, context, state)
+
+    result =
+      case apply_type(type, state) do
+        {:managed_link, labels} ->
+          if tag == :managed_observe, do: Catena.Task.Monitor.type(labels), else: :unit
+
+        _ ->
+          fail!("PRC003", "expected a managed link handle", expression.span)
+      end
+
+    {%{expression | link: link}, result, combine_effects(effects, [:process]), state}
+  end
+
   defp do_infer(%{tag: :spawn} = expression, environment, context, state, _expected) do
     entry = process_entry!(context.processes, expression.entry, expression.span)
 
@@ -1160,6 +1356,29 @@ defmodule Catena.Kernel.Checker do
       })
 
     {typed, :unit, combine_effects(target_effects, message_effects, [:process]), state}
+  end
+
+  defp do_infer(%{tag: :timed_receive} = expression, environment, context, state, expected) do
+    if is_nil(context.mailbox),
+      do: fail!("PRC003", "timed receive requires a managed process entry", expression.span)
+
+    {duration, _, before_effects, state} =
+      infer(expression.duration, environment, context, state, :integer)
+
+    {clauses, result, effects, state} =
+      infer_clauses(expression.clauses, context.mailbox, environment, context, state, expected)
+
+    {fallback, _, fallback_effects, state} =
+      infer(expression.fallback, environment, context, state, result)
+
+    {Map.merge(expression, %{
+       duration: duration,
+       clauses: clauses,
+       fallback: fallback,
+       mailbox: context.mailbox
+     }), apply_type(result, state),
+     combine_effects(combine_effects(before_effects, effects, fallback_effects), [:process]),
+     state}
   end
 
   defp do_infer(%{tag: :receive} = expression, environment, context, state, expected) do
@@ -1613,7 +1832,8 @@ defmodule Catena.Kernel.Checker do
   defp inference_variables({tag, %{fields: fields}}) when tag in [:record, :variant],
     do: fields |> Map.values() |> Enum.flat_map(&inference_variables/1)
 
-  defp inference_variables({:process, mailbox}), do: inference_variables(mailbox)
+  defp inference_variables({tag, mailbox}) when tag in [:process, :managed_process],
+    do: inference_variables(mailbox)
 
   defp inference_variables({:nominal, _name, arguments}),
     do: Enum.flat_map(arguments, &inference_variables/1)
@@ -1693,7 +1913,9 @@ defmodule Catena.Kernel.Checker do
       match?({:function, _, _, _}, left) and match?({:function, _, _, _}, right) ->
         unify_functions!(left, right, state, span)
 
-      match?({:process, _}, left) and match?({:process, _}, right) ->
+      match?({tag, _} when tag in [:process, :managed_process], left) and
+        match?({tag, _} when tag in [:process, :managed_process], right) and
+          elem(left, 0) == elem(right, 0) ->
         unify!(elem(left, 1), elem(right, 1), state, span)
 
       row_type?(left) and row_type?(right) ->
@@ -1732,7 +1954,7 @@ defmodule Catena.Kernel.Checker do
       {tag, %{fields: fields}} when tag in [:record, :variant] ->
         Enum.any?(fields, fn {_label, field_type} -> occurs?(id, field_type, state) end)
 
-      {:process, mailbox} ->
+      {tag, mailbox} when tag in [:process, :managed_process] ->
         occurs?(id, mailbox, state)
 
       {:nominal, _name, arguments} ->
@@ -1815,7 +2037,8 @@ defmodule Catena.Kernel.Checker do
      %{row | fields: Map.new(fields, fn {label, type} -> {label, apply_type(type, state)} end)}}
   end
 
-  defp apply_type({:process, mailbox}, state), do: {:process, apply_type(mailbox, state)}
+  defp apply_type({tag, mailbox}, state) when tag in [:process, :managed_process],
+    do: {tag, apply_type(mailbox, state)}
 
   defp apply_type({:nominal, name, arguments}, state),
     do: {:nominal, name, Enum.map(arguments, &apply_type(&1, state))}
@@ -1909,8 +2132,9 @@ defmodule Catena.Kernel.Checker do
            validate_type_effects!(type, effects, span)
          end)
 
-  defp validate_type_effects!({:process, mailbox}, effects, span),
-    do: validate_type_effects!(mailbox, effects, span)
+  defp validate_type_effects!({tag, mailbox}, effects, span)
+       when tag in [:process, :managed_process],
+       do: validate_type_effects!(mailbox, effects, span)
 
   defp validate_type_effects!({:nominal, _name, arguments}, effects, span),
     do: Enum.each(arguments, &validate_type_effects!(&1, effects, span))
@@ -1940,7 +2164,7 @@ defmodule Catena.Kernel.Checker do
           validate_known_types!(field_type, types, span)
         end)
 
-      {:process, mailbox} ->
+      {tag, mailbox} when tag in [:process, :managed_process] ->
         validate_known_types!(mailbox, types, span)
 
       {:nominal, name, arguments} ->
@@ -1968,7 +2192,7 @@ defmodule Catena.Kernel.Checker do
        when tag in [:record, :variant],
        do: Enum.all?(fields, fn {_label, field} -> sendable_type?(field, data, seen) end)
 
-  defp sendable_type?({:process, mailbox}, data, seen),
+  defp sendable_type?({tag, mailbox}, data, seen) when tag in [:process, :managed_process],
     do: Type.closed?(mailbox) and sendable_type?(mailbox, data, seen)
 
   defp sendable_type?({:nominal, name, arguments} = type, data, seen) do

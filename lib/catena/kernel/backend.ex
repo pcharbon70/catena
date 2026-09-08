@@ -45,6 +45,8 @@ defmodule Catena.Kernel.Backend do
 
   def compile(%{version: "0.1.51"} = core, _options), do: Catena.Resource.Kernel.compile(core)
 
+  def compile(%{version: "0.1.52"} = core, _options), do: Catena.Task.Kernel.compile(core)
+
   def compile(_core, _options),
     do: {:error, Diagnostic.new("I001", "unknown kernel artifact boundary")}
 
@@ -872,6 +874,127 @@ defmodule Catena.Kernel.Backend do
     lower_cps(call, environment, globals, module, handlers, k)
   end
 
+  defp lower_cps(%{tag: :task_scope} = expression, environment, globals, module, handlers, k) do
+    ann = annotation(expression.span)
+    scope_name = cps_variable("TaskScope", expression.span, 0)
+    finish_name = cps_variable("TaskFinish", expression.span, 1)
+
+    body =
+      lower_cps(
+        expression.body,
+        Map.put(environment, expression.binder, scope_name),
+        globals,
+        module,
+        handlers,
+        {:var, ann, finish_name}
+      )
+
+    callback =
+      {:fun, ann,
+       {:clauses,
+        [{:clause, ann, [{:var, ann, scope_name}, {:var, ann, finish_name}], [], [body]}]}}
+
+    run =
+      remote_call(
+        Catena.Task.Runtime,
+        :scope_cps,
+        [callback, {:integer, ann, expression.grace_ns}],
+        ann
+      )
+
+    call_continuation(k, remote_call(Catena.Task.Runtime, :value, [run], ann), ann)
+  end
+
+  defp lower_cps(%{tag: :task_sleep} = expression, environment, globals, module, handlers, k) do
+    lower_values_cps(
+      [expression.scope, expression.duration],
+      environment,
+      globals,
+      module,
+      handlers,
+      fn [scope, duration] ->
+        ann = annotation(expression.span)
+
+        call_continuation(
+          k,
+          remote_call(Catena.Task.Runtime, :sleep, [scope, duration], ann),
+          ann
+        )
+      end
+    )
+  end
+
+  defp lower_cps(%{tag: :task_monitor} = expression, environment, globals, module, handlers, k) do
+    lower_values_cps(
+      [expression.scope, expression.target],
+      environment,
+      globals,
+      module,
+      handlers,
+      fn [scope, target] ->
+        ann = annotation(expression.span)
+        call_continuation(k, remote_call(Catena.Task.Monitor, :start, [scope, target], ann), ann)
+      end
+    )
+  end
+
+  defp lower_cps(%{tag: tag} = expression, environment, globals, module, handlers, k)
+       when tag in [:task_observe, :task_demonitor] do
+    lower_values_cps([expression.monitor], environment, globals, module, handlers, fn [monitor] ->
+      ann = annotation(expression.span)
+      {:task_monitor, _, labels} = expression.monitor.type
+
+      {operation, arguments} =
+        if tag == :task_observe,
+          do: {:observe, [monitor, :erl_parse.abstract(labels)]},
+          else: {:demonitor, [monitor]}
+
+      call_continuation(k, remote_call(Catena.Task.Monitor, operation, arguments, ann), ann)
+    end)
+  end
+
+  defp lower_cps(%{tag: :task_start} = expression, environment, globals, module, handlers, k) do
+    lower_values_cps(
+      [expression.scope, expression.body],
+      environment,
+      globals,
+      module,
+      handlers,
+      fn [scope, body] ->
+        ann = annotation(expression.span)
+
+        callback =
+          {:fun, ann,
+           {:clauses, [{:clause, ann, [], [], [{:call, ann, body, [{:atom, ann, :unit}]}]}]}}
+
+        call_continuation(
+          k,
+          remote_call(Catena.Task.Runtime, :start, [scope, callback], ann),
+          ann
+        )
+      end
+    )
+  end
+
+  defp lower_cps(%{tag: :task_cancel} = expression, environment, globals, module, handlers, k) do
+    lower_values_cps(
+      [expression.task, expression.reason],
+      environment,
+      globals,
+      module,
+      handlers,
+      fn [task, reason] ->
+        ann = annotation(expression.span)
+
+        {:block, ann,
+         [
+           remote_call(Catena.Task.Runtime, :cancel, [task, reason], ann),
+           call_continuation(k, {:atom, ann, :unit}, ann)
+         ]}
+      end
+    )
+  end
+
   defp lower_cps(
          %{tag: :resource_exit} = expression,
          environment,
@@ -1086,6 +1209,88 @@ defmodule Catena.Kernel.Backend do
     end)
   end
 
+  defp lower_cps(%{tag: :managed_spawn} = expression, environment, globals, module, handlers, k) do
+    lower_values_cps(expression.arguments, environment, globals, module, handlers, fn values ->
+      ann = annotation(expression.span)
+      worker = safe_atom("__catena_process_#{expression.selected_entry.name}")
+
+      callback =
+        {:fun, ann,
+         {:clauses, [{:clause, ann, [], [], [{:call, ann, {:atom, ann, worker}, values}]}]}}
+
+      call_continuation(
+        k,
+        remote_call(
+          Catena.Task.Managed,
+          :spawn_actor,
+          [callback, {:integer, ann, expression.grace_ns}],
+          ann
+        ),
+        ann
+      )
+    end)
+  end
+
+  defp lower_cps(%{tag: :managed_self} = expression, _, _, _, _, k) do
+    ann = annotation(expression.span)
+    call_continuation(k, remote_call(Catena.Task.Managed, :self_actor, [], ann), ann)
+  end
+
+  defp lower_cps(%{tag: :managed_send} = expression, environment, globals, module, handlers, k) do
+    lower_values_cps(
+      [expression.left, expression.right],
+      environment,
+      globals,
+      module,
+      handlers,
+      fn [target, message] ->
+        ann = annotation(expression.span)
+
+        call_continuation(
+          k,
+          remote_call(Catena.Task.Managed, :send_message, [target, message], ann),
+          ann
+        )
+      end
+    )
+  end
+
+  defp lower_cps(
+         %{tag: :managed_trapping} = expression,
+         environment,
+         globals,
+         module,
+         handlers,
+         k
+       ) do
+    ann = annotation(expression.span)
+    body = lower_cps(expression.body, environment, globals, module, handlers, identity_fun(ann))
+    callback = {:fun, ann, {:clauses, [{:clause, ann, [], [], [body]}]}}
+    call_continuation(k, remote_call(Catena.Task.Managed, :trapping, [callback], ann), ann)
+  end
+
+  defp lower_cps(%{tag: :managed_link} = expression, environment, globals, module, handlers, k) do
+    lower_values_cps([expression.target], environment, globals, module, handlers, fn [target] ->
+      ann = annotation(expression.span)
+      call_continuation(k, remote_call(Catena.Task.Managed, :link, [target], ann), ann)
+    end)
+  end
+
+  defp lower_cps(%{tag: tag} = expression, environment, globals, module, handlers, k)
+       when tag in [:managed_unlink, :managed_observe] do
+    lower_values_cps([expression.link], environment, globals, module, handlers, fn [link] ->
+      ann = annotation(expression.span)
+      {:managed_link, labels} = expression.link.type
+
+      {operation, arguments} =
+        if tag == :managed_observe,
+          do: {:observe, [link, :erl_parse.abstract(labels)]},
+          else: {:unlink, [link]}
+
+      call_continuation(k, remote_call(Catena.Task.Managed, operation, arguments, ann), ann)
+    end)
+  end
+
   defp lower_cps(%{tag: :spawn} = expression, environment, globals, module, handlers, k) do
     lower_values_cps(expression.arguments, environment, globals, module, handlers, fn values ->
       annotation = annotation(expression.span)
@@ -1120,6 +1325,36 @@ defmodule Catena.Kernel.Backend do
         {:block, annotation, [send, call_continuation(k, {:atom, annotation, :unit}, annotation)]}
       end
     )
+  end
+
+  defp lower_cps(%{tag: :timed_receive} = expression, environment, globals, module, handlers, k) do
+    lower_values_cps([expression.duration], environment, globals, module, handlers, fn [duration] ->
+      ann = annotation(expression.span)
+      deadline_name = cps_variable("ReceiveDeadline", expression.span, 0)
+      loop_name = cps_variable("ReceiveWait", expression.span, 0)
+      deadline = {:var, ann, deadline_name}
+      retry = {:call, ann, {:var, ann, loop_name}, []}
+      fallback = lower_cps(expression.fallback, environment, globals, module, handlers, k)
+      expired = remote_call(Catena.Task.Time, :expired?, [deadline], ann)
+
+      after_body =
+        {:case, ann, expired,
+         [
+           {:clause, ann, [{:atom, ann, true}], [], [fallback]},
+           {:clause, ann, [{:atom, ann, false}], [], [retry]}
+         ]}
+
+      receive_ast =
+        {:receive, ann,
+         lower_cps_clauses(expression.clauses, environment, globals, module, handlers, k),
+         remote_call(Catena.Task.Time, :remaining_ms, [deadline], ann), [after_body]}
+
+      wait =
+        {:call, ann, {:named_fun, ann, loop_name, [{:clause, ann, [], [], [receive_ast]}]}, []}
+
+      {:call, ann, continuation_fun(deadline_name, wait, ann),
+       [remote_call(Catena.Task.Time, :deadline, [duration], ann)]}
+    end)
   end
 
   defp lower_cps(%{tag: :receive} = expression, environment, globals, module, handlers, k) do
@@ -1681,6 +1916,21 @@ defmodule Catena.Kernel.Backend do
               :request,
               :handle,
               :resume,
+              :task_scope,
+              :managed_spawn,
+              :managed_send,
+              :managed_self,
+              :managed_link,
+              :managed_unlink,
+              :managed_observe,
+              :timed_receive,
+              :managed_trapping,
+              :task_monitor,
+              :task_observe,
+              :task_demonitor,
+              :task_start,
+              :task_sleep,
+              :task_cancel,
               :resource_scope,
               :resource_read,
               :resource_cancel,

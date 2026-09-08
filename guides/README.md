@@ -343,3 +343,5 @@ are rejected rather than normalized because they also occurred in digests and
 signed protocol domains.
 
 - [Owned resource scopes](language/resource-scopes.md) — checked local lifetimes and mandatory cleanup at exact 0.1.51.
+
+- [Owned tasks and managed relationships](language/process-lifetimes.md) — checked process lifetimes at exact 0.1.52; general time remains separately gated.
