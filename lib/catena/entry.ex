@@ -182,7 +182,12 @@ defmodule Catena.Entry do
   end
 
   defp invoke(entry, %{module: module, binary: binary}) do
-    {:module, ^module} = :code.load_binary(module, ~c"#{module}.beam", binary)
+    with {:module, ^module} <- Catena.OTP.Compiler.load(module, ~c"#{module}.beam", binary) do
+      invoke_loaded(entry, module)
+    end
+  end
+
+  defp invoke_loaded(entry, module) do
     function = String.to_atom(entry.name)
 
     try do

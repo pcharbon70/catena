@@ -6,6 +6,7 @@ defmodule Catena.ConformanceInfo do
   @spec document() :: map()
   def document do
     %{
+      "toolchain" => Catena.OTP.Profile.document(),
       "format" => "catena-conformance-info",
       "version" => 1,
       "implementation" => %{

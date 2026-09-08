@@ -70,7 +70,8 @@ defmodule Catena.Supervision.Description do
 
   def start_artifact(description, module, binary, manifest) do
     with :ok <- verify_artifact(description, module, binary, manifest),
-         {:module, ^module} <- :code.load_binary(module, ~c"catena-supervision.beam", binary),
+         {:module, ^module} <-
+           Catena.OTP.Compiler.load(module, ~c"catena-supervision.beam", binary),
          {:ok, _, _, metadata} <- compile(description) do
       {:ok, Catena.Task.Managed.start_supervision(metadata.flags, metadata.children)}
     else
