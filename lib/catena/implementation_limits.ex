@@ -65,7 +65,7 @@ defmodule Catena.ImplementationLimits do
       portable_minimum: nil,
       configured: nil,
       applies_to: "deployment runtime memory rather than language acceptance",
-      exhaustion: %{kind: :deferred, owner: "G068/G129"}
+      exhaustion: %{kind: :deferred, owner: "P085/P129"}
     }
   ]
 

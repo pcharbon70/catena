@@ -14,7 +14,7 @@ defmodule Catena.C012ImplementationLimitsTest do
     assert JSON.encode!(first) == JSON.encode!(second)
     assert first["format"] == "catena-conformance-info"
     assert first["version"] == 1
-    assert first["language"]["current_revision"] == "0.1.54"
+    assert first["language"]["current_revision"] == "0.1.55"
     assert first["implementation"]["release"] == "0.1.0"
 
     assert Enum.map(first["permissions"], & &1["id"]) == [
@@ -158,7 +158,7 @@ defmodule Catena.C012ImplementationLimitsTest do
     mailbox = profile["runtime_capacities"]["mailbox"]
 
     assert mailbox["capacity"] == "deployment-defined"
-    assert mailbox["policy_owner"] == "G068/G129"
+    assert mailbox["policy_owner"] == "P085/P129"
     assert ImplementationLimits.configured(:mailbox_capacity) == nil
 
     assert Enum.any?(mailbox["semantic_constraints"], &String.contains?(&1, "reordering"))

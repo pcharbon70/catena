@@ -354,6 +354,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "outcome-contracts/values-sequencing-and-validation.md#status-and-authority"
         )
+      ),
+      feature(
+        "local-protocol-contracts",
+        "0.1.55",
+        specification(
+          "local-protocol-contracts/schemas-sessions-and-outcomes.md#status-and-authority"
+        )
       )
     ]
   end
@@ -660,6 +667,9 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("local-protocol-contracts"),
+    do: ~w(source-acceptance static-meaning dynamic-behavior artifacts)
+
   defp affected_dimensions("outcome-contracts"), do: ~w(static-meaning dynamic-behavior)
 
   defp affected_dimensions("cancellation-and-time"),
@@ -943,6 +953,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("local-protocol-contracts"),
+    do:
+      "Select exact 0.1.55 through the checked local protocol application builder. Bind closed mailbox roles to the verified process interface and select explicit capacity and time budgets. Retained kernel source, interfaces and signed formats remain unchanged; no static session fidelity or remote transport is admitted."
 
   defp migration("outcome-contracts"),
     do:

@@ -16,8 +16,8 @@ defmodule Catena.TaskMonitorKernelTest do
   @tag obligations: ~w(OT-OBL-006)
   test "checked process monitoring returns the same closed outcome on CEK and BEAM" do
     for {body, expected} <- [
-          {"(unit)", {:catena_variant, "done", :unit}},
-          {"(trap 99)", {:catena_variant, "fault", 99}}
+          {"(unit)", {:catena_variant, :done, :unit}},
+          {"(trap 99)", {:catena_variant, :fault, 99}}
         ] do
       parsed = fixture(body)
       assert {:ok, core} = Kernel.check(parsed, %{})
@@ -30,8 +30,8 @@ defmodule Catena.TaskMonitorKernelTest do
   @tag obligations: ~w(OT-OBL-006)
   test "managed process monitoring agrees across CEK and BEAM after cleanup" do
     for {body, expected} <- [
-          {"(unit)", {:catena_variant, "done", :unit}},
-          {"(trap 99)", {:catena_variant, "fault", 99}}
+          {"(unit)", {:catena_variant, :done, :unit}},
+          {"(trap 99)", {:catena_variant, :fault, 99}}
         ] do
       parsed = managed(fixture(body))
       assert {:ok, core} = Kernel.check(parsed, %{})
@@ -127,7 +127,7 @@ defmodule Catena.TaskMonitorKernelTest do
       assert {:ok, core} =
                Kernel.check(%{parsed | processes: [worker, failed]}, %{"Trace" => "trace"})
 
-      expected = {:catena_variant, if(trapping, do: "done", else: "exit"), :unit}
+      expected = {:catena_variant, if(trapping, do: :done, else: :exit), :unit}
       assert {:ok, ^expected, _} = Stepper.run(core, "main")
       assert expected == beam(core)
     end
@@ -154,6 +154,43 @@ defmodule Catena.TaskMonitorKernelTest do
     assert {:error, %{id: "T002"}} = Kernel.check(%{parsed | definitions: [changed]}, %{})
     escaped = put_in(main.expression.body.body.body, variable("watcher", main.span))
     assert {:error, _} = Kernel.check(%{parsed | definitions: [escaped]}, %{})
+  end
+
+  @tag obligations: ~w(OT-OBL-006)
+  test "selected monitor results can be consumed by ordinary typed variant patterns" do
+    parsed = fixture("(unit)")
+    [main] = parsed.definitions
+    observed = main.expression.body.body.body.second
+
+    clauses =
+      Enum.map(@labels, fn {role, label} ->
+        %{
+          pattern: %{
+            tag: :variant,
+            label: label,
+            pattern: %{tag: :wildcard, span: main.span},
+            span: main.span
+          },
+          guard: nil,
+          body: %{tag: :integer, value: if(role == :completed, do: 1, else: 2), span: main.span},
+          span: main.span
+        }
+      end)
+
+    matched = %{tag: :match, scrutinee: observed, clauses: clauses, span: main.span}
+    main = put_in(main.expression.body.body.body.second, matched)
+    parsed = %{parsed | definitions: [%{main | signature: :integer}]}
+    assert {:ok, core} = Kernel.check_selected(parsed, %{})
+    assert {:ok, 1, _} = Stepper.run(core, "main")
+    assert {:ok, module, binary, _} = Catena.Kernel.Backend.compile(core)
+    assert {:module, ^module} = :code.load_binary(module, ~c"monitor-pattern.beam", binary)
+
+    try do
+      assert apply(module, :main, []) == 1
+    after
+      :code.purge(module)
+      :code.delete(module)
+    end
   end
 
   defp fixture(body, extra \\ "") do

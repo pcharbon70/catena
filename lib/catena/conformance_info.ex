@@ -33,7 +33,7 @@ defmodule Catena.ConformanceInfo do
             "resource pressure does not authorize retargeting",
             "resource pressure does not authorize silent live-target message loss"
           ],
-          "policy_owner" => "G068/G129"
+          "policy_owner" => "P085/P129"
         }
       }
     }

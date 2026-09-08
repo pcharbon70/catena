@@ -192,7 +192,7 @@ defmodule Catena.Task.ManagedReference do
              value(
                c,
                %{p | status: :running},
-               {:catena_variant, Map.fetch!(link.labels[p.id], role), payload}
+               {:catena_variant, String.to_atom(Map.fetch!(link.labels[p.id], role)), payload}
              )}
 
           _ ->

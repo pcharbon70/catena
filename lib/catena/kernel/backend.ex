@@ -974,7 +974,14 @@ defmodule Catena.Kernel.Backend do
 
       {operation, arguments} =
         if tag == :task_observe,
-          do: {:observe, [monitor, :erl_parse.abstract(labels)]},
+          do:
+            {:observe,
+             [
+               monitor,
+               :erl_parse.abstract(
+                 Map.new(labels, fn {role, label} -> {role, safe_atom(label)} end)
+               )
+             ]},
           else: {:demonitor, [monitor]}
 
       call_continuation(k, remote_call(Catena.Task.Monitor, operation, arguments, ann), ann)
@@ -1312,7 +1319,14 @@ defmodule Catena.Kernel.Backend do
 
       {operation, arguments} =
         if tag == :managed_observe,
-          do: {:observe, [link, :erl_parse.abstract(labels)]},
+          do:
+            {:observe,
+             [
+               link,
+               :erl_parse.abstract(
+                 Map.new(labels, fn {role, label} -> {role, safe_atom(label)} end)
+               )
+             ]},
           else: {:unlink, [link]}
 
       call_continuation(k, remote_call(Catena.Task.Managed, operation, arguments, ann), ann)
