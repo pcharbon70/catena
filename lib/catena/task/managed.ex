@@ -4,8 +4,19 @@ defmodule Catena.Task.Managed do
 
   def spawn_actor(body, grace_ns)
       when is_function(body, 0) and is_integer(grace_ns) and grace_ns >= 0 do
+    do_spawn(body, grace_ns, [:monitor])
+  end
+
+  @doc false
+  def start_link(body, grace_ns)
+      when is_function(body, 0) and is_integer(grace_ns) and grace_ns >= 0 do
+    {__MODULE__, broker} = do_spawn(body, grace_ns, [:link, :monitor])
+    {:ok, broker}
+  end
+
+  defp do_spawn(body, grace_ns, options) do
     ready = :erlang.alias()
-    {broker, monitor} = spawn_monitor(fn -> broker_init(body, grace_ns, ready) end)
+    {broker, monitor} = :erlang.spawn_opt(fn -> broker_init(body, grace_ns, ready) end, options)
 
     try do
       receive do
@@ -67,6 +78,9 @@ defmodule Catena.Task.Managed do
       {:managed_control, ^token, :stop, reason} -> exit({:catena_resource_exit, reason})
     end
   end
+
+  @doc false
+  def start_supervision(flags, children), do: call({:start_supervision, flags, children})
 
   def link({__MODULE__, peer}), do: call({:link, peer})
   def unlink(handle), do: call({:unlink, handle})
@@ -159,7 +173,8 @@ defmodule Catena.Task.Managed do
       next: 0,
       outcome: nil,
       deadline: nil,
-      forced: false
+      forced: false,
+      supervisors: []
     })
   end
 
@@ -185,6 +200,7 @@ defmodule Catena.Task.Managed do
 
       {:DOWN, monitor, :process, worker, reason}
       when monitor == s.monitor and worker == s.worker ->
+        Enum.each(s.supervisors, &stop_supervisor/1)
         publish(s.outcome || {:exit, {:external_loss, reason}})
 
       {:EXIT, worker, _} when worker == s.worker ->
@@ -207,6 +223,18 @@ defmodule Catena.Task.Managed do
               outcome: {:exit, :shutdown_deadline_exhausted}
           })
         end
+    end
+  end
+
+  defp operation(s, reply, {:start_supervision, flags, children}) do
+    case Catena.Supervision.Runtime.start_link(flags, children) do
+      {:ok, supervisor} ->
+        s = operation(s, reply, {:link, supervisor})
+        %{s | supervisors: [supervisor | s.supervisors]}
+
+      {:error, reason} ->
+        send(reply, {reply, {:error, {:supervision_start_failed, reason}}})
+        s
     end
   end
 
@@ -332,6 +360,17 @@ defmodule Catena.Task.Managed do
       {:EXIT, ^peer, _} -> drain_exit(peer)
     after
       0 -> :ok
+    end
+  end
+
+  defp stop_supervisor(supervisor) do
+    try do
+      :gen_server.stop(supervisor, :shutdown, :infinity)
+    catch
+      :exit, reason when reason in [:noproc, :normal, :shutdown] -> :ok
+      :exit, {:noproc, _} -> :ok
+      :exit, {:normal, _} -> :ok
+      :exit, {:shutdown, _} -> :ok
     end
   end
 

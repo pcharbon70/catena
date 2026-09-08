@@ -361,6 +361,11 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "local-protocol-contracts/schemas-sessions-and-outcomes.md#status-and-authority"
         )
+      ),
+      feature(
+        "typed-supervision",
+        "0.1.56",
+        specification("typed-supervision/checked-trees-and-lifecycle.md#status-and-authority")
       )
     ]
   end
@@ -667,6 +672,9 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("typed-supervision"),
+    do: ~w(source-acceptance static-meaning dynamic-behavior artifacts)
+
   defp affected_dimensions("local-protocol-contracts"),
     do: ~w(source-acceptance static-meaning dynamic-behavior artifacts)
 
@@ -953,6 +961,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("typed-supervision"),
+    do:
+      "Select exact 0.1.56 through checked static supervision descriptions. Supply explicit strategy, restart and shutdown bounds, and fresh zero-argument process entries. Old interfaces and signed formats retain their admission boundaries; arbitrary OTP callbacks, nested supervisor child descriptions and inherited scope handles are not admitted."
 
   defp migration("local-protocol-contracts"),
     do:

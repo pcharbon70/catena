@@ -7,6 +7,32 @@ defmodule Catena.Entry do
 
   alias Catena.{Diagnostic, Effect.Row}
 
+  @doc "Validates a fresh, zero-argument managed process entry for the supervision adapter."
+  def validate_supervised_process(core, name) do
+    case Enum.find(core.processes, &(&1.name == name)) do
+      %{parameters: []} = process ->
+        if MapSet.size(
+             Catena.Kernel.CapabilityKernel.slots([
+               process.mailbox,
+               process.body.type,
+               process.body.effects
+             ])
+           ) == 0 do
+          {:ok, process}
+        else
+          {:error,
+           Diagnostic.new(
+             "ENT004",
+             "supervised entry must provision capabilities inside its new generation"
+           )}
+        end
+
+      _ ->
+        {:error,
+         Diagnostic.new("ENT004", "supervised entry must name a checked zero-argument process")}
+    end
+  end
+
   @spec library?(list()) :: boolean()
   def library?(entries), do: entries in [nil, []]
 
