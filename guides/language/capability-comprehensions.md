@@ -37,3 +37,7 @@ Effectful context definitions execute at each reached reference, including
 earlier context dependencies; they are not implicitly memoized or eagerly
 forced. Dependent case patterns preserve source effects before selecting
 elements. Unnecessary case-marker advisories use the selected 0.1.50 checker.
+
+Execution is serial. The only options are `handlers` and `language_selection`;
+unknown and duplicate options reject. No implicit parallel execution switch
+is accepted. Order-sensitive handler results are tested against both targets.
