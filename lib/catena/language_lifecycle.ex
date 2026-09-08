@@ -319,6 +319,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "selective-receive-correction/waiting-and-scan-cost-amendment.md#waiting-and-selection"
         )
+      ),
+      feature(
+        "closed-capability-kernel",
+        "0.1.50",
+        specification(
+          "closed-capability-kernel/identity-rows-and-comprehension-target.md#status-and-authority"
+        )
       )
     ]
   end
@@ -625,6 +632,9 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("closed-capability-kernel"),
+    do: ~w(source-acceptance static-meaning artifacts)
+
   defp affected_dimensions("selective-receive-correction"), do: ~w(static-meaning)
 
   defp affected_dimensions("editions-and-feature-lifecycle"),
@@ -890,6 +900,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("selective-receive-correction"),
     do:
       "Select 0.1.49 to adopt no-match suspension and rejected-prefix bypass with examined-candidate scan cost. Historical selections and persisted formats remain unchanged; retained C010 witnesses still select 0.1.8."
+
+  defp migration("closed-capability-kernel"),
+    do:
+      "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
 
   defp migration(_id), do: "Select the introducing revision to adopt this stable feature."
 

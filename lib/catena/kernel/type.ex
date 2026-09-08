@@ -185,6 +185,7 @@ defmodule Catena.Kernel.Type do
 
   defp encode_effect(:process), do: "Process"
   defp encode_effect({:effect, name}), do: %{"effect" => name}
+  defp encode_effect({:capability, name}), do: %{"capability" => name}
 
   defp decode_effects(effects) do
     Enum.reduce_while(effects, {:ok, []}, fn

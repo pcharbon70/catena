@@ -55,6 +55,38 @@ defmodule Catena.Kernel.CapabilityRow do
 
   def subtract(_entries, _slot), do: invalid("expected a nonempty capability identity", "$.slot")
 
+  @doc "Simultaneous substitution after type-argument unification; concrete targets are not rebound."
+  @spec instantiate(term(), term()) :: result()
+  def instantiate(entries, substitution) when is_map(substitution) do
+    with {:ok, entries} <- normalize(entries) do
+      known = Map.new(entries, &{&1.slot, &1})
+
+      substitution
+      |> Enum.sort_by(fn {slot, _target} -> slot end)
+      |> Enum.reduce_while(:ok, fn {slot, target}, :ok ->
+        case {Map.fetch(known, slot), normalize([target])} do
+          {{:ok, source}, {:ok, [target]}} ->
+            if source.family == target.family and source.arguments == target.arguments do
+              {:cont, :ok}
+            else
+              {:halt,
+               invalid("capability substitution changes the effect descriptor", "$.substitution")}
+            end
+
+          _ ->
+            {:halt, invalid("unknown slot or malformed substitution target", "$.substitution")}
+        end
+      end)
+      |> case do
+        :ok -> entries |> Enum.map(&Map.get(substitution, &1.slot, &1)) |> normalize()
+        error -> error
+      end
+    end
+  end
+
+  def instantiate(_entries, _substitution),
+    do: invalid("expected a capability substitution map", "$.substitution")
+
   defp insert(slots, %{slot: slot, family: family, arguments: arguments} = entry, index)
        when is_binary(slot) and byte_size(slot) > 0 and is_binary(family) and
               byte_size(family) > 0 and is_list(arguments) and map_size(entry) == 3 do

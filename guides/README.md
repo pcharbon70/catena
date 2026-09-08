@@ -174,7 +174,9 @@ flowchart TD
 38. [Progress and Preservation](language/progress-and-preservation.md)
    — the effects-and-failure targets and the composed integrated
    theorem with its routed proof obligation at revision 0.1.45.
-39. [Selective Receive](language/selective-receive.md) — the
+39. [Capability Comprehensions](language/capability-comprehensions.md) — the
+   0.1.50 closed-slot target, independent fragment checks and enclosing handlers.
+40. [Selective Receive](language/selective-receive.md) — the
    receive rule set with honest starvation cost and four routed
    interfaces at revision 0.1.46, corrected for waiting and scan cost at 0.1.49.
 40. [Exception Boundary](language/exception-boundary.md) — the
@@ -327,8 +329,9 @@ could also appear in the compiler.
 | 0.1.47 | exception boundary: values, the effect pattern, and the terminal trap as visibly distinct mechanisms; panics as trap kinds |
 | 0.1.48 | top-level effects: the silent top level — nothing unhandled, no ambient interpreter, capabilities explicit via G106 or absent |
 | 0.1.49 | selective receive correction: no-match waiting, rejected-prefix bypass, examined-candidate cost; retained formats unchanged |
+| 0.1.50 | closed capability-tree input and BEAM artifact: identity rows, independently checked comprehension fragments and enclosing handlers; no new interface or public grammar |
 
-Versions 0.1.1 through 0.1.49 identify completed normative revision boundaries;
+Versions 0.1.1 through 0.1.50 identify completed normative revision boundaries;
 their accepted frontend formats remain explicit rather than implicitly
 cumulative.
 Version 0.1.7 implements the normative C008 edition and lifecycle contract;

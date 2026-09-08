@@ -53,14 +53,10 @@ agree on the stepper and compiled BEAM. Real requests handled within each
 fragment also agree on values, order and terminal trap prefixes, including
 false filters and empty sources.
 
-General effects escaping a recursive worker remain incomplete. The exact
-`0.1.8` kernel sums ordinary effect occurrences; its finite rows cannot
-describe an escaping request plus recursive repetition of that same row.
-The aggregate `uses` field does not establish valid effectful lowering.
-Closing this gap requires an explicit normative target refinement, followed
-by enclosing-handler and whole-comprehension abort evidence. Handling each
-fragment locally does not substitute for that handler scope. See the
-[conformance profile](../../CONFORMANCE.md) for the current partial boundary.
+The retained `0.1.8` path still sums ordinary effect occurrences. For escaping
+recursive effects use the explicit [0.1.50 capability-tree boundary](capability-comprehensions.md),
+which checks fragment rows and preserves one enclosing handler around the
+whole traversal. The old API and standalone kernel selection remain unchanged.
 
 ## Diagnostics
 
