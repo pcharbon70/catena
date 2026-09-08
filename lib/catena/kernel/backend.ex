@@ -47,6 +47,8 @@ defmodule Catena.Kernel.Backend do
 
   def compile(%{version: "0.1.52"} = core, _options), do: Catena.Task.Kernel.compile(core)
 
+  def compile(%{version: "0.1.53"} = core, _options), do: Catena.Task.TimeKernel.compile(core)
+
   def compile(_core, _options),
     do: {:error, Diagnostic.new("I001", "unknown kernel artifact boundary")}
 
@@ -905,6 +907,32 @@ defmodule Catena.Kernel.Backend do
     call_continuation(k, remote_call(Catena.Task.Runtime, :value, [run], ann), ann)
   end
 
+  defp lower_cps(%{tag: :task_deadline} = expression, environment, globals, module, handlers, k) do
+    lower_values_cps(
+      [expression.scope, expression.duration],
+      environment,
+      globals,
+      module,
+      handlers,
+      fn [scope, duration] ->
+        ann = annotation(expression.span)
+
+        call_continuation(
+          k,
+          remote_call(Catena.Task.Runtime, :deadline, [scope, duration], ann),
+          ann
+        )
+      end
+    )
+  end
+
+  defp lower_cps(%{tag: :task_wait_until} = expression, environment, globals, module, handlers, k) do
+    lower_values_cps([expression.deadline], environment, globals, module, handlers, fn [deadline] ->
+      ann = annotation(expression.span)
+      call_continuation(k, remote_call(Catena.Task.Runtime, :wait_until, [deadline], ann), ann)
+    end)
+  end
+
   defp lower_cps(%{tag: :task_sleep} = expression, environment, globals, module, handlers, k) do
     lower_values_cps(
       [expression.scope, expression.duration],
@@ -1327,8 +1355,11 @@ defmodule Catena.Kernel.Backend do
     )
   end
 
-  defp lower_cps(%{tag: :timed_receive} = expression, environment, globals, module, handlers, k) do
-    lower_values_cps([expression.duration], environment, globals, module, handlers, fn [duration] ->
+  defp lower_cps(%{tag: tag} = expression, environment, globals, module, handlers, k)
+       when tag in [:timed_receive, :timed_receive_until] do
+    operand = if tag == :timed_receive, do: expression.duration, else: expression.deadline
+
+    lower_values_cps([operand], environment, globals, module, handlers, fn [duration] ->
       ann = annotation(expression.span)
       deadline_name = cps_variable("ReceiveDeadline", expression.span, 0)
       loop_name = cps_variable("ReceiveWait", expression.span, 0)
@@ -1353,7 +1384,12 @@ defmodule Catena.Kernel.Backend do
         {:call, ann, {:named_fun, ann, loop_name, [{:clause, ann, [], [], [receive_ast]}]}, []}
 
       {:call, ann, continuation_fun(deadline_name, wait, ann),
-       [remote_call(Catena.Task.Time, :deadline, [duration], ann)]}
+       [
+         if(tag == :timed_receive,
+           do: remote_call(Catena.Task.Time, :deadline, [duration], ann),
+           else: remote_call(Catena.Task.Runtime, :deadline_instant, [duration], ann)
+         )
+       ]}
     end)
   end
 
@@ -1923,6 +1959,9 @@ defmodule Catena.Kernel.Backend do
               :managed_link,
               :managed_unlink,
               :managed_observe,
+              :timed_receive_until,
+              :task_deadline,
+              :task_wait_until,
               :timed_receive,
               :managed_trapping,
               :task_monitor,

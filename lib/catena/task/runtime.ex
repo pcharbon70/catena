@@ -161,8 +161,9 @@ defmodule Catena.Task.Runtime do
   end
 
   defp check_scope({__MODULE__, owner, manager, token}) do
-    unless owner == self() and Process.get({__MODULE__, :scopes}, %{})[token] == manager,
-      do: :erlang.error({:catena_trap, :invalid_task_scope_owner})
+    unless owner == self() and is_pid(manager) and is_reference(token) and
+             Process.get({__MODULE__, :scopes}, %{})[token] == manager,
+           do: :erlang.error({:catena_trap, :invalid_task_scope_owner})
   end
 
   def cancel({__MODULE__, owner, manager, token, child}, reason) when owner == self() do
@@ -173,12 +174,35 @@ defmodule Catena.Task.Runtime do
 
   def cancel(_, _), do: :erlang.error({:catena_trap, :invalid_task_owner})
 
+  def deadline({__MODULE__, owner, manager, token} = scope, duration)
+      when is_integer(duration) and duration >= 0 do
+    check_scope(scope)
+    {Catena.Task.Time, owner, manager, token, now() + duration}
+  end
+
+  def deadline(_, duration) when not is_integer(duration) or duration < 0,
+    do: :erlang.error({:catena_trap, :invalid_duration})
+
+  def deadline(_, _), do: :erlang.error({:catena_trap, :invalid_task_scope_owner})
+
+  def deadline_instant({Catena.Task.Time, owner, manager, token, instant})
+      when is_integer(instant) do
+    unless owner == self() and is_pid(manager) and is_reference(token) and
+             Process.get({__MODULE__, :scopes}, %{})[token] == manager,
+           do: :erlang.error({:catena_trap, :invalid_deadline_origin})
+
+    instant
+  end
+
+  def deadline_instant(_), do: :erlang.error({:catena_trap, :invalid_deadline_origin})
+  def wait_until(deadline), do: sleep_until(deadline_instant(deadline))
+
   def sleep({__MODULE__, owner, manager, token}, duration)
       when owner == self() and is_integer(duration) and duration >= 0 do
     unless Process.get({__MODULE__, :scopes}, %{})[token] == manager,
       do: :erlang.error({:catena_trap, :invalid_task_scope_owner})
 
-    sleep_until(now() + div(duration + 999_999, 1_000_000) * 1_000_000)
+    sleep_until(now() + duration)
   end
 
   def sleep(_, duration) when not is_integer(duration) or duration < 0,
@@ -209,6 +233,9 @@ defmodule Catena.Task.Runtime do
       wait(deadline) -> if now() < deadline, do: sleep_until(deadline), else: :unit
     end
   end
+
+  def receive_context,
+    do: {Process.get({__MODULE__, :worker}), Process.get({__MODULE__, :scopes}, %{})}
 
   def checkpoint do
     Catena.Task.Managed.checkpoint()

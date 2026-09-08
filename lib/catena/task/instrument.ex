@@ -4,31 +4,47 @@ defmodule Catena.Task.Instrument do
 
   def lower(core) do
     with :ok <- Verifier.verify(core) do
-      {:ok, Enum.map(Backend.lower(core), &walk/1)}
+      {forms, _} = Enum.map_reduce(Backend.lower(core), 0, &walk/2)
+      {:ok, forms}
     end
   end
 
-  defp walk({:function, ann, name, arity, clauses}),
-    do: {:function, ann, name, arity, Enum.map(clauses, &function_clause/1)}
+  defp walk({:function, ann, name, arity, clauses}, counter) do
+    {clauses, counter} = Enum.map_reduce(clauses, counter, &function_clause/2)
+    {{:function, ann, name, arity, clauses}, counter}
+  end
 
-  defp walk({:fun, ann, {:clauses, clauses}}),
-    do: {:fun, ann, {:clauses, Enum.map(clauses, &function_clause/1)}}
+  defp walk({:fun, ann, {:clauses, clauses}}, counter) do
+    {clauses, counter} = Enum.map_reduce(clauses, counter, &function_clause/2)
+    {{:fun, ann, {:clauses, clauses}}, counter}
+  end
 
-  defp walk({:named_fun, ann, name, clauses}),
-    do: {:named_fun, ann, name, Enum.map(clauses, &function_clause/1)}
+  defp walk({:named_fun, ann, name, clauses}, counter) do
+    {clauses, counter} = Enum.map_reduce(clauses, counter, &function_clause/2)
+    {{:named_fun, ann, name, clauses}, counter}
+  end
 
-  defp walk({:receive, ann, clauses}), do: receive_form(ann, clauses, nil)
+  defp walk({:receive, ann, clauses}, counter) do
+    {clauses, next} = walk(clauses, counter + 1)
+    {receive_form(ann, clauses, nil, counter), next}
+  end
 
-  defp walk({:receive, ann, clauses, timeout, fallback}),
-    do: receive_form(ann, clauses, {walk(timeout), walk(fallback)})
+  defp walk({:receive, ann, clauses, timeout, fallback}, counter) do
+    {clauses, next} = walk(clauses, counter + 1)
+    {timeout, next} = walk(timeout, next)
+    {fallback, next} = walk(fallback, next)
+    {receive_form(ann, clauses, {timeout, fallback}, counter), next}
+  end
 
-  defp walk(value) when is_tuple(value),
-    do: value |> Tuple.to_list() |> Enum.map(&walk/1) |> List.to_tuple()
+  defp walk(value, counter) when is_tuple(value) do
+    {elements, counter} = value |> Tuple.to_list() |> Enum.map_reduce(counter, &walk/2)
+    {List.to_tuple(elements), counter}
+  end
 
-  defp walk(value) when is_list(value), do: Enum.map(value, &walk/1)
-  defp walk(value), do: value
+  defp walk(value, counter) when is_list(value), do: Enum.map_reduce(value, counter, &walk/2)
+  defp walk(value, counter), do: {value, counter}
 
-  defp receive_form(ann, clauses, timing) do
+  defp receive_form(ann, clauses, timing, counter) do
     receive_ast = fn clauses ->
       case timing do
         nil -> {:receive, ann, clauses}
@@ -36,9 +52,35 @@ defmodule Catena.Task.Instrument do
       end
     end
 
-    clauses = Enum.map(clauses, &walk/1)
-    token = {:var, ann, :__Catena_ManagedReceiveToken}
-    reason = {:var, ann, :__Catena_ManagedReceiveReason}
+    token = {:var, ann, String.to_atom("__Catena_ManagedReceiveToken_#{counter}")}
+    reason = {:var, ann, String.to_atom("__Catena_ManagedReceiveReason_#{counter}")}
+
+    worker = {:var, ann, String.to_atom("__Catena_ReceiveWorker_#{counter}")}
+    scopes = {:var, ann, String.to_atom("__Catena_ReceiveScopes_#{counter}")}
+    scope = {:var, ann, String.to_atom("__Catena_ReceiveScope_#{counter}")}
+    runtime = {:atom, ann, Catena.Task.Runtime}
+
+    setup =
+      {:match, ann, {:tuple, ann, [worker, scopes]},
+       {:call, ann, {:remote, ann, runtime, {:atom, ann, :receive_context}}, []}}
+
+    worker_cancel =
+      {:clause, ann, [{:tuple, ann, [worker, {:atom, ann, :cancel}, reason]}],
+       [[{:call, ann, {:atom, ann, :is_reference}, [worker]}]],
+       [
+         {:call, ann, {:remote, ann, {:atom, ann, :erlang}, {:atom, ann, :throw}},
+          [{:tuple, ann, [{:atom, ann, :catena_resource_cancelled}, reason]}]}
+       ]}
+
+    child_failure =
+      {:clause, ann, [{:tuple, ann, [{:atom, ann, :task_failed}, scope, reason]}],
+       [[{:call, ann, {:atom, ann, :is_map_key}, [scope, scopes]}]],
+       [
+         {:call, ann, {:remote, ann, {:atom, ann, :erlang}, {:atom, ann, :exit}},
+          [{:tuple, ann, [{:atom, ann, :catena_resource_exit}, reason]}]}
+       ]}
+
+    task_controls = [worker_cancel, child_failure]
 
     wrapped =
       Enum.map(clauses, fn {:clause, a, [pattern], guards, body} ->
@@ -59,19 +101,20 @@ defmodule Catena.Task.Instrument do
     select =
       {:case, ann, context,
        [
-         {:clause, ann, [{:atom, ann, nil}], [], [receive_ast.(clauses)]},
+         {:clause, ann, [{:atom, ann, nil}], [], [receive_ast.(task_controls ++ clauses)]},
          {:clause, ann, [{:tuple, ann, [{:var, ann, :_}, token]}], [],
-          [receive_ast.([stop | wrapped])]}
+          [receive_ast.(task_controls ++ [stop | wrapped])]}
        ]}
 
-    {:call, ann, {:fun, ann, {:clauses, [{:clause, ann, [], [], [select]}]}}, []}
+    {:call, ann, {:fun, ann, {:clauses, [{:clause, ann, [], [], [setup, select]}]}}, []}
   end
 
-  defp function_clause({:clause, ann, parameters, guards, body}) do
+  defp function_clause({:clause, ann, parameters, guards, body}, counter) do
     checkpoint =
       {:call, ann, {:remote, ann, {:atom, ann, Catena.Task.Runtime}, {:atom, ann, :checkpoint}},
        []}
 
-    {:clause, ann, parameters, guards, [checkpoint | Enum.map(body, &walk/1)]}
+    {body, counter} = walk(body, counter)
+    {{:clause, ann, parameters, guards, [checkpoint | body]}, counter}
   end
 end

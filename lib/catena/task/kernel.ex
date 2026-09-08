@@ -115,6 +115,24 @@ defmodule Catena.Task.Kernel do
     end
   end
 
+  def boundary(%{version: "0.1.53"} = core) do
+    if Enum.all?(
+         [:frontend_format, :frontend_version, :language_revision],
+         &(Map.get(core, &1) == "0.1.53")
+       ) do
+      core =
+        Enum.reduce(
+          [:version, :frontend_format, :frontend_version, :language_revision],
+          core,
+          &Map.put(&2, &1, @profile)
+        )
+
+      boundary(core)
+    else
+      {:error, "inconsistent cancellation and time target"}
+    end
+  end
+
   def boundary(%{version: "0.1.52"} = core) do
     if Enum.all?(
          [:frontend_format, :frontend_version, :language_revision],
@@ -160,6 +178,7 @@ defmodule Catena.Task.Kernel do
 
   defp context_nodes?(%{tag: tag})
        when tag in [
+              :timed_receive_until,
               :timed_receive,
               :managed_self,
               :managed_link,
@@ -228,7 +247,16 @@ defmodule Catena.Task.Kernel do
 
   defp walk(value, count, _), do: {value, count}
 
-  defp future_time?(%{tag: tag}) when tag in [:task_sleep, :timed_receive], do: true
+  defp future_time?(%{tag: tag})
+       when tag in [
+              :task_sleep,
+              :timed_receive,
+              :task_deadline,
+              :task_wait_until,
+              :timed_receive_until
+            ],
+       do: true
+
   defp future_time?(%_{}), do: false
   defp future_time?(v) when is_map(v), do: Enum.any?(Map.values(v), &future_time?/1)
   defp future_time?(v) when is_list(v), do: Enum.any?(v, &future_time?/1)
@@ -246,12 +274,15 @@ defmodule Catena.Task.Kernel do
        when tag in [
               :managed_spawn,
               :managed_send,
+              :timed_receive_until,
               :timed_receive,
               :managed_self,
               :managed_link,
               :managed_unlink,
               :managed_observe,
               :managed_trapping,
+              :task_deadline,
+              :task_wait_until,
               :task_scope,
               :task_start,
               :task_cancel,

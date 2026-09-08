@@ -340,6 +340,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "process-lifetimes/owned-tasks-and-managed-relationships.md#status-and-authority"
         )
+      ),
+      feature(
+        "cancellation-and-time",
+        "0.1.53",
+        specification(
+          "cancellation-and-time/deadlines-waits-and-cancellation.md#status-and-authority"
+        )
       )
     ]
   end
@@ -646,6 +653,9 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("cancellation-and-time"),
+    do: ~w(source-acceptance static-meaning dynamic-behavior artifacts)
+
   defp affected_dimensions("owned-task-lifetimes"),
     do: ~w(source-acceptance static-meaning dynamic-behavior artifacts)
 
@@ -924,6 +934,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("cancellation-and-time"),
+    do:
+      "Select exact 0.1.53 through the time-tree boundary for opaque local deadlines, sleep and total timed receive. Preserve 0.1.52 lifetime-only admission and old interfaces; no wall-clock or foreign interruption guarantee is introduced."
 
   defp migration("owned-task-lifetimes"),
     do:

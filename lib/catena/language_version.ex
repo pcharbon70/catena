@@ -61,18 +61,20 @@ defmodule Catena.LanguageVersion do
     selective_receive_correction: "0.1.49",
     closed_capability_kernel: "0.1.50",
     resource_scopes: "0.1.51",
-    owned_task_lifetimes: "0.1.52"
+    owned_task_lifetimes: "0.1.52",
+    cancellation_and_time: "0.1.53"
   ]
   @ordered Keyword.values(@versions)
   @json_frontends ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7)
   @kernel_frontends ~w(0.1.8)
-  @source_text_frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35 0.1.36 0.1.37 0.1.38 0.1.39 0.1.40 0.1.41 0.1.42 0.1.43 0.1.44 0.1.45 0.1.46 0.1.47 0.1.48 0.1.49 0.1.50 0.1.51 0.1.52)
+  @source_text_frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35 0.1.36 0.1.37 0.1.38 0.1.39 0.1.40 0.1.41 0.1.42 0.1.43 0.1.44 0.1.45 0.1.46 0.1.47 0.1.48 0.1.49 0.1.50 0.1.51 0.1.52 0.1.53)
   @capability_frontends ~w(0.1.50)
   @resource_frontends ~w(0.1.51)
   @task_frontends ~w(0.1.52)
+  @time_frontends ~w(0.1.53)
   @compilable @json_frontends ++
                 @kernel_frontends ++
-                @capability_frontends ++ @resource_frontends ++ @task_frontends
+                @capability_frontends ++ @resource_frontends ++ @task_frontends ++ @time_frontends
   @interfaces ~w(0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8)
   @signed_formats ~w(0.1.6 0.1.7 0.1.8)
   @retired ~w(0.1 0.2 0.3 0.4 0.5 0.6)
@@ -131,6 +133,7 @@ defmodule Catena.LanguageVersion do
           | :closed_capability_kernel
           | :resource_scopes
           | :owned_task_lifetimes
+          | :cancellation_and_time
 
   @spec all() :: [String.t()]
   def all, do: @ordered
@@ -143,6 +146,8 @@ defmodule Catena.LanguageVersion do
 
   @spec capability_frontend_versions() :: [String.t()]
   def capability_frontend_versions, do: @capability_frontends
+
+  def time_frontend_versions, do: @time_frontends
 
   def task_frontend_versions, do: @task_frontends
 
@@ -162,7 +167,9 @@ defmodule Catena.LanguageVersion do
 
   @spec artifact_versions() :: [String.t()]
   def artifact_versions,
-    do: @interfaces ++ @capability_frontends ++ @resource_frontends ++ @task_frontends
+    do:
+      @interfaces ++
+        @capability_frontends ++ @resource_frontends ++ @task_frontends ++ @time_frontends
 
   @spec signed_format_versions() :: [String.t()]
   def signed_format_versions, do: @signed_formats

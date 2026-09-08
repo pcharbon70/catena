@@ -209,6 +209,16 @@ defmodule Catena.Task.ManagedReference do
       p = c.processes[id]
 
       if Map.get(p, :managed, false) and terminal?(p) and not Map.get(p, :managed_notified, false) do
+        p =
+          case Map.get(p, :managed_primary) do
+            {:exit, reason}
+            when p.status != :trapped and p.result != :shutdown_deadline_exhausted ->
+              %{p | status: :exited, result: reason}
+
+            _ ->
+              p
+          end
+
         c = put(c, Map.put(p, :managed_notified, true))
 
         Enum.reduce(Map.get(c, :managed_links, %{}), c, fn {{a, b}, link}, c ->
@@ -239,10 +249,13 @@ defmodule Catena.Task.ManagedReference do
           outcome == {:completed, :unit} ->
             c
 
-          is_nil(Map.get(p, :task_pending)) ->
+          is_nil(Map.get(p, :managed_primary)) ->
+            primary = {:exit, {:linked, peer, outcome}}
+
             p =
               p
-              |> Map.put(:task_pending, {:exit, {:linked, peer, outcome}})
+              |> Map.put(:managed_primary, primary)
+              |> Map.put(:task_pending, Map.get(p, :task_pending) || primary)
               |> Map.put(:task_shutdown_deadline, Map.get(c, :task_clock, 0) + p.managed_grace)
 
             put(c, p)

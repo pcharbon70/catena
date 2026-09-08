@@ -27,10 +27,10 @@ lifecycle protocols never enter the user mailbox. Unlink invalidates the
 caller's generation; it does not manufacture a terminal notification for the
 other endpoint. General supervision and distributed transport remain separate.
 
-`Catena.Task.Kernel.check/2` is the unselected experimental entry used while
-completing G088. Its sleep and timed-receive nodes are rejected by the selected
-0.1.52 entry and cannot be emitted as selected artifacts. Historical interfaces
-and signed formats are unchanged.
+`Catena.Task.Kernel.check/2` remains an unselected experimental entry. General
+time is admitted separately through `Catena.Task.TimeKernel.check/3` at exact
+0.1.53; those nodes remain rejected by the selected 0.1.52 entry. Historical
+interfaces and signed formats are unchanged. See [cancellation and time](cancellation-and-time.md).
 
 The [lifetime contract](https://github.com/pcharbon70/catena-research/blob/main/60-specification/process-lifetimes/owned-tasks-and-managed-relationships.md)
 defines the admitted behavior. The `task_*_test.exs` behavioral

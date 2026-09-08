@@ -48,7 +48,7 @@ defmodule Catena.Kernel.Stepper do
   end
 
   def advance_resource_clock(%{core: %{version: version}} = configuration, now)
-      when version in ["0.1.52", :owned_task_experiment],
+      when version in ["0.1.52", "0.1.53", :owned_task_experiment],
       do: Catena.Task.Reference.advance(configuration, now)
 
   def advance_resource_clock(%{core: %{version: "0.1.51"}} = configuration, now)
@@ -59,7 +59,7 @@ defmodule Catena.Kernel.Stepper do
   end
 
   def expire_resource_release(%{core: %{version: version}} = configuration, pid)
-      when version in ["0.1.51", "0.1.52", :owned_task_experiment] do
+      when version in ["0.1.51", "0.1.52", "0.1.53", :owned_task_experiment] do
     process = Map.fetch!(configuration.processes, pid)
     deadline = Map.get(process, :release_deadline)
 
@@ -365,6 +365,8 @@ defmodule Catena.Kernel.Stepper do
 
       tag
       when tag in [
+             :task_deadline,
+             :task_wait_until,
              :task_scope,
              :task_start,
              :task_cancel,
@@ -434,6 +436,11 @@ defmodule Catena.Kernel.Stepper do
       :send ->
         push_expression(configuration, process, expression.left, environment, [
           {:send_target, expression.right, environment}
+        ])
+
+      :timed_receive_until ->
+        push_expression(configuration, process, expression.deadline, environment, [
+          {:timed_receive_deadline, expression, environment}
         ])
 
       :timed_receive ->
@@ -573,6 +580,9 @@ defmodule Catena.Kernel.Stepper do
       frame
       when is_tuple(frame) and
              elem(frame, 0) in [
+               :task_deadline_scope,
+               :task_deadline_duration,
+               :task_wait_until,
                :task_monitor_scope,
                :task_monitor_target,
                :task_observe,
@@ -594,6 +604,24 @@ defmodule Catena.Kernel.Stepper do
                :managed_restore
              ] ->
         Catena.Task.Reference.returned(configuration, process, frame, value)
+
+      {:timed_receive_deadline, expression, environment} ->
+        case value do
+          {:catena_task_deadline, owner, scope, instant} when owner == process.id ->
+            if get_in(process, [:task_scopes, scope, :phase]) == :open do
+              process =
+                process
+                |> Map.put(:receive_deadline, instant)
+                |> Map.put(:receive_fallback, expression.fallback)
+
+              attempt_receive(configuration, process, expression.clauses, environment)
+            else
+              trap_process(configuration, process, :invalid_deadline_origin)
+            end
+
+          _ ->
+            trap_process(configuration, process, :invalid_deadline_origin)
+        end
 
       {:timed_receive_duration, expression, environment} ->
         if is_integer(value) and value >= 0 do
@@ -920,7 +948,7 @@ defmodule Catena.Kernel.Stepper do
         ])
         |> Map.merge(%{status: :running, control: {:expr, fallback, env}})
 
-      put_process(configuration, process)
+      put_process(configuration, Catena.Task.Reference.after_wait(configuration, process))
     else
       put_process(configuration, %{process | status: :waiting})
     end
@@ -959,7 +987,7 @@ defmodule Catena.Kernel.Stepper do
       })
 
     configuration
-    |> put_process(process)
+    |> put_process(Catena.Task.Reference.after_wait(configuration, process))
     |> append_trace(%{
       label: :receive,
       pid: process.id,

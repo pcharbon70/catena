@@ -1,5 +1,5 @@
 defmodule Catena.Task.Time do
-  @moduledoc "Experimental monotonic deadline conversion for checked managed receives."
+  @moduledoc "Exact monotonic deadline conversion for the 0.1.53 managed receive target."
   @max_wait 4_294_967_295
   def deadline(duration) when is_integer(duration) and duration >= 0 do
     case Catena.Task.Managed.context() do

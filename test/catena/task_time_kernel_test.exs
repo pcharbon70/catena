@@ -1,7 +1,7 @@
 defmodule Catena.TaskTimeKernelTest do
   use ExUnit.Case, async: false
   alias Catena.Kernel.{Parser, Stepper, Verifier}
-  alias Catena.Task.{Kernel, Instrument, Monitor}
+  alias Catena.Task.{Kernel, Monitor}
 
   @labels %{
     completed: "done",
@@ -13,20 +13,22 @@ defmodule Catena.TaskTimeKernelTest do
     external_loss: "lost"
   }
 
+  @tag obligations: ~w(TM-OBL-003 TM-OBL-006)
   test "a queued matching message wins zero timeout and an empty queue takes fallback" do
     for {messages, expected} <- [
           {[0, 1], {:catena_variant, "done", :unit}},
           {[1], {:catena_variant, "fault", 55}}
         ] do
-      assert {:ok, core} = Kernel.check(fixture(messages, 0), %{})
+      assert {:ok, core} = Catena.Task.TimeKernel.check(fixture(messages, 0), %{})
       assert :ok = Verifier.verify(core)
       assert {:ok, ^expected, _} = Stepper.run(core, "main")
       assert beam(core) == expected
     end
   end
 
+  @tag obligations: ~w(TM-OBL-002)
   test "a positive timeout is eligible only after its virtual deadline" do
-    assert {:ok, core} = Kernel.check(fixture([1], 1_000_000), %{})
+    assert {:ok, core} = Catena.Task.TimeKernel.check(fixture([1], 1_000_000), %{})
     assert {:ok, initial} = Stepper.initial(core, "main")
 
     waiting =
@@ -49,8 +51,9 @@ defmodule Catena.TaskTimeKernelTest do
     assert beam(core) == {:catena_variant, "fault", 55}
   end
 
+  @tag obligations: ~w(TM-OBL-006)
   test "deadline selection and a queued reply have distinct permitted schedules" do
-    assert {:ok, core} = Kernel.check(fixture([1], 10), %{})
+    assert {:ok, core} = Catena.Task.TimeKernel.check(fixture([1], 10), %{})
     assert {:ok, initial} = Stepper.initial(core, "main")
 
     waiting =
@@ -75,12 +78,14 @@ defmodule Catena.TaskTimeKernelTest do
     assert Enum.find(result.processes, &(&1.pid == 1)).mailbox == []
   end
 
+  @tag obligations: ~w(TM-OBL-002 TM-OBL-003)
   test "invalid duration is checked before the queued matching message" do
-    assert {:ok, core} = Kernel.check(fixture([0, 1], -1), %{})
+    assert {:ok, core} = Catena.Task.TimeKernel.check(fixture([0, 1], -1), %{})
     assert {:ok, {:catena_variant, "runtime", :unit}, _} = Stepper.run(core, "main")
     assert beam(core) == {:catena_variant, "runtime", :unit}
   end
 
+  @tag obligations: ~w(TM-OBL-003 TM-OBL-008)
   test "fallback preserves messages skipped by the timed receive" do
     parsed = fixture([99, 1], 0)
     [worker] = parsed.processes
@@ -95,10 +100,231 @@ defmodule Catena.TaskTimeKernelTest do
       | body: %{worker.body | clauses: [%{initial | body: %{timed | fallback: fallback}}]}
     }
 
-    assert {:ok, core} = Kernel.check(%{parsed | processes: [worker]}, %{})
+    assert {:ok, core} = Catena.Task.TimeKernel.check(%{parsed | processes: [worker]}, %{})
     assert {:ok, {:catena_variant, "done", :unit}, result} = Stepper.run(core, "main")
     assert for(%{label: :receive, message: n} <- result.trace, do: n) == [1, 99]
     assert beam(core) == {:catena_variant, "done", :unit}
+  end
+
+  @tag obligations: ~w(TM-OBL-003)
+  test "timeout evaluation happens once before scanning rejected candidates" do
+    parsed = fixture([0, 1, 99, 0], 0)
+
+    {:ok, donor} =
+      Parser.parse("""
+      (module DurationProbe (edition 0.1) (revision 0.1.8) (origin "test://task/duration")
+        (process Duration (mailbox Int) (params) (sequence (receive (case (bind n) (var n))) (unit))))
+      """)
+
+    [duration_worker] = donor.processes
+    duration = duration_worker.body.first
+    [worker] = parsed.processes
+    [initial] = worker.body.clauses
+
+    worker = %{
+      worker
+      | body: %{worker.body | clauses: [%{initial | body: %{initial.body | duration: duration}}]}
+    }
+
+    assert {:ok, core} = Catena.Task.TimeKernel.check(%{parsed | processes: [worker]}, %{})
+    assert {:ok, {:catena_variant, "done", :unit}, result} = Stepper.run(core, "main")
+    assert for(%{label: :receive, message: n} <- result.trace, do: n) == [1, 0, 0]
+    assert beam(core) == {:catena_variant, "done", :unit}
+  end
+
+  @tag obligations: ~w(TM-OBL-001 TM-OBL-004)
+  test "opaque absolute deadlines share one budget across repeated waits and receive" do
+    for {messages, expected} <- [
+          {[0, 1], {:catena_variant, "done", :unit}},
+          {[1], {:catena_variant, "fault", 55}}
+        ] do
+      parsed = fixture(messages, 10)
+      [worker] = parsed.processes
+      [initial] = worker.body.clauses
+
+      timed =
+        initial.body
+        |> Map.delete(:duration)
+        |> Map.put(:tag, :timed_receive_until)
+        |> Map.put(:deadline, variable("deadline", worker.span))
+
+      make = %{
+        tag: :task_deadline,
+        scope: variable("clock", worker.span),
+        duration: integer(10, worker.span),
+        span: worker.span
+      }
+
+      wait = %{
+        tag: :task_wait_until,
+        deadline: variable("deadline", worker.span),
+        span: worker.span
+      }
+
+      repeated = %{
+        tag: :sequence,
+        first: wait,
+        second: %{tag: :sequence, first: wait, second: timed, span: worker.span},
+        span: worker.span
+      }
+
+      scope = %{
+        tag: :task_scope,
+        binder: "clock",
+        grace_ns: 1_000_000_000,
+        body: %{tag: :let, name: "deadline", value: make, body: repeated, span: worker.span},
+        span: worker.span
+      }
+
+      worker = %{worker | body: %{worker.body | clauses: [%{initial | body: scope}]}}
+      parsed = %{parsed | processes: [worker]}
+      assert {:ok, core} = Catena.Task.TimeKernel.check(parsed, %{})
+      assert :ok = Verifier.verify(core)
+      assert {:error, %{id: "T002"}} = Kernel.check_selected(parsed, %{})
+      assert {:ok, initial} = Stepper.initial(core, "main")
+
+      waiting =
+        Enum.reduce_while(1..200, initial, fn _, c ->
+          case Stepper.runnable_pids(c) do
+            [] ->
+              {:halt, c}
+
+            [pid | _] ->
+              assert {:ok, next} = Stepper.step(c, pid)
+              {:cont, next}
+          end
+        end)
+
+      assert waiting.processes[1].task_wake == 10
+      assert {:ok, early} = Catena.Task.Reference.advance(waiting, 9)
+      assert Stepper.runnable_pids(early) == []
+      assert {:ok, due} = Catena.Task.Reference.advance(waiting, 10)
+      assert {:ok, ^expected, _} = Stepper.run_configuration(due)
+      assert beam(core) == expected
+    end
+  end
+
+  @tag obligations: ~w(TM-OBL-004)
+  test "absolute deadline handles cannot escape the scope which supplies their origin" do
+    parsed = fixture([1], 0)
+    [main] = parsed.definitions
+
+    escaped = %{
+      tag: :task_deadline,
+      scope: variable("tasks", main.span),
+      duration: integer(10, main.span),
+      span: main.span
+    }
+
+    main = %{main | expression: %{main.expression | body: escaped}}
+
+    assert {:error, %{id: "T002"}} =
+             Catena.Task.TimeKernel.check(%{parsed | definitions: [main]}, %{})
+  end
+
+  @tag obligations: ~w(TM-OBL-005)
+  test "a raw actor's explicit owned scope observes child failure while blocked in receive" do
+    parsed = fixture([1], 0)
+    [worker] = parsed.processes
+    [initial] = worker.body.clauses
+
+    waiting =
+      initial.body |> Map.delete(:duration) |> Map.delete(:fallback) |> Map.put(:tag, :receive)
+
+    child = %{
+      tag: :function,
+      parameter: "u",
+      parameter_type: :unit,
+      body: %{tag: :trap, expression: integer(99, worker.span), span: worker.span},
+      span: worker.span
+    }
+
+    start = %{
+      tag: :task_start,
+      scope: variable("children", worker.span),
+      body: child,
+      span: worker.span
+    }
+
+    scope = %{
+      tag: :task_scope,
+      binder: "children",
+      grace_ns: 1_000_000_000,
+      body: %{tag: :sequence, first: start, second: waiting, span: worker.span},
+      span: worker.span
+    }
+
+    worker = %{worker | body: %{worker.body | clauses: [%{initial | body: scope}]}}
+    [main] = parsed.definitions
+    main = put_in(main.expression.body.value.tag, :spawn)
+    main = put_in(main.expression.body.body.body.first.tag, :send)
+
+    assert {:ok, core} =
+             Catena.Task.TimeKernel.check(
+               %{parsed | processes: [worker], definitions: [main]},
+               %{}
+             )
+
+    assert {:ok, {:catena_variant, "exit", :unit}, _} = Stepper.run(core, "main")
+    assert beam(core) == {:catena_variant, "exit", :unit}
+  end
+
+  @tag obligations: ~w(TM-OBL-001)
+  test "time target rejects old selection and forged typed timeout evidence" do
+    parsed = fixture([1], 0)
+
+    assert {:error, %{id: "EDN001"}} =
+             Catena.Task.TimeKernel.check(parsed, %{},
+               language_selection: %Catena.LanguageSelection{
+                 edition: "0.1",
+                 language_revision: "0.1.52",
+                 previews: []
+               }
+             )
+
+    assert {:ok, core} = Catena.Task.TimeKernel.check(parsed, %{})
+    [worker] = core.processes
+    [initial] = worker.body.clauses
+    forged = put_in(initial.body.duration.type, :boolean)
+    worker = %{worker | body: %{worker.body | clauses: [forged]}}
+    assert {:error, _} = Verifier.verify(%{core | processes: [worker]})
+
+    old =
+      Enum.reduce(
+        [:version, :frontend_format, :frontend_version, :language_revision],
+        core,
+        &Map.put(&2, &1, "0.1.52")
+      )
+
+    assert {:error, _} = Verifier.verify(old)
+  end
+
+  @tag obligations: ~w(TM-OBL-005 TM-OBL-006)
+  test "cancellation after wait selection uses the next safe point without selecting another branch" do
+    assert {:ok, core} = Catena.Task.TimeKernel.check(fixture([1], 10), %{})
+    assert {:ok, initial} = Stepper.initial(core, "main")
+
+    waiting =
+      Enum.reduce_while(1..200, initial, fn _, c ->
+        case Stepper.runnable_pids(c) do
+          [] ->
+            {:halt, c}
+
+          [pid | _] ->
+            assert {:ok, next} = Stepper.step(c, pid)
+            {:cont, next}
+        end
+      end)
+
+    assert {:ok, due} = Catena.Task.Reference.advance(waiting, 10)
+    assert {:ok, selected} = Stepper.step(due, 1)
+    assert selected.processes[1].task_after_wait
+    interrupted = update_in(selected.processes[1], &Map.put(&1, :task_pending, {:exit, 7}))
+
+    assert {:ok, {:catena_variant, "exit", :unit}, result} =
+             Stepper.run_configuration(interrupted)
+
+    refute Enum.any?(result.trace, &match?(%{label: :trap, reason: 55}, &1))
   end
 
   defp fixture(messages, duration) do
@@ -170,8 +396,10 @@ defmodule Catena.TaskTimeKernelTest do
   defp integer(value, span), do: %{tag: :integer, value: value, span: span}
 
   defp beam(core) do
-    assert {:ok, forms} = Instrument.lower(core)
-    assert {:ok, module, binary} = :compile.forms(forms, [:binary, :return_errors])
+    assert {:ok, module, binary, metadata} = Catena.Kernel.Backend.compile(core)
+    assert metadata.artifact_version == "0.1.53"
+    assert metadata.interface == nil
+    assert {:ok, ^module, ^binary, _} = Catena.Kernel.Backend.compile(core)
     assert {:module, ^module} = :code.load_binary(module, ~c"timed-receive-experiment", binary)
 
     try do
