@@ -364,14 +364,11 @@ and non-list targets are excluded.
 Executable evidence covers pure values and real locally handled requests
 in sources, filters, bindings and yields, including exact nested traversal
 order, false-filter effects, empty sources and terminal trap prefixes on
-the reference and BEAM. General escaping ordinary effects and an enclosing
-handler's whole-comprehension abort remain unsupported by this lowering.
-Exact kernel `0.1.8` preserves ordinary row multiplicity; repeating an
-escaping request in a recursive worker requires an unsatisfiable finite row
-equation. Copying aggregate `uses` onto generated definitions does not fix
-that boundary. A versioned target refinement is required before claiming
-the complete `0.1.39` effect contract. P050/P053/P057 and their partial
-conformance obligations therefore remain open.
+the reference and BEAM. The retained 0.1.8 lowering cannot represent general escaping recursive rows.
+The separate 0.1.50 closed-capability target now supplies that representation,
+independent fragment probes and enclosing-handler abort. C050's filter gap is
+remediated through that explicit target; exact-order and sequential-execution
+completion audits remain tracked separately as P053/P057.
 
 Normative C061 uses `0.1.40` for numeric relationships. Numeric
 operators instantiate over the closed set `{Int, Float}`: operands
@@ -626,3 +623,23 @@ vendor extension, implementation-defined choice, recommendation disposition,
 bounded presentation choice, or implementation limit changes. A semantic
 change still requires an applicable normative revision; a profile edit alone
 cannot introduce one.
+
+## Closed capability-kernel target (0.1.50)
+
+The explicit compound boundary adds identity-bearing closed rows, deterministic
+slot identities, same-family descriptor checks, lexical scope and escape
+validation, and independent verifier derivation. A separate capability frontend
+and artifact revision are registered; old JSON/kernel source, interfaces and
+signed formats retain their versions.
+
+Comprehension fragment rows are checked in nonrecursive probes before final
+worker arrows are annotated. The source/qualifier/yield trace and all first/last
+failure positions agree between stepper and production BEAM compilation under
+one enclosing handler. Declining that handler aborts the full traversal; it is
+not treated as a false filter. Main artifact emission rejects unhandled or
+escaping capability requirements and returns no importable interface.
+
+The `CK-OBL-001` through `CK-OBL-008` test inventory is explicit. Coverage tags
+are bookkeeping; the behavioral assertions and profile-boundary checks provide
+the executable evidence. General open-row inference and public source adoption
+are outside this slice. See [the guide](guides/language/capability-comprehensions.md).

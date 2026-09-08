@@ -1,5 +1,5 @@
 defmodule Catena.Kernel.Backend do
-  @moduledoc "Fixed-layout Erlang Abstract Format lowering for verified kernel 0.1.8 core."
+  @moduledoc "Fixed-layout Erlang Abstract Format lowering for verified historical and closed-capability kernel core."
 
   alias Catena.{Diagnostic, ImplementationLimits, LanguageSelection}
   alias Catena.Kernel.{Interface, Verifier}
@@ -7,7 +7,9 @@ defmodule Catena.Kernel.Backend do
 
   @spec compile(map(), keyword()) ::
           {:ok, module(), binary(), map()} | {:error, Diagnostic.t()}
-  def compile(core, _options \\ []) do
+  def compile(core, options \\ [])
+
+  def compile(%{version: "0.1.8"} = core, _options) do
     with :ok <- verify(core),
          forms <- lower(core),
          :ok <- ImplementationLimits.validate_generated_arities(forms),
@@ -37,6 +39,12 @@ defmodule Catena.Kernel.Backend do
        }}
     end
   end
+
+  def compile(%{version: "0.1.50"} = core, _options),
+    do: Catena.Kernel.CapabilityKernel.compile(core)
+
+  def compile(_core, _options),
+    do: {:error, Diagnostic.new("I001", "unknown kernel artifact boundary")}
 
   @spec lower(map()) :: [term()]
   def lower(core) do
@@ -70,7 +78,7 @@ defmodule Catena.Kernel.Backend do
       {:attribute, annotation, :export, value_exports ++ process_exports}
     ]
 
-    definitions = Enum.flat_map(core.definitions, &lower_definition(&1, globals))
+    definitions = Enum.flat_map(core.definitions, &lower_definition(&1, globals, module))
     processes = Enum.flat_map(core.processes, &lower_process(&1, globals, module))
     attributes ++ definitions ++ processes
   end
@@ -85,11 +93,16 @@ defmodule Catena.Kernel.Backend do
     end
   end
 
-  defp lower_definition(definition, globals) do
+  defp lower_definition(definition, globals, module) do
     cond do
-      staged_definition?(definition) -> lower_staged_definition(definition, globals)
-      effect_control?(definition.expression) -> lower_effect_definition(definition, globals)
-      true -> [lower_direct_definition(definition, globals)]
+      staged_definition?(definition) ->
+        lower_staged_definition(definition, globals, module)
+
+      effect_control?(definition.expression) ->
+        lower_effect_definition(definition, globals, module)
+
+      true ->
+        [lower_direct_definition(definition, globals, module)]
     end
   end
 
@@ -100,12 +113,12 @@ defmodule Catena.Kernel.Backend do
     length(parameters) < definition.arity
   end
 
-  defp lower_staged_definition(definition, globals) do
+  defp lower_staged_definition(definition, globals, module) do
     annotation = annotation(definition.span)
     handlers = {:var, annotation, :__Catena_Kernel_Handlers}
     k = {:var, annotation, :__Catena_Kernel_Continuation}
     factory_name = value_factory_atom(definition.name)
-    body = lower_cps(definition.expression, %{}, globals, nil, handlers, k)
+    body = lower_cps(definition.expression, %{}, globals, module, handlers, k)
     factory_clause = {:clause, annotation, [handlers, k], [], [body]}
     factory = {:function, annotation, factory_name, 2, [factory_clause]}
 
@@ -142,7 +155,7 @@ defmodule Catena.Kernel.Backend do
     [wrapper, factory]
   end
 
-  defp lower_direct_definition(definition, globals) do
+  defp lower_direct_definition(definition, globals, module) do
     annotation = annotation(definition.span)
 
     arguments =
@@ -152,7 +165,7 @@ defmodule Catena.Kernel.Backend do
         Enum.map(1..definition.arity, &{:var, annotation, String.to_atom("__Catena_Arg#{&1}")})
       end
 
-    value = lower_expression(definition.expression, %{}, globals, nil)
+    value = lower_expression(definition.expression, %{}, globals, module)
 
     body =
       Enum.reduce(arguments, value, fn argument, function ->
@@ -460,7 +473,7 @@ defmodule Catena.Kernel.Backend do
     remote_call(:erlang, :error, [tuple], annotation)
   end
 
-  defp lower_effect_definition(definition, globals) do
+  defp lower_effect_definition(definition, globals, module) do
     annotation = annotation(definition.span)
     {parameters, body} = unwrap_functions(definition.expression, definition.arity, [])
 
@@ -479,7 +492,7 @@ defmodule Catena.Kernel.Backend do
     handlers = {:var, annotation, handlers_variable}
     continuation = {:var, annotation, continuation_variable}
 
-    worker_body = lower_cps(body, environment, globals, nil, handlers, continuation)
+    worker_body = lower_cps(body, environment, globals, module, handlers, continuation)
 
     worker_arguments =
       arguments ++
@@ -867,7 +880,7 @@ defmodule Catena.Kernel.Backend do
     installed_value =
       {:map, annotation, handlers,
        [
-         {:map_field_assoc, annotation, {:atom, annotation, safe_atom(handler.effect)},
+         {:map_field_assoc, annotation, effect_key(handler.effect, handler, annotation),
           handler_fun}
        ]}
 
@@ -941,7 +954,7 @@ defmodule Catena.Kernel.Backend do
         remote_call(
           :maps,
           :find,
-          [{:atom, annotation, safe_atom(expression.effect)}, handlers],
+          [effect_key(expression.effect, expression, annotation), handlers],
           annotation
         )
 
@@ -1567,7 +1580,8 @@ defmodule Catena.Kernel.Backend do
   defp effect_control?(values) when is_list(values), do: Enum.any?(values, &effect_control?/1)
   defp effect_control?(_value), do: false
 
-  defp ordinary_effects?(effects), do: Enum.any?(effects, &match?({:effect, _}, &1))
+  defp ordinary_effects?(effects),
+    do: Enum.any?(effects, &(match?({:effect, _}, &1) or match?({:capability, _}, &1)))
 
   # A callable's ABI follows its own arrow row, independently of where it is
   # constructed. Its result may itself be a callable with a different ABI.
@@ -1580,4 +1594,9 @@ defmodule Catena.Kernel.Backend do
     do: ordinary_effects?(effects) or latent_ordinary_effects?(result)
 
   defp latent_ordinary_effects?(_type), do: false
+
+  defp effect_key(effect, %{capability_dispatch: true}, _annotation),
+    do: :erl_parse.abstract(effect)
+
+  defp effect_key(effect, _evidence, annotation), do: {:atom, annotation, safe_atom(effect)}
 end

@@ -4,8 +4,10 @@ defmodule Catena.Kernel.Verifier do
   alias Catena.Kernel.Type
 
   @spec verify(map()) :: :ok | {:error, String.t()}
-  def verify(%{format: :kernel_core, version: "0.1.8"} = core) do
-    with :ok <- verify_data(core),
+  def verify(%{format: :kernel_core, version: version} = core)
+      when version in ["0.1.8", "0.1.50"] do
+    with :ok <- Catena.Kernel.CapabilityKernel.verify_scope(core),
+         :ok <- verify_data(core),
          :ok <- verify_exports(core),
          :ok <- verify_process_index(core),
          :ok <- verify_handlers(core),
@@ -475,7 +477,8 @@ defmodule Catena.Kernel.Verifier do
     with {:ok, types, effects} <-
            verify_expressions(expression.arguments, environment, context, core),
          true <- types == operation.parameters do
-      {:ok, operation.result, combine_effects(effects, [{:effect, effect.name}])}
+      {:ok, operation.result,
+       combine_effects(effects, [Map.get(effect, :occurrence, {:effect, effect.name})])}
     else
       _ -> :error
     end
@@ -487,7 +490,11 @@ defmodule Catena.Kernel.Verifier do
     with {:ok, type, effects} <-
            verify_expression(expression.expression, environment, context, core),
          true <- type == handler.input,
-         {:ok, residual} <- remove_effect(effects, {:effect, handler.effect}) do
+         {:ok, residual} <-
+           remove_effect(
+             effects,
+             Map.get(core.effects[handler.effect], :occurrence, {:effect, handler.effect})
+           ) do
       {:ok, handler.output, residual}
     else
       _ -> :error
@@ -1109,8 +1116,21 @@ defmodule Catena.Kernel.Verifier do
 
   defp canonical_effects(effects) do
     process = if :process in effects, do: [:process], else: []
-    ordinary = effects |> Enum.reject(&(&1 == :process)) |> Enum.sort_by(&inspect/1)
-    process ++ ordinary
+    ordinary = effects |> Enum.filter(&match?({:effect, _}, &1)) |> Enum.sort_by(&inspect/1)
+
+    capabilities =
+      effects
+      |> Enum.filter(&match?({:capability, _}, &1))
+      |> Enum.uniq()
+      |> Enum.sort_by(&inspect/1)
+
+    unknown =
+      Enum.reject(
+        effects,
+        &(&1 == :process or match?({:effect, _}, &1) or match?({:capability, _}, &1))
+      )
+
+    process ++ ordinary ++ capabilities ++ unknown
   end
 
   defp combine_effects(effects), do: effects |> List.flatten() |> canonical_effects()

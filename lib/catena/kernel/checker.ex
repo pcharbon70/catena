@@ -52,9 +52,9 @@ defmodule Catena.Kernel.Checker do
 
       core = %{
         format: :kernel_core,
-        version: "0.1.8",
-        frontend_format: "0.1.8",
-        frontend_version: "0.1.8",
+        version: module.version,
+        frontend_format: module.frontend_format,
+        frontend_version: module.frontend_version,
         edition: module.edition,
         language_revision: module.language_revision,
         previews: module.previews,
@@ -74,9 +74,25 @@ defmodule Catena.Kernel.Checker do
         effects: semantics.effects,
         handlers: handlers,
         diagnostics: [],
-        profile: :formal_semantic_kernel,
+        profile:
+          if(module.version == "0.1.50",
+            do: :closed_capability_kernel,
+            else: :formal_semantic_kernel
+          ),
         next: state.next
       }
+
+      core =
+        if Map.has_key?(module, :capabilities),
+          do: Map.put(core, :capabilities, module.capabilities),
+          else: core
+
+      if core.version == "0.1.50" do
+        case Catena.Kernel.CapabilityKernel.verify_scope(core) do
+          :ok -> :ok
+          {:error, reason} -> fail!("EFX003", reason, module.span)
+        end
+      end
 
       case ImplementationLimits.validate_source_arities(core) do
         :ok ->
@@ -955,7 +971,9 @@ defmodule Catena.Kernel.Checker do
       end)
 
     typed = Map.put(expression, :arguments, Enum.reverse(arguments))
-    {typed, operation.result, combine_effects(effects, [{:effect, effect.name}]), state}
+
+    {typed, operation.result,
+     combine_effects(effects, [Map.get(effect, :occurrence, {:effect, effect.name})]), state}
   end
 
   defp do_infer(%{tag: :handle} = expression, environment, context, state, _expected) do
@@ -968,7 +986,7 @@ defmodule Catena.Kernel.Checker do
     {handled, _type, effects, state} =
       infer(expression.expression, environment, context, state, handler.input)
 
-    occurrence = {:effect, handler.effect}
+    occurrence = Map.get(context.effects[handler.effect], :occurrence, {:effect, handler.effect})
 
     case remove_effect(effects, occurrence) do
       {:ok, residual} ->
@@ -1719,8 +1737,21 @@ defmodule Catena.Kernel.Checker do
 
   defp canonical_effects(effects) do
     process = if :process in effects, do: [:process], else: []
-    ordinary = effects |> Enum.reject(&(&1 == :process)) |> Enum.sort_by(&inspect/1)
-    process ++ ordinary
+    ordinary = effects |> Enum.filter(&match?({:effect, _}, &1)) |> Enum.sort_by(&inspect/1)
+
+    capabilities =
+      effects
+      |> Enum.filter(&match?({:capability, _}, &1))
+      |> Enum.uniq()
+      |> Enum.sort_by(&inspect/1)
+
+    unknown =
+      Enum.reject(
+        effects,
+        &(&1 == :process or match?({:effect, _}, &1) or match?({:capability, _}, &1))
+      )
+
+    process ++ ordinary ++ capabilities ++ unknown
   end
 
   defp combine_effects(effect_lists), do: effect_lists |> List.flatten() |> canonical_effects()
@@ -1731,6 +1762,7 @@ defmodule Catena.Kernel.Checker do
     Enum.map(effects, fn
       :process -> "Process"
       {:effect, name} -> name
+      {:capability, name} -> %{"capability" => name}
     end)
   end
 
@@ -1763,7 +1795,7 @@ defmodule Catena.Kernel.Checker do
       :process ->
         :ok
 
-      {:effect, name} ->
+      {kind, name} when kind in [:effect, :capability] ->
         unless Map.has_key?(effects, name) do
           fail!("EFX001", "unknown effect #{name} in effect row", span)
         end

@@ -258,6 +258,7 @@ flowchart LR
     RC --> XB[Exception boundary 0.1.47]
     XB --> TL[Top-level effects 0.1.48]
     TL --> RC[Receive correction 0.1.49]
+    RC --> CK[Closed capability target 0.1.50]
     TL --> STOP[Identities, locks, origins, and digests]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]

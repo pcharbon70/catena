@@ -28,7 +28,8 @@ defmodule Catena.Comprehension do
     :result_element_type,
     types: [],
     uses: [],
-    context: []
+    context: [],
+    yield_uses: []
   ]
 
   @type qualifier ::

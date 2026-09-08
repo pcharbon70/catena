@@ -29,7 +29,8 @@ defmodule Catena.C047TraceabilityCoverageTest do
     source =
       [
         "test/catena/c047_list_comprehensions_test.exs",
-        "test/catena/c047_effects_completion_test.exs"
+        "test/catena/c047_effects_completion_test.exs",
+        "test/catena/c047_capability_comprehension_test.exs"
       ]
       |> Enum.map_join("\n", &File.read!/1)
 
