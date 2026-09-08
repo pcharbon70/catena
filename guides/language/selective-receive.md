@@ -1,8 +1,8 @@
 # Selective Receive
 
-Revision `0.1.46` closes P086: the selective-receive rule set is
-fixed at the language level, and the four connections that need
-other owners are stated as routed interfaces.
+Revision `0.1.49` corrects the inconsistent starvation claim in the retained
+`0.1.46` contract. Historical selections and executable format versions remain
+unchanged; public syntax and the routed interfaces remain separate work.
 
 ## The rules
 
@@ -22,10 +22,16 @@ other owners are stated as routed interfaces.
 
 ## Starvation, honestly
 
-A receive whose clauses reject a prefix starves while that prefix
-stands. Each attempt's scan cost is proportional to its rejected
-prefix; a stable prefix is re-examined by every subsequent
-attempt. No fairness guarantee beyond scan order is claimed.
+A rejected prefix does not prevent selecting a later match. With no matching
+message, including an empty mailbox, the receive waits and preserves every
+message. A message that never matches can remain queued while later messages
+are consumed. No scheduler fairness or bounded waiting time is promised.
+Abstract scan work counts candidates and clauses actually examined; the
+contract does not require a rescan on every wakeup or promise wall-clock cost.
+
+The completion fixture selects `2` then `1` from `[0, 2, -1, 1, 3]` and
+observes `[0, -1, 3]` remaining on both the reference stepper and live BEAM.
+The following older fixture demonstrates no-match waiting only:
 
 ```elixir
 # The preservation witness: both messages stay queued, in order,
@@ -46,4 +52,4 @@ holder.mailbox   #=> [Some 0, Some 1]
 | Send-side semantics | G085 | everything beyond C010's order-and-content preservation |
 
 The normative contract is the research repository's
-[Selective Receive Specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/selective-receive).
+[Selective Receive Specification](https://github.com/pcharbon70/catena-research/tree/main/60-specification/selective-receive-correction).

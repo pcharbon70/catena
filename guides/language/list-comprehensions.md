@@ -42,13 +42,25 @@ ordered; execution is sequential and depth-first left-to-right.
   |> Catena.Comprehension.elaborate()
 
 {:ok, core} = Catena.check_kernel(source)
-{:ok, [2, 3], %{root_status: :terminated}} = Catena.Kernel.Stepper.run(core, "main")
+{:ok, result, %{root_status: :terminated}} = Catena.Kernel.Stepper.run(core, "main")
+# result is the kernel's tagged Cons/Nil representation of [2, 3].
 ```
 
 The generated module declares its own `List` nominal type, one fused
 tail-recursive worker per generator depth sharing one accumulator, and
-a final ordering pass — no intermediate map/filter lists. Values,
-failures, and effect rows agree on the stepper and compiled BEAM.
+a final ordering pass — no intermediate map/filter lists. Pure examples
+agree on the stepper and compiled BEAM. Real requests handled within each
+fragment also agree on values, order and terminal trap prefixes, including
+false filters and empty sources.
+
+General effects escaping a recursive worker remain incomplete. The exact
+`0.1.8` kernel sums ordinary effect occurrences; its finite rows cannot
+describe an escaping request plus recursive repetition of that same row.
+The aggregate `uses` field does not establish valid effectful lowering.
+Closing this gap requires an explicit normative target refinement, followed
+by enclosing-handler and whole-comprehension abort evidence. Handling each
+fragment locally does not substitute for that handler scope. See the
+[conformance profile](../../CONFORMANCE.md) for the current partial boundary.
 
 ## Diagnostics
 

@@ -141,6 +141,11 @@ run the retained JSON-AST and exact
 kernel paths, and find the
 authoritative `catena-research` documents.
 
+The [comprehension implementation](guides/language/list-comprehensions.md#the-elaborator)
+remains partial: pure and locally handled cases execute on the reference
+and BEAM, while general escaping effects need an explicit kernel-target
+refinement. See [CONFORMANCE.md](CONFORMANCE.md) for the supported boundary.
+
 The [Catena Guides](guides/README.md) provide a detailed source-first learning
 path, task guides for each implemented language slice, governance operations,
 and compiler developer documentation. The
@@ -252,6 +257,7 @@ flowchart LR
     PP --> RC[Selective receive 0.1.46]
     RC --> XB[Exception boundary 0.1.47]
     XB --> TL[Top-level effects 0.1.48]
+    TL --> RC[Receive correction 0.1.49]
     TL --> STOP[Identities, locks, origins, and digests]
     JSON --> D[Nominal data elaboration]
     D --> W[Principal and annotation-directed inference]

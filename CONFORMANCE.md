@@ -346,8 +346,8 @@ Normative C047–C058 use `0.1.39` for list comprehensions. The
 `for ... yield` contract — eager ordered `List A` to `List B`
 production, total generators, `case` mismatch-as-skip filtering
 generators, typed `when` filters, exhaustive `let` bindings,
-visible effects, sequential depth-first traversal — is implemented
-as a dormant elaboration boundary: `Catena.Comprehension.elaborate/1`
+visible effects, sequential depth-first traversal — has a partial
+dormant implementation: `Catena.Comprehension.elaborate/1`
 maps a caller-built qualifier tree to a kernel module whose fused
 tail-recursive worker chain (one definition per generator depth,
 one shared accumulator, a final ordering pass) checks, runs on the
@@ -360,6 +360,18 @@ marker); non-total generators and refutable bindings reuse `M001`,
 type mismatches reuse the typing families, unused bindings reuse
 `BS001`. Iterators, streams, lazy production, parallel traversal,
 and non-list targets are excluded.
+
+Executable evidence covers pure values and real locally handled requests
+in sources, filters, bindings and yields, including exact nested traversal
+order, false-filter effects, empty sources and terminal trap prefixes on
+the reference and BEAM. General escaping ordinary effects and an enclosing
+handler's whole-comprehension abort remain unsupported by this lowering.
+Exact kernel `0.1.8` preserves ordinary row multiplicity; repeating an
+escaping request in a recursive worker requires an unsatisfiable finite row
+equation. Copying aggregate `uses` onto generated definitions does not fix
+that boundary. A versioned target refinement is required before claiming
+the complete `0.1.39` effect contract. P050/P053/P057 and their partial
+conformance obligations therefore remain open.
 
 Normative C061 uses `0.1.40` for numeric relationships. Numeric
 operators instantiate over the closed set `{Int, Float}`: operands
@@ -449,14 +461,14 @@ Normative C086 uses `0.1.46` for selective receive. The rule set:
 FIFO scan from the oldest message, rejected messages preserved in
 position, one-time removal before the body, one closed message
 type, an effect-free receive form, portable conditions only
-(`CND006` unchanged). Starvation is honest: a stable rejected
-prefix starves the receive and each attempt's scan cost is
-proportional to its rejected prefix — no fairness guarantee
-beyond scan order. Witnessed by the blocked-holder fixture
-(`waiting` with both messages retained in order, quiescent on the
-stepper), the C010 launch selection trace re-pinned with its BEAM
-twin, and the harness `CND006` rejections (or-pattern expansion,
-non-closed message types). Public syntax routes to P109 (the
+(`CND006` unchanged). The `0.1.49` correction replaces the disputed
+starvation claim: a rejected prefix permits later matching selection;
+no-match receives wait. Scan work counts examined candidates, with no
+universal rescan or scheduler fairness promise. Focused stepper and BEAM
+fixtures witness two oldest-matching selections, exact residual mailbox
+preservation, and empty/all-rejected waiting. The historical `0.1.46`
+selection and persisted formats remain unchanged.
+Public syntax routes to P109 (the
 timeout clause is C044's explicit total fallback), timeouts and
 cancellation to G088, typed protocols to G087, send-side semantics
 to G085. Zero new diagnostic families and no new public API.

@@ -481,7 +481,9 @@ generators, `case` mismatch-as-skip filtering generators, typed
 `when` filters, exhaustive `let` bindings, visible effects, and
 sequential depth-first traversal. No frozen frontend carries the
 form — `Catena.Comprehension.elaborate/1` maps a qualifier tree to
-a kernel fused worker chain agreeing on stepper and BEAM, and the
+a kernel fused worker chain with stepper/BEAM agreement for pure
+and locally handled cases. Escaping ordinary effects and enclosing-handler
+abort remain [partial](guides/language/list-comprehensions.md#the-elaborator); the
 surface tokens adopt with the future grammar capstone. Three `LCP`
 diagnostic families arrive; iterators, streams, lazy production,
 parallelism, and non-list targets stay excluded.
