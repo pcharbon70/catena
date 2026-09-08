@@ -4,9 +4,20 @@ defmodule Catena.Comprehension.Capability do
   alias Catena.Kernel.{CapabilityKernel, Checker, Parser}
 
   def check(%Comprehension{} = spec, bindings, options \\ []) do
-    with {:ok, core, advisories} <- check_core(spec, bindings, options) do
+    with :ok <- validate_options(options),
+         {:ok, core, advisories} <- check_core(spec, bindings, options) do
       retained = Enum.reject(advisories, &(&1.id == "LCP003"))
       {:ok, core, retained ++ marker_advisories(spec, bindings, options)}
+    end
+  end
+
+  defp validate_options(options) do
+    if Keyword.keyword?(options) and
+         Enum.all?(Keyword.keys(options), &(&1 in [:handlers, :language_selection])) and
+         length(Keyword.keys(options)) == length(Enum.uniq(Keyword.keys(options))) do
+      :ok
+    else
+      error("unsupported or duplicate capability-comprehension option", "$.options")
     end
   end
 

@@ -231,6 +231,50 @@ defmodule Catena.C047CapabilityComprehensionTest do
     assert_success(core, @values, @events)
   end
 
+  @tag obligations: ~w(LC-OBL-008 LC-OBL-012)
+  test "noncommuting handler results distinguish serial suffixes from interleaving" do
+    spec = fixture("C047SerialPositionalHandler")
+
+    types =
+      Enum.map(spec.types, fn declaration ->
+        declaration
+        |> String.replace("(output (List Int))", "(output Int)")
+        |> String.replace("(return result (var result))", "(return result 0)")
+        |> String.replace("(case true (construct Nil))", "(case true 0)")
+        |> String.replace(
+          "(case false (resume next (var observed)))",
+          "(case false (add (multiply 1000 (resume next (var observed))) (var observed)))"
+        )
+      end)
+
+    core = elaborate!(%{spec | types: types})
+    # Each three-digit group is a request marker. The first request is the
+    # least significant group because each clause folds after its resumption.
+    expected = 532_432_332_531_431_331_203_202_312_511_411_311_201_100
+    assert {:ok, ^expected, outcome} = Stepper.run(core, "main")
+    assert request_events(outcome) == @events
+    assert {{:ok, ^expected}, @events} = run_beam(core)
+
+    positional = fn events ->
+      Enum.reduce(Enum.reverse(events), 0, fn n, acc -> acc * 1000 + n end)
+    end
+
+    assert positional.(@events) == expected
+    refute positional.(Enum.reverse(@events)) == expected
+    interleaved = [100, 201, 203, 311, 331, 411, 431, 511, 531, 312, 202, 332, 432, 532]
+    refute positional.(interleaved) == expected
+  end
+
+  @tag obligations: ~w(LC-OBL-012)
+  test "the compound boundary does not admit implicit parallel execution switches" do
+    spec = fixture("C047NoParallelAdmission")
+
+    for options <- [[parallel: true], [execution: :parallel], [handlers: ["Echo"], handlers: []]] do
+      assert {:error, %{id: "T002", path: "$.options"}} =
+               Catena.Comprehension.Capability.check(spec, %{"Trace" => "TraceFamily"}, options)
+    end
+  end
+
   defp fixture(module, options \\ []) do
     trap_at = Keyword.get(options, :trap_at, -99_999)
     decline_at = Keyword.get(options, :decline_at, -1)
