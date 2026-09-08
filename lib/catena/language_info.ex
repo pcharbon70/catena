@@ -18,6 +18,7 @@ defmodule Catena.LanguageInfo do
     end
 
     %{
+      "toolchain" => Catena.OTP.Profile.document(),
       "format" => "catena-language-info",
       "version" => @format_version,
       "current" => LanguageVersion.current_selection() |> LanguageSelection.to_map(),

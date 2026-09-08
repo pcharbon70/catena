@@ -366,6 +366,11 @@ defmodule Catena.LanguageLifecycle do
         "typed-supervision",
         "0.1.56",
         specification("typed-supervision/checked-trees-and-lifecycle.md#status-and-authority")
+      ),
+      feature(
+        "otp-compatibility",
+        "0.1.57",
+        specification("otp-compatibility/support-probes-and-artifacts.md#status-and-authority")
       )
     ]
   end
@@ -672,6 +677,8 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("otp-compatibility"), do: ~w(diagnostics artifacts)
+
   defp affected_dimensions("typed-supervision"),
     do: ~w(source-acceptance static-meaning dynamic-behavior artifacts)
 
@@ -961,6 +968,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("otp-compatibility"),
+    do:
+      "Use a tested toolchain row and rebuild untagged or mismatched binaries from retained source. Adding a row requires full semantic and artifact evidence. Source revisions and interface formats remain retained; no new executable frontend is admitted."
 
   defp migration("typed-supervision"),
     do:
