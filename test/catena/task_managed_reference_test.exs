@@ -72,6 +72,29 @@ defmodule Catena.TaskManagedReferenceTest do
     assert c.processes[0].trap == :invalid_managed_relationship
   end
 
+  @tag obligations: ~w(OT-OBL-008)
+  test "a delivered managed failure cannot be replaced by a later normal worker return" do
+    c = %{processes: %{0 => %{process(0) | managed_trapping: false}, 1 => process(1)}, trace: []}
+
+    c =
+      R.returned(c, c.processes[0], {:managed_link_target, @labels}, {:catena_managed_process, 1})
+
+    c =
+      put_in(c.processes[1].status, :trapped)
+      |> put_in([:processes, 1, :trap], 99)
+      |> R.after_step()
+
+    assert {:handled, selected} = R.before(c, c.processes[0])
+
+    completed =
+      put_in(selected.processes[0].status, :terminated)
+      |> put_in([:processes, 0, :result], :unit)
+      |> R.after_step()
+
+    assert completed.processes[0].status == :exited
+    assert completed.processes[0].result == {:linked, 1, {:trapped, 99}}
+  end
+
   defp process(id),
     do: %{
       id: id,

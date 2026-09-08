@@ -77,6 +77,7 @@ defmodule Catena.Kernel.Checker do
         profile:
           case module.version do
             :owned_task_experiment -> :owned_task_experiment
+            "0.1.53" -> :cancellation_and_time
             "0.1.52" -> :owned_task_lifetimes
             "0.1.51" -> :resource_scopes
             "0.1.50" -> :closed_capability_kernel
@@ -90,7 +91,7 @@ defmodule Catena.Kernel.Checker do
           do: Map.put(core, :capabilities, module.capabilities),
           else: core
 
-      if core.version in ["0.1.50", "0.1.51", "0.1.52", :owned_task_experiment] do
+      if core.version in ["0.1.50", "0.1.51", "0.1.52", "0.1.53", :owned_task_experiment] do
         case Catena.Kernel.CapabilityKernel.verify_scope(core) do
           :ok -> :ok
           {:error, reason} -> fail!("EFX003", reason, module.span)
@@ -585,6 +586,31 @@ defmodule Catena.Kernel.Checker do
        do: fail!("T002", "task lifetime handle escapes its scope", expression.span)
 
     {%{expression | body: body}, result, effects, state}
+  end
+
+  defp do_infer(%{tag: :task_deadline} = expression, environment, context, state, _expected) do
+    {scope, type, effects, state} = infer(expression.scope, environment, context, state)
+
+    id =
+      case apply_type(type, state) do
+        {:task_scope, id} -> id
+        _ -> fail!("T002", "deadline requires an explicit owned scope", expression.span)
+      end
+
+    {duration, _, timed, state} =
+      infer(expression.duration, environment, context, state, :integer)
+
+    {%{expression | scope: scope, duration: duration}, {:task_deadline, id},
+     combine_effects(effects, timed), state}
+  end
+
+  defp do_infer(%{tag: :task_wait_until} = expression, environment, context, state, _expected) do
+    {deadline, type, effects, state} = infer(expression.deadline, environment, context, state)
+
+    unless match?({:task_deadline, _}, apply_type(type, state)),
+      do: fail!("T002", "absolute wait requires a local deadline", expression.span)
+
+    {%{expression | deadline: deadline}, :unit, effects, state}
   end
 
   defp do_infer(%{tag: :task_sleep} = expression, environment, context, state, _expected) do
@@ -1356,6 +1382,32 @@ defmodule Catena.Kernel.Checker do
       })
 
     {typed, :unit, combine_effects(target_effects, message_effects, [:process]), state}
+  end
+
+  defp do_infer(%{tag: :timed_receive_until} = expression, environment, context, state, expected) do
+    if is_nil(context.mailbox),
+      do: fail!("PRC003", "timed receive requires a managed process entry", expression.span)
+
+    {deadline, type, before_effects, state} =
+      infer(expression.deadline, environment, context, state)
+
+    unless match?({:task_deadline, _}, apply_type(type, state)),
+      do: fail!("T002", "absolute receive requires a local deadline", expression.span)
+
+    {clauses, result, effects, state} =
+      infer_clauses(expression.clauses, context.mailbox, environment, context, state, expected)
+
+    {fallback, _, fallback_effects, state} =
+      infer(expression.fallback, environment, context, state, result)
+
+    {Map.merge(expression, %{
+       deadline: deadline,
+       clauses: clauses,
+       fallback: fallback,
+       mailbox: context.mailbox
+     }), apply_type(result, state),
+     combine_effects(combine_effects(before_effects, effects, fallback_effects), [:process]),
+     state}
   end
 
   defp do_infer(%{tag: :timed_receive} = expression, environment, context, state, expected) do

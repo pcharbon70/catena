@@ -25,8 +25,9 @@ resources are not admitted by this target.
 
 The backend independently verifies the core and requires an effect-closed,
 zero-argument main. It emits deterministic 0.1.51 artifacts without adding an
-interface or signed format. General task cancellation, supervision, remote
-failure and foreign adapters remain separate gaps.
+interface or signed format. Owned tasks and cancellation are admitted separately
+at 0.1.52 and 0.1.53. Supervision, remote failure and foreign adapters remain
+separate work.
 
 The [normative scope contract](https://github.com/pcharbon70/catena-research/blob/main/60-specification/resource-scopes/owned-lifetime-and-mandatory-cleanup.md)
 controls these rules. Behavioral witnesses are the `resource_*_test.exs` suite;

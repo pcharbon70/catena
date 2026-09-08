@@ -18,7 +18,7 @@ defmodule Catena.Kernel.Type do
           | {:nominal, String.t(), [t()]}
 
   @spec closed?(t()) :: boolean()
-  def closed?({kind, _}) when kind in [:task_scope, :owned_task], do: false
+  def closed?({kind, _}) when kind in [:task_scope, :owned_task, :task_deadline], do: false
   def closed?({:managed_link, _}), do: false
   def closed?({:task_monitor, _, _}), do: false
   def closed?({:resource, _, _}), do: false
@@ -100,7 +100,7 @@ defmodule Catena.Kernel.Type do
   def substitute(type, _substitution), do: type
 
   @spec encode(t()) :: map()
-  def encode({kind, id}) when kind in [:task_scope, :owned_task],
+  def encode({kind, id}) when kind in [:task_scope, :owned_task, :task_deadline],
     do: %{"tag" => Atom.to_string(kind), "scope" => id}
 
   def encode({:task_monitor, id, labels}),

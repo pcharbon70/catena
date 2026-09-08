@@ -125,7 +125,7 @@ defmodule Catena.Kernel.CapabilityKernel do
 
   # A verifier gate, not inference: check slot derivation, descriptors, visibility and escape.
   def verify_scope(%{version: version} = core)
-      when version in ["0.1.52", :owned_task_experiment] do
+      when version in ["0.1.52", "0.1.53", :owned_task_experiment] do
     core =
       Enum.reduce(
         [:version, :frontend_format, :frontend_version, :language_revision],

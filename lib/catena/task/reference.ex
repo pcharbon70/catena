@@ -36,6 +36,12 @@ defmodule Catena.Task.Reference do
     put(c, %{p | stack: [{:task_end, id} | p.stack], control: {:expr, e.body, env}})
   end
 
+  def evaluate(c, p, %{tag: :task_deadline} = e, env),
+    do: push(c, p, e.scope, env, {:task_deadline_scope, e.duration, env})
+
+  def evaluate(c, p, %{tag: :task_wait_until} = e, env),
+    do: push(c, p, e.deadline, env, {:task_wait_until})
+
   def evaluate(c, p, %{tag: :task_monitor} = e, env),
     do: push(c, p, e.scope, env, {:task_monitor_scope, e.target, e.labels, env})
 
@@ -114,6 +120,38 @@ defmodule Catena.Task.Reference do
                :managed_restore
              ],
       do: Catena.Task.ManagedReference.returned(c, p, frame, value)
+
+  def returned(c, p, {:task_deadline_scope, duration, env}, {:catena_task_scope, owner, scope})
+      when owner == p.id,
+      do: push(c, p, duration, env, {:task_deadline_duration, scope})
+
+  def returned(c, p, {:task_deadline_duration, scope}, duration) do
+    if get_in(p, [:task_scopes, scope, :phase]) == :open and is_integer(duration) and
+         duration >= 0,
+       do:
+         put(c, %{
+           p
+           | control:
+               {:value,
+                {:catena_task_deadline, p.id, scope, Map.get(c, :task_clock, 0) + duration}}
+         }),
+       else: stop(c, p, {:trap, :invalid_duration})
+  end
+
+  def returned(c, p, {:task_wait_until}, {:catena_task_deadline, owner, scope, instant})
+      when owner == p.id do
+    if get_in(p, [:task_scopes, scope, :phase]) == :open do
+      put(
+        c,
+        p
+        |> Map.put(:task_wake, instant)
+        |> Map.put(:status, :task_sleeping)
+        |> Map.put(:control, nil)
+      )
+    else
+      stop(c, p, {:trap, :invalid_deadline_origin})
+    end
+  end
 
   def returned(
         c,
@@ -306,6 +344,12 @@ defmodule Catena.Task.Reference do
     end
   end
 
+  def after_wait(%{core: %{version: version}}, p)
+      when version in ["0.1.53", :owned_task_experiment],
+      do: Map.put(p, :task_after_wait, true)
+
+  def after_wait(_, p), do: p
+
   def before(c, p) do
     case Catena.Task.ManagedReference.before(c, p) do
       :ordinary -> before_task(c, p)
@@ -317,10 +361,18 @@ defmodule Catena.Task.Reference do
     pending = Map.get(p, :task_pending)
 
     point =
-      p.status in [:waiting, :task_joining, :task_sleeping, :task_observing, :managed_observing] or
+      Map.get(p, :task_after_wait, false) or
+        p.status in [:waiting, :task_joining, :task_sleeping, :task_observing, :managed_observing] or
         case p.control do
           {:expr, %{tag: tag}, _} ->
-            tag in [:call, :receive, :timed_receive, :task_sleep]
+            tag in [
+              :call,
+              :receive,
+              :timed_receive,
+              :timed_receive_until,
+              :task_sleep,
+              :task_wait_until
+            ]
 
           {:value, _} ->
             match?([{:apply_value, _} | _], p.stack)
@@ -336,13 +388,16 @@ defmodule Catena.Task.Reference do
         end
 
     if pending != nil and point and is_nil(Map.get(p, :release_deadline)) do
-      p = Map.put(p, :task_pending, nil)
+      p = p |> Map.put(:task_pending, nil) |> Map.delete(:task_after_wait)
 
       {:handled, stop(c, p, pending)}
     else
       cond do
+        Map.get(p, :task_after_wait, false) ->
+          {:handled, put(c, Map.delete(p, :task_after_wait))}
+
         p.status == :task_sleeping and sleeping_ready?(c, p) ->
-          {:handled, put(c, %{p | status: :running, control: {:value, :unit}})}
+          {:handled, put(c, after_wait(c, %{p | status: :running, control: {:value, :unit}}))}
 
         p.status == :task_observing and observing_ready?(c, p) ->
           {:handled, observed(c, p)}
@@ -354,7 +409,7 @@ defmodule Catena.Task.Reference do
   end
 
   def after_step(%{core: %{version: version}} = c)
-      when version in ["0.1.52", :owned_task_experiment] do
+      when version in ["0.1.52", "0.1.53", :owned_task_experiment] do
     c = Catena.Task.ManagedReference.after_step(c)
 
     c =

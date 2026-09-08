@@ -5,7 +5,7 @@ defmodule Catena.Kernel.Verifier do
 
   @spec verify(map()) :: :ok | {:error, String.t()}
   def verify(%{format: :kernel_core, version: version} = core)
-      when version in ["0.1.8", "0.1.50", "0.1.51", "0.1.52", :owned_task_experiment] do
+      when version in ["0.1.8", "0.1.50", "0.1.51", "0.1.52", "0.1.53", :owned_task_experiment] do
     with :ok <- Catena.Task.Kernel.boundary(core),
          :ok <- Catena.Resource.Kernel.boundary(core),
          :ok <- Catena.Kernel.CapabilityKernel.verify_scope(core),
@@ -322,7 +322,7 @@ defmodule Catena.Kernel.Verifier do
   end
 
   defp derive_expression(%{tag: :task_scope} = expression, environment, context, core) do
-    with true <- core.version in ["0.1.52", :owned_task_experiment],
+    with true <- core.version in ["0.1.52", "0.1.53", :owned_task_experiment],
          true <- is_integer(expression.grace_ns) and expression.grace_ns >= 0,
          true <- is_binary(expression.binder) and expression.binder != "",
          environment <-
@@ -336,8 +336,30 @@ defmodule Catena.Kernel.Verifier do
     end
   end
 
+  defp derive_expression(%{tag: :task_deadline} = expression, environment, context, core) do
+    with true <- core.version in ["0.1.53", :owned_task_experiment],
+         {:ok, {:task_scope, id}, effects} <-
+           verify_expression(expression.scope, environment, context, core),
+         {:ok, :integer, timed} <-
+           verify_expression(expression.duration, environment, context, core) do
+      {:ok, {:task_deadline, id}, combine_effects(effects, timed)}
+    else
+      _ -> :error
+    end
+  end
+
+  defp derive_expression(%{tag: :task_wait_until} = expression, environment, context, core) do
+    with true <- core.version in ["0.1.53", :owned_task_experiment],
+         {:ok, {:task_deadline, _}, effects} <-
+           verify_expression(expression.deadline, environment, context, core) do
+      {:ok, :unit, effects}
+    else
+      _ -> :error
+    end
+  end
+
   defp derive_expression(%{tag: :task_sleep} = expression, environment, context, core) do
-    with true <- core.version == :owned_task_experiment,
+    with true <- core.version in ["0.1.53", :owned_task_experiment],
          {:ok, {:task_scope, _}, effects} <-
            verify_expression(expression.scope, environment, context, core),
          {:ok, :integer, duration} <-
@@ -349,7 +371,7 @@ defmodule Catena.Kernel.Verifier do
   end
 
   defp derive_expression(%{tag: :task_monitor} = expression, environment, context, core) do
-    with true <- core.version in ["0.1.52", :owned_task_experiment],
+    with true <- core.version in ["0.1.52", "0.1.53", :owned_task_experiment],
          true <- Catena.Task.Monitor.valid_labels?(expression.labels),
          {:ok, {:task_scope, id}, effects} <-
            verify_expression(expression.scope, environment, context, core),
@@ -363,7 +385,7 @@ defmodule Catena.Kernel.Verifier do
 
   defp derive_expression(%{tag: tag} = expression, environment, context, core)
        when tag in [:task_observe, :task_demonitor] do
-    with true <- core.version in ["0.1.52", :owned_task_experiment],
+    with true <- core.version in ["0.1.52", "0.1.53", :owned_task_experiment],
          {:ok, {:task_monitor, _, labels}, effects} <-
            verify_expression(expression.monitor, environment, context, core),
          true <- Catena.Task.Monitor.valid_labels?(labels) do
@@ -374,7 +396,7 @@ defmodule Catena.Kernel.Verifier do
   end
 
   defp derive_expression(%{tag: :task_start} = expression, environment, context, core) do
-    with true <- core.version in ["0.1.52", :owned_task_experiment],
+    with true <- core.version in ["0.1.52", "0.1.53", :owned_task_experiment],
          {:ok, {:task_scope, id}, effects} <-
            verify_expression(expression.scope, environment, context, core),
          {:ok, {:function, :unit, [], :unit}, formation} <-
@@ -386,7 +408,7 @@ defmodule Catena.Kernel.Verifier do
   end
 
   defp derive_expression(%{tag: :task_cancel} = expression, environment, context, core) do
-    with true <- core.version in ["0.1.52", :owned_task_experiment],
+    with true <- core.version in ["0.1.52", "0.1.53", :owned_task_experiment],
          {:ok, {:owned_task, _}, effects} <-
            verify_expression(expression.task, environment, context, core),
          {:ok, :integer, reason} <-
@@ -398,7 +420,7 @@ defmodule Catena.Kernel.Verifier do
   end
 
   defp derive_expression(%{tag: :resource_scope} = expression, environment, context, core) do
-    with true <- core.version in ["0.1.51", "0.1.52", :owned_task_experiment],
+    with true <- core.version in ["0.1.51", "0.1.52", "0.1.53", :owned_task_experiment],
          true <- expression.release.tag == :function,
          true <- is_integer(expression.grace_ns) and expression.grace_ns >= 0,
          {:ok, payload, acquisition} <-
@@ -429,7 +451,7 @@ defmodule Catena.Kernel.Verifier do
   end
 
   defp derive_expression(%{tag: :resource_exit} = expression, environment, context, core) do
-    with true <- core.version in ["0.1.51", "0.1.52", :owned_task_experiment],
+    with true <- core.version in ["0.1.51", "0.1.52", "0.1.53", :owned_task_experiment],
          {:ok, {:resource, _, _}, effects} <-
            verify_expression(expression.resource, environment, context, core),
          {:ok, :integer, reason_effects} <-
@@ -441,7 +463,7 @@ defmodule Catena.Kernel.Verifier do
   end
 
   defp derive_expression(%{tag: :resource_cancel} = expression, environment, context, core) do
-    with true <- core.version in ["0.1.51", "0.1.52", :owned_task_experiment],
+    with true <- core.version in ["0.1.51", "0.1.52", "0.1.53", :owned_task_experiment],
          {:ok, {:resource, _, _}, effects} <-
            verify_expression(expression.resource, environment, context, core),
          {:ok, :integer, reason_effects} <-
@@ -453,7 +475,7 @@ defmodule Catena.Kernel.Verifier do
   end
 
   defp derive_expression(%{tag: :resource_read} = expression, environment, context, core) do
-    with true <- core.version in ["0.1.51", "0.1.52", :owned_task_experiment],
+    with true <- core.version in ["0.1.51", "0.1.52", "0.1.53", :owned_task_experiment],
          {:ok, {:resource, _, payload}, effects} <-
            verify_expression(expression.resource, environment, context, core) do
       {:ok, payload, effects}
@@ -665,7 +687,7 @@ defmodule Catena.Kernel.Verifier do
   end
 
   defp derive_expression(%{tag: :managed_spawn} = expression, environment, context, core) do
-    with true <- core.version in ["0.1.52", :owned_task_experiment],
+    with true <- core.version in ["0.1.52", "0.1.53", :owned_task_experiment],
          true <- is_integer(expression.grace_ns) and expression.grace_ns >= 0,
          false <- core.process_entries[expression.entry].imported?,
          {:ok, {:process, mailbox}, effects} <-
@@ -679,11 +701,11 @@ defmodule Catena.Kernel.Verifier do
   defp derive_expression(%{tag: :managed_self}, _, %{mailbox: mailbox}, %{
          version: version
        })
-       when version in ["0.1.52", :owned_task_experiment] and not is_nil(mailbox),
+       when version in ["0.1.52", "0.1.53", :owned_task_experiment] and not is_nil(mailbox),
        do: {:ok, {:managed_process, mailbox}, []}
 
   defp derive_expression(%{tag: :managed_send} = expression, environment, context, core) do
-    with true <- core.version in ["0.1.52", :owned_task_experiment],
+    with true <- core.version in ["0.1.52", "0.1.53", :owned_task_experiment],
          {:ok, {:managed_process, mailbox}, effects} <-
            verify_expression(expression.left, environment, context, core),
          true <- expression.mailbox == mailbox,
@@ -696,7 +718,8 @@ defmodule Catena.Kernel.Verifier do
 
   defp derive_expression(%{tag: :managed_trapping} = expression, environment, context, core) do
     with true <-
-           core.version in ["0.1.52", :owned_task_experiment] and not is_nil(context.mailbox),
+           core.version in ["0.1.52", "0.1.53", :owned_task_experiment] and
+             not is_nil(context.mailbox),
          {:ok, type, effects} <-
            verify_expression(
              expression.body,
@@ -712,7 +735,8 @@ defmodule Catena.Kernel.Verifier do
 
   defp derive_expression(%{tag: :managed_link} = expression, environment, context, core) do
     with true <-
-           core.version in ["0.1.52", :owned_task_experiment] and not is_nil(context.mailbox),
+           core.version in ["0.1.52", "0.1.53", :owned_task_experiment] and
+             not is_nil(context.mailbox),
          true <- Catena.Task.Monitor.valid_labels?(expression.labels),
          {:ok, {:managed_process, _}, effects} <-
            verify_expression(expression.target, environment, context, core) do
@@ -725,7 +749,8 @@ defmodule Catena.Kernel.Verifier do
   defp derive_expression(%{tag: tag} = expression, environment, context, core)
        when tag in [:managed_observe, :managed_unlink] do
     with true <-
-           core.version in ["0.1.52", :owned_task_experiment] and not is_nil(context.mailbox),
+           core.version in ["0.1.52", "0.1.53", :owned_task_experiment] and
+             not is_nil(context.mailbox),
          true <- tag == :managed_unlink or Map.get(context, :managed_trapping, false),
          {:ok, {:managed_link, labels}, effects} <-
            verify_expression(expression.link, environment, context, core),
@@ -766,12 +791,34 @@ defmodule Catena.Kernel.Verifier do
   end
 
   defp derive_expression(
+         %{tag: :timed_receive_until} = expression,
+         environment,
+         context,
+         %{version: version} = core
+       )
+       when version in ["0.1.53", :owned_task_experiment] and not is_nil(context.mailbox) do
+    with true <- expression.mailbox == context.mailbox,
+         {:ok, {:task_deadline, _}, before_effects} <-
+           verify_expression(expression.deadline, environment, context, core),
+         {:ok, result, effects} <-
+           verify_clauses(expression.clauses, context.mailbox, environment, context, core),
+         {:ok, fallback, fallback_effects} <-
+           verify_expression(expression.fallback, environment, context, core),
+         true <- fallback == result or fallback == :bottom or result == :bottom do
+      {:ok, if(result == :bottom, do: fallback, else: result),
+       combine_effects(combine_effects(before_effects, effects, fallback_effects), [:process])}
+    else
+      _ -> :error
+    end
+  end
+
+  defp derive_expression(
          %{tag: :timed_receive} = expression,
          environment,
          context,
-         %{version: :owned_task_experiment} = core
+         %{version: version} = core
        )
-       when not is_nil(context.mailbox) do
+       when version in ["0.1.53", :owned_task_experiment] and not is_nil(context.mailbox) do
     with true <- expression.mailbox == context.mailbox,
          {:ok, :integer, before_effects} <-
            verify_expression(expression.duration, environment, context, core),

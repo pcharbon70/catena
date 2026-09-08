@@ -345,3 +345,5 @@ signed protocol domains.
 - [Owned resource scopes](language/resource-scopes.md) — checked local lifetimes and mandatory cleanup at exact 0.1.51.
 
 - [Owned tasks and managed relationships](language/process-lifetimes.md) — checked process lifetimes at exact 0.1.52; general time remains separately gated.
+
+- [Cancellation and time](language/cancellation-and-time.md) — exact local deadlines and cancellable waits at 0.1.53.
