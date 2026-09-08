@@ -4,6 +4,43 @@ defmodule Catena.Comprehension.Capability do
   alias Catena.Kernel.{CapabilityKernel, Checker, Parser}
 
   def check(%Comprehension{} = spec, bindings, options \\ []) do
+    with {:ok, core, advisories} <- check_core(spec, bindings, options) do
+      retained = Enum.reject(advisories, &(&1.id == "LCP003"))
+      {:ok, core, retained ++ marker_advisories(spec, bindings, options)}
+    end
+  end
+
+  defp marker_advisories(spec, bindings, options) do
+    spec.qualifiers
+    |> Enum.with_index()
+    |> Enum.flat_map(fn
+      {{:case_generator, fields}, index} ->
+        probe = %{
+          spec
+          | qualifiers: List.replace_at(spec.qualifiers, index, {:generator, fields})
+        }
+
+        case check_core(probe, bindings, options) do
+          {:ok, _, _} ->
+            [
+              Diagnostic.new(
+                "LCP003",
+                "this filtering marker is unnecessary: the pattern already accepts every element",
+                severity: :warning,
+                path: "$.qualifiers[#{index}]"
+              )
+            ]
+
+          _ ->
+            []
+        end
+
+      _ ->
+        []
+    end)
+  end
+
+  defp check_core(spec, bindings, options) do
     try do
       contexts = Enum.map(spec.context, &context/1)
 

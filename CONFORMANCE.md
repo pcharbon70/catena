@@ -367,8 +367,9 @@ order, false-filter effects, empty sources and terminal trap prefixes on
 the reference and BEAM. The retained 0.1.8 lowering cannot represent general escaping recursive rows.
 The separate 0.1.50 closed-capability target now supplies that representation,
 independent fragment probes and enclosing-handler abort. C050's filter gap is
-remediated through that explicit target; exact-order and sequential-execution
-completion audits remain tracked separately as P053/P057.
+remediated through that explicit target. C053 context/pattern order acceptance
+is complete; P057 retains a separate
+order-sensitive handler acceptance gate.
 
 Normative C061 uses `0.1.40` for numeric relationships. Numeric
 operators instantiate over the closed set `{Int, Float}`: operands

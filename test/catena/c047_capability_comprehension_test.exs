@@ -130,6 +130,107 @@ defmodule Catena.C047CapabilityComprehensionTest do
              )
   end
 
+  @tag obligations: ~w(CK-OBL-005 LC-OBL-008)
+  test "effectful contexts run at each reached reference in dependency order" do
+    spec = fixture("C047ContextOrder")
+    [{kind, fields} | suffix] = spec.qualifiers
+    source = marked("100", "(let ignored (var outer_values) (var outer_values))", -1)
+
+    spec = %{
+      spec
+      | context: [
+          {"seed", "Int", marked("80", "1", -1), ["Trace"]},
+          {"outer_values", "(List Int)",
+           marked(
+             "90",
+             "(construct Cons (var seed) (construct Cons 2 (construct Cons 3 (construct Nil))))",
+             -1
+           ), ["Trace"]},
+          {"unused", "Int", marked("99", "0", -1), ["Trace"]}
+        ],
+        qualifiers: [{kind, Keyword.put(fields, :source, source)} | suffix]
+    }
+
+    assert_success(elaborate!(spec), @values, [100, 90, 80, 90, 80 | tl(@events)])
+  end
+
+  @tag obligations: ~w(CK-OBL-005 LC-OBL-008)
+  test "a context failure stops before dependencies and traversal suffix" do
+    spec = fixture("C047ContextTrap")
+
+    spec = %{
+      spec
+      | context: [{"outer_values", "(List Int)", marked("90", ints([1, 2, 3]), 90), ["Trace"]}]
+    }
+
+    core = elaborate!(spec)
+    assert {:trap, 90, outcome} = Stepper.run(core, "main")
+    assert request_events(outcome) == [100, 90]
+    assert {{:trap, {:catena_trap, 90}}, [100, 90]} = run_beam(core)
+  end
+
+  @tag obligations: ~w(LC-OBL-004 LC-OBL-006 LC-OBL-008)
+  test "dependent filtering patterns preserve source effects and skip only their suffix" do
+    spec = fixture("C047DependentCase", outer: [1, 2])
+    [outer | _] = spec.qualifiers
+
+    candidates =
+      "(construct Cons (construct None) (construct Cons (construct Some (var x)) (construct Cons (construct Some (add (var x) 10)) (construct Nil))))"
+
+    spec = %{
+      spec
+      | types: [
+          "(data Option (params a) (constructor None (fields)) (constructor Some (fields a)))"
+          | spec.types
+        ],
+        qualifiers: [
+          outer,
+          {:case_generator,
+           [
+             uses: ["Trace"],
+             pattern: "(constructor Some (bind y))",
+             element_type: "(Option Int)",
+             source: marked("(add 200 (var x))", candidates, -1),
+             binds: [{"y", "Int"}]
+           ]},
+          {:filter,
+           [
+             uses: ["Trace"],
+             expr: marked("(add 300 (var y))", "(not_equal (var marker) 312)", -1)
+           ]}
+        ],
+        yield: marked("(add 400 (var y))", "(var y)", -1)
+    }
+
+    assert_success(elaborate!(spec), [1, 11, 2], [
+      100,
+      201,
+      301,
+      401,
+      311,
+      411,
+      202,
+      302,
+      402,
+      312
+    ])
+  end
+
+  @tag obligations: ~w(LC-OBL-006 LC-OBL-008)
+  test "totality advisories use the selected effectful target" do
+    spec = fixture("C047CapabilityTotalMarker")
+    [{:generator, fields} | rest] = spec.qualifiers
+    spec = %{spec | qualifiers: [{:case_generator, fields} | rest]}
+
+    assert {:ok, core, advisories} =
+             Catena.Comprehension.Capability.check(spec, %{"Trace" => "TraceFamily"},
+               handlers: ["Echo"]
+             )
+
+    assert [%{id: "LCP003", path: "$.qualifiers[0]"}] = advisories
+    assert_success(core, @values, @events)
+  end
+
   defp fixture(module, options \\ []) do
     trap_at = Keyword.get(options, :trap_at, -99_999)
     decline_at = Keyword.get(options, :decline_at, -1)
