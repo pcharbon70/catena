@@ -347,6 +347,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "cancellation-and-time/deadlines-waits-and-cancellation.md#status-and-authority"
         )
+      ),
+      feature(
+        "outcome-contracts",
+        "0.1.54",
+        specification(
+          "outcome-contracts/values-sequencing-and-validation.md#status-and-authority"
+        )
       )
     ]
   end
@@ -653,6 +660,8 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("outcome-contracts"), do: ~w(static-meaning dynamic-behavior)
+
   defp affected_dimensions("cancellation-and-time"),
     do: ~w(source-acceptance static-meaning dynamic-behavior artifacts)
 
@@ -934,6 +943,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("outcome-contracts"),
+    do:
+      "Explicitly select the digest-bound outcome package through retained 0.1.4 ordinary ADTs and categorical specialization. No implicit imports, source vocabulary, new executable frontend or persisted format is admitted."
 
   defp migration("cancellation-and-time"),
     do:
