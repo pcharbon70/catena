@@ -1363,6 +1363,13 @@ defmodule Catena.Type.Infer do
       left == right ->
         {state, refinements}
 
+      match?({:var, _}, left) or match?({:var, _}, right) ->
+        # Constructor universals are flexible: instantiate them to the
+        # scrutinee's rigid parameter, rather than refining that parameter
+        # to a fresh variable local to this match clause.
+        substitution = Unify.unify(left, right, state.substitution, path)
+        {%{state | substitution: substitution}, refinements}
+
       match?({:skolem, _}, left) ->
         bind_refinement(left, right, state, refinements, path)
 

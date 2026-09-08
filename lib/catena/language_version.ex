@@ -62,12 +62,13 @@ defmodule Catena.LanguageVersion do
     closed_capability_kernel: "0.1.50",
     resource_scopes: "0.1.51",
     owned_task_lifetimes: "0.1.52",
-    cancellation_and_time: "0.1.53"
+    cancellation_and_time: "0.1.53",
+    outcome_contracts: "0.1.54"
   ]
   @ordered Keyword.values(@versions)
   @json_frontends ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7)
   @kernel_frontends ~w(0.1.8)
-  @source_text_frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35 0.1.36 0.1.37 0.1.38 0.1.39 0.1.40 0.1.41 0.1.42 0.1.43 0.1.44 0.1.45 0.1.46 0.1.47 0.1.48 0.1.49 0.1.50 0.1.51 0.1.52 0.1.53)
+  @source_text_frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35 0.1.36 0.1.37 0.1.38 0.1.39 0.1.40 0.1.41 0.1.42 0.1.43 0.1.44 0.1.45 0.1.46 0.1.47 0.1.48 0.1.49 0.1.50 0.1.51 0.1.52 0.1.53 0.1.54)
   @capability_frontends ~w(0.1.50)
   @resource_frontends ~w(0.1.51)
   @task_frontends ~w(0.1.52)
@@ -134,6 +135,7 @@ defmodule Catena.LanguageVersion do
           | :resource_scopes
           | :owned_task_lifetimes
           | :cancellation_and_time
+          | :outcome_contracts
 
   @spec all() :: [String.t()]
   def all, do: @ordered

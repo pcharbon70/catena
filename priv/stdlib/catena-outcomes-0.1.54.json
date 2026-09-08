@@ -1,0 +1,3018 @@
+{
+  "ast": {
+    "definitions": [
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [],
+                "constructor": "Optional.Absent",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [],
+                "constructor": "Optional.Absent",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "arguments": [
+                      {
+                        "name": "value",
+                        "tag": "variable"
+                      }
+                    ],
+                    "callee": {
+                      "name": "callback",
+                      "tag": "variable"
+                    },
+                    "tag": "call"
+                  }
+                ],
+                "constructor": "Optional.Present",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Optional.Present",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "subject",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "optional_map",
+        "parameters": [
+          "callback",
+          "subject"
+        ],
+        "signature": {
+          "forall": [
+            "a",
+            "b"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "effect": [],
+              "parameter": {
+                "name": "a",
+                "tag": "variable"
+              },
+              "result": {
+                "name": "b",
+                "tag": "variable"
+              },
+              "tag": "function"
+            },
+            "result": {
+              "effect": [],
+              "parameter": {
+                "arguments": [
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Optional",
+                "tag": "named"
+              },
+              "result": {
+                "arguments": [
+                  {
+                    "name": "b",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Optional",
+                "tag": "named"
+              },
+              "tag": "function"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "arguments": [
+            {
+              "name": "value",
+              "tag": "variable"
+            }
+          ],
+          "constructor": "Optional.Present",
+          "tag": "construct"
+        },
+        "name": "optional_embed",
+        "parameters": [
+          "value"
+        ],
+        "signature": {
+          "forall": [
+            "a"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "name": "a",
+              "tag": "variable"
+            },
+            "result": {
+              "arguments": [
+                {
+                  "name": "a",
+                  "tag": "variable"
+                }
+              ],
+              "name": "Optional",
+              "tag": "named"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "elements": [],
+                    "tag": "tuple"
+                  }
+                ],
+                "callee": {
+                  "name": "on_failure",
+                  "tag": "variable"
+                },
+                "tag": "call"
+              },
+              "pattern": {
+                "arguments": [],
+                "constructor": "Optional.Absent",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "variable"
+                  }
+                ],
+                "callee": {
+                  "name": "on_success",
+                  "tag": "variable"
+                },
+                "tag": "call"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Optional.Present",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "subject",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "optional_fold",
+        "parameters": [
+          "on_failure",
+          "on_success",
+          "subject"
+        ],
+        "signature": {
+          "forall": [
+            "a",
+            "b"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "effect": [],
+              "parameter": {
+                "elements": [],
+                "tag": "tuple"
+              },
+              "result": {
+                "name": "b",
+                "tag": "variable"
+              },
+              "tag": "function"
+            },
+            "result": {
+              "effect": [],
+              "parameter": {
+                "effect": [],
+                "parameter": {
+                  "name": "a",
+                  "tag": "variable"
+                },
+                "result": {
+                  "name": "b",
+                  "tag": "variable"
+                },
+                "tag": "function"
+              },
+              "result": {
+                "effect": [],
+                "parameter": {
+                  "arguments": [
+                    {
+                      "name": "a",
+                      "tag": "variable"
+                    }
+                  ],
+                  "name": "Optional",
+                  "tag": "named"
+                },
+                "result": {
+                  "name": "b",
+                  "tag": "variable"
+                },
+                "tag": "function"
+              },
+              "tag": "function"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [],
+                "constructor": "Optional.Absent",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [],
+                "constructor": "Optional.Absent",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "variable"
+                  }
+                ],
+                "callee": {
+                  "name": "callback",
+                  "tag": "variable"
+                },
+                "tag": "call"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Optional.Present",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "subject",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "optional_chain",
+        "parameters": [
+          "callback",
+          "subject"
+        ],
+        "signature": {
+          "forall": [
+            "a",
+            "b"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "effect": [],
+              "parameter": {
+                "name": "a",
+                "tag": "variable"
+              },
+              "result": {
+                "arguments": [
+                  {
+                    "name": "b",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Optional",
+                "tag": "named"
+              },
+              "tag": "function"
+            },
+            "result": {
+              "effect": [],
+              "parameter": {
+                "arguments": [
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Optional",
+                "tag": "named"
+              },
+              "result": {
+                "arguments": [
+                  {
+                    "name": "b",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Optional",
+                "tag": "named"
+              },
+              "tag": "function"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [],
+                "constructor": "Optional.Absent",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [],
+                "constructor": "Optional.Absent",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "clauses": [
+                  {
+                    "body": {
+                      "arguments": [],
+                      "constructor": "Optional.Absent",
+                      "tag": "construct"
+                    },
+                    "pattern": {
+                      "arguments": [],
+                      "constructor": "Optional.Absent",
+                      "tag": "constructor"
+                    }
+                  },
+                  {
+                    "body": {
+                      "arguments": [
+                        {
+                          "arguments": [
+                            {
+                              "name": "left",
+                              "tag": "variable"
+                            },
+                            {
+                              "name": "right",
+                              "tag": "variable"
+                            }
+                          ],
+                          "callee": {
+                            "name": "callback",
+                            "tag": "variable"
+                          },
+                          "tag": "call"
+                        }
+                      ],
+                      "constructor": "Optional.Present",
+                      "tag": "construct"
+                    },
+                    "pattern": {
+                      "arguments": [
+                        {
+                          "name": "right",
+                          "tag": "bind"
+                        }
+                      ],
+                      "constructor": "Optional.Present",
+                      "tag": "constructor"
+                    }
+                  }
+                ],
+                "scrutinee": {
+                  "name": "second",
+                  "tag": "variable"
+                },
+                "tag": "match"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "left",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Optional.Present",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "first",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "optional_map2",
+        "parameters": [
+          "callback",
+          "first",
+          "second"
+        ],
+        "signature": {
+          "forall": [
+            "a",
+            "b",
+            "d"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "effect": [],
+              "parameter": {
+                "name": "a",
+                "tag": "variable"
+              },
+              "result": {
+                "effect": [],
+                "parameter": {
+                  "name": "b",
+                  "tag": "variable"
+                },
+                "result": {
+                  "name": "d",
+                  "tag": "variable"
+                },
+                "tag": "function"
+              },
+              "tag": "function"
+            },
+            "result": {
+              "effect": [],
+              "parameter": {
+                "arguments": [
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Optional",
+                "tag": "named"
+              },
+              "result": {
+                "effect": [],
+                "parameter": {
+                  "arguments": [
+                    {
+                      "name": "b",
+                      "tag": "variable"
+                    }
+                  ],
+                  "name": "Optional",
+                  "tag": "named"
+                },
+                "result": {
+                  "arguments": [
+                    {
+                      "name": "d",
+                      "tag": "variable"
+                    }
+                  ],
+                  "name": "Optional",
+                  "tag": "named"
+                },
+                "tag": "function"
+              },
+              "tag": "function"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "variable"
+                  }
+                ],
+                "constructor": "Dependent.Failure",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Dependent.Failure",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "arguments": [
+                      {
+                        "name": "value",
+                        "tag": "variable"
+                      }
+                    ],
+                    "callee": {
+                      "name": "callback",
+                      "tag": "variable"
+                    },
+                    "tag": "call"
+                  }
+                ],
+                "constructor": "Dependent.Success",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Dependent.Success",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "subject",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "dependent_map",
+        "parameters": [
+          "callback",
+          "subject"
+        ],
+        "signature": {
+          "forall": [
+            "e",
+            "a",
+            "b"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "effect": [],
+              "parameter": {
+                "name": "a",
+                "tag": "variable"
+              },
+              "result": {
+                "name": "b",
+                "tag": "variable"
+              },
+              "tag": "function"
+            },
+            "result": {
+              "effect": [],
+              "parameter": {
+                "arguments": [
+                  {
+                    "name": "e",
+                    "tag": "variable"
+                  },
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Dependent",
+                "tag": "named"
+              },
+              "result": {
+                "arguments": [
+                  {
+                    "name": "e",
+                    "tag": "variable"
+                  },
+                  {
+                    "name": "b",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Dependent",
+                "tag": "named"
+              },
+              "tag": "function"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "arguments": [
+            {
+              "name": "value",
+              "tag": "variable"
+            }
+          ],
+          "constructor": "Dependent.Success",
+          "tag": "construct"
+        },
+        "name": "dependent_embed",
+        "parameters": [
+          "value"
+        ],
+        "signature": {
+          "forall": [
+            "e",
+            "a"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "name": "a",
+              "tag": "variable"
+            },
+            "result": {
+              "arguments": [
+                {
+                  "name": "e",
+                  "tag": "variable"
+                },
+                {
+                  "name": "a",
+                  "tag": "variable"
+                }
+              ],
+              "name": "Dependent",
+              "tag": "named"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "variable"
+                  }
+                ],
+                "callee": {
+                  "name": "on_failure",
+                  "tag": "variable"
+                },
+                "tag": "call"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Dependent.Failure",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "variable"
+                  }
+                ],
+                "callee": {
+                  "name": "on_success",
+                  "tag": "variable"
+                },
+                "tag": "call"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Dependent.Success",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "subject",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "dependent_fold",
+        "parameters": [
+          "on_failure",
+          "on_success",
+          "subject"
+        ],
+        "signature": {
+          "forall": [
+            "e",
+            "a",
+            "b"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "effect": [],
+              "parameter": {
+                "name": "e",
+                "tag": "variable"
+              },
+              "result": {
+                "name": "b",
+                "tag": "variable"
+              },
+              "tag": "function"
+            },
+            "result": {
+              "effect": [],
+              "parameter": {
+                "effect": [],
+                "parameter": {
+                  "name": "a",
+                  "tag": "variable"
+                },
+                "result": {
+                  "name": "b",
+                  "tag": "variable"
+                },
+                "tag": "function"
+              },
+              "result": {
+                "effect": [],
+                "parameter": {
+                  "arguments": [
+                    {
+                      "name": "e",
+                      "tag": "variable"
+                    },
+                    {
+                      "name": "a",
+                      "tag": "variable"
+                    }
+                  ],
+                  "name": "Dependent",
+                  "tag": "named"
+                },
+                "result": {
+                  "name": "b",
+                  "tag": "variable"
+                },
+                "tag": "function"
+              },
+              "tag": "function"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "variable"
+                  }
+                ],
+                "constructor": "Dependent.Failure",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Dependent.Failure",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "variable"
+                  }
+                ],
+                "callee": {
+                  "name": "callback",
+                  "tag": "variable"
+                },
+                "tag": "call"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Dependent.Success",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "subject",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "dependent_chain",
+        "parameters": [
+          "callback",
+          "subject"
+        ],
+        "signature": {
+          "forall": [
+            "e",
+            "a",
+            "b"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "effect": [],
+              "parameter": {
+                "name": "a",
+                "tag": "variable"
+              },
+              "result": {
+                "arguments": [
+                  {
+                    "name": "e",
+                    "tag": "variable"
+                  },
+                  {
+                    "name": "b",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Dependent",
+                "tag": "named"
+              },
+              "tag": "function"
+            },
+            "result": {
+              "effect": [],
+              "parameter": {
+                "arguments": [
+                  {
+                    "name": "e",
+                    "tag": "variable"
+                  },
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Dependent",
+                "tag": "named"
+              },
+              "result": {
+                "arguments": [
+                  {
+                    "name": "e",
+                    "tag": "variable"
+                  },
+                  {
+                    "name": "b",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Dependent",
+                "tag": "named"
+              },
+              "tag": "function"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "variable"
+                  }
+                ],
+                "constructor": "Dependent.Failure",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Dependent.Failure",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "clauses": [
+                  {
+                    "body": {
+                      "arguments": [
+                        {
+                          "name": "other_error",
+                          "tag": "variable"
+                        }
+                      ],
+                      "constructor": "Dependent.Failure",
+                      "tag": "construct"
+                    },
+                    "pattern": {
+                      "arguments": [
+                        {
+                          "name": "other_error",
+                          "tag": "bind"
+                        }
+                      ],
+                      "constructor": "Dependent.Failure",
+                      "tag": "constructor"
+                    }
+                  },
+                  {
+                    "body": {
+                      "arguments": [
+                        {
+                          "arguments": [
+                            {
+                              "name": "left",
+                              "tag": "variable"
+                            },
+                            {
+                              "name": "right",
+                              "tag": "variable"
+                            }
+                          ],
+                          "callee": {
+                            "name": "callback",
+                            "tag": "variable"
+                          },
+                          "tag": "call"
+                        }
+                      ],
+                      "constructor": "Dependent.Success",
+                      "tag": "construct"
+                    },
+                    "pattern": {
+                      "arguments": [
+                        {
+                          "name": "right",
+                          "tag": "bind"
+                        }
+                      ],
+                      "constructor": "Dependent.Success",
+                      "tag": "constructor"
+                    }
+                  }
+                ],
+                "scrutinee": {
+                  "name": "second",
+                  "tag": "variable"
+                },
+                "tag": "match"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "left",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Dependent.Success",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "first",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "dependent_map2",
+        "parameters": [
+          "callback",
+          "first",
+          "second"
+        ],
+        "signature": {
+          "forall": [
+            "e",
+            "a",
+            "b",
+            "d"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "effect": [],
+              "parameter": {
+                "name": "a",
+                "tag": "variable"
+              },
+              "result": {
+                "effect": [],
+                "parameter": {
+                  "name": "b",
+                  "tag": "variable"
+                },
+                "result": {
+                  "name": "d",
+                  "tag": "variable"
+                },
+                "tag": "function"
+              },
+              "tag": "function"
+            },
+            "result": {
+              "effect": [],
+              "parameter": {
+                "arguments": [
+                  {
+                    "name": "e",
+                    "tag": "variable"
+                  },
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Dependent",
+                "tag": "named"
+              },
+              "result": {
+                "effect": [],
+                "parameter": {
+                  "arguments": [
+                    {
+                      "name": "e",
+                      "tag": "variable"
+                    },
+                    {
+                      "name": "b",
+                      "tag": "variable"
+                    }
+                  ],
+                  "name": "Dependent",
+                  "tag": "named"
+                },
+                "result": {
+                  "arguments": [
+                    {
+                      "name": "e",
+                      "tag": "variable"
+                    },
+                    {
+                      "name": "d",
+                      "tag": "variable"
+                    }
+                  ],
+                  "name": "Dependent",
+                  "tag": "named"
+                },
+                "tag": "function"
+              },
+              "tag": "function"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "variable"
+                  }
+                ],
+                "constructor": "Independent.Invalid",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Independent.Invalid",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "arguments": [
+                      {
+                        "name": "value",
+                        "tag": "variable"
+                      }
+                    ],
+                    "callee": {
+                      "name": "callback",
+                      "tag": "variable"
+                    },
+                    "tag": "call"
+                  }
+                ],
+                "constructor": "Independent.Valid",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Independent.Valid",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "subject",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "independent_map",
+        "parameters": [
+          "callback",
+          "subject"
+        ],
+        "signature": {
+          "forall": [
+            "e",
+            "a",
+            "b"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "effect": [],
+              "parameter": {
+                "name": "a",
+                "tag": "variable"
+              },
+              "result": {
+                "name": "b",
+                "tag": "variable"
+              },
+              "tag": "function"
+            },
+            "result": {
+              "effect": [],
+              "parameter": {
+                "arguments": [
+                  {
+                    "name": "e",
+                    "tag": "variable"
+                  },
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Independent",
+                "tag": "named"
+              },
+              "result": {
+                "arguments": [
+                  {
+                    "name": "e",
+                    "tag": "variable"
+                  },
+                  {
+                    "name": "b",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Independent",
+                "tag": "named"
+              },
+              "tag": "function"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "arguments": [
+            {
+              "name": "value",
+              "tag": "variable"
+            }
+          ],
+          "constructor": "Independent.Valid",
+          "tag": "construct"
+        },
+        "name": "independent_embed",
+        "parameters": [
+          "value"
+        ],
+        "signature": {
+          "forall": [
+            "e",
+            "a"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "name": "a",
+              "tag": "variable"
+            },
+            "result": {
+              "arguments": [
+                {
+                  "name": "e",
+                  "tag": "variable"
+                },
+                {
+                  "name": "a",
+                  "tag": "variable"
+                }
+              ],
+              "name": "Independent",
+              "tag": "named"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "variable"
+                  }
+                ],
+                "callee": {
+                  "name": "on_failure",
+                  "tag": "variable"
+                },
+                "tag": "call"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Independent.Invalid",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "variable"
+                  }
+                ],
+                "callee": {
+                  "name": "on_success",
+                  "tag": "variable"
+                },
+                "tag": "call"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Independent.Valid",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "subject",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "independent_fold",
+        "parameters": [
+          "on_failure",
+          "on_success",
+          "subject"
+        ],
+        "signature": {
+          "forall": [
+            "e",
+            "a",
+            "b"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "effect": [],
+              "parameter": {
+                "arguments": [
+                  {
+                    "name": "e",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Nonempty",
+                "tag": "named"
+              },
+              "result": {
+                "name": "b",
+                "tag": "variable"
+              },
+              "tag": "function"
+            },
+            "result": {
+              "effect": [],
+              "parameter": {
+                "effect": [],
+                "parameter": {
+                  "name": "a",
+                  "tag": "variable"
+                },
+                "result": {
+                  "name": "b",
+                  "tag": "variable"
+                },
+                "tag": "function"
+              },
+              "result": {
+                "effect": [],
+                "parameter": {
+                  "arguments": [
+                    {
+                      "name": "e",
+                      "tag": "variable"
+                    },
+                    {
+                      "name": "a",
+                      "tag": "variable"
+                    }
+                  ],
+                  "name": "Independent",
+                  "tag": "named"
+                },
+                "result": {
+                  "name": "b",
+                  "tag": "variable"
+                },
+                "tag": "function"
+              },
+              "tag": "function"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "arguments": [
+                      {
+                        "name": "error",
+                        "tag": "variable"
+                      }
+                    ],
+                    "callee": {
+                      "name": "callback",
+                      "tag": "variable"
+                    },
+                    "tag": "call"
+                  }
+                ],
+                "constructor": "Dependent.Failure",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Dependent.Failure",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "variable"
+                  }
+                ],
+                "constructor": "Dependent.Success",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Dependent.Success",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "subject",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "dependent_map_error",
+        "parameters": [
+          "callback",
+          "subject"
+        ],
+        "signature": {
+          "forall": [
+            "e",
+            "h",
+            "a"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "effect": [],
+              "parameter": {
+                "name": "e",
+                "tag": "variable"
+              },
+              "result": {
+                "name": "h",
+                "tag": "variable"
+              },
+              "tag": "function"
+            },
+            "result": {
+              "effect": [],
+              "parameter": {
+                "arguments": [
+                  {
+                    "name": "e",
+                    "tag": "variable"
+                  },
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Dependent",
+                "tag": "named"
+              },
+              "result": {
+                "arguments": [
+                  {
+                    "name": "h",
+                    "tag": "variable"
+                  },
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Dependent",
+                "tag": "named"
+              },
+              "tag": "function"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "arguments": [
+                      {
+                        "elements": [],
+                        "tag": "tuple"
+                      }
+                    ],
+                    "callee": {
+                      "name": "on_absence",
+                      "tag": "variable"
+                    },
+                    "tag": "call"
+                  }
+                ],
+                "constructor": "Dependent.Failure",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [],
+                "constructor": "Optional.Absent",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "variable"
+                  }
+                ],
+                "constructor": "Dependent.Success",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Optional.Present",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "subject",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "optional_to_dependent",
+        "parameters": [
+          "on_absence",
+          "subject"
+        ],
+        "signature": {
+          "forall": [
+            "e",
+            "a"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "effect": [],
+              "parameter": {
+                "elements": [],
+                "tag": "tuple"
+              },
+              "result": {
+                "name": "e",
+                "tag": "variable"
+              },
+              "tag": "function"
+            },
+            "result": {
+              "effect": [],
+              "parameter": {
+                "arguments": [
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Optional",
+                "tag": "named"
+              },
+              "result": {
+                "arguments": [
+                  {
+                    "name": "e",
+                    "tag": "variable"
+                  },
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Dependent",
+                "tag": "named"
+              },
+              "tag": "function"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [],
+                "constructor": "Optional.Absent",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Dependent.Failure",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "variable"
+                  }
+                ],
+                "constructor": "Optional.Present",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Dependent.Success",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "subject",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "dependent_to_optional",
+        "parameters": [
+          "subject"
+        ],
+        "signature": {
+          "forall": [
+            "e",
+            "a"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "arguments": [
+                {
+                  "name": "e",
+                  "tag": "variable"
+                },
+                {
+                  "name": "a",
+                  "tag": "variable"
+                }
+              ],
+              "name": "Dependent",
+              "tag": "named"
+            },
+            "result": {
+              "arguments": [
+                {
+                  "name": "a",
+                  "tag": "variable"
+                }
+              ],
+              "name": "Optional",
+              "tag": "named"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "arguments": [
+                      {
+                        "name": "error",
+                        "tag": "variable"
+                      },
+                      {
+                        "arguments": [],
+                        "constructor": "Sequence.End",
+                        "tag": "construct"
+                      }
+                    ],
+                    "constructor": "Nonempty.Errors",
+                    "tag": "construct"
+                  }
+                ],
+                "constructor": "Independent.Invalid",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Dependent.Failure",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "variable"
+                  }
+                ],
+                "constructor": "Independent.Valid",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Dependent.Success",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "subject",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "dependent_to_independent",
+        "parameters": [
+          "subject"
+        ],
+        "signature": {
+          "forall": [
+            "e",
+            "a"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "arguments": [
+                {
+                  "name": "e",
+                  "tag": "variable"
+                },
+                {
+                  "name": "a",
+                  "tag": "variable"
+                }
+              ],
+              "name": "Dependent",
+              "tag": "named"
+            },
+            "result": {
+              "arguments": [
+                {
+                  "name": "e",
+                  "tag": "variable"
+                },
+                {
+                  "name": "a",
+                  "tag": "variable"
+                }
+              ],
+              "name": "Independent",
+              "tag": "named"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "variable"
+                  }
+                ],
+                "constructor": "Dependent.Failure",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Independent.Invalid",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "variable"
+                  }
+                ],
+                "constructor": "Dependent.Success",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "value",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Independent.Valid",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "subject",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "independent_to_dependent",
+        "parameters": [
+          "subject"
+        ],
+        "signature": {
+          "forall": [
+            "e",
+            "a"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "arguments": [
+                {
+                  "name": "e",
+                  "tag": "variable"
+                },
+                {
+                  "name": "a",
+                  "tag": "variable"
+                }
+              ],
+              "name": "Independent",
+              "tag": "named"
+            },
+            "result": {
+              "arguments": [
+                {
+                  "arguments": [
+                    {
+                      "name": "e",
+                      "tag": "variable"
+                    }
+                  ],
+                  "name": "Nonempty",
+                  "tag": "named"
+                },
+                {
+                  "name": "a",
+                  "tag": "variable"
+                }
+              ],
+              "name": "Dependent",
+              "tag": "named"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "arguments": [],
+                "constructor": "Optional.Absent",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [],
+                "constructor": "Sequence.End",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "arguments": [
+                  {
+                    "arguments": [
+                      {
+                        "name": "head",
+                        "tag": "variable"
+                      },
+                      {
+                        "name": "tail",
+                        "tag": "variable"
+                      }
+                    ],
+                    "constructor": "Nonempty.Errors",
+                    "tag": "construct"
+                  }
+                ],
+                "constructor": "Optional.Present",
+                "tag": "construct"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "head",
+                    "tag": "bind"
+                  },
+                  {
+                    "name": "tail",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Sequence.Next",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "subject",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "errors_from_sequence",
+        "parameters": [
+          "subject"
+        ],
+        "signature": {
+          "forall": [
+            "e"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "arguments": [
+                {
+                  "name": "e",
+                  "tag": "variable"
+                }
+              ],
+              "name": "Sequence",
+              "tag": "named"
+            },
+            "result": {
+              "arguments": [
+                {
+                  "arguments": [
+                    {
+                      "name": "e",
+                      "tag": "variable"
+                    }
+                  ],
+                  "name": "Nonempty",
+                  "tag": "named"
+                }
+              ],
+              "name": "Optional",
+              "tag": "named"
+            },
+            "tag": "function"
+          }
+        }
+      },
+      {
+        "body": {
+          "clauses": [
+            {
+              "body": {
+                "clauses": [
+                  {
+                    "body": {
+                      "arguments": [
+                        {
+                          "arguments": [
+                            {
+                              "name": "error",
+                              "tag": "variable"
+                            },
+                            {
+                              "name": "other_error",
+                              "tag": "variable"
+                            }
+                          ],
+                          "callee": {
+                            "name": "combine_errors",
+                            "tag": "variable"
+                          },
+                          "tag": "call"
+                        }
+                      ],
+                      "constructor": "Independent.Invalid",
+                      "tag": "construct"
+                    },
+                    "pattern": {
+                      "arguments": [
+                        {
+                          "name": "other_error",
+                          "tag": "bind"
+                        }
+                      ],
+                      "constructor": "Independent.Invalid",
+                      "tag": "constructor"
+                    }
+                  },
+                  {
+                    "body": {
+                      "arguments": [
+                        {
+                          "name": "error",
+                          "tag": "variable"
+                        }
+                      ],
+                      "constructor": "Independent.Invalid",
+                      "tag": "construct"
+                    },
+                    "pattern": {
+                      "arguments": [
+                        {
+                          "name": "unused",
+                          "tag": "bind"
+                        }
+                      ],
+                      "constructor": "Independent.Valid",
+                      "tag": "constructor"
+                    }
+                  }
+                ],
+                "scrutinee": {
+                  "name": "second",
+                  "tag": "variable"
+                },
+                "tag": "match"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "error",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Independent.Invalid",
+                "tag": "constructor"
+              }
+            },
+            {
+              "body": {
+                "clauses": [
+                  {
+                    "body": {
+                      "arguments": [
+                        {
+                          "name": "other_error",
+                          "tag": "variable"
+                        }
+                      ],
+                      "constructor": "Independent.Invalid",
+                      "tag": "construct"
+                    },
+                    "pattern": {
+                      "arguments": [
+                        {
+                          "name": "other_error",
+                          "tag": "bind"
+                        }
+                      ],
+                      "constructor": "Independent.Invalid",
+                      "tag": "constructor"
+                    }
+                  },
+                  {
+                    "body": {
+                      "arguments": [
+                        {
+                          "arguments": [
+                            {
+                              "name": "left",
+                              "tag": "variable"
+                            },
+                            {
+                              "name": "right",
+                              "tag": "variable"
+                            }
+                          ],
+                          "callee": {
+                            "name": "callback",
+                            "tag": "variable"
+                          },
+                          "tag": "call"
+                        }
+                      ],
+                      "constructor": "Independent.Valid",
+                      "tag": "construct"
+                    },
+                    "pattern": {
+                      "arguments": [
+                        {
+                          "name": "right",
+                          "tag": "bind"
+                        }
+                      ],
+                      "constructor": "Independent.Valid",
+                      "tag": "constructor"
+                    }
+                  }
+                ],
+                "scrutinee": {
+                  "name": "second",
+                  "tag": "variable"
+                },
+                "tag": "match"
+              },
+              "pattern": {
+                "arguments": [
+                  {
+                    "name": "left",
+                    "tag": "bind"
+                  }
+                ],
+                "constructor": "Independent.Valid",
+                "tag": "constructor"
+              }
+            }
+          ],
+          "scrutinee": {
+            "name": "first",
+            "tag": "variable"
+          },
+          "tag": "match"
+        },
+        "name": "independent_map2_with_errors",
+        "parameters": [
+          "combine_errors",
+          "callback",
+          "first",
+          "second"
+        ],
+        "signature": {
+          "forall": [
+            "e",
+            "a",
+            "b",
+            "d"
+          ],
+          "type": {
+            "effect": [],
+            "parameter": {
+              "effect": [],
+              "parameter": {
+                "arguments": [
+                  {
+                    "name": "e",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Nonempty",
+                "tag": "named"
+              },
+              "result": {
+                "effect": [],
+                "parameter": {
+                  "arguments": [
+                    {
+                      "name": "e",
+                      "tag": "variable"
+                    }
+                  ],
+                  "name": "Nonempty",
+                  "tag": "named"
+                },
+                "result": {
+                  "arguments": [
+                    {
+                      "name": "e",
+                      "tag": "variable"
+                    }
+                  ],
+                  "name": "Nonempty",
+                  "tag": "named"
+                },
+                "tag": "function"
+              },
+              "tag": "function"
+            },
+            "result": {
+              "effect": [],
+              "parameter": {
+                "effect": [],
+                "parameter": {
+                  "name": "a",
+                  "tag": "variable"
+                },
+                "result": {
+                  "effect": [],
+                  "parameter": {
+                    "name": "b",
+                    "tag": "variable"
+                  },
+                  "result": {
+                    "name": "d",
+                    "tag": "variable"
+                  },
+                  "tag": "function"
+                },
+                "tag": "function"
+              },
+              "result": {
+                "effect": [],
+                "parameter": {
+                  "arguments": [
+                    {
+                      "name": "e",
+                      "tag": "variable"
+                    },
+                    {
+                      "name": "a",
+                      "tag": "variable"
+                    }
+                  ],
+                  "name": "Independent",
+                  "tag": "named"
+                },
+                "result": {
+                  "effect": [],
+                  "parameter": {
+                    "arguments": [
+                      {
+                        "name": "e",
+                        "tag": "variable"
+                      },
+                      {
+                        "name": "b",
+                        "tag": "variable"
+                      }
+                    ],
+                    "name": "Independent",
+                    "tag": "named"
+                  },
+                  "result": {
+                    "arguments": [
+                      {
+                        "name": "e",
+                        "tag": "variable"
+                      },
+                      {
+                        "name": "d",
+                        "tag": "variable"
+                      }
+                    ],
+                    "name": "Independent",
+                    "tag": "named"
+                  },
+                  "tag": "function"
+                },
+                "tag": "function"
+              },
+              "tag": "function"
+            },
+            "tag": "function"
+          }
+        }
+      }
+    ],
+    "exports": [
+      "optional_map",
+      "optional_embed",
+      "optional_fold",
+      "optional_chain",
+      "optional_map2",
+      "dependent_map",
+      "dependent_embed",
+      "dependent_fold",
+      "dependent_chain",
+      "dependent_map2",
+      "independent_map",
+      "independent_embed",
+      "independent_fold",
+      "dependent_map_error",
+      "optional_to_dependent",
+      "dependent_to_optional",
+      "dependent_to_independent",
+      "independent_to_dependent",
+      "errors_from_sequence",
+      "independent_map2_with_errors"
+    ],
+    "imports": [],
+    "instances": [
+      {
+        "arguments": [
+          {
+            "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Optional",
+            "kind": "Type -> Type",
+            "owner": "catena://outcome-contract/0.1.54",
+            "tag": "constructor"
+          }
+        ],
+        "law_status": "tested",
+        "methods": {
+          "map": "Elixir.Catena.Standard.Outcomes.optional_map"
+        },
+        "owner": "catena://outcome-contract/0.1.54",
+        "trait": "Mapper"
+      },
+      {
+        "arguments": [
+          {
+            "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Optional",
+            "kind": "Type -> Type",
+            "owner": "catena://outcome-contract/0.1.54",
+            "tag": "constructor"
+          }
+        ],
+        "law_status": "tested",
+        "methods": {
+          "map2": "Elixir.Catena.Standard.Outcomes.optional_map2"
+        },
+        "owner": "catena://outcome-contract/0.1.54",
+        "trait": "MultiMapper"
+      },
+      {
+        "arguments": [
+          {
+            "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Optional",
+            "kind": "Type -> Type",
+            "owner": "catena://outcome-contract/0.1.54",
+            "tag": "constructor"
+          }
+        ],
+        "law_status": "tested",
+        "methods": {
+          "from_value": "Elixir.Catena.Standard.Outcomes.optional_embed"
+        },
+        "owner": "catena://outcome-contract/0.1.54",
+        "trait": "ValueEmbedder"
+      },
+      {
+        "arguments": [
+          {
+            "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Optional",
+            "kind": "Type -> Type",
+            "owner": "catena://outcome-contract/0.1.54",
+            "tag": "constructor"
+          }
+        ],
+        "law_status": "tested",
+        "methods": {
+          "and_then": "Elixir.Catena.Standard.Outcomes.optional_chain"
+        },
+        "owner": "catena://outcome-contract/0.1.54",
+        "trait": "Chainable"
+      },
+      {
+        "arguments": [
+          {
+            "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Optional",
+            "kind": "Type -> Type",
+            "owner": "catena://outcome-contract/0.1.54",
+            "tag": "constructor"
+          }
+        ],
+        "law_status": "tested",
+        "methods": {},
+        "owner": "catena://outcome-contract/0.1.54",
+        "trait": "Workflow"
+      },
+      {
+        "arguments": [
+          {
+            "argument": {
+              "kind": "Type",
+              "name": "error",
+              "tag": "variable"
+            },
+            "callee": {
+              "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Dependent",
+              "kind": "Type -> Type -> Type",
+              "owner": "catena://outcome-contract/0.1.54",
+              "tag": "constructor"
+            },
+            "tag": "application"
+          }
+        ],
+        "law_status": "tested",
+        "methods": {
+          "map": "Elixir.Catena.Standard.Outcomes.dependent_map"
+        },
+        "owner": "catena://outcome-contract/0.1.54",
+        "trait": "Mapper"
+      },
+      {
+        "arguments": [
+          {
+            "argument": {
+              "kind": "Type",
+              "name": "error",
+              "tag": "variable"
+            },
+            "callee": {
+              "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Dependent",
+              "kind": "Type -> Type -> Type",
+              "owner": "catena://outcome-contract/0.1.54",
+              "tag": "constructor"
+            },
+            "tag": "application"
+          }
+        ],
+        "law_status": "tested",
+        "methods": {
+          "map2": "Elixir.Catena.Standard.Outcomes.dependent_map2"
+        },
+        "owner": "catena://outcome-contract/0.1.54",
+        "trait": "MultiMapper"
+      },
+      {
+        "arguments": [
+          {
+            "argument": {
+              "kind": "Type",
+              "name": "error",
+              "tag": "variable"
+            },
+            "callee": {
+              "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Dependent",
+              "kind": "Type -> Type -> Type",
+              "owner": "catena://outcome-contract/0.1.54",
+              "tag": "constructor"
+            },
+            "tag": "application"
+          }
+        ],
+        "law_status": "tested",
+        "methods": {
+          "from_value": "Elixir.Catena.Standard.Outcomes.dependent_embed"
+        },
+        "owner": "catena://outcome-contract/0.1.54",
+        "trait": "ValueEmbedder"
+      },
+      {
+        "arguments": [
+          {
+            "argument": {
+              "kind": "Type",
+              "name": "error",
+              "tag": "variable"
+            },
+            "callee": {
+              "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Dependent",
+              "kind": "Type -> Type -> Type",
+              "owner": "catena://outcome-contract/0.1.54",
+              "tag": "constructor"
+            },
+            "tag": "application"
+          }
+        ],
+        "law_status": "tested",
+        "methods": {
+          "and_then": "Elixir.Catena.Standard.Outcomes.dependent_chain"
+        },
+        "owner": "catena://outcome-contract/0.1.54",
+        "trait": "Chainable"
+      },
+      {
+        "arguments": [
+          {
+            "argument": {
+              "kind": "Type",
+              "name": "error",
+              "tag": "variable"
+            },
+            "callee": {
+              "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Dependent",
+              "kind": "Type -> Type -> Type",
+              "owner": "catena://outcome-contract/0.1.54",
+              "tag": "constructor"
+            },
+            "tag": "application"
+          }
+        ],
+        "law_status": "tested",
+        "methods": {},
+        "owner": "catena://outcome-contract/0.1.54",
+        "trait": "Workflow"
+      },
+      {
+        "arguments": [
+          {
+            "argument": {
+              "kind": "Type",
+              "name": "error",
+              "tag": "variable"
+            },
+            "callee": {
+              "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Independent",
+              "kind": "Type -> Type -> Type",
+              "owner": "catena://outcome-contract/0.1.54",
+              "tag": "constructor"
+            },
+            "tag": "application"
+          }
+        ],
+        "law_status": "tested",
+        "methods": {
+          "map": "Elixir.Catena.Standard.Outcomes.independent_map"
+        },
+        "owner": "catena://outcome-contract/0.1.54",
+        "trait": "Mapper"
+      },
+      {
+        "arguments": [
+          {
+            "argument": {
+              "kind": "Type",
+              "name": "error",
+              "tag": "variable"
+            },
+            "callee": {
+              "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Independent",
+              "kind": "Type -> Type -> Type",
+              "owner": "catena://outcome-contract/0.1.54",
+              "tag": "constructor"
+            },
+            "tag": "application"
+          }
+        ],
+        "law_status": "tested",
+        "methods": {
+          "map2": "Elixir.Catena.Standard.Outcomes.independent_map2"
+        },
+        "owner": "catena://outcome-contract/0.1.54",
+        "trait": "MultiMapper"
+      },
+      {
+        "arguments": [
+          {
+            "argument": {
+              "kind": "Type",
+              "name": "error",
+              "tag": "variable"
+            },
+            "callee": {
+              "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Independent",
+              "kind": "Type -> Type -> Type",
+              "owner": "catena://outcome-contract/0.1.54",
+              "tag": "constructor"
+            },
+            "tag": "application"
+          }
+        ],
+        "law_status": "tested",
+        "methods": {
+          "from_value": "Elixir.Catena.Standard.Outcomes.independent_embed"
+        },
+        "owner": "catena://outcome-contract/0.1.54",
+        "trait": "ValueEmbedder"
+      }
+    ],
+    "module": "CatenaOutcomeRoles",
+    "origin": "catena://outcome-contract/0.1.54",
+    "templates": [
+      {
+        "body": {
+          "arguments": [
+            {
+              "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Optional",
+              "kind": "Type -> Type",
+              "owner": "catena://outcome-contract/0.1.54",
+              "tag": "constructor"
+            }
+          ],
+          "method": "map2",
+          "tag": "trait_call",
+          "trait": "MultiMapper",
+          "values": [
+            {
+              "name": "callback",
+              "tag": "argument"
+            },
+            {
+              "name": "first",
+              "tag": "argument"
+            },
+            {
+              "name": "second",
+              "tag": "argument"
+            }
+          ]
+        },
+        "helpers": [],
+        "id": "optional_map2_specialized",
+        "parameters": [
+          "callback",
+          "first",
+          "second"
+        ],
+        "types": []
+      },
+      {
+        "body": {
+          "arguments": [
+            {
+              "argument": {
+                "id": "Int",
+                "kind": "Type",
+                "owner": "catena://builtins",
+                "tag": "constructor"
+              },
+              "callee": {
+                "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Dependent",
+                "kind": "Type -> Type -> Type",
+                "owner": "catena://outcome-contract/0.1.54",
+                "tag": "constructor"
+              },
+              "tag": "application"
+            }
+          ],
+          "method": "map2",
+          "tag": "trait_call",
+          "trait": "MultiMapper",
+          "values": [
+            {
+              "name": "callback",
+              "tag": "argument"
+            },
+            {
+              "name": "first",
+              "tag": "argument"
+            },
+            {
+              "name": "second",
+              "tag": "argument"
+            }
+          ]
+        },
+        "helpers": [],
+        "id": "dependent_map2_specialized",
+        "parameters": [
+          "callback",
+          "first",
+          "second"
+        ],
+        "types": []
+      },
+      {
+        "body": {
+          "arguments": [
+            {
+              "argument": {
+                "id": "Int",
+                "kind": "Type",
+                "owner": "catena://builtins",
+                "tag": "constructor"
+              },
+              "callee": {
+                "id": "catena://outcome-contract/0.1.54::CatenaOutcomeRoles::Independent",
+                "kind": "Type -> Type -> Type",
+                "owner": "catena://outcome-contract/0.1.54",
+                "tag": "constructor"
+              },
+              "tag": "application"
+            }
+          ],
+          "method": "map2",
+          "tag": "trait_call",
+          "trait": "MultiMapper",
+          "values": [
+            {
+              "name": "callback",
+              "tag": "argument"
+            },
+            {
+              "name": "first",
+              "tag": "argument"
+            },
+            {
+              "name": "second",
+              "tag": "argument"
+            }
+          ]
+        },
+        "helpers": [],
+        "id": "independent_map2_specialized",
+        "parameters": [
+          "callback",
+          "first",
+          "second"
+        ],
+        "types": []
+      }
+    ],
+    "traits": [],
+    "type_exports": [
+      {
+        "name": "Optional",
+        "visibility": "transparent"
+      },
+      {
+        "name": "Dependent",
+        "visibility": "transparent"
+      },
+      {
+        "name": "Independent",
+        "visibility": "transparent"
+      },
+      {
+        "name": "Sequence",
+        "visibility": "transparent"
+      },
+      {
+        "name": "Nonempty",
+        "visibility": "transparent"
+      }
+    ],
+    "type_groups": [
+      {
+        "declarations": [
+          {
+            "constructors": [
+              {
+                "fields": [],
+                "name": "Absent"
+              },
+              {
+                "fields": [
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Present"
+              }
+            ],
+            "name": "Optional",
+            "parameters": [
+              {
+                "kind": "Type",
+                "name": "a"
+              }
+            ]
+          },
+          {
+            "constructors": [
+              {
+                "fields": [
+                  {
+                    "name": "e",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Failure"
+              },
+              {
+                "fields": [
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Success"
+              }
+            ],
+            "name": "Dependent",
+            "parameters": [
+              {
+                "kind": "Type",
+                "name": "e"
+              },
+              {
+                "kind": "Type",
+                "name": "a"
+              }
+            ]
+          },
+          {
+            "constructors": [
+              {
+                "fields": [
+                  {
+                    "arguments": [
+                      {
+                        "name": "e",
+                        "tag": "variable"
+                      }
+                    ],
+                    "name": "Nonempty",
+                    "tag": "named"
+                  }
+                ],
+                "name": "Invalid"
+              },
+              {
+                "fields": [
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  }
+                ],
+                "name": "Valid"
+              }
+            ],
+            "name": "Independent",
+            "parameters": [
+              {
+                "kind": "Type",
+                "name": "e"
+              },
+              {
+                "kind": "Type",
+                "name": "a"
+              }
+            ]
+          },
+          {
+            "constructors": [
+              {
+                "fields": [],
+                "name": "End"
+              },
+              {
+                "fields": [
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  },
+                  {
+                    "arguments": [
+                      {
+                        "name": "a",
+                        "tag": "variable"
+                      }
+                    ],
+                    "name": "Sequence",
+                    "tag": "named"
+                  }
+                ],
+                "name": "Next"
+              }
+            ],
+            "name": "Sequence",
+            "parameters": [
+              {
+                "kind": "Type",
+                "name": "a"
+              }
+            ]
+          },
+          {
+            "constructors": [
+              {
+                "fields": [
+                  {
+                    "name": "a",
+                    "tag": "variable"
+                  },
+                  {
+                    "arguments": [
+                      {
+                        "name": "a",
+                        "tag": "variable"
+                      }
+                    ],
+                    "name": "Sequence",
+                    "tag": "named"
+                  }
+                ],
+                "name": "Errors"
+              }
+            ],
+            "name": "Nonempty",
+            "parameters": [
+              {
+                "kind": "Type",
+                "name": "a"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "version": "0.1.4"
+  },
+  "contract": "0.1.54",
+  "digest": "c95db1c6e5a137d576e03c640f0d42a6723b43f47663e330c13e65a5ddbd80fa",
+  "format": "catena-outcome-package",
+  "hierarchy_digest": "c841bf5b4cbdbf8969ccf5375bc327ae106eb222671595b29ea49acd5b2f1013",
+  "layout": "uniform"
+}

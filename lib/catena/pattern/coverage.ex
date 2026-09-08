@@ -117,7 +117,20 @@ defmodule Catena.Pattern.Coverage do
     if matrix == [], do: {{:useful, []}, budget - 1}, else: {:not_useful, budget - 1}
   end
 
-  defp useful(matrix, [pattern | rest], [type | rest_types], data, budget) do
+  defp useful(matrix, vector, types, data, budget) do
+    # A complete wildcard row already covers every candidate. Expanding a
+    # recursive field here would revisit its constructors without learning
+    # anything and exhaust the budget even for a two-clause list match.
+    if Enum.any?(matrix, fn row ->
+         length(row) == length(vector) and Enum.all?(row, &wildcard?/1)
+       end) do
+      {:not_useful, budget - 1}
+    else
+      useful_uncovered(matrix, vector, types, data, budget)
+    end
+  end
+
+  defp useful_uncovered(matrix, [pattern | rest], [type | rest_types], data, budget) do
     budget = budget - 1
 
     if wildcard?(pattern) do
