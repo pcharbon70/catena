@@ -18,6 +18,9 @@ defmodule Catena.Kernel.Type do
           | {:nominal, String.t(), [t()]}
 
   @spec closed?(t()) :: boolean()
+  def closed?({kind, _}) when kind in [:task_scope, :owned_task], do: false
+  def closed?({:managed_link, _}), do: false
+  def closed?({:task_monitor, _, _}), do: false
   def closed?({:resource, _, _}), do: false
   def closed?(:integer), do: true
   def closed?(:boolean), do: true
@@ -36,7 +39,7 @@ defmodule Catena.Kernel.Type do
   def closed?({tag, %{tail: tail}}) when tag in [:record, :variant] and not is_nil(tail),
     do: false
 
-  def closed?({:process, mailbox}), do: closed?(mailbox)
+  def closed?({tag, mailbox}) when tag in [:process, :managed_process], do: closed?(mailbox)
   def closed?({:nominal, _name, arguments}), do: Enum.all?(arguments, &closed?/1)
 
   @spec sendable?(t()) :: boolean()
@@ -46,7 +49,9 @@ defmodule Catena.Kernel.Type do
   def sendable?({tag, %{fields: fields, tail: nil}}) when tag in [:record, :variant],
     do: Enum.all?(fields, fn {_label, type} -> sendable?(type) end)
 
-  def sendable?({:process, mailbox}), do: closed?(mailbox) and sendable?(mailbox)
+  def sendable?({tag, mailbox}) when tag in [:process, :managed_process],
+    do: closed?(mailbox) and sendable?(mailbox)
+
   def sendable?({:nominal, _name, arguments}), do: Enum.all?(arguments, &sendable?/1)
   def sendable?(_type), do: false
 
@@ -63,7 +68,7 @@ defmodule Catena.Kernel.Type do
     if is_nil(tail), do: field_variables, else: MapSet.put(field_variables, tail)
   end
 
-  def variables({:process, mailbox}), do: variables(mailbox)
+  def variables({tag, mailbox}) when tag in [:process, :managed_process], do: variables(mailbox)
   def variables({:nominal, _name, arguments}), do: union_variables(arguments)
   def variables(_type), do: MapSet.new()
 
@@ -86,8 +91,8 @@ defmodule Catena.Kernel.Type do
     {tag, %{row | fields: fields}}
   end
 
-  def substitute({:process, mailbox}, substitution),
-    do: {:process, substitute(mailbox, substitution)}
+  def substitute({tag, mailbox}, substitution) when tag in [:process, :managed_process],
+    do: {tag, substitute(mailbox, substitution)}
 
   def substitute({:nominal, name, arguments}, substitution),
     do: {:nominal, name, Enum.map(arguments, &substitute(&1, substitution))}
@@ -95,6 +100,12 @@ defmodule Catena.Kernel.Type do
   def substitute(type, _substitution), do: type
 
   @spec encode(t()) :: map()
+  def encode({kind, id}) when kind in [:task_scope, :owned_task],
+    do: %{"tag" => Atom.to_string(kind), "scope" => id}
+
+  def encode({:task_monitor, id, labels}),
+    do: %{"tag" => "task-monitor", "scope" => id, "labels" => labels}
+
   def encode({:resource, id, payload}),
     do: %{"tag" => "scoped-resource", "scope" => id, "payload" => encode(payload)}
 
@@ -126,6 +137,11 @@ defmodule Catena.Kernel.Type do
       "tail" => tail
     }
   end
+
+  def encode({:managed_process, mailbox}),
+    do: %{"tag" => "managed-process", "mailbox" => encode(mailbox)}
+
+  def encode({:managed_link, labels}), do: %{"tag" => "managed-link", "labels" => labels}
 
   def encode({:process, mailbox}), do: %{"tag" => "process", "mailbox" => encode(mailbox)}
 

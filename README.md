@@ -632,3 +632,5 @@ lowering boundary, and OTP 29 Abstract Format remains the sole production
 `.beam` generation path.
 
 - [Owned resource scopes](guides/language/resource-scopes.md) — checked local lifetimes and mandatory cleanup at exact 0.1.51.
+
+- [Owned tasks and managed relationships](guides/language/process-lifetimes.md) — checked process lifetimes at exact 0.1.52; general time remains separately gated.

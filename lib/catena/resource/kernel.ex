@@ -85,6 +85,17 @@ defmodule Catena.Resource.Kernel do
     end
   end
 
+  def boundary(%{version: version} = core) when version in ["0.1.52", :owned_task_experiment] do
+    core =
+      Enum.reduce(
+        [:version, :frontend_format, :frontend_version, :language_revision],
+        core,
+        &Map.put(&2, &1, @profile)
+      )
+
+    boundary(core)
+  end
+
   def boundary(%{version: @profile} = core) do
     expected = assign_scopes(core)
 
@@ -134,6 +145,8 @@ defmodule Catena.Resource.Kernel do
     }
   end
 
+  def resource_ids({kind, id}) when kind in [:task_scope, :owned_task], do: MapSet.new([id])
+  def resource_ids({:task_monitor, id, _}), do: MapSet.new([id])
   def resource_ids({:resource, id, _payload}), do: MapSet.new([id])
   def resource_ids(%_{}), do: MapSet.new()
   def resource_ids(value) when is_map(value), do: value |> Map.values() |> resource_ids()
