@@ -341,3 +341,5 @@ specific cumulative contract. The compiler package has its own release
 version, so `mix.exs` remains `0.1.0`. Retired two-component slice identifiers
 are rejected rather than normalized because they also occurred in digests and
 signed protocol domains.
+
+- [Owned resource scopes](language/resource-scopes.md) — checked local lifetimes and mandatory cleanup at exact 0.1.51.

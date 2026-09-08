@@ -630,3 +630,5 @@ two-stage reproducible fixed point, and retain a reproducible bootstrap path.
 At every stage Catena still targets only BEAM, verified typed core remains the
 lowering boundary, and OTP 29 Abstract Format remains the sole production
 `.beam` generation path.
+
+- [Owned resource scopes](guides/language/resource-scopes.md) — checked local lifetimes and mandatory cleanup at exact 0.1.51.

@@ -43,6 +43,8 @@ defmodule Catena.Kernel.Backend do
   def compile(%{version: "0.1.50"} = core, _options),
     do: Catena.Kernel.CapabilityKernel.compile(core)
 
+  def compile(%{version: "0.1.51"} = core, _options), do: Catena.Resource.Kernel.compile(core)
+
   def compile(_core, _options),
     do: {:error, Diagnostic.new("I001", "unknown kernel artifact boundary")}
 
@@ -870,6 +872,115 @@ defmodule Catena.Kernel.Backend do
     lower_cps(call, environment, globals, module, handlers, k)
   end
 
+  defp lower_cps(
+         %{tag: :resource_exit} = expression,
+         environment,
+         globals,
+         module,
+         handlers,
+         _k
+       ) do
+    lower_values_cps(
+      [expression.resource, expression.reason],
+      environment,
+      globals,
+      module,
+      handlers,
+      fn [resource, reason] ->
+        remote_call(
+          Catena.Resource.Runtime,
+          :exit_scope,
+          [resource, reason],
+          annotation(expression.span)
+        )
+      end
+    )
+  end
+
+  defp lower_cps(
+         %{tag: :resource_cancel} = expression,
+         environment,
+         globals,
+         module,
+         handlers,
+         _k
+       ) do
+    lower_values_cps(
+      [expression.resource, expression.reason],
+      environment,
+      globals,
+      module,
+      handlers,
+      fn [resource, reason] ->
+        remote_call(
+          Catena.Resource.Runtime,
+          :cancel,
+          [resource, reason],
+          annotation(expression.span)
+        )
+      end
+    )
+  end
+
+  defp lower_cps(%{tag: :resource_read} = expression, environment, globals, module, handlers, k) do
+    lower_values_cps([expression.resource], environment, globals, module, handlers, fn [resource] ->
+      ann = annotation(expression.span)
+      call_continuation(k, remote_call(Catena.Resource.Runtime, :read, [resource], ann), ann)
+    end)
+  end
+
+  defp lower_cps(%{tag: :resource_scope} = expression, environment, globals, module, handlers, k) do
+    lower_values_cps(
+      [expression.release, expression.acquire],
+      environment,
+      globals,
+      module,
+      handlers,
+      fn [release, payload] ->
+        ann = annotation(expression.span)
+        finish_name = cps_variable("ResourceFinish", expression.span, 0)
+        result_name = cps_variable("ResourceResult", expression.span, 1)
+        finish = {:var, ann, finish_name}
+        result = {:var, ann, result_name}
+
+        normal =
+          {:block, ann,
+           [
+             {:call, ann, finish, [{:tuple, ann, [{:atom, ann, :ok}, result]}]},
+             call_continuation(k, result, ann)
+           ]}
+
+        handle_name = cps_variable("ResourceHandle", expression.span, 2)
+
+        body_environment =
+          if is_nil(expression.binder),
+            do: environment,
+            else: Map.put(environment, expression.binder, handle_name)
+
+        body =
+          lower_cps(
+            expression.body,
+            body_environment,
+            globals,
+            module,
+            handlers,
+            continuation_fun(result_name, normal, ann)
+          )
+
+        scope_body =
+          {:fun, ann,
+           {:clauses, [{:clause, ann, [finish, {:var, ann, handle_name}], [], [body]}]}}
+
+        remote_call(
+          Catena.Resource.Runtime,
+          :run,
+          [payload, release, scope_body, {:integer, ann, expression.grace_ns}],
+          ann
+        )
+      end
+    )
+  end
+
   defp lower_cps(%{tag: :handle} = expression, environment, globals, module, handlers, k) do
     annotation = annotation(expression.span)
     handler = expression.selected_handler
@@ -1565,7 +1676,18 @@ defmodule Catena.Kernel.Backend do
   defp module_name(nil), do: nil
   defp module_name(module) when is_atom(module), do: Atom.to_string(module)
 
-  defp effect_control?(%{tag: tag}) when tag in [:request, :handle, :resume], do: true
+  defp effect_control?(%{tag: tag})
+       when tag in [
+              :request,
+              :handle,
+              :resume,
+              :resource_scope,
+              :resource_read,
+              :resource_cancel,
+              :resource_exit
+            ],
+       do: true
+
   defp effect_control?(%Catena.SourceSpan{}), do: false
 
   defp effect_control?(%{} = value) do

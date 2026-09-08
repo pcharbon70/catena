@@ -5,8 +5,9 @@ defmodule Catena.Kernel.Verifier do
 
   @spec verify(map()) :: :ok | {:error, String.t()}
   def verify(%{format: :kernel_core, version: version} = core)
-      when version in ["0.1.8", "0.1.50"] do
-    with :ok <- Catena.Kernel.CapabilityKernel.verify_scope(core),
+      when version in ["0.1.8", "0.1.50", "0.1.51"] do
+    with :ok <- Catena.Resource.Kernel.boundary(core),
+         :ok <- Catena.Kernel.CapabilityKernel.verify_scope(core),
          :ok <- verify_data(core),
          :ok <- verify_exports(core),
          :ok <- verify_process_index(core),
@@ -250,8 +251,11 @@ defmodule Catena.Kernel.Verifier do
     environment = Map.put(environment, expression.parameter, expression.parameter_type)
 
     with {:ok, result, body_effects} <-
-           verify_expression(expression.body, environment, context, core) do
+           verify_expression(expression.body, environment, context, core),
+         false <- Catena.Resource.Kernel.captures?(expression.body, environment) do
       {:ok, {:function, expression.parameter_type, body_effects, result}, []}
+    else
+      _ -> :error
     end
   end
 
@@ -308,6 +312,71 @@ defmodule Catena.Kernel.Verifier do
     with {:ok, types, effects} <-
            verify_expressions(expression.elements, environment, context, core) do
       {:ok, {:tuple, types}, effects}
+    end
+  end
+
+  defp derive_expression(%{tag: :resource_scope} = expression, environment, context, core) do
+    with true <- core.version == "0.1.51",
+         true <- expression.release.tag == :function,
+         true <- is_integer(expression.grace_ns) and expression.grace_ns >= 0,
+         {:ok, payload, acquisition} <-
+           verify_expression(expression.acquire, environment, context, core),
+         true <- Type.sendable?(payload),
+         {:ok, {:function, ^payload, [], :unit}, release} <-
+           verify_expression(expression.release, environment, context, core),
+         true <-
+           is_nil(expression.binder) or (is_binary(expression.binder) and expression.binder != ""),
+         body_environment <-
+           if(is_nil(expression.binder),
+             do: environment,
+             else:
+               Map.put(
+                 environment,
+                 expression.binder,
+                 {:resource, expression.resource_id, payload}
+               )
+           ),
+         {:ok, result, body} <-
+           verify_expression(expression.body, body_environment, context, core),
+         false <-
+           MapSet.member?(Catena.Resource.Kernel.resource_ids(result), expression.resource_id) do
+      {:ok, result, combine_effects([acquisition, release, body])}
+    else
+      _ -> :error
+    end
+  end
+
+  defp derive_expression(%{tag: :resource_exit} = expression, environment, context, core) do
+    with true <- core.version == "0.1.51",
+         {:ok, {:resource, _, _}, effects} <-
+           verify_expression(expression.resource, environment, context, core),
+         {:ok, :integer, reason_effects} <-
+           verify_expression(expression.reason, environment, context, core) do
+      {:ok, expression.type, combine_effects(effects, reason_effects)}
+    else
+      _ -> :error
+    end
+  end
+
+  defp derive_expression(%{tag: :resource_cancel} = expression, environment, context, core) do
+    with true <- core.version == "0.1.51",
+         {:ok, {:resource, _, _}, effects} <-
+           verify_expression(expression.resource, environment, context, core),
+         {:ok, :integer, reason_effects} <-
+           verify_expression(expression.reason, environment, context, core) do
+      {:ok, expression.type, combine_effects(effects, reason_effects)}
+    else
+      _ -> :error
+    end
+  end
+
+  defp derive_expression(%{tag: :resource_read} = expression, environment, context, core) do
+    with true <- core.version == "0.1.51",
+         {:ok, {:resource, _, payload}, effects} <-
+           verify_expression(expression.resource, environment, context, core) do
+      {:ok, payload, effects}
+    else
+      _ -> :error
     end
   end
 

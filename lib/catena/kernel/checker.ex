@@ -75,10 +75,11 @@ defmodule Catena.Kernel.Checker do
         handlers: handlers,
         diagnostics: [],
         profile:
-          if(module.version == "0.1.50",
-            do: :closed_capability_kernel,
-            else: :formal_semantic_kernel
-          ),
+          case module.version do
+            "0.1.51" -> :resource_scopes
+            "0.1.50" -> :closed_capability_kernel
+            _ -> :formal_semantic_kernel
+          end,
         next: state.next
       }
 
@@ -87,7 +88,7 @@ defmodule Catena.Kernel.Checker do
           do: Map.put(core, :capabilities, module.capabilities),
           else: core
 
-      if core.version == "0.1.50" do
+      if core.version in ["0.1.50", "0.1.51"] do
         case Catena.Kernel.CapabilityKernel.verify_scope(core) do
           :ok -> :ok
           {:error, reason} -> fail!("EFX003", reason, module.span)
@@ -563,6 +564,88 @@ defmodule Catena.Kernel.Checker do
      type, effects, state}
   end
 
+  defp do_infer(%{tag: :resource_scope} = expression, environment, context, state, expected) do
+    unless is_integer(expression.grace_ns) and expression.grace_ns >= 0 do
+      fail!("T002", "resource release grace must be a nonnegative integer", expression.span)
+    end
+
+    unless expression.release.tag == :function do
+      fail!("T002", "resource release requires an explicit callback", expression.span)
+    end
+
+    payload = expression.release.parameter_type
+
+    unless Type.sendable?(payload) do
+      fail!("T002", "local resource payload must be closed and sendable", expression.span)
+    end
+
+    {release, _type, release_effects, state} =
+      infer(expression.release, environment, context, state, {:function, payload, [], :unit})
+
+    {acquire, _payload, acquire_effects, state} =
+      infer(expression.acquire, environment, context, state, payload)
+
+    body_environment =
+      case expression.binder do
+        nil ->
+          environment
+
+        name when is_binary(name) and name != "" ->
+          Map.put(environment, name, {:mono, {:resource, expression.resource_id, payload}})
+
+        _ ->
+          fail!("T002", "invalid local resource binder", expression.span)
+      end
+
+    {body, result, body_effects, state} =
+      infer(expression.body, body_environment, context, state, expected)
+
+    if MapSet.member?(
+         Catena.Resource.Kernel.resource_ids(apply_type(result, state)),
+         expression.resource_id
+       ) do
+      fail!("T002", "resource handle escapes its lexical scope", expression.span)
+    end
+
+    {%{expression | acquire: acquire, release: release, body: body}, result,
+     combine_effects([acquire_effects, release_effects, body_effects]), state}
+  end
+
+  defp do_infer(%{tag: :resource_exit} = expression, environment, context, state, _expected) do
+    {resource, type, effects, state} = infer(expression.resource, environment, context, state)
+
+    unless match?({:resource, _, _}, apply_type(type, state)),
+      do: fail!("T002", "cooperative exit requires a live scoped handle", expression.span)
+
+    {reason, _, reason_effects, state} =
+      infer(expression.reason, environment, context, state, :integer)
+
+    {%{expression | resource: resource, reason: reason}, :bottom,
+     combine_effects(effects, reason_effects), state}
+  end
+
+  defp do_infer(%{tag: :resource_cancel} = expression, environment, context, state, _expected) do
+    {resource, type, effects, state} = infer(expression.resource, environment, context, state)
+
+    unless match?({:resource, _, _}, apply_type(type, state)),
+      do: fail!("T002", "cancellation requires a live scoped handle", expression.span)
+
+    {reason, _, reason_effects, state} =
+      infer(expression.reason, environment, context, state, :integer)
+
+    {%{expression | resource: resource, reason: reason}, :bottom,
+     combine_effects(effects, reason_effects), state}
+  end
+
+  defp do_infer(%{tag: :resource_read} = expression, environment, context, state, _expected) do
+    {resource, type, effects, state} = infer(expression.resource, environment, context, state)
+
+    case apply_type(type, state) do
+      {:resource, _, payload} -> {%{expression | resource: resource}, payload, effects, state}
+      _ -> fail!("T002", "resource read requires a live scoped handle", expression.span)
+    end
+  end
+
   defp do_infer(%{tag: :integer} = expression, _environment, _context, state, _expected),
     do: {expression, :integer, [], state}
 
@@ -614,6 +697,14 @@ defmodule Catena.Kernel.Checker do
 
     {body, result, body_effects, state} =
       infer(body, environment, context, state, expected_result)
+
+    if Catena.Resource.Kernel.captures?(body, environment) do
+      fail!(
+        "T002",
+        "local resource handles cannot be captured by closures",
+        expression.span
+      )
+    end
 
     type =
       {:function, apply_type(parameter, state), canonical_effects(body_effects),

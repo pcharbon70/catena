@@ -27,7 +27,7 @@ document governs and the affected conformance claim is suspended.
 | Bootstrap toolchain | Elixir `1.20.2-otp-29` on Erlang/OTP `29.0.4` |
 | Runtime target | BEAM through OTP 29 Erlang Abstract Format |
 | Edition | `0.1` |
-| Supported exact language revisions | Normative `0.1.1` through `0.1.48` |
+| Supported exact language revisions | Normative `0.1.1` through `0.1.51` |
 | Source boundary | Versioned JSON AST for `0.1.1`–`0.1.7`; exact kernel S-expression for `0.1.8`; strict source-text envelope for `0.1.9`–`0.1.48`; standalone identifiers for `0.1.10`; layout over lexer-supplied events for exact `0.1.11`; comment scanning and documentation attachment over supplied events for exact `0.1.12`; atomic literal scanning for exact `0.1.13`; numeric literal elaboration for exact `0.1.14`; whole-source tokenization and operator-expression parsing for exact `0.1.15`; file-unit resolution for exact `0.1.16`; namespace resolution for exact `0.1.17`; import/export validation and unused-import analysis for exact `0.1.18`; abstraction-boundary exclusions for exact `0.1.19`; SCC grouping and joint digests for exact `0.1.20`; dependency resolution, lockfiles, and bundle digests for exact `0.1.21`; the prelude origin for exact `0.1.22`; exact semantic selection for the package, value, control, failure, observability, compile-time, data-model, records, collections, pattern-contexts, list-comprehensions, numeric-relationships, aliases-and-newtypes, name-resolution, dynamic-and-unsafe-boundaries, excluded-advanced-type-features, progress-and-preservation, selective-receive, exception-boundary, and top-level-effects revisions `0.1.23`–`0.1.48` |
 | Implementation-defined choices | None |
 | Vendor extensions | None |
@@ -645,3 +645,14 @@ The `CK-OBL-001` through `CK-OBL-008` test inventory is explicit. Coverage tags
 are bookkeeping; the behavioral assertions and profile-boundary checks provide
 the executable evidence. General open-row inference and public source adoption
 are outside this slice. See [the guide](guides/language/capability-comprehensions.md).
+
+## Owned resource scopes at 0.1.51
+
+The [resource scope guide](guides/language/resource-scopes.md) describes the
+checked compound input and production backend. Independent core verification,
+reference transitions, real handler-abort execution, local actor cleanup,
+opaque owner tokens, bounded release and deterministic artifacts implement the
+local contract. No interface or signed format is widened. Source-text selection
+includes 0.1.51; bare exact 0.1.8 and closed capability 0.1.50 remain retained.
+General task/time propagation and process-affine foreign resources are not
+claimed. Forced external loss carries no mandatory cleanup guarantee.
