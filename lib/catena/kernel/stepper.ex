@@ -47,6 +47,24 @@ defmodule Catena.Kernel.Stepper do
     end
   end
 
+  def advance_resource_clock(%{core: %{version: "0.1.51"}} = configuration, now)
+      when is_integer(now) do
+    if now >= Map.get(configuration, :resource_clock, 0),
+      do: {:ok, Map.put(configuration, :resource_clock, now)},
+      else: {:error, :clock_reversed}
+  end
+
+  def expire_resource_release(%{core: %{version: "0.1.51"}} = configuration, pid) do
+    process = Map.fetch!(configuration.processes, pid)
+    deadline = Map.get(process, :release_deadline)
+
+    if is_integer(deadline) and Map.get(configuration, :resource_clock, 0) >= deadline do
+      {:ok, trap_process(configuration, process, :deadline_exhausted)}
+    else
+      {:error, :release_deadline_not_due}
+    end
+  end
+
   @spec runnable_pids(configuration()) :: [non_neg_integer()]
   def runnable_pids(configuration) do
     configuration.processes
@@ -159,6 +177,12 @@ defmodule Catena.Kernel.Stepper do
       root.status == :trapped ->
         {:trap, root.trap, result}
 
+      root.status == :exited ->
+        {:exited, root.result, result}
+
+      root.status == :cancelled ->
+        {:cancelled, root.result, result}
+
       root.status == :terminated ->
         {:ok, root.result, result}
 
@@ -269,6 +293,28 @@ defmodule Catena.Kernel.Stepper do
         }
 
         put_control(configuration, process, {:expr, call, environment})
+
+      :resource_exit ->
+        push_expression(configuration, process, expression.resource, environment, [
+          {:resource_exit_handle, expression.reason, environment}
+        ])
+
+      :resource_cancel ->
+        push_expression(configuration, process, expression.resource, environment, [
+          {:resource_cancel_handle, expression.reason, environment}
+        ])
+
+      :resource_read ->
+        push_expression(configuration, process, expression.resource, environment, [:resource_read])
+
+      :resource_scope ->
+        if Enum.any?(process.stack, &match?({:resource_cleanup_return, _, _, _, _}, &1)) do
+          trap_process(configuration, process, :resource_cleanup_reentry)
+        else
+          push_expression(configuration, process, expression.release, environment, [
+            {:resource_release_function, expression, environment}
+          ])
+        end
 
       :handle ->
         configuration =
@@ -430,6 +476,115 @@ defmodule Catena.Kernel.Stepper do
 
       {:match, clauses, environment} ->
         select_match(configuration, process, value, clauses, environment)
+
+      {:resource_release_function, expression, environment} ->
+        push_expression(configuration, process, expression.acquire, environment, [
+          {:resource_acquired, expression, environment, value}
+        ])
+
+      {:resource_acquired, expression, environment, release} ->
+        id = Map.get(configuration, :next_resource, 0)
+        entry = %{payload: value, release: release, active: true, grace_ns: expression.grace_ns}
+        resources = Map.put(Map.get(process, :resources, %{}), id, entry)
+        process = process |> Map.put(:resources, resources) |> push_frames([{:resource_end, id}])
+        configuration = Map.put(configuration, :next_resource, id + 1)
+
+        environment =
+          if is_nil(expression.binder),
+            do: environment,
+            else: Map.put(environment, expression.binder, {:catena_resource, process.id, id})
+
+        put_control(configuration, process, {:expr, expression.body, environment})
+
+      {:resource_exit_handle, reason, environment} ->
+        case value do
+          {:catena_resource, owner, id} when owner == process.id ->
+            if get_in(process, [:resources, id, :active]) do
+              push_expression(configuration, process, reason, environment, [
+                :resource_exit_reason
+              ])
+            else
+              trap_process(configuration, process, :invalid_resource_owner)
+            end
+
+          _ ->
+            trap_process(configuration, process, :invalid_resource_owner)
+        end
+
+      :resource_exit_reason ->
+        start_cleanup(
+          configuration,
+          process,
+          active_resources(process),
+          {:exited, value},
+          :terminal
+        )
+
+      {:resource_cancel_handle, reason, environment} ->
+        case value do
+          {:catena_resource, owner, id} when owner == process.id ->
+            if get_in(process, [:resources, id, :active]) do
+              push_expression(configuration, process, reason, environment, [
+                :resource_cancel_reason
+              ])
+            else
+              trap_process(configuration, process, :invalid_resource_owner)
+            end
+
+          _ ->
+            trap_process(configuration, process, :invalid_resource_owner)
+        end
+
+      :resource_cancel_reason ->
+        start_cleanup(
+          configuration,
+          process,
+          active_resources(process),
+          {:cancelled, value},
+          :terminal
+        )
+
+      :resource_read ->
+        case value do
+          {:catena_resource, owner, id} when owner == process.id ->
+            case get_in(process, [:resources, id]) do
+              %{active: true, payload: payload} ->
+                put_control(configuration, process, {:value, payload})
+
+              _ ->
+                trap_process(configuration, process, :invalid_resource_owner)
+            end
+
+          _ ->
+            trap_process(configuration, process, :invalid_resource_owner)
+        end
+
+      {:resource_end, id} ->
+        start_cleanup(configuration, process, [id], {:ok, value}, {:value, value, process.stack})
+
+      {:resource_cleanup_return, remaining, outcome, after_cleanup, payload} ->
+        configuration =
+          append_trace(configuration, %{
+            label: :resource_release_finished,
+            pid: process.id,
+            payload: payload,
+            result: :ok
+          })
+
+        begin_cleanup(configuration, process, remaining, outcome, after_cleanup)
+
+      {:resource_operation_exit, resumption, captured_resources} ->
+        if MapSet.member?(configuration.resumptions, resumption) do
+          put_control(configuration, process, {:value, value})
+        else
+          start_cleanup(
+            configuration,
+            process,
+            captured_resources,
+            {:abort, value},
+            {:value, value, process.stack}
+          )
+        end
 
       {:handler, handler, environment} ->
         return = handler.return
@@ -822,7 +977,14 @@ defmodule Catena.Kernel.Stepper do
           end)
           |> Map.put(clause.resumption, resumption)
 
-        process = %{process | stack: outer_stack, control: {:expr, clause.body, environment}}
+        captured_resources = for {:resource_end, resource} <- captured, do: resource
+
+        exit_stack =
+          if captured_resources == [],
+            do: outer_stack,
+            else: [{:resource_operation_exit, id, captured_resources} | outer_stack]
+
+        process = %{process | stack: exit_stack, control: {:expr, clause.body, environment}}
 
         configuration
         |> Map.put(:next_resumption, id + 1)
@@ -924,6 +1086,107 @@ defmodule Catena.Kernel.Stepper do
   end
 
   defp trap_process(configuration, process, reason) do
+    case Enum.find(process.stack, &match?({:resource_cleanup_return, _, _, _, _}, &1)) do
+      {:resource_cleanup_return, remaining, outcome, after_cleanup, payload} ->
+        configuration =
+          append_trace(configuration, %{
+            label: :resource_release_finished,
+            pid: process.id,
+            payload: payload,
+            result: {:error, reason}
+          })
+
+        outcome =
+          case outcome do
+            {:trap, _} -> outcome
+            _ -> {:trap, {:mandatory_release_failed, reason}}
+          end
+
+        begin_cleanup(configuration, process, remaining, outcome, after_cleanup)
+
+      nil ->
+        case active_resources(process) do
+          [] ->
+            terminal_trap(configuration, process, reason)
+
+          resources ->
+            start_cleanup(configuration, process, resources, {:trap, reason}, :terminal)
+        end
+    end
+  end
+
+  defp start_cleanup(configuration, process, ids, outcome, after_cleanup) do
+    configuration =
+      append_trace(configuration, %{label: :resource_primary, pid: process.id, outcome: outcome})
+
+    begin_cleanup(configuration, process, ids, outcome, after_cleanup)
+  end
+
+  defp begin_cleanup(configuration, process, [], outcome, after_cleanup) do
+    process = process |> Map.put(:release_deadline, nil) |> Map.put(:stack, [])
+
+    case {outcome, after_cleanup} do
+      {{:exited, reason}, :terminal} ->
+        process = %{process | status: :exited, result: reason, control: nil, mailbox: []}
+
+        configuration
+        |> put_process(process)
+        |> append_trace(%{label: :exited, pid: process.id, reason: reason})
+
+      {{:cancelled, reason}, :terminal} ->
+        process = %{process | status: :cancelled, result: reason, control: nil, mailbox: []}
+
+        configuration
+        |> put_process(process)
+        |> append_trace(%{label: :cancelled, pid: process.id, reason: reason})
+
+      {{:trap, reason}, _} ->
+        trap_process(configuration, process, reason)
+
+      {_, {:value, value, stack}} ->
+        put_control(configuration, %{process | stack: stack}, {:value, value})
+    end
+  end
+
+  defp begin_cleanup(configuration, process, [id | rest], outcome, after_cleanup) do
+    case get_in(process, [:resources, id]) do
+      %{active: true} = entry ->
+        process = put_in(process, [:resources, id, :active], false)
+
+        process =
+          Map.put(
+            process,
+            :release_deadline,
+            Map.get(configuration, :resource_clock, 0) + entry.grace_ns
+          )
+
+        process = %{
+          process
+          | stack: [{:resource_cleanup_return, rest, outcome, after_cleanup, entry.payload}]
+        }
+
+        configuration =
+          append_trace(configuration, %{
+            label: :resource_release_started,
+            pid: process.id,
+            payload: entry.payload
+          })
+
+        apply_closure(configuration, process, entry.release, entry.payload)
+
+      _ ->
+        begin_cleanup(configuration, process, rest, outcome, after_cleanup)
+    end
+  end
+
+  defp active_resources(process) do
+    Map.get(process, :resources, %{})
+    |> Enum.filter(fn {_, entry} -> entry.active end)
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.sort(:desc)
+  end
+
+  defp terminal_trap(configuration, process, reason) do
     process = %{process | status: :trapped, trap: reason, control: nil, stack: [], mailbox: []}
 
     configuration

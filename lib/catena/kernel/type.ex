@@ -18,6 +18,7 @@ defmodule Catena.Kernel.Type do
           | {:nominal, String.t(), [t()]}
 
   @spec closed?(t()) :: boolean()
+  def closed?({:resource, _, _}), do: false
   def closed?(:integer), do: true
   def closed?(:boolean), do: true
   def closed?(:unit), do: true
@@ -94,6 +95,9 @@ defmodule Catena.Kernel.Type do
   def substitute(type, _substitution), do: type
 
   @spec encode(t()) :: map()
+  def encode({:resource, id, payload}),
+    do: %{"tag" => "scoped-resource", "scope" => id, "payload" => encode(payload)}
+
   def encode(:integer), do: %{"tag" => "integer"}
   def encode(:boolean), do: %{"tag" => "boolean"}
   def encode(:unit), do: %{"tag" => "unit"}
