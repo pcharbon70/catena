@@ -376,6 +376,13 @@ defmodule Catena.LanguageLifecycle do
         "value-boundaries",
         "0.1.58",
         specification("value-boundaries/carriers-and-checked-conversion.md#status-and-authority")
+      ),
+      feature(
+        "calling-conventions",
+        "0.1.59",
+        specification(
+          "calling-conventions/checked-calls-and-artifact-identity.md#status-and-authority"
+        )
       )
     ]
   end
@@ -682,6 +689,9 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("calling-conventions"),
+    do: ~w(static-meaning dynamic-behavior artifacts)
+
   defp affected_dimensions("value-boundaries"),
     do: ~w(source-acceptance static-meaning dynamic-behavior artifacts)
 
@@ -976,6 +986,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("calling-conventions"),
+    do:
+      "Select exact 0.1.59 for compiler-bound calling sidecars over retained verified core. Rebuild artifacts and recreate scoped callbacks for the exact compiler. Existing input, interface and signed formats retain their admission boundaries; general foreign authority and asynchronous callbacks remain separate."
 
   defp migration("value-boundaries"),
     do:

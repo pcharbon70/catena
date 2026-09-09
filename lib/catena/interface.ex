@@ -25,6 +25,9 @@ defmodule Catena.Interface do
   @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
   @claim_subject_kinds ~w(value datatype trait instance effect handler module output interface action profile)
 
+  @doc "Build an exact 0.1.59 artifact call sidecar; retained interface bytes are unchanged."
+  def calling_descriptor(core, options \\ []), do: Catena.Calling.Descriptor.build(core, options)
+
   @spec build(map(), keyword()) :: map()
   def build(core, options \\ []) do
     values =

@@ -60,7 +60,8 @@ defmodule Catena.Kernel.Backend do
     do: {:error, Diagnostic.new("I001", "unknown kernel artifact boundary")}
 
   @spec lower(map()) :: [term()]
-  def lower(core) do
+  @spec lower(map(), keyword()) :: [term()]
+  def lower(core, options \\ []) do
     annotation = 1
     module = safe_atom(core.module)
 
@@ -93,7 +94,79 @@ defmodule Catena.Kernel.Backend do
 
     definitions = Enum.flat_map(core.definitions, &lower_definition(&1, globals, module))
     processes = Enum.flat_map(core.processes, &lower_process(&1, globals, module))
-    attributes ++ definitions ++ processes
+    forms = attributes ++ definitions ++ processes
+
+    if Keyword.get(options, :calling, false) do
+      factories =
+        for definition <- core.definitions, definition.name in core.exports.values do
+          ann = annotation(definition.span)
+
+          body =
+            lower_cps(
+              definition.expression,
+              %{},
+              globals,
+              module,
+              {:map, ann, []},
+              identity_fun(ann)
+            )
+
+          {:function, ann, Catena.Calling.Lowering.factory(definition.name), 0,
+           [{:clause, ann, [], [], [body]}]}
+        end
+
+      origins =
+        Enum.reduce(core.definitions, %{}, fn definition, acc ->
+          Map.merge(
+            acc,
+            Catena.Calling.Lowering.origins(
+              lower_definition(definition, globals, module),
+              definition.name,
+              core.origin,
+              definition.span,
+              definition.arity,
+              :value
+            )
+          )
+        end)
+
+      origins =
+        Enum.reduce(core.processes, origins, fn process, acc ->
+          Map.merge(
+            acc,
+            Catena.Calling.Lowering.origins(
+              lower_process(process, globals, module),
+              process.name,
+              core.origin,
+              process.span,
+              length(process.parameters),
+              :process_entry
+            )
+          )
+        end)
+
+      origins =
+        Enum.reduce(factories, origins, fn {:function, _, symbol, _, _} = factory, acc ->
+          definition =
+            Enum.find(core.definitions, &(Catena.Calling.Lowering.factory(&1.name) == symbol))
+
+          Map.merge(
+            acc,
+            Catena.Calling.Lowering.origins(
+              [factory],
+              definition.name,
+              core.origin,
+              definition.span,
+              0,
+              :entry_factory
+            )
+          )
+        end)
+
+      Catena.Calling.Lowering.attach(forms, factories, origins)
+    else
+      forms
+    end
   end
 
   defp verify(core) do

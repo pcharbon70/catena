@@ -6,6 +6,23 @@ defmodule Catena.OTP.Compiler do
   @default_version LanguageVersion.introduced(:data_and_patterns)
   @selection_versions LanguageVersion.compilable_from(:editions_and_feature_lifecycle)
 
+  @doc "Compile a calling sidecar only when it describes these exact forms and compiler."
+  def compile_calling(forms, descriptor, options \\ []) do
+    expected = Map.delete(descriptor, :digest)
+
+    with true <- descriptor.digest == Catena.Calling.Descriptor.digest(expected),
+         true <- descriptor.forms_digest == Catena.Calling.Descriptor.digest(forms),
+         true <- descriptor.compiler_digest == Catena.Calling.Descriptor.compiler_digest(),
+         {:ok, host} <- Catena.OTP.Profile.require_supported(),
+         true <- descriptor.toolchain_digest == Catena.OTP.Profile.digest(host) do
+      compile(forms, Keyword.put(options, :calling_descriptor, descriptor.digest))
+    else
+      _ -> {:error, Diagnostic.new("B001", "calling descriptor does not match compilation")}
+    end
+  rescue
+    _ -> {:error, Diagnostic.new("B001", "malformed calling descriptor")}
+  end
+
   @spec compile([term()], keyword()) ::
           {:ok, module(), binary(), [term()]} | {:error, Diagnostic.t()}
   def compile(forms, options \\ []) do
@@ -33,6 +50,12 @@ defmodule Catena.OTP.Compiler do
       {:catena_toolchain, fingerprint},
       {:catena_toolchain_digest, Catena.OTP.Profile.digest(fingerprint)}
     ]
+
+    compile_info =
+      case Keyword.fetch(options, :calling_descriptor) do
+        {:ok, digest} -> compile_info ++ [{:catena_calling_descriptor, digest}]
+        :error -> compile_info
+      end
 
     compile_info =
       case {Keyword.get(options, :artifact_version), Keyword.get(options, :language_selection)} do

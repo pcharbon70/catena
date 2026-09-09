@@ -67,7 +67,63 @@ defmodule Catena.Backend.ErlangAbstract do
         {:attribute, annotation, :export, exports}
       ] ++ unused_effect_wrapper_attribute(core, annotation)
 
-    attributes ++ functions ++ handler_functions
+    forms = attributes ++ functions ++ handler_functions
+
+    if Keyword.get(options, :calling, false) do
+      factories =
+        for definition <- runtime_definitions, definition.name in core.exports do
+          arguments =
+            for index <- Enum.take(1..255, length(definition.parameters)),
+                do: {:var, annotation, String.to_atom("__CallingArg#{index}")}
+
+          call = {:call, annotation, {:atom, annotation, safe_atom(definition.name)}, arguments}
+
+          body =
+            Enum.reduce(Enum.reverse(arguments), call, fn argument, body ->
+              {:fun, annotation, {:clauses, [{:clause, annotation, [argument], [], [body]}]}}
+            end)
+
+          {:function, annotation, Catena.Calling.Lowering.factory(definition.name), 0,
+           [{:clause, annotation, [], [], [body]}]}
+        end
+
+      origins =
+        Enum.reduce(runtime_definitions, %{}, fn definition, acc ->
+          Map.merge(
+            acc,
+            Catena.Calling.Lowering.origins(
+              List.wrap(lower_definition(definition, globals, annotation, layout)),
+              definition.name,
+              core.origin,
+              Map.get(definition, :span),
+              length(definition.parameters),
+              :value
+            )
+          )
+        end)
+
+      origins =
+        Enum.reduce(factories, origins, fn {:function, _, symbol, _, _} = factory, acc ->
+          definition =
+            Enum.find(runtime_definitions, &(Catena.Calling.Lowering.factory(&1.name) == symbol))
+
+          Map.merge(
+            acc,
+            Catena.Calling.Lowering.origins(
+              [factory],
+              definition.name,
+              core.origin,
+              Map.get(definition, :span),
+              0,
+              :entry_factory
+            )
+          )
+        end)
+
+      Catena.Calling.Lowering.attach(forms, factories, origins)
+    else
+      forms
+    end
   end
 
   @doc "Lowers already typed clauses through the selective-receive condition harness."
