@@ -9,6 +9,9 @@ defmodule Catena.Package.Manifest do
   @module_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @value_name ~r/^[a-z][A-Za-z0-9_]*$/
 
+  @doc "Decode the separate canonical native package description without widening retained manifests."
+  def decode_native(binary), do: Catena.Foreign.Native.Package.decode_description(binary)
+
   @spec decode(binary()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def decode(binary) do
     with {:ok, value} <- JSON.decode(binary),
