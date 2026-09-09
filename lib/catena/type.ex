@@ -15,6 +15,9 @@ defmodule Catena.Type do
           | {:function, t(), t()}
           | {:tuple, [t()]}
 
+  @doc "Build an explicit closed-data foreign codec; no dynamic type is introduced."
+  def foreign_codec(type), do: Catena.Foreign.Codec.new({:data, type})
+
   @spec free(t()) :: MapSet.t(non_neg_integer())
   def free({:var, id}), do: MapSet.new([id])
   def free({:function, parameter, result}), do: MapSet.union(free(parameter), free(result))

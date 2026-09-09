@@ -8,6 +8,10 @@ defmodule Catena.TypedCore.Verifier do
   alias Catena.Type
   alias Catena.Type.Scheme
 
+  @doc "Independently check a native carrier against a re-derived explicit foreign codec."
+  def verify_foreign_value(codec, native, limits),
+    do: Catena.Foreign.Codec.from_native(codec, native, limits)
+
   @spec verify(map()) :: :ok | {:error, String.t()}
   def verify(module) do
     initial_globals =

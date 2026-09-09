@@ -3,6 +3,10 @@ defmodule Catena.Backend.ErlangAbstract do
 
   alias Catena.Diagnostic
 
+  @doc "Lower a checked foreign semantic value using its Catena carrier, not its wire encoding."
+  def lower_foreign_value(codec, semantic, limits, annotation \\ 1),
+    do: Catena.Foreign.Codec.lower(codec, semantic, limits, annotation)
+
   @doc "Checked value-literal lowering shared across both layout owners."
   def lower_boundary_value(type, semantic, limits, annotation \\ 1),
     do: Catena.ValueBoundary.Data.lower(type, semantic, limits, annotation)

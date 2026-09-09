@@ -23,6 +23,24 @@ defmodule Catena.ValueBoundary.Nominal do
   def decode(description, value, budget), do: convert(description, value, budget, :decode)
   def encode(description, value, budget), do: convert(description, value, budget, :encode)
 
+  @doc "Convert one instantiated type argument of a re-derived exported nominal description."
+  def convert_argument(description, index, value, budget, direction)
+      when direction in [:decode, :encode] and is_integer(index) and index >= 0 do
+    with true <- Catena.ValueBoundary.Budget.valid?(budget),
+         {:ok, expected} <- describe(description.core, description.export, description.layout),
+         true <- expected == description,
+         {:nominal, _, arguments} <- description.type,
+         {:ok, type} <- Enum.fetch(arguments, index),
+         {:ok, converted, _} <- visit(type, value, description, budget, direction) do
+      {:ok, converted}
+    else
+      {:error, _} = error -> error
+      _ -> {:error, :invalid_boundary_description}
+    end
+  rescue
+    _ -> {:error, :invalid_boundary_description}
+  end
+
   defp convert(description, value, budget, direction) do
     if Catena.ValueBoundary.Budget.valid?(budget) do
       case description do
