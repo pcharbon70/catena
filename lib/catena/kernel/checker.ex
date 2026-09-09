@@ -6,6 +6,10 @@ defmodule Catena.Kernel.Checker do
 
   @type state :: %{next: non_neg_integer(), substitution: map()}
 
+  @doc "Check native role operations at the explicit sidecar boundary, not retained source syntax."
+  def check_native_operation(role, operation),
+    do: Catena.Foreign.NativeValue.check_operation(role, operation)
+
   @spec check(map(), keyword()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def check(module, options \\ []) do
     try do

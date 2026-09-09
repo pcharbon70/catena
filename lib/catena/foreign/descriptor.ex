@@ -9,13 +9,13 @@ defmodule Catena.Foreign.Descriptor do
          true <- Keyword.get(options, :trust) == :trusted_beam,
          true <- Keyword.get(options, :scheduler) == :owned_process,
          true <- Keyword.get(options, :cancellation) == :cooperative,
-         :ok <- each(arguments, &argument/1),
+         :ok <- each(arguments, &argument(&1, selection.language_revision)),
          :ok <- Codec.verify(result),
          {:ok, identity} <- identity(host, length(arguments) + 1) do
       {:ok,
        %{
          format: :foreign_declaration,
-         version: "0.1.61",
+         version: selection.language_revision,
          selection: selection,
          host: host,
          identity: identity,
@@ -54,18 +54,23 @@ defmodule Catena.Foreign.Descriptor do
       Keyword.get(options, :language_selection, Catena.LanguageVersion.legacy_selection("0.1.61"))
 
     case Catena.LanguageVersion.resolve_selection(requested) do
-      {:ok, %{language_revision: "0.1.61", previews: []} = selection} -> {:ok, selection}
-      _ -> {:error, :invalid_foreign_selection}
+      {:ok, %{language_revision: version, previews: []} = selection}
+      when version in ["0.1.61", "0.1.62"] ->
+        {:ok, selection}
+
+      _ ->
+        {:error, :invalid_foreign_selection}
     end
   end
 
   def id(descriptor), do: Catena.Calling.Descriptor.digest(descriptor)
 
-  defp argument({:callback, input, output}) do
+  defp argument({:callback, input, output}, _) do
     with :ok <- Codec.verify(input), do: Codec.verify(output)
   end
 
-  defp argument(codec), do: Codec.verify(codec)
+  defp argument({:native, role}, "0.1.62"), do: Catena.Foreign.NativeValue.verify_role(role)
+  defp argument(codec, _), do: Codec.verify(codec)
 
   defp identity({module, function}, arity) when is_atom(module) and is_atom(function) do
     with {:module, ^module} <- Code.ensure_loaded(module),
