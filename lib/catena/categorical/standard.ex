@@ -6,6 +6,8 @@ defmodule Catena.Categorical.Standard do
   @version LanguageVersion.introduced(:traits_and_categories)
   @path Application.app_dir(:catena, "priv/stdlib/catena-standard-#{@version}.json")
 
+  def minimum_package, do: Catena.Standard.Minimum.catalog!()
+
   @spec interface!() :: map()
   def interface! do
     value = @path |> File.read!() |> JSON.decode!()
