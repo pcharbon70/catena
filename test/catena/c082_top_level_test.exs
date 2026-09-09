@@ -5,12 +5,12 @@ defmodule Catena.C082TopLevelTest do
   alias Catena.Effect.Row
   alias Catena.Package.Linker
 
-  @frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35 0.1.36 0.1.37 0.1.38 0.1.39 0.1.40 0.1.41 0.1.42 0.1.43 0.1.44 0.1.45 0.1.46 0.1.47 0.1.48 0.1.49 0.1.50 0.1.51 0.1.52 0.1.53 0.1.54 0.1.55 0.1.56 0.1.57 0.1.58 0.1.59 0.1.60 0.1.61 0.1.62 0.1.63 0.1.64)
+  @frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35 0.1.36 0.1.37 0.1.38 0.1.39 0.1.40 0.1.41 0.1.42 0.1.43 0.1.44 0.1.45 0.1.46 0.1.47 0.1.48 0.1.49 0.1.50 0.1.51 0.1.52 0.1.53 0.1.54 0.1.55 0.1.56 0.1.57 0.1.58 0.1.59 0.1.60 0.1.61 0.1.62 0.1.63 0.1.64 0.1.65)
 
   describe "revision registration" do
     @tag obligations: ~w(TL-OBL-001)
     test "0.1.48 is an exact registered revision with predecessors pinned" do
-      assert LanguageVersion.latest() == "0.1.64"
+      assert LanguageVersion.latest() == "0.1.65"
       assert LanguageVersion.source_text_frontend_versions() == @frontends
       refute "0.1.48" in LanguageVersion.compilable_revisions()
       refute "0.1.48" in LanguageVersion.artifact_versions()
@@ -34,7 +34,7 @@ defmodule Catena.C082TopLevelTest do
 
       assert {:ok, %{selection: %{language_revision: "0.1.13"}}} = Catena.scan_literal("1.0")
 
-      assert {:ok, %{selection: %{language_revision: "0.1.64"}}} =
+      assert {:ok, %{selection: %{language_revision: "0.1.65"}}} =
                Catena.decode_source_text("")
 
       assert {:module, _} = Code.ensure_loaded(Catena)

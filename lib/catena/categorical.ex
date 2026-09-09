@@ -1,6 +1,8 @@
 defmodule Catena.Categorical do
   @moduledoc "Elaboration boundary for Catena 0.1.4+ traits, instances, laws, and templates."
 
+  def collection_package, do: Catena.Standard.Collections.package!()
+
   alias Catena.Categorical.{Standard, TypeTerm}
   alias Catena.{Diagnostic, Kind, LanguageVersion}
   alias Catena.Type.Trait
