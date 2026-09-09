@@ -5,6 +5,10 @@ defmodule Catena.Kernel.Backend do
   alias Catena.Kernel.{Interface, Verifier}
   alias Catena.OTP.Compiler, as: OTPCompiler
 
+  @doc "Lower an explicit handler-bearing entry from existing checked CPS forms."
+  def lower_foreign_entry(core, name),
+    do: Catena.Foreign.Lowering.entry(lower(core), name, "__catena_kernel_cps_")
+
   @doc "Lower a checked foreign semantic value using its Catena carrier, not its wire encoding."
   def lower_foreign_value(codec, semantic, limits, annotation \\ 1),
     do: Catena.Foreign.Codec.lower(codec, semantic, limits, annotation)

@@ -9,6 +9,10 @@ defmodule Catena.Effect do
   @value_name ~r/^[a-z][A-Za-z0-9_]*$/
   @effect_versions LanguageVersion.compilable_from(:effects_and_handlers)
 
+  @doc "Re-derive explicit foreign operation bindings from checked capability core."
+  def foreign_bindings(core, name, bindings),
+    do: Catena.Foreign.Program.describe(core, name, bindings)
+
   @spec prepare!(map(), map(), [map()]) :: map()
   def prepare!(%{frontend_version: version}, _data, _interfaces)
       when version not in @effect_versions do

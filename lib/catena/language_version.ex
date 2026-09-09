@@ -69,12 +69,13 @@ defmodule Catena.LanguageVersion do
     otp_compatibility: "0.1.57",
     value_boundaries: "0.1.58",
     calling_conventions: "0.1.59",
-    erlang_type_boundary: "0.1.60"
+    erlang_type_boundary: "0.1.60",
+    foreign_adapters: "0.1.61"
   ]
   @ordered Keyword.values(@versions)
   @json_frontends ~w(0.1.1 0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7)
   @kernel_frontends ~w(0.1.8)
-  @source_text_frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35 0.1.36 0.1.37 0.1.38 0.1.39 0.1.40 0.1.41 0.1.42 0.1.43 0.1.44 0.1.45 0.1.46 0.1.47 0.1.48 0.1.49 0.1.50 0.1.51 0.1.52 0.1.53 0.1.54 0.1.55 0.1.56 0.1.57 0.1.58 0.1.59 0.1.60)
+  @source_text_frontends ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35 0.1.36 0.1.37 0.1.38 0.1.39 0.1.40 0.1.41 0.1.42 0.1.43 0.1.44 0.1.45 0.1.46 0.1.47 0.1.48 0.1.49 0.1.50 0.1.51 0.1.52 0.1.53 0.1.54 0.1.55 0.1.56 0.1.57 0.1.58 0.1.59 0.1.60 0.1.61)
   @capability_frontends ~w(0.1.50)
   @resource_frontends ~w(0.1.51)
   @task_frontends ~w(0.1.52)
@@ -83,6 +84,7 @@ defmodule Catena.LanguageVersion do
   @supervision_frontends ~w(0.1.56)
   @value_frontends ~w(0.1.58)
   @calling_frontends ~w(0.1.59)
+  @foreign_frontends ~w(0.1.61)
   @compilable @json_frontends ++
                 @kernel_frontends ++
                 @capability_frontends ++
@@ -90,7 +92,8 @@ defmodule Catena.LanguageVersion do
                 @task_frontends ++
                 @time_frontends ++
                 @protocol_frontends ++
-                @supervision_frontends ++ @value_frontends ++ @calling_frontends
+                @supervision_frontends ++
+                @value_frontends ++ @calling_frontends ++ @foreign_frontends
   @interfaces ~w(0.1.2 0.1.3 0.1.4 0.1.5 0.1.6 0.1.7 0.1.8)
   @signed_formats ~w(0.1.6 0.1.7 0.1.8)
   @retired ~w(0.1 0.2 0.3 0.4 0.5 0.6)
@@ -157,6 +160,7 @@ defmodule Catena.LanguageVersion do
           | :value_boundaries
           | :calling_conventions
           | :erlang_type_boundary
+          | :foreign_adapters
 
   @spec all() :: [String.t()]
   def all, do: @ordered
@@ -169,6 +173,8 @@ defmodule Catena.LanguageVersion do
 
   @spec capability_frontend_versions() :: [String.t()]
   def capability_frontend_versions, do: @capability_frontends
+
+  def foreign_frontend_versions, do: @foreign_frontends
 
   def calling_frontend_versions, do: @calling_frontends
 
@@ -204,7 +210,8 @@ defmodule Catena.LanguageVersion do
         @resource_frontends ++
         @task_frontends ++
         @time_frontends ++
-        @protocol_frontends ++ @supervision_frontends ++ @value_frontends ++ @calling_frontends
+        @protocol_frontends ++
+        @supervision_frontends ++ @value_frontends ++ @calling_frontends ++ @foreign_frontends
 
   @spec signed_format_versions() :: [String.t()]
   def signed_format_versions, do: @signed_formats
