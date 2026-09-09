@@ -3,6 +3,10 @@ defmodule Catena.Backend.ErlangAbstract do
 
   alias Catena.Diagnostic
 
+  @doc "Checked value-literal lowering shared across both layout owners."
+  def lower_boundary_value(type, semantic, limits, annotation \\ 1),
+    do: Catena.ValueBoundary.Data.lower(type, semantic, limits, annotation)
+
   @spec lower(map(), keyword()) :: [term()]
   def lower(core, options \\ []) do
     annotation = annotation(core)

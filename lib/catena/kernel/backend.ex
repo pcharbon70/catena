@@ -5,6 +5,10 @@ defmodule Catena.Kernel.Backend do
   alias Catena.Kernel.{Interface, Verifier}
   alias Catena.OTP.Compiler, as: OTPCompiler
 
+  @doc "Checked value-literal lowering shared across both layout owners."
+  def lower_boundary_value(type, semantic, limits, annotation \\ 1),
+    do: Catena.ValueBoundary.Data.lower(type, semantic, limits, annotation)
+
   @spec compile(map(), keyword()) ::
           {:ok, module(), binary(), map()} | {:error, Diagnostic.t()}
   def compile(core, options \\ [])
@@ -48,6 +52,9 @@ defmodule Catena.Kernel.Backend do
   def compile(%{version: "0.1.52"} = core, _options), do: Catena.Task.Kernel.compile(core)
 
   def compile(%{version: "0.1.53"} = core, _options), do: Catena.Task.TimeKernel.compile(core)
+
+  def compile(%{version: "0.1.58"} = core, _options),
+    do: Catena.ValueBoundary.Kernel.compile(core)
 
   def compile(_core, _options),
     do: {:error, Diagnostic.new("I001", "unknown kernel artifact boundary")}
@@ -226,6 +233,16 @@ defmodule Catena.Kernel.Backend do
     spawn_clause = {:clause, annotation, arguments, [], [spawn_call]}
     spawn_function = {:function, annotation, spawn, length(arguments), [spawn_clause]}
     [spawn_function, worker_function]
+  end
+
+  defp lower_expression(%{tag: type, value: value} = expression, _environment, _globals, _module)
+       when type in [:float, :text, :character, :bytes] do
+    bytes = if is_binary(value), do: byte_size(value), else: 8
+
+    {:ok, form} =
+      lower_boundary_value(type, value, %{nodes: 1, bytes: bytes}, annotation(expression.span))
+
+    form
   end
 
   defp lower_expression(

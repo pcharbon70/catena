@@ -371,6 +371,11 @@ defmodule Catena.LanguageLifecycle do
         "otp-compatibility",
         "0.1.57",
         specification("otp-compatibility/support-probes-and-artifacts.md#status-and-authority")
+      ),
+      feature(
+        "value-boundaries",
+        "0.1.58",
+        specification("value-boundaries/carriers-and-checked-conversion.md#status-and-authority")
       )
     ]
   end
@@ -677,6 +682,9 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("value-boundaries"),
+    do: ~w(source-acceptance static-meaning dynamic-behavior artifacts)
+
   defp affected_dimensions("otp-compatibility"), do: ~w(diagnostics artifacts)
 
   defp affected_dimensions("typed-supervision"),
@@ -968,6 +976,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("value-boundaries"),
+    do:
+      "Select exact 0.1.58 for a closed pure value tree with finite Float, Text, Character and Bytes carriers. Checked data conversion preserves type identity and explicit budgets. Retained frontends, interfaces and signed formats are unchanged; raw foreign functions and handles remain excluded from data ingress."
 
   defp migration("otp-compatibility"),
     do:

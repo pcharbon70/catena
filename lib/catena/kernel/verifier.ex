@@ -5,8 +5,17 @@ defmodule Catena.Kernel.Verifier do
 
   @spec verify(map()) :: :ok | {:error, String.t()}
   def verify(%{format: :kernel_core, version: version} = core)
-      when version in ["0.1.8", "0.1.50", "0.1.51", "0.1.52", "0.1.53", :owned_task_experiment] do
-    with :ok <- Catena.Task.Kernel.boundary(core),
+      when version in [
+             "0.1.8",
+             "0.1.50",
+             "0.1.51",
+             "0.1.52",
+             "0.1.53",
+             :owned_task_experiment,
+             "0.1.58"
+           ] do
+    with :ok <- Catena.ValueBoundary.Kernel.boundary(core),
+         :ok <- Catena.Task.Kernel.boundary(core),
          :ok <- Catena.Resource.Kernel.boundary(core),
          :ok <- Catena.Kernel.CapabilityKernel.verify_scope(core),
          :ok <- verify_data(core),
@@ -211,11 +220,20 @@ defmodule Catena.Kernel.Verifier do
 
   defp verify_expression(_expression, _environment, _context, _core), do: :error
 
-  defp derive_expression(%{tag: :integer}, _environment, _context, _core),
-    do: {:ok, :integer, []}
+  defp derive_expression(%{tag: type, value: value}, _environment, _context, %{
+         version: "0.1.58"
+       })
+       when type in [:float, :text, :character, :bytes] do
+    if Catena.ValueBoundary.Data.valid_scalar?(type, value), do: {:ok, type, []}, else: :error
+  end
 
-  defp derive_expression(%{tag: :boolean}, _environment, _context, _core),
-    do: {:ok, :boolean, []}
+  defp derive_expression(%{tag: :integer, value: value}, _environment, _context, _core)
+       when is_integer(value),
+       do: {:ok, :integer, []}
+
+  defp derive_expression(%{tag: :boolean, value: value}, _environment, _context, _core)
+       when is_boolean(value),
+       do: {:ok, :boolean, []}
 
   defp derive_expression(%{tag: :unit}, _environment, _context, _core),
     do: {:ok, :unit, []}
@@ -915,8 +933,19 @@ defmodule Catena.Kernel.Verifier do
     end)
   end
 
-  defp non_expansive?(%{tag: tag}) when tag in [:integer, :boolean, :unit, :variable, :function],
-    do: true
+  defp non_expansive?(%{tag: tag})
+       when tag in [
+              :integer,
+              :boolean,
+              :unit,
+              :float,
+              :text,
+              :character,
+              :bytes,
+              :variable,
+              :function
+            ],
+       do: true
 
   defp non_expansive?(%{tag: :tuple, elements: elements}),
     do: Enum.all?(elements, &non_expansive?/1)
@@ -1015,8 +1044,11 @@ defmodule Catena.Kernel.Verifier do
   defp derive_pattern(%{tag: :bind, name: name}, expected, _core),
     do: {:ok, %{name => expected}}
 
-  defp derive_pattern(%{tag: :integer}, :integer, _core), do: {:ok, %{}}
-  defp derive_pattern(%{tag: :boolean}, :boolean, _core), do: {:ok, %{}}
+  defp derive_pattern(%{tag: :integer, value: value}, :integer, _core) when is_integer(value),
+    do: {:ok, %{}}
+
+  defp derive_pattern(%{tag: :boolean, value: value}, :boolean, _core) when is_boolean(value),
+    do: {:ok, %{}}
 
   defp derive_pattern(%{tag: :tuple, elements: patterns}, {:tuple, types}, core)
        when length(patterns) == length(types),
@@ -1336,7 +1368,8 @@ defmodule Catena.Kernel.Verifier do
 
   defp known_type?(type, declarations) do
     case type do
-      primitive when primitive in [:integer, :boolean, :unit] ->
+      primitive
+      when primitive in [:integer, :boolean, :unit, :float, :text, :character, :bytes] ->
         true
 
       {:variable, _name} ->

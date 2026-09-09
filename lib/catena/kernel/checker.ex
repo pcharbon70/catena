@@ -77,6 +77,7 @@ defmodule Catena.Kernel.Checker do
         profile:
           case module.version do
             :owned_task_experiment -> :owned_task_experiment
+            "0.1.58" -> :value_boundaries
             "0.1.53" -> :cancellation_and_time
             "0.1.52" -> :owned_task_lifetimes
             "0.1.51" -> :resource_scopes
@@ -772,6 +773,13 @@ defmodule Catena.Kernel.Checker do
       {:resource, _, payload} -> {%{expression | resource: resource}, payload, effects, state}
       _ -> fail!("T002", "resource read requires a live scoped handle", expression.span)
     end
+  end
+
+  defp do_infer(%{tag: type, value: value} = expression, _environment, _context, state, _expected)
+       when type in [:float, :text, :character, :bytes] do
+    if Catena.ValueBoundary.Data.valid_scalar?(type, value),
+      do: {expression, type, [], state},
+      else: fail!("T002", "invalid scalar payload", expression.span)
   end
 
   defp do_infer(%{tag: :integer} = expression, _environment, _context, state, _expected),
@@ -1910,8 +1918,19 @@ defmodule Catena.Kernel.Checker do
     end)
   end
 
-  defp non_expansive?(%{tag: tag}) when tag in [:integer, :boolean, :unit, :variable, :function],
-    do: true
+  defp non_expansive?(%{tag: tag})
+       when tag in [
+              :integer,
+              :boolean,
+              :unit,
+              :float,
+              :text,
+              :character,
+              :bytes,
+              :variable,
+              :function
+            ],
+       do: true
 
   defp non_expansive?(%{tag: :tuple, elements: elements}),
     do: Enum.all?(elements, &non_expansive?/1)
@@ -2195,7 +2214,8 @@ defmodule Catena.Kernel.Checker do
 
   defp validate_known_types!(type, types, span) do
     case type do
-      primitive when primitive in [:integer, :boolean, :unit, :bottom] ->
+      primitive
+      when primitive in [:integer, :boolean, :unit, :bottom, :float, :text, :character, :bytes] ->
         :ok
 
       {:variable, _name} ->

@@ -196,6 +196,9 @@ defmodule Catena.Kernel.CapabilityKernel do
     _ -> {:error, "malformed capability evidence"}
   end
 
+  def verify_scope(%{version: "0.1.58"} = core),
+    do: verify_scope(%{core | version: "0.1.8"})
+
   def verify_scope(%{version: "0.1.8"} = core) do
     if Map.has_key?(core, :capabilities) or MapSet.size(slots(core)) > 0 or marked?(core),
       do: {:error, "capability evidence is not part of retained kernel 0.1.8"},
