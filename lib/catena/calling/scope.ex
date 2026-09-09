@@ -9,7 +9,7 @@ defmodule Catena.Calling.Scope do
     with true <- Budget.valid?(limits) and is_integer(maximum) and maximum > 0,
          :ok <- Artifact.verify(artifact, core, options),
          {:module, module} <-
-           Catena.OTP.Compiler.load(artifact.module, ~c"calling-scope.beam", artifact.binary),
+           load_artifact(artifact, options),
          {:ok, {^module, digest}} <- :beam_lib.md5(artifact.binary) do
       token = make_ref()
       key = {__MODULE__, token}
@@ -33,6 +33,17 @@ defmodule Catena.Calling.Scope do
     else
       false -> {:error, :invalid_scope_limits}
       error -> error
+    end
+  end
+
+  defp load_artifact(artifact, options) do
+    {:ok, {module, digest}} = :beam_lib.md5(artifact.binary)
+
+    if Keyword.get(options, :reuse_loaded, false) and :code.is_loaded(module) != false and
+         module.module_info(:md5) == digest do
+      {:module, module}
+    else
+      Catena.OTP.Compiler.load(module, ~c"calling-scope.beam", artifact.binary)
     end
   end
 

@@ -6,6 +6,21 @@ defmodule Catena.OTP.Compiler do
   @default_version LanguageVersion.introduced(:data_and_patterns)
   @selection_versions LanguageVersion.compilable_from(:editions_and_feature_lifecycle)
 
+  @doc "Compile a foreign binding sidecar tied to these exact forms and compiler."
+  def compile_foreign(forms, description, options) do
+    alias Catena.Calling.Descriptor
+
+    if description.forms_digest == Descriptor.digest(forms) and
+         description.compiler == Descriptor.compiler_digest() and
+         description.version == "0.1.61" do
+      compile(forms, Keyword.put(options, :foreign_descriptor, Descriptor.digest(description)))
+    else
+      {:error, Diagnostic.new("B001", "foreign descriptor does not match compilation")}
+    end
+  rescue
+    _ -> {:error, Diagnostic.new("B001", "malformed foreign descriptor")}
+  end
+
   @doc "Compile a calling sidecar only when it describes these exact forms and compiler."
   def compile_calling(forms, descriptor, options \\ []) do
     expected = Map.delete(descriptor, :digest)
@@ -50,6 +65,12 @@ defmodule Catena.OTP.Compiler do
       {:catena_toolchain, fingerprint},
       {:catena_toolchain_digest, Catena.OTP.Profile.digest(fingerprint)}
     ]
+
+    compile_info =
+      case Keyword.fetch(options, :foreign_descriptor) do
+        {:ok, digest} -> compile_info ++ [{:catena_foreign_descriptor, digest}]
+        :error -> compile_info
+      end
 
     compile_info =
       case Keyword.fetch(options, :calling_descriptor) do

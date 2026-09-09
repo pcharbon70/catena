@@ -3,6 +3,10 @@ defmodule Catena.Backend.ErlangAbstract do
 
   alias Catena.Diagnostic
 
+  @doc "Lower an explicit handler-bearing entry from existing checked CPS forms."
+  def lower_foreign_entry(core, name),
+    do: Catena.Foreign.Lowering.entry(lower(core), name, "__catena_cps_")
+
   @doc "Lower a checked foreign semantic value using its Catena carrier, not its wire encoding."
   def lower_foreign_value(codec, semantic, limits, annotation \\ 1),
     do: Catena.Foreign.Codec.lower(codec, semantic, limits, annotation)

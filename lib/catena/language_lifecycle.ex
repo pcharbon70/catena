@@ -390,6 +390,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "erlang-type-boundary/typed-conversion-and-preservation.md#status-and-authority"
         )
+      ),
+      feature(
+        "foreign-adapters",
+        "0.1.61",
+        specification(
+          "foreign-adapters/authority-calls-and-callback-lifetime.md#status-and-authority"
+        )
       )
     ]
   end
@@ -696,6 +703,8 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("foreign-adapters"), do: ~w(static-meaning dynamic-behavior artifacts)
+
   defp affected_dimensions("erlang-type-boundary"), do: ~w(static-meaning dynamic-behavior)
 
   defp affected_dimensions("calling-conventions"),
@@ -995,6 +1004,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("foreign-adapters"),
+    do:
+      "Select exact 0.1.61 for explicit trusted host grants, typed owned calls and scoped pure callbacks. Rebuild the checked capability-core binding artifact. Historical source/interface/signed formats retain their boundaries; public syntax and application provisioning remain separate."
 
   defp migration("erlang-type-boundary"),
     do:
