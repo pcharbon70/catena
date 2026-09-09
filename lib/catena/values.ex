@@ -37,6 +37,8 @@ defmodule Catena.Values do
   @spec classify(term()) :: true | atom() | {atom(), atom()}
   def classify(term)
 
+  def classify(%Catena.Foreign.NativeValue{}), do: true
+
   # Typed-core expression forms: literal and closure-forming tags are
   # values; containers are values exactly when recursive; everything
   # else is a computation or effect machinery.
@@ -166,6 +168,8 @@ defmodule Catena.Values do
   """
   @spec comparable?(term()) :: boolean()
   def comparable?(term)
+
+  def comparable?(%Catena.Foreign.NativeValue{}), do: false
 
   def comparable?(%{tag: tag} = expression) when tag in @value_tags do
     case tag do

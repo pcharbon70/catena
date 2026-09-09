@@ -397,6 +397,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "foreign-adapters/authority-calls-and-callback-lifetime.md#status-and-authority"
         )
+      ),
+      feature(
+        "native-value-roles",
+        "0.1.62",
+        specification(
+          "native-value-roles/typed-admission-and-native-identity.md#status-and-authority"
+        )
       )
     ]
   end
@@ -703,6 +710,8 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("native-value-roles"), do: ~w(static-meaning dynamic-behavior)
+
   defp affected_dimensions("foreign-adapters"), do: ~w(static-meaning dynamic-behavior artifacts)
 
   defp affected_dimensions("erlang-type-boundary"), do: ~w(static-meaning dynamic-behavior)
@@ -1004,6 +1013,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("native-value-roles"),
+    do:
+      "Select exact 0.1.62 for registered local process-send and fresh-reference roles. Grants remain explicit and scoped; no generic host term, raw port/fun admission or new persisted/executable format is introduced. Existing foreign descriptors retain 0.1.61."
 
   defp migration("foreign-adapters"),
     do:

@@ -15,6 +15,9 @@ defmodule Catena.Type do
           | {:function, t(), t()}
           | {:tuple, [t()]}
 
+  @doc "Resolve a native role sidecar without adding a generic host-term type."
+  def native_role(role), do: Catena.Foreign.NativeValue.role(role)
+
   @doc "Build an explicit closed-data foreign codec; no dynamic type is introduced."
   def foreign_codec(type), do: Catena.Foreign.Codec.new({:data, type})
 
