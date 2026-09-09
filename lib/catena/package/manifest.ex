@@ -9,6 +9,8 @@ defmodule Catena.Package.Manifest do
   @module_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @value_name ~r/^[a-z][A-Za-z0-9_]*$/
 
+  def decode_minimum(binary), do: Catena.Standard.Minimum.decode(binary)
+
   @doc "Decode a separate exact environment-entry declaration; declarations grant no host authority."
   def decode_environment(binary), do: Catena.Runtime.Environment.Manifest.decode(binary)
 

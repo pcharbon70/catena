@@ -25,6 +25,8 @@ defmodule Catena.Interface do
   @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
   @claim_subject_kinds ~w(value datatype trait instance effect handler module output interface action profile)
 
+  def minimum_libraries(context), do: Catena.Standard.Minimum.compile_libraries(context)
+
   @doc "Build a checked 0.1.61 foreign sidecar over retained capability core."
   def foreign_descriptor(core, name, bindings),
     do: Catena.Effect.foreign_bindings(core, name, bindings)
