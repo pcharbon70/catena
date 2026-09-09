@@ -12,3 +12,6 @@ stable hierarchy separate from the task-oriented material in
 
 The existing [Catena Guides](../guides/README.md) remain the primary learning
 path for language users, compiler contributors, and operators.
+
+- [Trusted computing base](trusted-computing-base.md) maps guarantees to their
+  enforcement, residual host assumptions and reviewed source/data boundary gate.

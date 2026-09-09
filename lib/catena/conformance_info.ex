@@ -7,6 +7,7 @@ defmodule Catena.ConformanceInfo do
   def document do
     %{
       "toolchain" => Catena.OTP.Profile.document(),
+      "trusted_computing_base" => Catena.Trust.Profile.summary(),
       "format" => "catena-conformance-info",
       "version" => 1,
       "implementation" => %{
