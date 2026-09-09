@@ -383,6 +383,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "calling-conventions/checked-calls-and-artifact-identity.md#status-and-authority"
         )
+      ),
+      feature(
+        "erlang-type-boundary",
+        "0.1.60",
+        specification(
+          "erlang-type-boundary/typed-conversion-and-preservation.md#status-and-authority"
+        )
       )
     ]
   end
@@ -689,6 +696,8 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("erlang-type-boundary"), do: ~w(static-meaning dynamic-behavior)
+
   defp affected_dimensions("calling-conventions"),
     do: ~w(static-meaning dynamic-behavior artifacts)
 
@@ -986,6 +995,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("erlang-type-boundary"),
+    do:
+      "Select exact 0.1.60 for explicit typed Erlang codecs with whole-carrier depth, node and byte budgets. Bind nominal layouts and list constructor roles to verified declarations. No dynamic type, raw handle admission or new executable/interface/signed format is introduced."
 
   defp migration("calling-conventions"),
     do:

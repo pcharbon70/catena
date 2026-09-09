@@ -3,6 +3,13 @@ defmodule Catena.ValueBoundary.Data do
 
   @scalars [:integer, :boolean, :unit, :float, :text, :character, :bytes]
 
+  @doc "Validate an explicit closed data schema without inferring a type from a payload."
+  def validate_schema(type) do
+    schema(type)
+  rescue
+    _ -> {:error, :invalid_boundary_type}
+  end
+
   def decode(type, native, limits), do: convert(type, native, limits, :decode)
   def encode(type, semantic, limits), do: convert(type, semantic, limits, :encode)
 
