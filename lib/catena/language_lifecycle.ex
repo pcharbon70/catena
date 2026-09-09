@@ -418,6 +418,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "debugging-metadata/verified-origins-and-redacted-frames.md#status-and-authority"
         )
+      ),
+      feature(
+        "collection-protocols",
+        "0.1.65",
+        specification(
+          "collection-protocols/finite-families-and-owned-pulls.md#status-and-authority"
+        )
       )
     ]
   end
@@ -724,6 +731,7 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("collection-protocols"), do: ~w(static-meaning dynamic-behavior)
   defp affected_dimensions("debugging-metadata"), do: ~w(artifacts diagnostics)
 
   defp affected_dimensions("native-services"), do: ~w(static-meaning dynamic-behavior artifacts)
@@ -1031,6 +1039,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("collection-protocols"),
+    do:
+      "Use the explicit 0.1.65 collection package and checked descriptors. Strict builders reject duplicates; replacement and lawful combining are explicit. Pull sessions require typed grants and mandatory release. Retained source, interface, artifact and signed formats are unchanged."
 
   defp migration("debugging-metadata"),
     do:

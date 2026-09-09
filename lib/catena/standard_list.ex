@@ -15,4 +15,15 @@ defmodule Catena.Standard.List do
       callback.(accumulator).(item)
     end)
   end
+
+  @doc "Internal pure fold protocol with no callbacks after an explicit stop."
+  def fold_while(callback, initial, subject) when is_function(callback, 2) and is_list(subject) do
+    Enum.reduce_while(subject, initial, fn value, acc ->
+      case callback.(acc, value) do
+        {:continue, next} -> {:cont, next}
+        {:stop, next} -> {:halt, next}
+        _ -> :erlang.error({:catena_trap, :invalid_fold_step})
+      end
+    end)
+  end
 end
