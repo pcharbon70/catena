@@ -88,6 +88,11 @@ defmodule Catena.Effect.Runtime do
 
   @spec trace(term()) :: :ok
   def trace(event) do
+    event =
+      if Catena.Runtime.Secret.context?(),
+        do: :secret_activity,
+        else: Catena.Runtime.Secret.redact(event)
+
     case Process.get(@trace_key) do
       events when is_list(events) -> Process.put(@trace_key, [event | events])
       _other -> :ok

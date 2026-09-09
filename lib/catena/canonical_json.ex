@@ -2,6 +2,10 @@ defmodule Catena.CanonicalJSON do
   @moduledoc "Deterministic JSON encoding with recursively sorted object keys."
 
   @spec encode(term()) :: binary()
+  def encode(%{__struct__: type})
+      when type in [Catena.Runtime.Secret.Input, Catena.Runtime.Secret.Ref],
+      do: raise(ArgumentError, "sensitive artifact input")
+
   def encode(value) when is_map(value) do
     value
     |> Enum.map(fn {key, item} -> {to_string(key), item} end)

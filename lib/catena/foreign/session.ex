@@ -6,11 +6,12 @@ defmodule Catena.Foreign.Session do
   def start(owner, grants, limits, options) do
     maximum = Keyword.get(options, :max_operations, 1024)
     callbacks = Keyword.get(options, :allow_callbacks, false)
+    sensitive = Keyword.get(options, :sensitive, false)
 
     with {:ok, selection} <- Descriptor.selection(options),
          true <-
            is_list(grants) and Budget.valid?(limits) and is_integer(maximum) and maximum > 0 and
-             is_boolean(callbacks),
+             is_boolean(callbacks) and is_boolean(sensitive),
          true <-
            Enum.all?(
              grants,
@@ -23,7 +24,7 @@ defmodule Catena.Foreign.Session do
       GenServer.start(
         __MODULE__,
         {owner, grants, limits, maximum, callbacks, Keyword.fetch!(options, :release_token),
-         native_values}
+         native_values, sensitive}
       )
     else
       _ -> {:error, :invalid_foreign_scope_setup}
@@ -34,13 +35,15 @@ defmodule Catena.Foreign.Session do
   defp admitted_versions("0.1.62"), do: ["0.1.61", "0.1.62"]
 
   @impl true
-  def init({owner, grants, limits, maximum, callbacks, release_token, native_values}) do
+  def init({owner, grants, limits, maximum, callbacks, release_token, native_values, sensitive}) do
     Process.flag(:trap_exit, true)
+    if sensitive, do: Process.flag(:sensitive, true)
     monitor = Process.monitor(owner)
 
     {:ok,
      %{
        owner: owner,
+       sensitive: sensitive,
        release_token: release_token,
        native_values:
          native_values
@@ -60,6 +63,12 @@ defmodule Catena.Foreign.Session do
        waiter: nil
      }}
   end
+
+  @impl true
+  def format_status(%{state: %{sensitive: true}} = status),
+    do: Map.new(status, fn {key, _} -> {key, :redacted} end)
+
+  def format_status(status), do: status
 
   @impl true
   def handle_call(
@@ -366,6 +375,8 @@ defmodule Catena.Foreign.Session do
     {pid, monitor} =
       :erlang.spawn_opt(
         fn ->
+          if state.sensitive, do: Process.flag(:sensitive, true)
+
           outcome =
             try do
               body.({Control, self(), control})

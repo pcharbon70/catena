@@ -2,6 +2,9 @@ defmodule Catena.Foreign.Adapter do
   @moduledoc "Scoped capability-bound foreign calls; no ambient module/function lookup."
   alias Catena.Foreign.Session
 
+  def deliver_secret(scope, reference, recipient),
+    do: Catena.Runtime.Secret.deliver(scope, reference, recipient)
+
   def run(grants, limits, body, options \\ []) when is_function(body, 1) do
     grace = Keyword.get(options, :release_grace_ns, 1_000_000_000)
     release_token = make_ref()

@@ -8,6 +8,7 @@ defmodule Catena.ConformanceInfo do
     %{
       "toolchain" => Catena.OTP.Profile.document(),
       "trusted_computing_base" => Catena.Trust.Profile.summary(),
+      "secret_capabilities" => Catena.Runtime.Secret.conformance_profile(),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,

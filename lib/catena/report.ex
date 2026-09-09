@@ -65,7 +65,9 @@ defmodule Catena.Report do
   end
 
   def diagnostic(diagnostic) do
-    %{
+    diagnostic = Catena.Runtime.Secret.redact_diagnostic(diagnostic)
+
+    Catena.Runtime.Secret.redact(%{
       id: diagnostic.id,
       message: diagnostic.message,
       path: diagnostic.path,
@@ -73,7 +75,7 @@ defmodule Catena.Report do
       severity: Atom.to_string(diagnostic.severity),
       details: diagnostic.details,
       fixes: diagnostic.fixes
-    }
+    })
   end
 
   defp span(nil), do: nil

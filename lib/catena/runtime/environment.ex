@@ -3,6 +3,9 @@ defmodule Catena.Runtime.Environment do
   alias Catena.Runtime.Environment.{Session, Authority}
   alias Catena.Resource.Runtime
 
+  def deliver_secret(scope, reference, recipient),
+    do: Catena.Runtime.Secret.deliver(scope, reference, recipient)
+
   def profile,
     do: %{
       version: "0.1.68",

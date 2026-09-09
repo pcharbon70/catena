@@ -16,7 +16,7 @@ defmodule Catena.Diagnostic do
 
   @spec new(String.t(), String.t(), keyword()) :: t()
   def new(id, message, options \\ []) do
-    %__MODULE__{
+    Catena.Runtime.Secret.redact_diagnostic(%__MODULE__{
       id: id,
       message: message,
       path: Keyword.get(options, :path),
@@ -24,6 +24,6 @@ defmodule Catena.Diagnostic do
       severity: Keyword.get(options, :severity, :error),
       details: Map.new(Keyword.get(options, :details, %{})),
       fixes: Keyword.get(options, :fixes, [])
-    }
+    })
   end
 end
