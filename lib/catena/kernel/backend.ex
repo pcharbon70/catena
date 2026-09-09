@@ -2053,7 +2053,7 @@ defmodule Catena.Kernel.Backend do
   defp erlang_operator(:subtract), do: :-
   defp erlang_operator(:multiply), do: :*
 
-  defp annotation(span), do: span.line_start
+  defp annotation(span), do: Catena.Debugging.Origins.annotation(span, span.line_start)
   defp variable_atom(name, span), do: String.to_atom("__Catena_#{name}_#{span.byte_start}")
   defp safe_atom(name), do: String.to_atom(name)
   defp module_name(nil), do: nil

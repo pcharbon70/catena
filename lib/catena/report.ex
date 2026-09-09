@@ -1,6 +1,9 @@
 defmodule Catena.Report do
   @moduledoc false
 
+  def debug_frames(artifact, input, stack, options \\ []),
+    do: Catena.Debugging.frames(artifact, input, stack, options)
+
   alias Catena.Type
   alias Catena.Type.Scheme
 

@@ -411,6 +411,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "native-services/signed-loading-and-owned-execution.md#status-and-authority"
         )
+      ),
+      feature(
+        "debugging-metadata",
+        "0.1.64",
+        specification(
+          "debugging-metadata/verified-origins-and-redacted-frames.md#status-and-authority"
+        )
       )
     ]
   end
@@ -717,6 +724,8 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("debugging-metadata"), do: ~w(artifacts diagnostics)
+
   defp affected_dimensions("native-services"), do: ~w(static-meaning dynamic-behavior artifacts)
 
   defp affected_dimensions("native-value-roles"), do: ~w(static-meaning dynamic-behavior)
@@ -1022,6 +1031,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("debugging-metadata"),
+    do:
+      "Build exact 0.1.64 debug artifacts from retained source inputs. Keep the verified sidecar separate, use normalized relative source paths and redacted values by default. Stripped frames cannot recover missing origins; erased evidence remains external."
 
   defp migration("native-services"),
     do:
