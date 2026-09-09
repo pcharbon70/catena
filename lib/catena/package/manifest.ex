@@ -9,6 +9,9 @@ defmodule Catena.Package.Manifest do
   @module_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @value_name ~r/^[a-z][A-Za-z0-9_]*$/
 
+  @doc "Decode trust metadata only; execution additionally requires checked inputs and scoped grants."
+  def decode_trusted_obligations(binary), do: Catena.Trust.Obligations.decode(binary)
+
   def decode_minimum(binary), do: Catena.Standard.Minimum.decode(binary)
 
   @doc "Decode a separate exact environment-entry declaration; declarations grant no host authority."
