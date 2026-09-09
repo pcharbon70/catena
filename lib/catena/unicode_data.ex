@@ -39,6 +39,11 @@ defmodule Catena.UnicodeData do
   @spec identifier_allowed?(scalar()) :: boolean()
   def identifier_allowed?(scalar), do: in_ranges?(tables().identifier_allowed, scalar)
 
+  @doc "Explicit runtime normalization over the separately pinned text data."
+  defdelegate normalize_text(text, form), to: Catena.Standard.Text.Normalization, as: :normalize
+  @doc "Default extended grapheme byte boundaries for validated UTF-8 text."
+  defdelegate grapheme_boundaries(text), to: Catena.Standard.Text.Graphemes, as: :boundaries
+
   @spec nfc(String.t()) :: String.t()
   def nfc(string) when is_binary(string) do
     string
