@@ -425,6 +425,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "collection-protocols/finite-families-and-owned-pulls.md#status-and-authority"
         )
+      ),
+      feature(
+        "text-binary-model",
+        "0.1.66",
+        specification(
+          "text-binary-model/units-unicode-and-checked-binary-operations.md#status-and-authority"
+        )
       )
     ]
   end
@@ -731,6 +738,7 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("text-binary-model"), do: ~w(static-meaning dynamic-behavior artifacts)
   defp affected_dimensions("collection-protocols"), do: ~w(static-meaning dynamic-behavior)
   defp affected_dimensions("debugging-metadata"), do: ~w(artifacts diagnostics)
 
@@ -1039,6 +1047,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("text-binary-model"),
+    do:
+      "Use explicit byte/scalar/grapheme units and Unicode 17.0.0 operations. Normalize and convert encodings explicitly. Checked text pipelines use exact 0.1.66 artifacts over retained source; no public interpolation or binary-pattern syntax is adopted."
 
   defp migration("collection-protocols"),
     do:

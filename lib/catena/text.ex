@@ -86,4 +86,11 @@ defmodule Catena.Text do
   end
 
   defp meaning(kind, type, value), do: %Meaning{kind: kind, type: type, value: value}
+  @doc "Build an exact checked text-operation artifact from retained typed core."
+  defdelegate compile_operations(core, entry, steps, limits),
+    to: Catena.Standard.Text.Program,
+    as: :build
+
+  @doc "The explicit text library profile, separate from literal elaboration."
+  defdelegate contract_profile(), to: Catena.Standard.Text, as: :profile
 end
