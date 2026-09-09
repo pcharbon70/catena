@@ -12,7 +12,8 @@ defmodule Catena.Kernel.Verifier do
              "0.1.52",
              "0.1.53",
              :owned_task_experiment,
-             "0.1.58"
+             "0.1.58",
+             "0.1.68"
            ] do
     with :ok <- Catena.ValueBoundary.Kernel.boundary(core),
          :ok <- Catena.Task.Kernel.boundary(core),
@@ -221,9 +222,9 @@ defmodule Catena.Kernel.Verifier do
   defp verify_expression(_expression, _environment, _context, _core), do: :error
 
   defp derive_expression(%{tag: type, value: value}, _environment, _context, %{
-         version: "0.1.58"
+         version: version
        })
-       when type in [:float, :text, :character, :bytes] do
+       when version in ["0.1.58", "0.1.68"] and type in [:float, :text, :character, :bytes] do
     if Catena.ValueBoundary.Data.valid_scalar?(type, value), do: {:ok, type, []}, else: :error
   end
 

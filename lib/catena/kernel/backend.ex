@@ -621,6 +621,15 @@ defmodule Catena.Kernel.Backend do
     [wrapper, worker]
   end
 
+  defp lower_cps(%{tag: type} = expression, environment, globals, module, _handlers, k)
+       when type in [:float, :text, :character, :bytes] do
+    call_continuation(
+      k,
+      lower_expression(expression, environment, globals, module),
+      annotation(expression.span)
+    )
+  end
+
   defp lower_cps(
          %{tag: :integer, value: value} = expression,
          _environment,

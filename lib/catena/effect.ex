@@ -9,6 +9,10 @@ defmodule Catena.Effect do
   @value_name ~r/^[a-z][A-Za-z0-9_]*$/
   @effect_versions LanguageVersion.compilable_from(:effects_and_handlers)
 
+  @doc "Verify the explicit service bindings that close a new environmental entry."
+  def environment_bindings(core, name, bindings, limits),
+    do: Catena.Runtime.Environment.Program.describe(core, name, bindings, limits)
+
   @doc "Re-derive explicit foreign operation bindings from checked capability core."
   def foreign_bindings(core, name, bindings),
     do: Catena.Foreign.Program.describe(core, name, bindings)

@@ -9,6 +9,9 @@ defmodule Catena.Package.Manifest do
   @module_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @value_name ~r/^[a-z][A-Za-z0-9_]*$/
 
+  @doc "Decode a separate exact environment-entry declaration; declarations grant no host authority."
+  def decode_environment(binary), do: Catena.Runtime.Environment.Manifest.decode(binary)
+
   @doc "Decode the separate canonical native package description without widening retained manifests."
   def decode_native(binary), do: Catena.Foreign.Native.Package.decode_description(binary)
 
