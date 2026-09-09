@@ -25,6 +25,9 @@ defmodule Catena.Package.Linker do
   @governance_version LanguageVersion.introduced(:specifications_and_governance)
   @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
 
+  @doc "Verify exact native payloads and explicit publisher/unsafe grants before loading."
+  def link_native(package, policy), do: Catena.Foreign.Native.Package.verify(package, policy)
+
   @spec compile_manifest(Path.t(), keyword()) :: {:ok, map()} | {:error, Diagnostic.t()}
   def compile_manifest(path, options \\ []) do
     directory = Path.dirname(Path.expand(path))

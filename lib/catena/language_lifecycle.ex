@@ -404,6 +404,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "native-value-roles/typed-admission-and-native-identity.md#status-and-authority"
         )
+      ),
+      feature(
+        "native-services",
+        "0.1.63",
+        specification(
+          "native-services/signed-loading-and-owned-execution.md#status-and-authority"
+        )
       )
     ]
   end
@@ -710,6 +717,8 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
 
+  defp affected_dimensions("native-services"), do: ~w(static-meaning dynamic-behavior artifacts)
+
   defp affected_dimensions("native-value-roles"), do: ~w(static-meaning dynamic-behavior)
 
   defp affected_dimensions("foreign-adapters"), do: ~w(static-meaning dynamic-behavior artifacts)
@@ -1013,6 +1022,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("native-services"),
+    do:
+      "Use exact 0.1.63 native package descriptions and separate signed envelope format 1. Supply explicit publisher, kind and unsafe obligations; ports use the Python 3 guardian and NIFs require VM-crash acknowledgement. Retained Catena executable and governance formats are unchanged."
 
   defp migration("native-value-roles"),
     do:
