@@ -7,6 +7,9 @@ defmodule Catena.Kernel.Interface do
   @module_name ~r/^[A-Z][A-Za-z0-9_]*$/
   @value_name ~r/^[a-z][A-Za-z0-9_]*$/
 
+  @doc "Build an exact 0.1.59 artifact call sidecar; retained interface bytes are unchanged."
+  def calling_descriptor(core, options \\ []), do: Catena.Calling.Descriptor.build(core, options)
+
   @spec build(map()) :: map()
   def build(core) do
     types =
