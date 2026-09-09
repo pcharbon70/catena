@@ -22,6 +22,7 @@ defmodule Catena.Kernel.Type do
   def closed?({:managed_link, _}), do: false
   def closed?({:task_monitor, _, _}), do: false
   def closed?({:resource, _, _}), do: false
+  def closed?(type) when type in [:float, :text, :character, :bytes], do: true
   def closed?(:integer), do: true
   def closed?(:boolean), do: true
   def closed?(:unit), do: true

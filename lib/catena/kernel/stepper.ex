@@ -269,6 +269,9 @@ defmodule Catena.Kernel.Stepper do
 
   defp local_step(configuration, %{control: {:expr, expression, environment}} = process) do
     case expression.tag do
+      tag when tag in [:float, :text, :character, :bytes] ->
+        put_control(configuration, process, {:value, expression.value})
+
       :integer ->
         put_control(configuration, process, {:value, expression.value})
 

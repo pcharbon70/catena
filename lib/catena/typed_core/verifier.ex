@@ -180,11 +180,13 @@ defmodule Catena.TypedCore.Verifier do
 
   defp verify_condition_definition(_definition), do: :ok
 
-  defp verify_expression(%{tag: :integer, type: :integer}, _environment, _data),
-    do: {:ok, :integer}
+  defp verify_expression(%{tag: :integer, type: :integer, value: value}, _environment, _data)
+       when is_integer(value),
+       do: {:ok, :integer}
 
-  defp verify_expression(%{tag: :boolean, type: :boolean}, _environment, _data),
-    do: {:ok, :boolean}
+  defp verify_expression(%{tag: :boolean, type: :boolean, value: value}, _environment, _data)
+       when is_boolean(value),
+       do: {:ok, :boolean}
 
   defp verify_expression(
          %{tag: :unary, operator: :not, operand: operand, type: :boolean},
@@ -840,11 +842,13 @@ defmodule Catena.TypedCore.Verifier do
   defp verify_pattern(%{tag: :bind, name: name, type: type}, type, _data, bindings),
     do: put_pattern_binding(bindings, name, type)
 
-  defp verify_pattern(%{tag: :integer, type: :integer}, :integer, _data, bindings),
-    do: {:ok, bindings}
+  defp verify_pattern(%{tag: :integer, type: :integer, value: value}, :integer, _data, bindings)
+       when is_integer(value),
+       do: {:ok, bindings}
 
-  defp verify_pattern(%{tag: :boolean, type: :boolean}, :boolean, _data, bindings),
-    do: {:ok, bindings}
+  defp verify_pattern(%{tag: :boolean, type: :boolean, value: value}, :boolean, _data, bindings)
+       when is_boolean(value),
+       do: {:ok, bindings}
 
   defp verify_pattern(%{tag: :tuple, elements: patterns}, {:tuple, types}, data, bindings)
        when length(patterns) == length(types),

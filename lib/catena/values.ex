@@ -15,7 +15,7 @@ defmodule Catena.Values do
   alias Catena.Runtime.ResumptionToken
   alias Catena.{Effect.Row, Type.Scheme}
 
-  @value_tags ~w(integer boolean unit float function)a
+  @value_tags ~w(integer boolean unit float text character bytes function)a
   @container_tags ~w(tuple record construct inject)a
 
   @computation_tags ~w(
@@ -43,10 +43,22 @@ defmodule Catena.Values do
 
   def classify(%{tag: tag} = expression) when tag in @value_tags do
     case tag do
-      :integer -> if is_integer(expression.value), do: true, else: :unknown_form
-      :boolean -> if is_boolean(expression.value), do: true, else: :unknown_form
-      :float -> if is_float(expression.value), do: true, else: :unknown_form
-      _other -> true
+      :integer ->
+        if is_integer(Map.get(expression, :value)), do: true, else: :unknown_form
+
+      :boolean ->
+        if is_boolean(Map.get(expression, :value)), do: true, else: :unknown_form
+
+      :float ->
+        if is_float(Map.get(expression, :value)), do: true, else: :unknown_form
+
+      kind when kind in [:text, :character, :bytes] ->
+        if Catena.ValueBoundary.Data.valid_scalar?(kind, Map.get(expression, :value)),
+          do: true,
+          else: :unknown_form
+
+      _other ->
+        true
     end
   end
 
@@ -100,19 +112,40 @@ defmodule Catena.Values do
 
   def classify(term) when is_map(term) do
     cond do
-      struct?(term, Row) -> :effect_row
-      struct?(term, Scheme) -> :signature
-      struct?(term, ResumptionToken) -> :resumption
-      is_struct(term, Catena.Text.Meaning) -> true
-      is_map_key(term, :evidence) or is_map_key(term, "evidence") -> :evidence
-      term == %{} or Enum.all?(Map.values(term), &value?/1) -> true
-      true -> :unknown_form
+      struct?(term, Row) ->
+        :effect_row
+
+      struct?(term, Scheme) ->
+        :signature
+
+      struct?(term, ResumptionToken) ->
+        :resumption
+
+      is_struct(term, Catena.Text.Meaning) ->
+        if valid_text_meaning?(term), do: true, else: :unknown_form
+
+      is_map_key(term, :evidence) or is_map_key(term, "evidence") ->
+        :evidence
+
+      term == %{} or Enum.all?(Map.values(term), &value?/1) ->
+        true
+
+      true ->
+        :unknown_form
     end
   end
 
   def classify(term) when is_binary(term), do: true
 
   def classify(_other), do: :unknown_form
+
+  defp valid_text_meaning?(%Catena.Text.Meaning{kind: kind, type: type, value: value}) do
+    expected = %{text: :Text, bytes: :Bytes, character: :Character}
+    bytes = if is_binary(value), do: byte_size(value), else: 4
+
+    Map.get(expected, kind) == type and kind in [:text, :bytes, :character] and
+      match?({:ok, _}, Catena.ValueBoundary.Data.decode(kind, value, %{nodes: 1, bytes: bytes}))
+  end
 
   @doc """
   The closed non-value kinds of the normative grammar, for exclusion
@@ -136,10 +169,20 @@ defmodule Catena.Values do
 
   def comparable?(%{tag: tag} = expression) when tag in @value_tags do
     case tag do
-      :integer -> true
-      :boolean -> true
-      :float -> is_float(expression.value)
-      _other -> false
+      :integer ->
+        is_integer(Map.get(expression, :value))
+
+      :boolean ->
+        is_boolean(Map.get(expression, :value))
+
+      :float ->
+        is_float(Map.get(expression, :value))
+
+      kind when kind in [:text, :character, :bytes] ->
+        Catena.ValueBoundary.Data.valid_scalar?(kind, Map.get(expression, :value))
+
+      _other ->
+        false
     end
   end
 
@@ -152,7 +195,7 @@ defmodule Catena.Values do
   def comparable?(term) when is_boolean(term), do: true
   def comparable?(term) when is_float(term), do: true
   def comparable?(term) when is_binary(term), do: true
-  def comparable?(term) when is_struct(term, Catena.Text.Meaning), do: true
+  def comparable?(term) when is_struct(term, Catena.Text.Meaning), do: valid_text_meaning?(term)
 
   def comparable?({:catena_variant, _label, payload}), do: comparable?(payload)
 
@@ -173,12 +216,16 @@ defmodule Catena.Values do
   Int and Float only, in both the typed-core and runtime carriers.
   """
   @spec orderable?(term()) :: boolean()
-  def orderable?(%{tag: :integer}), do: true
+  def orderable?(%{tag: :integer, value: value}), do: is_integer(value)
   def orderable?(%{tag: :float, value: value}), do: is_float(value)
+
+  def orderable?(%{tag: kind, value: value}) when kind in [:text, :character, :bytes],
+    do: Catena.ValueBoundary.Data.valid_scalar?(kind, value)
+
   def orderable?(term) when is_integer(term), do: true
   def orderable?(term) when is_float(term), do: true
   def orderable?(term) when is_binary(term), do: true
-  def orderable?(term) when is_struct(term, Catena.Text.Meaning), do: true
+  def orderable?(term) when is_struct(term, Catena.Text.Meaning), do: valid_text_meaning?(term)
   def orderable?(_other), do: false
 
   @doc """
