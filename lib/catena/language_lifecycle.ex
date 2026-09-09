@@ -432,6 +432,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "text-binary-model/units-unicode-and-checked-binary-operations.md#status-and-authority"
         )
+      ),
+      feature(
+        "numeric-library",
+        "0.1.67",
+        specification(
+          "numeric-library/checked-arithmetic-and-explicit-rounding.md#status-and-authority"
+        )
       )
     ]
   end
@@ -737,6 +744,8 @@ defmodule Catena.LanguageLifecycle do
 
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
+
+  defp affected_dimensions("numeric-library"), do: ~w(static-meaning dynamic-behavior artifacts)
 
   defp affected_dimensions("text-binary-model"), do: ~w(static-meaning dynamic-behavior artifacts)
   defp affected_dimensions("collection-protocols"), do: ~w(static-meaning dynamic-behavior)
@@ -1047,6 +1056,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("numeric-library"),
+    do:
+      "Use explicit checked arithmetic, Euclidean integer division, finite binary64 conversions and decimal contexts. Exact 0.1.67 numeric artifacts bind retained input and fixed typed operations; public vocabulary remains held."
 
   defp migration("text-binary-model"),
     do:
