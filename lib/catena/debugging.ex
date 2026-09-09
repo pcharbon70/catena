@@ -208,7 +208,7 @@ defmodule Catena.Debugging do
 
   defp values(arguments, %{codec: codec, limits: limits}) when is_list(arguments) do
     case Catena.Foreign.Codec.from_native(codec, List.to_tuple(arguments), limits) do
-      {:ok, data} -> {:disclosed, data}
+      {:ok, data} -> {:disclosed, Catena.Runtime.Secret.redact(data)}
       _ -> :redacted
     end
   end

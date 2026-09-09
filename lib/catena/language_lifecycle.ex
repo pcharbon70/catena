@@ -467,6 +467,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "trusted-obligation-policy/transitive-disclosure-and-scoped-admission.md#status-and-authority"
         )
+      ),
+      feature(
+        "secrets-and-capabilities",
+        "0.1.72",
+        specification(
+          "secret-capabilities/sealed-values-and-protected-delivery.md#status-and-authority"
+        )
       )
     ]
   end
@@ -772,6 +779,8 @@ defmodule Catena.LanguageLifecycle do
 
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
+
+  defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
   defp affected_dimensions("trusted-obligation-policy"), do: ~w(artifacts dynamic-behavior)
 
@@ -1093,6 +1102,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("secrets-and-capabilities"),
+    do:
+      "Supply credential inputs or explicit providers to a secret scope and grant exact recipients. Use sealed transformations and protected delivery; marked secrets are refused in public artifacts, and secret-context diagnostics/traces are redacted. No raw credential retrieval or new source vocabulary is introduced."
 
   defp migration("trusted-obligation-policy"),
     do:

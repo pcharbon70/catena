@@ -74,6 +74,10 @@ defmodule Catena.CanonicalJCS do
   end
 
   @spec encode(term()) :: binary()
+  def encode(%{__struct__: type})
+      when type in [Catena.Runtime.Secret.Input, Catena.Runtime.Secret.Ref],
+      do: raise(ArgumentError, "sensitive artifact input")
+
   def encode(value) when is_map(value) do
     value
     |> Enum.map(fn

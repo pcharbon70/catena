@@ -22,6 +22,12 @@ defmodule Catena.Assurance do
 
   @spec build(map(), [map()], [map()], map() | nil, [map()]) :: map()
   def build(package, artifacts, cores, governance_result, signatures \\ []) do
+    if Catena.Runtime.Secret.sensitive?(
+         {package, artifacts, cores, governance_result, signatures}
+       ) do
+      raise ArgumentError, "sensitive artifact input"
+    end
+
     format_version = Map.get(package, :artifact_version, @legacy_version)
     selection = Map.get(package, :selection, LanguageVersion.legacy_selection(@legacy_version))
 

@@ -10,13 +10,16 @@ defmodule Catena.Runtime.Environment.Session do
 
   def init({owner, grants, limits, release, options}) do
     Process.flag(:trap_exit, true)
+    sensitive = Keyword.get(options, :sensitive, false)
+    if sensitive == true, do: Process.flag(:sensitive, true)
     timeout = Keyword.get(options, :timeout_ms, 1000)
     maximum = Keyword.get(options, :max_requests, 1024)
     parallel = Keyword.get(options, :max_inflight, 8)
     fake = Keyword.get(options, :fake, nil)
 
     valid =
-      is_list(grants) and length(grants) <= 8 and Enum.all?(grants, &(Policy.verify(&1) == :ok)) and
+      is_boolean(sensitive) and is_list(grants) and length(grants) <= 8 and
+        Enum.all?(grants, &(Policy.verify(&1) == :ok)) and
         length(Enum.uniq_by(grants, & &1.service)) == length(grants) and Budget.valid?(limits) and
         is_integer(timeout) and timeout in 1..1_000_000 and is_integer(maximum) and
         maximum in 1..10000 and
@@ -25,7 +28,7 @@ defmodule Catena.Runtime.Environment.Session do
         (is_nil(fake) or length(fake) <= maximum) and
         Enum.all?(
           Keyword.keys(options),
-          &(&1 in [:timeout_ms, :max_requests, :max_inflight, :fake])
+          &(&1 in [:timeout_ms, :max_requests, :max_inflight, :fake, :sensitive])
         )
 
     if valid do
@@ -54,6 +57,7 @@ defmodule Catena.Runtime.Environment.Session do
       {:ok,
        %{
          owner: owner,
+         sensitive: sensitive,
          owner_monitor: Process.monitor(owner),
          release: release,
          limits: limits,
@@ -75,6 +79,11 @@ defmodule Catena.Runtime.Environment.Session do
       {:stop, :invalid_environment_scope}
     end
   end
+
+  def format_status(%{state: %{sensitive: true}} = status),
+    do: Map.new(status, fn {key, _} -> {key, :redacted} end)
+
+  def format_status(status), do: status
 
   def handle_call({:bundle, owner}, {owner, _}, %{owner: owner} = state),
     do: {:reply, {:ok, state.bundle}, state}
@@ -236,6 +245,8 @@ defmodule Catena.Runtime.Environment.Session do
     {worker, monitor} =
       :erlang.spawn_opt(
         fn ->
+          if state.sensitive, do: Process.flag(:sensitive, true)
+
           result =
             try do
               case fake do
