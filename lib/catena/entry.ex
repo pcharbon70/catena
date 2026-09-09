@@ -33,6 +33,38 @@ defmodule Catena.Entry do
     end
   end
 
+  @doc "Launch an exact environment entry with explicitly supplied service authority."
+  def launch_environment(
+        artifact,
+        %{core: core, entry: name, bindings: bindings},
+        grants,
+        limits,
+        options \\ []
+      ) do
+    with :ok <- Catena.Runtime.Environment.Program.verify(artifact, core, name, bindings, limits) do
+      Catena.Runtime.Environment.run(
+        grants,
+        limits,
+        fn bundle ->
+          case Catena.Runtime.Environment.Program.invoke(
+                 artifact,
+                 core,
+                 name,
+                 bindings,
+                 limits,
+                 bundle
+               ) do
+            {:ok, value} -> {:ok, %{status: :completed, value: value}}
+            error -> error
+          end
+        end,
+        options
+      )
+    end
+  catch
+    :error, {:catena_trap, reason} -> {:ok, %{status: :failed, reason: reason}}
+  end
+
   @spec library?(list()) :: boolean()
   def library?(entries), do: entries in [nil, []]
 

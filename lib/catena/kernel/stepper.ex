@@ -767,6 +767,11 @@ defmodule Catena.Kernel.Stepper do
           )
         end
 
+      {:environment_handler, _, _, _} ->
+        if configuration.core.version == "0.1.68",
+          do: put_control(configuration, process, {:value, value}),
+          else: trap_process(configuration, process, :invalid_environment_handler)
+
       {:handler, handler, environment} ->
         return = handler.return
 
@@ -1221,6 +1226,33 @@ defmodule Catena.Kernel.Stepper do
           arguments: arguments
         })
 
+      {:environment, operations, bundle} ->
+        if configuration.core.version == "0.1.68" do
+          configuration =
+            append_trace(configuration, %{
+              label: :request,
+              pid: process.id,
+              effect: effect,
+              operation: operation,
+              arguments: arguments
+            })
+
+          case Catena.Runtime.Environment.Runtime.request(
+                 bundle,
+                 operations,
+                 operation,
+                 arguments
+               ) do
+            {:ok, value} ->
+              put_control(configuration, process, {:value, value})
+
+            {:error, reason} ->
+              trap_process(configuration, process, {:environment_boundary, reason})
+          end
+        else
+          trap_process(configuration, process, :invalid_environment_handler)
+        end
+
       :error ->
         trap_process(configuration, process, {:unhandled_effect, effect, operation})
     end
@@ -1261,6 +1293,9 @@ defmodule Catena.Kernel.Stepper do
          captured
        ),
        do: {:ok, Enum.reverse(captured), marker, rest}
+
+  defp split_handler([{:environment_handler, effect, operations, bundle} | _], effect, _),
+    do: {:environment, operations, bundle}
 
   defp split_handler([frame | rest], effect, captured),
     do: split_handler(rest, effect, [frame | captured])

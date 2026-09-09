@@ -439,6 +439,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "numeric-library/checked-arithmetic-and-explicit-rounding.md#status-and-authority"
         )
+      ),
+      feature(
+        "environmental-effects",
+        "0.1.68",
+        specification(
+          "environmental-effects/explicit-authority-and-closed-launches.md#status-and-authority"
+        )
       )
     ]
   end
@@ -744,6 +751,9 @@ defmodule Catena.LanguageLifecycle do
 
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
+
+  defp affected_dimensions("environmental-effects"),
+    do: ~w(static-meaning dynamic-behavior artifacts)
 
   defp affected_dimensions("numeric-library"), do: ~w(static-meaning dynamic-behavior artifacts)
 
@@ -1056,6 +1066,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("environmental-effects"),
+    do:
+      "Use an explicitly supplied authority bundle for the new closed environment entry. Service declarations do not grant authority; retained zero-argument launch and lexical capability non-escape remain unchanged."
 
   defp migration("numeric-library"),
     do:

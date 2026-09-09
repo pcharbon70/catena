@@ -40,6 +40,8 @@ defmodule Catena.ValueBoundary.Kernel do
     end
   end
 
+  def boundary(%{version: "0.1.68"} = core), do: Catena.Runtime.Environment.Kernel.boundary(core)
+
   def boundary(%{version: @profile} = core) do
     if core.language_revision == @profile and core.frontend_version == @profile and
          core.frontend_format == @profile and core.edition == "0.1" and core.previews == [] and

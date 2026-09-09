@@ -82,6 +82,7 @@ defmodule Catena.Kernel.Checker do
           case module.version do
             :owned_task_experiment -> :owned_task_experiment
             "0.1.58" -> :value_boundaries
+            "0.1.68" -> :environmental_effects
             "0.1.53" -> :cancellation_and_time
             "0.1.52" -> :owned_task_lifetimes
             "0.1.51" -> :resource_scopes
@@ -96,7 +97,14 @@ defmodule Catena.Kernel.Checker do
           do: Map.put(core, :capabilities, module.capabilities),
           else: core
 
-      if core.version in ["0.1.50", "0.1.51", "0.1.52", "0.1.53", :owned_task_experiment] do
+      if core.version in [
+           "0.1.50",
+           "0.1.51",
+           "0.1.52",
+           "0.1.53",
+           "0.1.68",
+           :owned_task_experiment
+         ] do
         case Catena.Kernel.CapabilityKernel.verify_scope(core) do
           :ok -> :ok
           {:error, reason} -> fail!("EFX003", reason, module.span)
