@@ -460,6 +460,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "trusted-computing-base/guarantees-assumptions-and-boundary-checks.md#status-and-authority"
         )
+      ),
+      feature(
+        "trusted-obligation-policy",
+        "0.1.71",
+        specification(
+          "trusted-obligation-policy/transitive-disclosure-and-scoped-admission.md#status-and-authority"
+        )
       )
     ]
   end
@@ -765,6 +772,8 @@ defmodule Catena.LanguageLifecycle do
 
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
+
+  defp affected_dimensions("trusted-obligation-policy"), do: ~w(artifacts dynamic-behavior)
 
   defp affected_dimensions("trusted-computing-base"), do: ~w(artifacts)
 
@@ -1084,6 +1093,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("trusted-obligation-policy"),
+    do:
+      "Derive the exact transitive obligation sidecar from checked build inputs and explicitly admit owner-qualified boundaries before using scoped execution. Retained formats and intralanguage unsafe exclusions are unchanged; admission does not establish native safety."
 
   defp migration("trusted-computing-base"),
     do:

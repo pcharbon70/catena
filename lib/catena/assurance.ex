@@ -1,6 +1,10 @@
 defmodule Catena.Assurance do
   @moduledoc "Build and independently inspect versioned artifact-bound assurance manifests."
 
+  @doc "Rebind a trust sidecar to exact checked inputs; hashes alone do not grant authority."
+  def verify_trusted_obligations(binary, graph),
+    do: Catena.Trust.Obligations.verify_document(binary, graph)
+
   alias Catena.{
     CanonicalJCS,
     Diagnostic,

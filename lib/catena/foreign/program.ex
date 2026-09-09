@@ -3,6 +3,9 @@ defmodule Catena.Foreign.Program do
   alias Catena.Foreign.{Adapter, Codec, Descriptor}
   alias Catena.Calling.Descriptor, as: Identity
 
+  def invoke_admitted(scope, package, entry, limits),
+    do: Catena.Trust.Policy.invoke(scope, package, entry, [], limits)
+
   def describe(%{format: :kernel_core, version: "0.1.50"} = core, name, bindings)
       when is_map(bindings) do
     with :ok <- Catena.Kernel.Verifier.verify(core),

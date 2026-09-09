@@ -25,6 +25,9 @@ defmodule Catena.Interface do
   @edition_version LanguageVersion.introduced(:editions_and_feature_lifecycle)
   @claim_subject_kinds ~w(value datatype trait instance effect handler module output interface action profile)
 
+  @doc "Derive a separate exact transitive trust sidecar from verified build inputs."
+  def trusted_obligations(root, inputs), do: Catena.Trust.Obligations.build(root, inputs)
+
   def minimum_libraries(context), do: Catena.Standard.Minimum.compile_libraries(context)
 
   @doc "Build a checked 0.1.61 foreign sidecar over retained capability core."

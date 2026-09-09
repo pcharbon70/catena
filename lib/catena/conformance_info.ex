@@ -8,6 +8,20 @@ defmodule Catena.ConformanceInfo do
     %{
       "toolchain" => Catena.OTP.Profile.document(),
       "trusted_computing_base" => Catena.Trust.Profile.summary(),
+      "trusted_obligation_policy" => %{
+        "contract" => "0.1.71",
+        "nodes" => 64,
+        "edges" => 256,
+        "input_bytes" => 67_108_864,
+        "document_bytes" => 1_048_576,
+        "boundaries" => 256,
+        "scopes" => 64,
+        "acknowledgements_per_grant" => 32,
+        "acknowledgement_bytes" => 128,
+        "package_name_bytes" => 128,
+        "revocation" => "future-admissions-only",
+        "host_safety_proven" => false
+      },
       "format" => "catena-conformance-info",
       "version" => 1,
       "implementation" => %{

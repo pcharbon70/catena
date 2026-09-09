@@ -11,7 +11,7 @@ defmodule Catena.CallingSelectionTest do
         (def main (signature Int (uses)) 42))
       """)
 
-    assert Catena.LanguageVersion.latest() == "0.1.70"
+    assert Catena.LanguageVersion.latest() == "0.1.71"
     assert Catena.LanguageVersion.calling_frontend_versions() == ["0.1.59"]
     refute "0.1.59" in Catena.LanguageVersion.interface_versions()
     refute "0.1.59" in Catena.LanguageVersion.signed_format_versions()

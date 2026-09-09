@@ -2,6 +2,9 @@ defmodule Catena.Foreign.Native do
   @moduledoc "Explicit signed native service scopes; Float is the initial closed ABI."
   alias Catena.Foreign.Native.{Package, Session}
 
+  def invoke_admitted(scope, package, value),
+    do: Catena.Trust.Policy.invoke(scope, package, "call", [value], %{})
+
   def run(package, policy, body, options \\ []) when is_function(body, 1) do
     release_token = make_ref()
     grace = Keyword.get(options, :release_grace_ns, 2_000_000_000)
