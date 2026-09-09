@@ -106,8 +106,41 @@ defmodule Catena.Foreign.Program do
   end
 
   def invoke(program, scope, limits, wait_ms) do
-    with :ok <- verify(program),
-         true <- Catena.Foreign.Budget.valid?(limits),
+    with :ok <- verify(program), do: execute(program, scope, limits, wait_ms)
+  catch
+    :throw, {:catena_resource_cancelled, _} = cancellation -> throw(cancellation)
+    :error, {:catena_trap, reason} -> {:trap, reason}
+    class, reason -> {:trap, {:foreign_program_failure, class, reason}}
+  end
+
+  def invoke_debug(artifact, input, scope, limits, wait_ms, options \\ []) do
+    with :ok <- Catena.Debugging.verify(artifact, input, options),
+         true <- input.kind == :foreign,
+         {:ok, core} <- Catena.Kernel.CapabilityKernel.check(input.source, input.families),
+         {:ok, description} <- describe(core, input.entry, input.bindings) do
+      program = %{
+        description: description,
+        module: artifact.module,
+        binary: artifact.binary,
+        symbol: String.to_existing_atom("__catena_foreign_" <> input.entry)
+      }
+
+      execute(program, scope, limits, wait_ms)
+    else
+      false -> {:error, :unsupported_debug_foreign_entry}
+      error -> error
+    end
+  catch
+    :throw, {:catena_resource_cancelled, _} = cancellation ->
+      throw(cancellation)
+
+    _, _ ->
+      {:ok, frames} = Catena.Debugging.frames(artifact, input, __STACKTRACE__, build: options)
+      {:trap, %{reason: :redacted, frames: frames}}
+  end
+
+  defp execute(program, scope, limits, wait_ms) do
+    with true <- Catena.Foreign.Budget.valid?(limits),
          true <- is_integer(wait_ms) and wait_ms >= 0 and wait_ms <= 4_294_967_295,
          :ok <- authorize(program, scope),
          {:module, module} <-
@@ -135,10 +168,6 @@ defmodule Catena.Foreign.Program do
       false -> {:error, :invalid_foreign_program_limits}
       error -> error
     end
-  catch
-    :throw, {:catena_resource_cancelled, _} = cancellation -> throw(cancellation)
-    :error, {:catena_trap, reason} -> {:trap, reason}
-    class, reason -> {:trap, {:foreign_program_failure, class, reason}}
   end
 
   defp authorize(program, scope) do

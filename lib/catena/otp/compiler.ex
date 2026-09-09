@@ -6,6 +6,18 @@ defmodule Catena.OTP.Compiler do
   @default_version LanguageVersion.introduced(:data_and_patterns)
   @selection_versions LanguageVersion.compilable_from(:editions_and_feature_lifecycle)
 
+  @doc "Compile generated location tokens without embedding source or erased evidence."
+  def compile_debug(forms, profile, virtual_file) do
+    compile(forms,
+      source: virtual_file,
+      specification: "0.1.64",
+      frontend: "debug-0.1.64",
+      artifact_version: "0.1.64",
+      language_selection: Catena.LanguageVersion.legacy_selection("0.1.64"),
+      debug_mode: profile.mode
+    )
+  end
+
   @doc "Compile a foreign binding sidecar tied to these exact forms and compiler."
   def compile_foreign(forms, description, options) do
     alias Catena.Calling.Descriptor
@@ -100,6 +112,11 @@ defmodule Catena.OTP.Compiler do
       {:source, String.to_charlist(source)},
       {:compile_info, compile_info}
     ]
+
+    compiler_options =
+      if Keyword.get(options, :debug_mode) == :stripped,
+        do: [:no_line_info | compiler_options],
+        else: compiler_options
 
     case :compile.noenv_forms(forms, compiler_options) do
       {:ok, module, binary} ->

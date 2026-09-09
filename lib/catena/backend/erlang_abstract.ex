@@ -191,7 +191,16 @@ defmodule Catena.Backend.ErlangAbstract do
     {:receive, annotation, lowered}
   end
 
-  defp lower_definition(
+  defp lower_definition(definition, globals, annotation, layout) do
+    lower_definition_node(
+      definition,
+      globals,
+      Catena.Debugging.Origins.annotation(definition, annotation),
+      layout
+    )
+  end
+
+  defp lower_definition_node(
          %{expression: %{tag: tag} = fold} = definition,
          _globals,
          annotation,
@@ -223,7 +232,7 @@ defmodule Catena.Backend.ErlangAbstract do
     {:function, annotation, safe_atom(definition.name), length(arguments), [clause]}
   end
 
-  defp lower_definition(
+  defp lower_definition_node(
          %{expression: %{tag: :derived_constructor, constructor: constructor}} = definition,
          _globals,
          annotation,
@@ -235,7 +244,7 @@ defmodule Catena.Backend.ErlangAbstract do
     {:function, annotation, safe_atom(definition.name), length(arguments), [clause]}
   end
 
-  defp lower_definition(
+  defp lower_definition_node(
          %{expression: %{tag: :derived_capability} = derived} = definition,
          _globals,
          annotation,
@@ -247,7 +256,7 @@ defmodule Catena.Backend.ErlangAbstract do
     {:function, annotation, safe_atom(definition.name), length(arguments), [clause]}
   end
 
-  defp lower_definition(%{generated?: false} = definition, globals, annotation, layout) do
+  defp lower_definition_node(%{generated?: false} = definition, globals, annotation, layout) do
     if effect_definition?(definition) do
       {parameters, body} = unwrap_parameters(definition.expression, definition.parameters, [])
       environment = Map.new(parameters, fn name -> {name, variable_atom(name)} end)
@@ -290,7 +299,7 @@ defmodule Catena.Backend.ErlangAbstract do
     end
   end
 
-  defp lower_definition(definition, globals, annotation, layout) do
+  defp lower_definition_node(definition, globals, annotation, layout) do
     lower_direct_definition(definition, globals, annotation, layout)
   end
 
@@ -304,6 +313,15 @@ defmodule Catena.Backend.ErlangAbstract do
   end
 
   defp lower_handler_helpers(handler, globals, annotation, layout) do
+    lower_handler_helpers_node(
+      handler,
+      globals,
+      Catena.Debugging.Origins.annotation(handler, annotation),
+      layout
+    )
+  end
+
+  defp lower_handler_helpers_node(handler, globals, annotation, layout) do
     parameter_variables =
       handler.parameters
       |> Enum.with_index()
@@ -462,7 +480,17 @@ defmodule Catena.Backend.ErlangAbstract do
   defp unwrap_parameters(_expression, _parameters, _accumulator),
     do: raise(ArgumentError, "typed core does not match declared definition parameters")
 
-  defp lower_expression(
+  defp lower_expression(expression, environment, globals, annotation, layout) do
+    lower_expression_node(
+      expression,
+      environment,
+      globals,
+      Catena.Debugging.Origins.annotation(expression, annotation),
+      layout
+    )
+  end
+
+  defp lower_expression_node(
          %{tag: :integer, value: value},
          _environment,
          _globals,
@@ -471,7 +499,7 @@ defmodule Catena.Backend.ErlangAbstract do
        ),
        do: {:integer, annotation, value}
 
-  defp lower_expression(
+  defp lower_expression_node(
          %{tag: :boolean, value: value},
          _environment,
          _globals,
@@ -480,7 +508,7 @@ defmodule Catena.Backend.ErlangAbstract do
        ),
        do: {:atom, annotation, value}
 
-  defp lower_expression(
+  defp lower_expression_node(
          %{tag: :unary, operator: operator, operand: operand},
          environment,
          globals,
@@ -491,7 +519,7 @@ defmodule Catena.Backend.ErlangAbstract do
      lower_expression(operand, environment, globals, annotation, layout)}
   end
 
-  defp lower_expression(
+  defp lower_expression_node(
          %{tag: :binary, operator: operator, left: left, right: right} = expression,
          environment,
          globals,
@@ -507,7 +535,13 @@ defmodule Catena.Backend.ErlangAbstract do
     )
   end
 
-  defp lower_expression(%{tag: :variable, name: name}, environment, globals, annotation, _layout) do
+  defp lower_expression_node(
+         %{tag: :variable, name: name},
+         environment,
+         globals,
+         annotation,
+         _layout
+       ) do
     case Map.fetch(environment, name) do
       {:ok, variable} ->
         {:var, annotation, variable}
@@ -523,7 +557,7 @@ defmodule Catena.Backend.ErlangAbstract do
     end
   end
 
-  defp lower_expression(
+  defp lower_expression_node(
          %{tag: :function, parameter: parameter, body: body},
          environment,
          globals,
@@ -547,7 +581,7 @@ defmodule Catena.Backend.ErlangAbstract do
     {:fun, annotation, {:clauses, [clause]}}
   end
 
-  defp lower_expression(
+  defp lower_expression_node(
          %{tag: :call, callee: %{tag: :variable, name: name} = callee, arguments: arguments},
          environment,
          globals,
@@ -578,7 +612,7 @@ defmodule Catena.Backend.ErlangAbstract do
     end
   end
 
-  defp lower_expression(
+  defp lower_expression_node(
          %{tag: :call, callee: callee, arguments: arguments},
          environment,
          globals,
@@ -595,7 +629,7 @@ defmodule Catena.Backend.ErlangAbstract do
     )
   end
 
-  defp lower_expression(
+  defp lower_expression_node(
          %{tag: :let, name: name, value: value, body: body},
          environment,
          globals,
@@ -612,7 +646,7 @@ defmodule Catena.Backend.ErlangAbstract do
      ]}
   end
 
-  defp lower_expression(
+  defp lower_expression_node(
          %{tag: :tuple, elements: elements},
          environment,
          globals,
@@ -623,7 +657,7 @@ defmodule Catena.Backend.ErlangAbstract do
      Enum.map(elements, &lower_expression(&1, environment, globals, annotation, layout))}
   end
 
-  defp lower_expression(
+  defp lower_expression_node(
          %{tag: :annotate, expression: expression},
          environment,
          globals,
@@ -632,7 +666,13 @@ defmodule Catena.Backend.ErlangAbstract do
        ),
        do: lower_expression(expression, environment, globals, annotation, layout)
 
-  defp lower_expression(%{tag: :construct} = expression, environment, globals, annotation, layout) do
+  defp lower_expression_node(
+         %{tag: :construct} = expression,
+         environment,
+         globals,
+         annotation,
+         layout
+       ) do
     evaluations =
       expression.arguments
       |> Enum.with_index()
@@ -661,7 +701,7 @@ defmodule Catena.Backend.ErlangAbstract do
     if bindings == [], do: value, else: {:block, annotation, bindings ++ [value]}
   end
 
-  defp lower_expression(
+  defp lower_expression_node(
          %{tag: :match, scrutinee: scrutinee, clauses: clauses, path: path},
          environment,
          globals,
@@ -686,7 +726,19 @@ defmodule Catena.Backend.ErlangAbstract do
      [{:match, annotation, {:var, annotation, variable}, scrutinee}, decision]}
   end
 
-  defp lower_cps(
+  defp lower_cps(expression, environment, handlers, globals, annotation, layout, continuation) do
+    lower_cps_node(
+      expression,
+      environment,
+      handlers,
+      globals,
+      Catena.Debugging.Origins.annotation(expression, annotation),
+      layout,
+      continuation
+    )
+  end
+
+  defp lower_cps_node(
          %{tag: tag} = expression,
          environment,
          _handlers,
@@ -703,7 +755,7 @@ defmodule Catena.Backend.ErlangAbstract do
     )
   end
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :unary, operator: operator, operand: operand},
          environment,
          handlers,
@@ -721,7 +773,7 @@ defmodule Catena.Backend.ErlangAbstract do
     end)
   end
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :binary, operator: :and, left: left, right: right, path: path},
          environment,
          handlers,
@@ -752,7 +804,7 @@ defmodule Catena.Backend.ErlangAbstract do
     )
   end
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :binary, operator: :or, left: left, right: right, path: path},
          environment,
          handlers,
@@ -783,7 +835,7 @@ defmodule Catena.Backend.ErlangAbstract do
     )
   end
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :binary, operator: operator, left: left, right: right} = expression,
          environment,
          handlers,
@@ -811,7 +863,7 @@ defmodule Catena.Backend.ErlangAbstract do
     )
   end
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :tuple, elements: elements},
          environment,
          handlers,
@@ -825,7 +877,7 @@ defmodule Catena.Backend.ErlangAbstract do
     end)
   end
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :let, name: name, value: value, body: body},
          environment,
          handlers,
@@ -854,7 +906,7 @@ defmodule Catena.Backend.ErlangAbstract do
     lower_cps(value, environment, handlers, globals, annotation, layout, next)
   end
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :call, callee: %{tag: :variable, name: name}, arguments: arguments} = expression,
          environment,
          handlers,
@@ -900,7 +952,7 @@ defmodule Catena.Backend.ErlangAbstract do
     end
   end
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :call, callee: callee, arguments: arguments},
          environment,
          handlers,
@@ -920,7 +972,7 @@ defmodule Catena.Backend.ErlangAbstract do
     )
   end
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :annotate, expression: expression},
          environment,
          handlers,
@@ -931,7 +983,7 @@ defmodule Catena.Backend.ErlangAbstract do
        ),
        do: lower_cps(expression, environment, handlers, globals, annotation, layout, continuation)
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :request} = expression,
          environment,
          handlers,
@@ -967,7 +1019,7 @@ defmodule Catena.Backend.ErlangAbstract do
     )
   end
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :resume, resumption: resumption, value: value},
          environment,
          handlers,
@@ -989,7 +1041,7 @@ defmodule Catena.Backend.ErlangAbstract do
     end)
   end
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :handle} = expression,
          environment,
          outer_handlers,
@@ -1110,7 +1162,7 @@ defmodule Catena.Backend.ErlangAbstract do
     )
   end
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :construct} = expression,
          environment,
          handlers,
@@ -1136,7 +1188,7 @@ defmodule Catena.Backend.ErlangAbstract do
     end)
   end
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :match, scrutinee: scrutinee, clauses: clauses, path: path},
          environment,
          handlers,
@@ -1171,7 +1223,7 @@ defmodule Catena.Backend.ErlangAbstract do
     )
   end
 
-  defp lower_cps(
+  defp lower_cps_node(
          %{tag: :function} = expression,
          environment,
          _handlers,
@@ -1191,7 +1243,15 @@ defmodule Catena.Backend.ErlangAbstract do
     )
   end
 
-  defp lower_cps(expression, environment, _handlers, globals, annotation, layout, continuation) do
+  defp lower_cps_node(
+         expression,
+         environment,
+         _handlers,
+         globals,
+         annotation,
+         layout,
+         continuation
+       ) do
     if effect_control?(expression) do
       cps_fail("unsupported effectful expression #{inspect(expression.tag)}")
     end
