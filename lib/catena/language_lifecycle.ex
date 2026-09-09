@@ -453,6 +453,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "minimum-prelude/explicit-minimum-and-component-identity.md#status-and-authority"
         )
+      ),
+      feature(
+        "trusted-computing-base",
+        "0.1.70",
+        specification(
+          "trusted-computing-base/guarantees-assumptions-and-boundary-checks.md#status-and-authority"
+        )
       )
     ]
   end
@@ -758,6 +765,8 @@ defmodule Catena.LanguageLifecycle do
 
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
+
+  defp affected_dimensions("trusted-computing-base"), do: ~w(artifacts)
 
   defp affected_dimensions("minimum-prelude"), do: ~w(static-meaning dynamic-behavior artifacts)
 
@@ -1075,6 +1084,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("trusted-computing-base"),
+    do:
+      "Review the guarantee-specific trust profile and source/data boundary inventory when compiler or host paths change. The profile discloses residual trust; it adds no proof-verified compiler or runtime sandbox claim."
 
   defp migration("minimum-prelude"),
     do:
