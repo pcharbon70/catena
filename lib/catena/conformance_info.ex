@@ -40,6 +40,7 @@ defmodule Catena.ConformanceInfo do
       "optimizer_validity" => stringify(Catena.Optimizer.profile()),
       "standard_stability_and_performance" => stringify(Catena.Standard.Contract.profile()),
       "performance_envelope" => stringify(Catena.Performance.Envelope.profile()),
+      "debugging_and_observability" => stringify(Catena.Tool.Debugger.profile()),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,

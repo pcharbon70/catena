@@ -118,7 +118,7 @@ defmodule Catena.OptimizerValidityTest do
   @tag obligations: ~w(OZ-OBL-001 OZ-OBL-017 OZ-OBL-018)
   test "optimizer validity is selected cumulatively and disclosed" do
     assert LanguageVersion.introduced(:optimizer_validity) == "0.1.86"
-    assert LanguageVersion.from(:optimizer_validity) == ["0.1.86", "0.1.87", "0.1.88"]
+    assert LanguageVersion.from(:optimizer_validity) == ["0.1.86", "0.1.87", "0.1.88", "0.1.89"]
     assert %{"version" => "0.1.86"} = Catena.ConformanceInfo.document()["optimizer_validity"]
 
     assert {:ok, :stable} == LanguageLifecycle.state("optimizer-validity", "0.1.86")
