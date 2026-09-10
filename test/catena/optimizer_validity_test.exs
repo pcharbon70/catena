@@ -124,7 +124,8 @@ defmodule Catena.OptimizerValidityTest do
              "0.1.87",
              "0.1.88",
              "0.1.89",
-             "0.1.90"
+             "0.1.90",
+             "0.1.91"
            ]
 
     assert %{"version" => "0.1.86"} = Catena.ConformanceInfo.document()["optimizer_validity"]

@@ -592,6 +592,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "release-readiness/evidence-gates-and-release-claims.md#status-and-authority"
         )
+      ),
+      feature(
+        "diagnostic-contract",
+        "0.1.91",
+        specification(
+          "diagnostic-contract/structured-explanations-and-repairs.md#status-and-authority"
+        )
       )
     ]
   end
@@ -948,6 +955,8 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(dynamic-behavior diagnostics artifacts)
 
   defp affected_dimensions("release-readiness"), do: ~w(interfaces artifacts)
+
+  defp affected_dimensions("diagnostic-contract"), do: ~w(diagnostics interfaces)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1335,6 +1344,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("release-readiness"),
     do:
       "Select exact 0.1.90 for canonical release evidence manifests and explicit experimental, complete and stable claims. Close every class-specific gate with exact platform, obligation, contradiction and proof witnesses; assessment performs no publication or automatic class upgrade."
+
+  defp migration("diagnostic-contract"),
+    do:
+      "Select exact 0.1.91 for bounded related locations, source-level type presentation, causal provenance, coverage and guard explanations, generated origins, and preimage-bound edits. Public parse diagnostics remain held for P109."
 
   defp migration("secrets-and-capabilities"),
     do:

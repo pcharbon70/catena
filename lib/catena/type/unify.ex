@@ -51,7 +51,15 @@ defmodule Catena.Type.Unify do
           "T002",
           "cannot unify #{inspect(Type.normalize(left))} with #{inspect(Type.normalize(right))}",
           path: path,
-          details: %{left: Type.normalize(left), right: Type.normalize(right)}
+          details: %{left: Type.normalize(left), right: Type.normalize(right)},
+          explanation: %{
+            kind: :type_mismatch,
+            inferred: Catena.Diagnostic.Contract.present_type(left),
+            expected: Catena.Diagnostic.Contract.present_type(right)
+          },
+          provenance: [
+            %{id: "unify-root", relation: :requires_equal_types, path: path}
+          ]
         )
   end
 
