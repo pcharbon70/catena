@@ -39,6 +39,7 @@ defmodule Catena.ConformanceInfo do
       "differential_testing" => stringify(Catena.Reference.Differential.profile()),
       "optimizer_validity" => stringify(Catena.Optimizer.profile()),
       "standard_stability_and_performance" => stringify(Catena.Standard.Contract.profile()),
+      "performance_envelope" => stringify(Catena.Performance.Envelope.profile()),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,
