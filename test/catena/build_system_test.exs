@@ -186,7 +186,7 @@ defmodule Catena.BuildSystemTest do
   end
 
   test "conformance exposes the complete retained-input build profile" do
-    assert Catena.LanguageVersion.latest() == "0.1.81"
+    assert Catena.LanguageVersion.latest() == "0.1.82"
     info = Catena.ConformanceInfo.document()
     assert info["build_system"]["version"] == "0.1.81"
     assert info["build_system"]["network_during_build"] == false
