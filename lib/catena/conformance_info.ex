@@ -28,6 +28,7 @@ defmodule Catena.ConformanceInfo do
         "duplicate_disposition" => "deduplicate-by-message-id-and-frame-digest",
         "application_processing_acknowledged" => false
       },
+      "message_semantics" => stringify(Catena.Message.profile()),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,
