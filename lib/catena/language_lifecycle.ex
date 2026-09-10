@@ -606,6 +606,11 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "documentation-tool/interface-graph-rendering-and-doctests.md#status-and-authority"
         )
+      ),
+      feature(
+        "migration-tool",
+        "0.1.93",
+        specification("migration-tool/transactional-retained-json-edits.md#status-and-authority")
       )
     ]
   end
@@ -966,6 +971,8 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("diagnostic-contract"), do: ~w(diagnostics interfaces)
 
   defp affected_dimensions("documentation-tool"), do: ~w(interfaces diagnostics artifacts)
+
+  defp affected_dimensions("migration-tool"), do: ~w(diagnostics artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1361,6 +1368,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("documentation-tool"),
     do:
       "Select exact 0.1.92 for verified interface-linked documentation graphs, visibility-aware deterministic Markdown, and explicit bounded doctests over retained JSON or kernel inputs. Public source examples remain held for P109."
+
+  defp migration("migration-tool"),
+    do:
+      "Select exact 0.1.93 for explicitly authorized, preimage-bound transactional application of machine-applicable retained JSON edits. Recheck migrated modules or manifests, retain backups and audit records, and inherit no governance approval. Public source and API rewrites remain held for P109."
 
   defp migration("secrets-and-capabilities"),
     do:

@@ -44,6 +44,7 @@ defmodule Catena.ConformanceInfo do
       "release_readiness" => stringify(Catena.Release.Readiness.profile()),
       "diagnostic_contract" => stringify(Catena.Diagnostic.Contract.profile()),
       "documentation_tool" => stringify(Catena.Tool.Documentation.profile()),
+      "migration_tool" => stringify(Catena.Tool.Migration.profile()),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,
