@@ -36,6 +36,7 @@ defmodule Catena.ConformanceInfo do
       "compatibility_suite" => stringify(Catena.Package.CompatibilityMatrix.profile()),
       "reference_evaluator" => stringify(Catena.Reference.Observation.profile()),
       "testing_tools" => stringify(Catena.Tool.TestRunner.profile()),
+      "differential_testing" => stringify(Catena.Reference.Differential.profile()),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,
