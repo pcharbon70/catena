@@ -158,10 +158,10 @@ defmodule Catena.DebuggingObservabilityTest do
     assert profile["erased_declarations"] == "external_evidence_only"
     assert profile["optimized_values"] == "explicitly_unavailable"
     assert "derivation" in profile["event_kinds"] and "unavailable" in profile["event_kinds"]
-    assert Catena.LanguageVersion.latest() == "0.1.89"
+    assert Catena.LanguageVersion.latest() == "0.1.90"
     assert Catena.LanguageVersion.introduced(:debugging_and_observability) == "0.1.89"
 
     assert {:ok, :stable} =
-             Catena.LanguageLifecycle.state("debugging-and-observability", "0.1.89")
+             Catena.LanguageLifecycle.state("debugging-and-observability", "0.1.90")
   end
 end
