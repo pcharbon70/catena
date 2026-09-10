@@ -13,6 +13,10 @@ defmodule Catena.ConformanceInfo do
         Map.new(Catena.Package.Reproducible.profile(), fn {key, value} ->
           {Atom.to_string(key), value}
         end),
+      "supply_chain_policy" =>
+        Map.new(Catena.Package.Registry.profile(), fn {key, value} ->
+          {Atom.to_string(key), value}
+        end),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,

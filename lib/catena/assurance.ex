@@ -9,6 +9,10 @@ defmodule Catena.Assurance do
   def verify_reproducible(archive, plan, root),
     do: Catena.Package.Reproducible.rebuild_verify(plan, archive, root)
 
+  @doc "Replay an exact dependency lock through verified registry metadata and content."
+  def verify_registry_lock(client, manifest, lockfile, mirrors, options \\ []),
+    do: Catena.Package.Registry.acquire_lock(client, manifest, lockfile, mirrors, options)
+
   alias Catena.{
     CanonicalJCS,
     Diagnostic,

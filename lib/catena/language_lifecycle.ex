@@ -481,6 +481,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "reproducible-builds/exact-inputs-and-canonical-packages.md#status-and-authority"
         )
+      ),
+      feature(
+        "supply-chain-policy",
+        "0.1.74",
+        specification(
+          "supply-chain-policy/signed-registry-and-immutable-acquisition.md#status-and-authority"
+        )
       )
     ]
   end
@@ -788,6 +795,8 @@ defmodule Catena.LanguageLifecycle do
   defp change_classification(_id), do: "compatible-addition"
 
   defp affected_dimensions("reproducible-builds"), do: ~w(artifacts)
+
+  defp affected_dimensions("supply-chain-policy"), do: ~w(artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1115,6 +1124,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("reproducible-builds"),
     do:
       "Bind all supplied files, deterministic generators and explicit public environment in an exact compiler/toolchain envelope. Build in fresh roots and compare complete canonical archives. General build actions, new signed events and secret-dependent builds require their own contracts."
+
+  defp migration("supply-chain-policy"),
+    do:
+      "Configure an out-of-band registry root, verify monotonic signed snapshots and delegated publisher signatures, then acquire exact content through a lock. Yanked releases remain available only to exact locked replay; compromised releases are denied. Registry authority remains separate from language governance."
 
   defp migration("secrets-and-capabilities"),
     do:

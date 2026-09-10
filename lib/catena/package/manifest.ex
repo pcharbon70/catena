@@ -17,6 +17,9 @@ defmodule Catena.Package.Manifest do
   @doc "Decode a separate exact environment-entry declaration; declarations grant no host authority."
   def decode_environment(binary), do: Catena.Runtime.Environment.Manifest.decode(binary)
 
+  @doc "Decode an out-of-band registry root; registry metadata grants no language capability."
+  def decode_registry_root(binary), do: Catena.Package.Registry.decode_root(binary)
+
   @doc "Decode the separate canonical native package description without widening retained manifests."
   def decode_native(binary), do: Catena.Foreign.Native.Package.decode_description(binary)
 
