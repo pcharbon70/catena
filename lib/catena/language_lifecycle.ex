@@ -599,6 +599,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "diagnostic-contract/structured-explanations-and-repairs.md#status-and-authority"
         )
+      ),
+      feature(
+        "documentation-tool",
+        "0.1.92",
+        specification(
+          "documentation-tool/interface-graph-rendering-and-doctests.md#status-and-authority"
+        )
       )
     ]
   end
@@ -957,6 +964,8 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("release-readiness"), do: ~w(interfaces artifacts)
 
   defp affected_dimensions("diagnostic-contract"), do: ~w(diagnostics interfaces)
+
+  defp affected_dimensions("documentation-tool"), do: ~w(interfaces diagnostics artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1348,6 +1357,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("diagnostic-contract"),
     do:
       "Select exact 0.1.91 for bounded related locations, source-level type presentation, causal provenance, coverage and guard explanations, generated origins, and preimage-bound edits. Public parse diagnostics remain held for P109."
+
+  defp migration("documentation-tool"),
+    do:
+      "Select exact 0.1.92 for verified interface-linked documentation graphs, visibility-aware deterministic Markdown, and explicit bounded doctests over retained JSON or kernel inputs. Public source examples remain held for P109."
 
   defp migration("secrets-and-capabilities"),
     do:
