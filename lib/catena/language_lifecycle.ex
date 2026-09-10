@@ -550,6 +550,13 @@ defmodule Catena.LanguageLifecycle do
         "testing-tools",
         "0.1.84",
         specification("testing-tools/isolated-seeded-and-scoped-runs.md#status-and-authority")
+      ),
+      feature(
+        "differential-testing",
+        "0.1.85",
+        specification(
+          "differential-testing/generated-and-adversarial-agreement.md#status-and-authority"
+        )
       )
     ]
   end
@@ -888,6 +895,9 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(static-meaning dynamic-behavior)
 
   defp affected_dimensions("testing-tools"),
+    do: ~w(static-meaning dynamic-behavior artifacts)
+
+  defp affected_dimensions("differential-testing"),
     do: ~w(static-meaning dynamic-behavior artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
@@ -1252,6 +1262,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("testing-tools"),
     do:
       "Select exact 0.1.84 for internal unit, law, property, model, concurrency and specification runs. Supply explicit seeds and subject digests, preserve generator invariants while shrinking, declare observed effects, and distinguish semantic, schedule, shrink and host-time bounds. Public test syntax remains held for P109/P107."
+
+  defp migration("differential-testing"),
+    do:
+      "Select exact 0.1.85 for subject-bound generated and adversarial comparison of independent reference and production observations. Compare deterministic behavior exactly, validate nondeterministic executions against bounded allowed sets, and retain minimized counterexamples. Public source generation remains held for P109."
 
   defp migration("secrets-and-capabilities"),
     do:
