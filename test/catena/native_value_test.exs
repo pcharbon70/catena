@@ -69,7 +69,9 @@ defmodule Catena.NativeValueTest do
                [],
                [:fresh_reference, :fresh_reference],
                @limits,
-               fn _ -> flunk("excess grants admitted") end, max_operations: 1)
+               fn _ -> flunk("excess grants admitted") end,
+               max_operations: 1
+             )
 
     NativeValue.run(
       [],
@@ -81,7 +83,9 @@ defmodule Catena.NativeValueTest do
         assert {:error, :foreign_operation_limit} = NativeValue.send_message(handle, 8)
         assert_receive 7
         refute_received 8
-      end, max_operations: 1)
+      end,
+      max_operations: 1
+    )
   end
 
   test "dead process send preserves C010's no-liveness-acknowledgement contract" do
