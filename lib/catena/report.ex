@@ -77,12 +77,20 @@ defmodule Catena.Report do
       span: span(diagnostic.span),
       severity: Atom.to_string(diagnostic.severity),
       details: diagnostic.details,
-      fixes: diagnostic.fixes
+      fixes: diagnostic.fixes,
+      related: Enum.map(diagnostic.related, &location/1),
+      explanation: diagnostic.explanation,
+      provenance: diagnostic.provenance
     })
   end
 
   defp span(nil), do: nil
   defp span(span), do: Catena.SourceSpan.to_map(span)
+
+  defp location(%{span: related_span} = location),
+    do: Map.put(location, :span, span(related_span))
+
+  defp location(location), do: location
 
   defp scheme(%Scheme{variables: variables, type: type}) do
     %{quantified: length(variables), type: printable(Type.normalize(type))}

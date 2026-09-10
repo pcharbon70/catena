@@ -2,7 +2,18 @@ defmodule Catena.Diagnostic do
   @moduledoc "A stable machine-readable compiler diagnostic."
 
   @enforce_keys [:id, :message]
-  defstruct [:id, :message, :path, :span, severity: :error, details: %{}, fixes: []]
+  defstruct [
+    :id,
+    :message,
+    :path,
+    :span,
+    severity: :error,
+    details: %{},
+    fixes: [],
+    related: [],
+    explanation: nil,
+    provenance: []
+  ]
 
   @type t :: %__MODULE__{
           id: String.t(),
@@ -11,7 +22,10 @@ defmodule Catena.Diagnostic do
           span: Catena.SourceSpan.t() | nil,
           severity: :error | :warning,
           details: map(),
-          fixes: [map()]
+          fixes: [map()],
+          related: [map()],
+          explanation: map() | nil,
+          provenance: [map()]
         }
 
   @spec new(String.t(), String.t(), keyword()) :: t()
@@ -23,7 +37,10 @@ defmodule Catena.Diagnostic do
       span: Keyword.get(options, :span),
       severity: Keyword.get(options, :severity, :error),
       details: Map.new(Keyword.get(options, :details, %{})),
-      fixes: Keyword.get(options, :fixes, [])
+      fixes: Keyword.get(options, :fixes, []),
+      related: Keyword.get(options, :related, []),
+      explanation: Keyword.get(options, :explanation),
+      provenance: Keyword.get(options, :provenance, [])
     })
   end
 end

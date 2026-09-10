@@ -39,7 +39,17 @@ defmodule Catena.Pattern.Coverage do
           end
 
         if guard_class == false or not useful? or fact_redundant? do
-          fail("M002", "redundant match clause #{index + 1}", clause.path)
+          reason =
+            cond do
+              guard_class == false -> :guard_unsatisfiable
+              fact_redundant? -> :guard_covered_by_prior_clauses
+              true -> :pattern_covered_by_prior_clauses
+            end
+
+          fail("M002", "redundant match clause #{index + 1}", clause.path,
+            clause: index + 1,
+            guard_explanation: reason
+          )
         end
 
         matrix =
