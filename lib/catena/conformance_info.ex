@@ -32,6 +32,7 @@ defmodule Catena.ConformanceInfo do
       "scheduler" => stringify(Catena.Scheduler.profile()),
       "hot_code_upgrade" => stringify(Catena.Upgrade.profile()),
       "long_term_evolution" => stringify(Catena.Artifact.Migration.profile()),
+      "build_system" => stringify(Catena.Package.Build.profile()),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,
