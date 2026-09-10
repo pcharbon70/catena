@@ -13,7 +13,7 @@ defmodule Catena.Tool.Debugger do
   alias Catena.Tool.Debugger.Handle
 
   @version "0.1.89"
-  @event_kinds ~w(checkpoint return closure handler process-spawn process-exit message-send message-receive foreign-enter foreign-exit cancellation failure derivation)a
+  @event_kinds ~w(checkpoint return closure handler process-spawn process-exit message-send message-receive foreign-enter foreign-exit cancellation failure derivation unavailable)a
   @identity_keys ~w(pid parent child sender receiver process)a
   @redacted_keys ~w(value values payload message secret arguments)a
 
@@ -22,6 +22,7 @@ defmodule Catena.Tool.Debugger do
       version: @version,
       maximum_events: 10_000,
       maximum_event_bytes: 16_384,
+      event_kinds: @event_kinds,
       values: :redacted_by_default,
       source_authority: :verified_debug_sidecar,
       breakpoints: :explicit_cooperative_checkpoints,
@@ -30,6 +31,7 @@ defmodule Catena.Tool.Debugger do
       timing: :host_relative_nonsemantic,
       erased_declarations: :external_evidence_only,
       stripped_origins: :unavailable,
+      optimized_values: :explicitly_unavailable,
       public_source: :held_for_p109
     }
   end

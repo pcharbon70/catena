@@ -52,7 +52,7 @@ defmodule Catena.DebuggingObservabilityTest do
 
   test "bounded traces preserve semantic identity, pseudonymize processes, and report loss" do
     {artifact, input} = artifact()
-    assert {:ok, debug} = Debugger.open(artifact, input, maximum_events: 2)
+    assert {:ok, debug} = Debugger.open(artifact, input, maximum_events: 4)
     [node | _] = artifact.sidecar.nodes |> Map.keys() |> Enum.sort()
 
     assert :ok = Debugger.event(debug, :"process-spawn", node, %{child: self(), value: "hidden"})
@@ -60,13 +60,24 @@ defmodule Catena.DebuggingObservabilityTest do
     assert :ok =
              Debugger.event(debug, :"message-send", node, %{receiver: self(), payload: "hidden"})
 
+    assert :ok = Debugger.event(debug, :derivation, node, %{kind: :generated_fold})
+    assert :ok = Debugger.event(debug, :unavailable, node, %{reason: :optimized_value})
     assert :ok = Debugger.event(debug, :handler, node, %{handler: "Ask", outcome: :resumed})
     assert {:ok, snapshot} = Debugger.snapshot(debug)
     assert snapshot.dropped == 1
     refute snapshot.trace_complete
-    assert Enum.map(snapshot.events, & &1.sequence) == [2, 3]
+    assert Enum.map(snapshot.events, & &1.sequence) == [2, 3, 4, 5]
+
+    assert Enum.map(snapshot.events, & &1.kind) == [
+             :"message-send",
+             :derivation,
+             :unavailable,
+             :handler
+           ]
+
     assert hd(snapshot.events).attributes.payload == :redacted
     assert hd(snapshot.events).attributes.receiver == "process-1"
+    assert Enum.at(snapshot.events, 2).attributes.reason == :optimized_value
     assert Enum.all?(snapshot.events, &(is_binary(&1.id) and &1.elapsed_native >= 0))
     assert snapshot.perturbs_execution and not snapshot.timing_semantic
     assert {:ok, profile} = Catena.Report.debug_profile(debug)
@@ -145,6 +156,8 @@ defmodule Catena.DebuggingObservabilityTest do
     assert profile["version"] == "0.1.89"
     assert profile["trace_perturbation"] == "observable"
     assert profile["erased_declarations"] == "external_evidence_only"
+    assert profile["optimized_values"] == "explicitly_unavailable"
+    assert "derivation" in profile["event_kinds"] and "unavailable" in profile["event_kinds"]
     assert Catena.LanguageVersion.latest() == "0.1.89"
     assert Catena.LanguageVersion.introduced(:debugging_and_observability) == "0.1.89"
 
