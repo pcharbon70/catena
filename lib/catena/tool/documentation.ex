@@ -97,20 +97,26 @@ defmodule Catena.Tool.Documentation do
   end
 
   defp dependencies(binaries) when is_list(binaries) do
-    Enum.reduce_while(binaries, {:ok, %{}}, fn binary, {:ok, known} ->
-      with true <- is_binary(binary),
-           {:ok, _} <- Interface.decode(binary),
-           {:ok, raw} <- decode_raw(binary),
-           {:ok, nodes} <- nodes(raw, [], []) do
-        additions = Map.new(nodes, &{&1["id"], %{module: raw["module"], anchor: &1["anchor"]}})
+    result =
+      Enum.reduce_while(binaries, {:ok, MapSet.new(), %{}}, fn binary, {:ok, modules, known} ->
+        with true <- is_binary(binary),
+             {:ok, _} <- Interface.decode(binary),
+             {:ok, raw} <- decode_raw(binary),
+             {:ok, nodes} <- nodes(raw, [], []) do
+          additions = Map.new(nodes, &{&1["id"], %{module: raw["module"], anchor: &1["anchor"]}})
 
-        if Map.has_key?(known, raw["module"]),
-          do: {:halt, {:error, :duplicate_dependency_module}},
-          else: {:cont, {:ok, Map.merge(known, additions)}}
-      else
-        _ -> {:halt, {:error, :invalid_dependency_interface}}
-      end
-    end)
+          if MapSet.member?(modules, raw["module"]),
+            do: {:halt, {:error, :duplicate_dependency_module}},
+            else: {:cont, {:ok, MapSet.put(modules, raw["module"]), Map.merge(known, additions)}}
+        else
+          _ -> {:halt, {:error, :invalid_dependency_interface}}
+        end
+      end)
+
+    case result do
+      {:ok, _modules, known} -> {:ok, known}
+      {:error, _} = error -> error
+    end
   end
 
   defp dependencies(_), do: {:error, :invalid_dependency_interface}
