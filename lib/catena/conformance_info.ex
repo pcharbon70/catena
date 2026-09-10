@@ -33,6 +33,7 @@ defmodule Catena.ConformanceInfo do
       "hot_code_upgrade" => stringify(Catena.Upgrade.profile()),
       "long_term_evolution" => stringify(Catena.Artifact.Migration.profile()),
       "build_system" => stringify(Catena.Package.Build.profile()),
+      "compatibility_suite" => stringify(Catena.Package.CompatibilityMatrix.profile()),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,

@@ -531,6 +531,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "build-system/project-graphs-acquisition-and-offline-builds.md#status-and-authority"
         )
+      ),
+      feature(
+        "compatibility-suite",
+        "0.1.82",
+        specification(
+          "compatibility-suite/layered-matrix-and-edition-policy.md#status-and-authority"
+        )
       )
     ]
   end
@@ -861,6 +868,9 @@ defmodule Catena.LanguageLifecycle do
 
   defp affected_dimensions("build-system"),
     do: ~w(artifacts interfaces)
+
+  defp affected_dimensions("compatibility-suite"),
+    do: ~w(static-meaning interfaces artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1212,6 +1222,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("build-system"),
     do:
       "Select exact 0.1.81 project graphs and profiles over retained manifests, locks and reproducible plans. Acquire verified locked content before building; offline execution uses content-addressed inputs, declared generators and staged output publication. Public project vocabulary remains deferred."
+
+  defp migration("compatibility-suite"),
+    do:
+      "Select exact 0.1.82 for bounded layered compatibility matrices. Report source, interface, dependency, data, toolchain, historical-signature and runtime-upgrade cases separately as pass, fail or unsupported; retain edition 0.1 and make no ecosystem-wide claim."
 
   defp migration("secrets-and-capabilities"),
     do:
