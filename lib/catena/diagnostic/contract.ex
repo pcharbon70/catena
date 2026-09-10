@@ -34,6 +34,16 @@ defmodule Catena.Diagnostic.Contract do
     end
   end
 
+  def generated_origin_digest(node, %SourceSpan{} = span, source)
+      when is_binary(node) and is_binary(source) do
+    with {:ok, ^span} <- SourceSpan.from_bytes(source, span.byte_start, span.byte_end) do
+      evidence = binary_part(source, span.byte_start, span.byte_end - span.byte_start)
+      {:ok, :crypto.hash(:sha256, [node, <<0>>, evidence]) |> Base.encode16(case: :lower)}
+    end
+  end
+
+  def generated_origin_digest(_, _, _), do: {:error, :invalid_generated_origin}
+
   def validate(diagnostic, source \\ nil)
 
   def validate(%Diagnostic{} = diagnostic, source) do
@@ -81,7 +91,8 @@ defmodule Catena.Diagnostic.Contract do
 
   defp valid_generated_origin?(%{generated_origin: origin}, source) do
     is_map(origin) and is_binary(origin[:node]) and digest?(origin[:digest]) and
-      match?(%SourceSpan{}, origin[:span]) and valid_span?(origin[:span], source)
+      match?(%SourceSpan{}, origin[:span]) and
+      generated_origin_digest(origin[:node], origin[:span], source) == {:ok, origin[:digest]}
   end
 
   defp valid_generated_origin?(_, _), do: true

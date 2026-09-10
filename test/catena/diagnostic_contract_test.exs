@@ -93,10 +93,13 @@ defmodule Catena.DiagnosticContractTest do
     assert {:error, :invalid_diagnostic_contract} =
              Contract.validate(Diagnostic.new("T002", "many", related: related), "")
 
+    assert {:ok, generated_digest} =
+             Contract.generated_origin_digest("derive", hd(related).span, "")
+
     generated = %{
       generated_origin: %{
         node: "derive",
-        digest: :crypto.hash(:sha256, "derive") |> Base.encode16(case: :lower),
+        digest: generated_digest,
         span: hd(related).span
       }
     }
@@ -104,7 +107,12 @@ defmodule Catena.DiagnosticContractTest do
     assert {:ok, _} =
              Contract.validate(Diagnostic.new("T002", "generated", explanation: generated), "")
 
-    forged = put_in(generated, [:generated_origin, :digest], "bad")
+    forged =
+      put_in(
+        generated,
+        [:generated_origin, :digest],
+        String.duplicate("0", 64)
+      )
 
     assert {:error, :invalid_diagnostic_contract} =
              Contract.validate(Diagnostic.new("T002", "generated", explanation: forged), "")
