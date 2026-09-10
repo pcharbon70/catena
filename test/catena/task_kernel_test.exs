@@ -10,7 +10,7 @@ defmodule Catena.TaskKernelTest do
     assert {:ok, :unit, _} = Catena.Kernel.Stepper.run(core, "main")
     assert :unit = beam(core)
     assert {:error, %{id: "I001"}} = Backend.compile(core)
-    assert Catena.LanguageVersion.latest() == "0.1.76"
+    assert Catena.LanguageVersion.latest() == "0.1.77"
 
     for version <- ["0.1.8", "0.1.50", "0.1.51"] do
       forged =

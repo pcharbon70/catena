@@ -500,6 +500,11 @@ defmodule Catena.LanguageLifecycle do
         "distribution",
         "0.1.76",
         specification("distribution/typed-authenticated-transport.md#status-and-authority")
+      ),
+      feature(
+        "message-semantics",
+        "0.1.77",
+        specification("message-semantics/values-capacity-and-transport.md#status-and-authority")
       )
     ]
   end
@@ -815,6 +820,9 @@ defmodule Catena.LanguageLifecycle do
 
   defp affected_dimensions("distribution"),
     do: ~w(dynamic-behavior interfaces artifacts)
+
+  defp affected_dimensions("message-semantics"),
+    do: ~w(dynamic-behavior interfaces)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1154,6 +1162,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("distribution"),
     do:
       "Provision mutually authenticated TLS identities and an explicit peer allow-list bound to package and local-protocol digests. Exchange only bounded canonical typed frames; handle not-enqueued and delivery-unknown outcomes explicitly, without automatic retry or an exactly-once claim."
+
+  defp migration("message-semantics"),
+    do:
+      "Retain raw local Unit-returning send where its existing contract is intended. At foreign, capacity-sensitive or remote boundaries, validate the declared message schema before admission and handle the boundary's explicit overload or delivery outcome."
 
   defp migration("secrets-and-capabilities"),
     do:
