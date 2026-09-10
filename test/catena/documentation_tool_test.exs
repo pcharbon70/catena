@@ -42,6 +42,8 @@ defmodule Catena.DocumentationToolTest do
     assert {:ok, graph} = Documentation.build(interface(), docs)
     assert {:ok, first} = Documentation.render(graph)
     assert {:ok, ^first} = Documentation.render(graph)
+    forged_graph = put_in(graph, ["module"], "ForgedDocumentation")
+    assert {:error, :forged_documentation_graph} = Documentation.render(forged_graph)
     assert first =~ "[#{type_id}](##{String.replace(String.downcase(type_id), ".", "-")})"
     assert first =~ "No documentation supplied."
     assert Enum.any?(graph["nodes"], &(&1["kind"] == "type"))
