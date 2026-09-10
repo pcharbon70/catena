@@ -538,6 +538,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "compatibility-suite/layered-matrix-and-edition-policy.md#status-and-authority"
         )
+      ),
+      feature(
+        "reference-evaluator",
+        "0.1.83",
+        specification(
+          "reference-evaluator/common-observations-and-bounded-models.md#status-and-authority"
+        )
       )
     ]
   end
@@ -871,6 +878,9 @@ defmodule Catena.LanguageLifecycle do
 
   defp affected_dimensions("compatibility-suite"),
     do: ~w(static-meaning interfaces artifacts)
+
+  defp affected_dimensions("reference-evaluator"),
+    do: ~w(static-meaning dynamic-behavior)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1226,6 +1236,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("compatibility-suite"),
     do:
       "Select exact 0.1.82 for bounded layered compatibility matrices. Report source, interface, dependency, data, toolchain, historical-signature and runtime-upgrade cases separately as pass, fail or unsupported; retain edition 0.1 and make no ecosystem-wide claim."
+
+  defp migration("reference-evaluator"),
+    do:
+      "Select exact 0.1.83 for the common bounded observation contract over retained independent reference engines. Preserve values, traps, ordered events, lifetime outcomes, semantic exhaustion, host timeout and unsupported coverage as distinct observations. Public source grammar remains held for P109."
 
   defp migration("secrets-and-capabilities"),
     do:
