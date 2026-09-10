@@ -102,15 +102,17 @@ defmodule Catena.Release.Readiness do
     valid =
       payload["format"] == @format and payload["manifest_version"] == 1 and
         payload["language_revision"] == @version and payload["release_class"] in @classes and
-        chapter_rows_valid?(payload["normative_chapters"]) and
+        payload == normalize(payload) and chapter_rows_valid?(payload["normative_chapters"]) and
         obligations_valid?(obligations) and
         nonempty_rows?(payload["platforms"], ~w(fingerprint digest status)) and
+        unique_rows?(payload["platforms"], "digest") and
         evidence_valid?(payload["evidence"]) and string_list?(payload["open_items"]) and
         nonempty_rows?(payload["limitations"], ~w(id status disposition)) and
+        unique_rows?(payload["limitations"], "id") and
         nonempty_rows?(
           payload["proofs"],
           ~w(checker container_digest scope source_digest status theorems)
-        ) and
+        ) and unique_rows?(payload["proofs"], "source_digest") and
         audit_rows_valid?(payload["contradictions"])
 
     if valid, do: :ok, else: {:error, :invalid_release_manifest}
@@ -137,7 +139,7 @@ defmodule Catena.Release.Readiness do
     evidence_passes =
       Enum.all?(@required_evidence, &(manifest["evidence"][&1]["status"] == "pass"))
 
-    gates_closed = Enum.all?(@required_gates, &(&1 not in manifest["open_items"]))
+    gates_closed = manifest["open_items"] == []
 
     blockers
     |> add_unless(obligations_complete?(manifest["obligations"]), "obligation-coverage")
@@ -198,6 +200,7 @@ defmodule Catena.Release.Readiness do
 
   defp chapter_rows_valid?(rows) do
     nonempty_rows?(rows, ~w(id version digest status)) and
+      unique_rows?(rows, "id") and
       Enum.all?(rows, fn row ->
         is_binary(row["id"]) and is_binary(row["version"]) and digest?(row["digest"])
       end)
@@ -231,6 +234,11 @@ defmodule Catena.Release.Readiness do
   end
 
   defp nonempty_rows?(_, _), do: false
+
+  defp unique_rows?(rows, key) do
+    identities = Enum.map(rows, & &1[key])
+    length(identities) == length(Enum.uniq(identities))
+  end
 
   defp string_list?(items),
     do: is_list(items) and Enum.all?(items, &is_binary/1) and items == Enum.sort(Enum.uniq(items))

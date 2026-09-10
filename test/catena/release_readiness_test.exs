@@ -170,4 +170,36 @@ defmodule Catena.Release.ReadinessTest do
     assert {:error, :invalid_release_manifest} =
              Readiness.build(fields(%{"contradictions" => []}))
   end
+
+  test "duplicate inventory identities and noncanonical manifests are rejected" do
+    [limitation] = fields()["limitations"]
+
+    assert {:error, :invalid_release_manifest} =
+             Readiness.build(fields(%{"limitations" => [limitation, limitation]}))
+
+    assert {:ok, manifest} = Readiness.build(fields())
+    noncanonical = Map.update!(manifest, "open_items", &Enum.reverse/1)
+    payload = Map.delete(noncanonical, "digest")
+    forged_digest = Catena.CanonicalJCS.digest(payload)
+
+    assert {:error, :invalid_release_manifest} =
+             Readiness.verify(Map.put(noncanonical, "digest", forged_digest))
+  end
+
+  test "any declared open item blocks a complete claim" do
+    complete =
+      fields(%{
+        "release_class" => "complete",
+        "open_items" => ["LOCAL-REVIEW"],
+        "obligations" => %{"total" => 4, "traced" => 4, "partial" => 0, "untraced" => 0},
+        "evidence" =>
+          Map.new(fields()["evidence"], fn {key, evidence} ->
+            {key, Map.put(evidence, "status", "pass")}
+          end)
+      })
+
+    assert {:ok, manifest} = Readiness.build(complete)
+    assert {:ok, result} = Readiness.assess(manifest)
+    assert "completion-gates" in result.blockers
+  end
 end
