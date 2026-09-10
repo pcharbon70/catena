@@ -34,6 +34,7 @@ defmodule Catena.ConformanceInfo do
       "long_term_evolution" => stringify(Catena.Artifact.Migration.profile()),
       "build_system" => stringify(Catena.Package.Build.profile()),
       "compatibility_suite" => stringify(Catena.Package.CompatibilityMatrix.profile()),
+      "reference_evaluator" => stringify(Catena.Reference.Observation.profile()),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,
