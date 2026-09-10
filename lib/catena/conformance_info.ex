@@ -17,6 +17,10 @@ defmodule Catena.ConformanceInfo do
         Map.new(Catena.Package.Registry.profile(), fn {key, value} ->
           {Atom.to_string(key), value}
         end),
+      "resource_exhaustion" => %{
+        "compiler" => stringify(Catena.Resource.Budget.profile()),
+        "runtime" => stringify(Catena.Runtime.Capacity.profile())
+      },
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,
@@ -58,7 +62,9 @@ defmodule Catena.ConformanceInfo do
             "resource pressure does not authorize retargeting",
             "resource pressure does not authorize silent live-target message loss"
           ],
-          "policy_owner" => "P085/P129"
+          "admission" => "explicit-bounded-queue",
+          "overload_outcomes" => ["reject", "terminate"],
+          "policy_owner" => "C129/P085"
         }
       }
     }
@@ -79,6 +85,8 @@ defmodule Catena.ConformanceInfo do
   defp stringify(value) when is_map(value),
     do: Map.new(value, fn {key, item} -> {Atom.to_string(key), stringify(item)} end)
 
+  defp stringify(value) when is_list(value), do: Enum.map(value, &stringify/1)
+  defp stringify(value) when is_boolean(value) or is_nil(value), do: value
   defp stringify(value) when is_atom(value), do: Atom.to_string(value)
   defp stringify(value), do: value
 

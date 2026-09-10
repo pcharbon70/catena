@@ -24,7 +24,7 @@ defmodule Catena.C013SourceTextTest do
     assert decoded.source == source
     assert decoded.text == source
     assert Enum.map(decoded.units, & &1.scalar) == String.to_charlist(source)
-    assert decoded.selection.language_revision == "0.1.74"
+    assert decoded.selection.language_revision == "0.1.75"
     assert Enum.at(decoded.units, 4).span == span(8, 10, 1, 5, 1, 6)
 
     composed = "é"
@@ -130,10 +130,10 @@ defmodule Catena.C013SourceTextTest do
 
   @tag obligations: ~w(ST-OBL-001 ST-OBL-010)
   test "0.1.9 remains source-text-only after cumulative lexical revisions" do
-    assert LanguageVersion.latest() == "0.1.74"
+    assert LanguageVersion.latest() == "0.1.75"
 
     assert LanguageVersion.source_text_frontend_versions() ==
-             ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35 0.1.36 0.1.37 0.1.38 0.1.39 0.1.40 0.1.41 0.1.42 0.1.43 0.1.44 0.1.45 0.1.46 0.1.47 0.1.48 0.1.49 0.1.50 0.1.51 0.1.52 0.1.53 0.1.54 0.1.55 0.1.56 0.1.57 0.1.58 0.1.59 0.1.60 0.1.61 0.1.62 0.1.63 0.1.64 0.1.65 0.1.66 0.1.67 0.1.68 0.1.69 0.1.70 0.1.71 0.1.72 0.1.73 0.1.74)
+             ~w(0.1.9 0.1.10 0.1.11 0.1.12 0.1.13 0.1.14 0.1.15 0.1.16 0.1.17 0.1.18 0.1.19 0.1.20 0.1.21 0.1.22 0.1.23 0.1.24 0.1.25 0.1.26 0.1.27 0.1.28 0.1.29 0.1.30 0.1.31 0.1.32 0.1.33 0.1.34 0.1.35 0.1.36 0.1.37 0.1.38 0.1.39 0.1.40 0.1.41 0.1.42 0.1.43 0.1.44 0.1.45 0.1.46 0.1.47 0.1.48 0.1.49 0.1.50 0.1.51 0.1.52 0.1.53 0.1.54 0.1.55 0.1.56 0.1.57 0.1.58 0.1.59 0.1.60 0.1.61 0.1.62 0.1.63 0.1.64 0.1.65 0.1.66 0.1.67 0.1.68 0.1.69 0.1.70 0.1.71 0.1.72 0.1.73 0.1.74 0.1.75)
 
     refute "0.1.9" in LanguageVersion.compilable_revisions()
     refute "0.1.9" in LanguageVersion.interface_versions()
@@ -142,7 +142,7 @@ defmodule Catena.C013SourceTextTest do
     assert {:ok, :stable} == LanguageLifecycle.state("source-text", "0.1.9")
 
     info = LanguageInfo.document()
-    assert info["current"]["language_revision"] == "0.1.74"
+    assert info["current"]["language_revision"] == "0.1.75"
     assert Enum.any?(info["features"], &(&1["id"] == "source-text"))
 
     assert {:error, %{id: "EDN001", details: %{frontend: "source-text"}}} =
@@ -199,7 +199,7 @@ defmodule Catena.C013SourceTextTest do
     assert output == %{
              "status" => "ok",
              "edition" => "0.1",
-             "language_revision" => "0.1.74",
+             "language_revision" => "0.1.75",
              "byte_count" => 4,
              "scalar_count" => 2,
              "newline_count" => 1

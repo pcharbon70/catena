@@ -11,7 +11,7 @@ defmodule Catena.Scc do
   parse source text, resolve operator expressions, or assemble packages.
   """
 
-  alias Catena.{AST.Decoder, Compiler, Diagnostic, Interface}
+  alias Catena.{AST.Decoder, Compiler, Diagnostic, Interface, Resource.Budget}
 
   defmodule Result do
     @moduledoc "One compiled component: its members and the joint digest."
@@ -37,7 +37,9 @@ defmodule Catena.Scc do
     layout = Keyword.get(options, :layout, :compact)
     outside = Keyword.get(options, :interfaces, [])
 
-    with {:ok, asts} <- decode_all(sources),
+    with :ok <- Budget.validate_sources(sources),
+         {:ok, asts} <- decode_all(sources),
+         :ok <- Budget.validate_tree(asts),
          {:ok, provisionals} <- build_provisional(asts, options),
          {:ok, _cores} <- check_all(asts, provisionals, outside, options),
          {:ok, members} <- compile_all(asts, provisionals, outside, layout, options),

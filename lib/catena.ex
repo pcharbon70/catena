@@ -25,7 +25,7 @@ defmodule Catena do
   strongly-connected components with joint digests.
   """
 
-  alias Catena.{AST.Decoder, Compiler}
+  alias Catena.{AST.Decoder, Compiler, Resource.Budget}
   alias Catena.Kernel.{Backend, Checker, Parser}
 
   @spec decode_source_text(binary(), keyword()) ::
@@ -151,7 +151,9 @@ defmodule Catena do
 
   @spec check_json(binary(), keyword()) :: {:ok, map()} | {:error, Catena.Diagnostic.t()}
   def check_json(json, options \\ []) do
-    with {:ok, ast} <- Decoder.decode(json, options) do
+    with :ok <- Budget.validate_sources([json]),
+         {:ok, ast} <- Decoder.decode(json, options),
+         :ok <- Budget.validate_tree(ast) do
       Compiler.check(ast, options)
     end
   end
@@ -159,14 +161,18 @@ defmodule Catena do
   @spec compile_json(binary(), keyword()) ::
           {:ok, module(), binary(), map()} | {:error, Catena.Diagnostic.t()}
   def compile_json(json, options \\ []) do
-    with {:ok, ast} <- Decoder.decode(json, options) do
+    with :ok <- Budget.validate_sources([json]),
+         {:ok, ast} <- Decoder.decode(json, options),
+         :ok <- Budget.validate_tree(ast) do
       Compiler.compile(ast, options)
     end
   end
 
   @spec check_kernel(binary(), keyword()) :: {:ok, map()} | {:error, Catena.Diagnostic.t()}
   def check_kernel(source, options \\ []) do
-    with {:ok, module} <- Parser.parse(source, options) do
+    with :ok <- Budget.validate_sources([source]),
+         {:ok, module} <- Parser.parse(source, options),
+         :ok <- Budget.validate_tree(module) do
       Checker.check(module, options)
     end
   end

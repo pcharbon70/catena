@@ -18,6 +18,7 @@ defmodule Catena.Package.Linker do
   }
 
   alias Catena.OTP.Compiler, as: OTPCompiler
+  alias Catena.Resource.Budget
   alias Catena.Type.Trait
 
   @budget ImplementationLimits.configured(:package_specialization_steps)
@@ -34,6 +35,7 @@ defmodule Catena.Package.Linker do
 
     with {:ok, manifest} <- path |> File.read!() |> Manifest.decode(),
          :ok <- validate_paths(manifest, directory),
+         :ok <- validate_input_budget(manifest, directory, path, options),
          {:ok, imported_interfaces} <- load_interfaces(manifest.interfaces, directory),
          :ok <- LanguageLifecycle.validate_interfaces(manifest.selection, imported_interfaces),
          {:ok, interfaces, prepared_modules} <-
@@ -55,9 +57,9 @@ defmodule Catena.Package.Linker do
              imported_interfaces,
              directory,
              options
-           ) do
-      :ok = commit_outputs(result.prepared_outputs)
-
+           ),
+         :ok <- Budget.validate_outputs(result.prepared_outputs),
+         :ok <- commit_outputs(result.prepared_outputs) do
       {:ok,
        %{
          module: module,
@@ -84,6 +86,32 @@ defmodule Catena.Package.Linker do
     error in File.Error ->
       {:error, Diagnostic.new("LNK001", Exception.message(error), path: path)}
   end
+
+  defp validate_input_budget(manifest, directory, manifest_path, options) do
+    paths =
+      [manifest_path] ++
+        Enum.map(manifest.modules, &resolve(&1["source"], directory)) ++
+        Enum.map(manifest.interfaces, &resolve(&1, directory)) ++
+        optional_path(manifest.governance, directory) ++
+        optional_external_path(Keyword.get(options, :trust_root))
+
+    sizes =
+      paths
+      |> Enum.uniq()
+      |> Enum.map(fn path ->
+        case File.stat(path) do
+          {:ok, %{type: :regular, size: size}} -> size
+          _ -> raise File.Error, reason: :enoent, action: "read", path: path
+        end
+      end)
+
+    Budget.validate_file_sizes(sizes)
+  end
+
+  defp optional_path(nil, _), do: []
+  defp optional_path(path, directory), do: [resolve(path, directory)]
+  defp optional_external_path(nil), do: []
+  defp optional_external_path(path), do: [Path.expand(path)]
 
   @spec link(map(), [map()], keyword()) ::
           {:ok, module(), binary(), map()} | {:error, Diagnostic.t()}
