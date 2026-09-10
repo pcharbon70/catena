@@ -471,7 +471,7 @@ defmodule Catena.ValueBoundaryTest do
   @tag obligations: ~w(VB-OBL-001 VB-OBL-005)
   test "exact 0.1.58 selection and artifact provenance retain historical interface boundaries" do
     alias Catena.Kernel.Parser
-    assert Catena.LanguageVersion.latest() == "0.1.73"
+    assert Catena.LanguageVersion.latest() == "0.1.74"
     assert Catena.LanguageVersion.value_frontend_versions() == ["0.1.58"]
     refute "0.1.58" in Catena.LanguageVersion.interface_versions()
     refute "0.1.58" in Catena.LanguageVersion.signed_format_versions()
