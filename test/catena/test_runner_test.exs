@@ -189,7 +189,7 @@ defmodule Catena.TestRunnerTest do
   end
 
   test "profile states the scope and language revision" do
-    assert Catena.LanguageVersion.latest() == "0.1.92"
+    assert Catena.LanguageVersion.latest() == "0.1.93"
     assert TestRunner.profile().version == "0.1.84"
     refute TestRunner.profile().passing_tests_are_proof
     refute TestRunner.profile().host_timeout_is_divergence
