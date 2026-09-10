@@ -29,6 +29,7 @@ defmodule Catena.ConformanceInfo do
         "application_processing_acknowledged" => false
       },
       "message_semantics" => stringify(Catena.Message.profile()),
+      "scheduler" => stringify(Catena.Scheduler.profile()),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,
