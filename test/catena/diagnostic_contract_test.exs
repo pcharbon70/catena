@@ -67,6 +67,11 @@ defmodule Catena.DiagnosticContractTest do
 
     assert {:error, :invalid_diagnostic_contract} =
              Contract.validate(Diagnostic.new("T002", "repair", fixes: split), source)
+
+    overlap = [hd(good), Map.merge(List.last(good), %{byte_start: 1, byte_end: 7})]
+
+    assert {:error, :invalid_diagnostic_contract} =
+             Contract.validate(Diagnostic.new("T002", "repair", fixes: overlap), source)
   end
 
   test "bounds and forged generated origins are rejected" do
@@ -88,7 +93,18 @@ defmodule Catena.DiagnosticContractTest do
     assert {:error, :invalid_diagnostic_contract} =
              Contract.validate(Diagnostic.new("T002", "many", related: related), "")
 
-    forged = %{generated_origin: %{node: "derive", digest: "bad", span: hd(related).span}}
+    generated = %{
+      generated_origin: %{
+        node: "derive",
+        digest: :crypto.hash(:sha256, "derive") |> Base.encode16(case: :lower),
+        span: hd(related).span
+      }
+    }
+
+    assert {:ok, _} =
+             Contract.validate(Diagnostic.new("T002", "generated", explanation: generated), "")
+
+    forged = put_in(generated, [:generated_origin, :digest], "bad")
 
     assert {:error, :invalid_diagnostic_contract} =
              Contract.validate(Diagnostic.new("T002", "generated", explanation: forged), "")
@@ -131,6 +147,22 @@ defmodule Catena.DiagnosticContractTest do
 
     assert {:error, %{id: "M001", details: %{witness: "false", scrutinee_type: :boolean}}} =
              source |> JSON.encode!() |> Catena.check_json()
+
+    guarded =
+      put_in(source, ["definitions", Access.at(0), "body", "clauses"], [
+        %{
+          "pattern" => %{"tag" => "wildcard"},
+          "guard" => %{"tag" => "boolean", "value" => false},
+          "body" => %{"tag" => "integer", "value" => 1}
+        },
+        %{
+          "pattern" => %{"tag" => "wildcard"},
+          "body" => %{"tag" => "integer", "value" => 2}
+        }
+      ])
+
+    assert {:error, %{id: "M002", details: %{clause: 1, guard_explanation: :guard_unsatisfiable}}} =
+             guarded |> JSON.encode!() |> Catena.check_json()
   end
 
   test "the semantic contract is versioned while parse coverage remains held" do
