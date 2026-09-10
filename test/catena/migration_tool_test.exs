@@ -122,10 +122,46 @@ defmodule Catena.MigrationToolTest do
   end
 
   test "finite planning bounds have a distinct implementation-limit outcome", %{tmp_dir: root} do
-    {_path, _original, fixes} = legacy_module(root, "module.json")
+    {path, original, fixes} = legacy_module(root, "module.json")
     requests = List.duplicate(request("module.json", "module", fixes), 33)
 
     assert {:error, :migration_limit_exceeded} = Migration.plan(root, requests)
+
+    File.write!(path, String.duplicate(" ", 16_777_217))
+
+    assert {:error, :migration_limit_exceeded} =
+             Migration.plan(root, [request("module.json", "module", fixes)])
+
+    File.write!(path, original)
+    large_result = [edit("add", "$.payload", String.duplicate("x", 16_777_216))]
+
+    assert {:error, :migration_limit_exceeded} =
+             Migration.plan(root, [request("module.json", "module", large_result)])
+
+    too_many_edits =
+      Enum.map(1..1_025, &edit("add", "$.field#{&1}", &1))
+
+    assert {:error, :migration_limit_exceeded} =
+             Migration.plan(root, [request("module.json", "module", too_many_edits)])
+
+    assert File.read!(path) == original
+  end
+
+  test "a retained backup identity is never overwritten", %{tmp_dir: root} do
+    {path, original, fixes} = legacy_module(root, "module.json")
+    assert {:ok, plan} = Migration.plan(root, [request("module.json", "module", fixes)])
+    assert {:ok, audit} = Migration.apply(plan, root, authorized: true)
+    [file] = audit["files"]
+    backup = Path.join(root, file["backup"])
+    assert File.read!(backup) == original
+
+    File.write!(path, original)
+
+    assert {:error, :unsafe_or_existing_migration_backup} =
+             Migration.apply(plan, root, authorized: true)
+
+    assert File.read!(backup) == original
+    assert File.read!(path) == original
   end
 
   test "a symlinked backup base cannot redirect retained preimages", %{tmp_dir: root} do
