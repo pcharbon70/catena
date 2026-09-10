@@ -585,6 +585,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "debugging-and-observability/source-aware-bounded-debug-sessions.md#status-and-authority"
         )
+      ),
+      feature(
+        "release-readiness",
+        "0.1.90",
+        specification(
+          "release-readiness/evidence-gates-and-release-claims.md#status-and-authority"
+        )
       )
     ]
   end
@@ -939,6 +946,8 @@ defmodule Catena.LanguageLifecycle do
 
   defp affected_dimensions("debugging-and-observability"),
     do: ~w(dynamic-behavior diagnostics artifacts)
+
+  defp affected_dimensions("release-readiness"), do: ~w(interfaces artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1322,6 +1331,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("debugging-and-observability"),
     do:
       "Select exact 0.1.89 bounded debug sessions over verified sidecars. Use explicit cooperative checkpoints, treat trace timing as perturbing nonsemantic evidence, retain loss counts, redact values by default, and keep erased declarations outside runtime artifacts."
+
+  defp migration("release-readiness"),
+    do:
+      "Select exact 0.1.90 for canonical release evidence manifests and explicit experimental, complete and stable claims. Close every class-specific gate with exact platform, obligation, contradiction and proof witnesses; assessment performs no publication or automatic class upgrade."
 
   defp migration("secrets-and-capabilities"),
     do:

@@ -1,0 +1,1 @@
+{"checker":"The Rocq Prover","command":"rocq compile CatenaKernel.v","container_digest":"sha256:33926fb3757b2b560c3844157bd64173a26b6d338a256be1ae5eec8df2019025","container_image":"docker.io/rocq/rocq-prover:9.2.0","ocaml":"4.14.2","scope":"bounded-core-not-integrated-catena","version":"9.2"}

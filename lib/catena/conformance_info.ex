@@ -41,6 +41,7 @@ defmodule Catena.ConformanceInfo do
       "standard_stability_and_performance" => stringify(Catena.Standard.Contract.profile()),
       "performance_envelope" => stringify(Catena.Performance.Envelope.profile()),
       "debugging_and_observability" => stringify(Catena.Tool.Debugger.profile()),
+      "release_readiness" => stringify(Catena.Release.Readiness.profile()),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,
@@ -103,7 +104,10 @@ defmodule Catena.ConformanceInfo do
   end
 
   defp stringify(value) when is_map(value),
-    do: Map.new(value, fn {key, item} -> {Atom.to_string(key), stringify(item)} end)
+    do:
+      Map.new(value, fn {key, item} ->
+        {if(is_atom(key), do: Atom.to_string(key), else: key), stringify(item)}
+      end)
 
   defp stringify(value) when is_list(value), do: Enum.map(value, &stringify/1)
   defp stringify(value) when is_boolean(value) or is_nil(value), do: value
