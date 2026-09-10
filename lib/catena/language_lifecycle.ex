@@ -564,6 +564,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "optimizer-validity/checked-rewrites-and-observation-preservation.md#status-and-authority"
         )
+      ),
+      feature(
+        "standard-stability-and-performance",
+        "0.1.87",
+        specification(
+          "standard-stability-and-performance/versioned-operation-contracts.md#status-and-authority"
+        )
       )
     ]
   end
@@ -909,6 +916,9 @@ defmodule Catena.LanguageLifecycle do
 
   defp affected_dimensions("optimizer-validity"),
     do: ~w(dynamic-behavior artifacts)
+
+  defp affected_dimensions("standard-stability-and-performance"),
+    do: ~w(static-meaning dynamic-behavior interfaces artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1280,6 +1290,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("optimizer-validity"),
     do:
       "Select exact 0.1.86 to enable checked optimization. Only the published literal and right-identity rules run; each rewrite is independently reverified and replayed from its input certificate. Law-dependent annihilation remains refused without machine-checked purity and totality evidence."
+
+  defp migration("standard-stability-and-performance"),
+    do:
+      "Select exact 0.1.87 standard contracts. Preserve laws, order, callback multiplicity, failures, stack and asymptotic bounds across compatible replacements; treat measurements as toolchain-bound evidence, never portable time or ABI promises."
 
   defp migration("secrets-and-capabilities"),
     do:
