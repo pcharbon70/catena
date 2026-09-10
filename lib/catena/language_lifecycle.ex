@@ -571,6 +571,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "standard-stability-and-performance/versioned-operation-contracts.md#status-and-authority"
         )
+      ),
+      feature(
+        "performance-envelope",
+        "0.1.88",
+        specification(
+          "performance-envelope/supported-host-workloads-and-regression-policy.md#status-and-authority"
+        )
       )
     ]
   end
@@ -919,6 +926,9 @@ defmodule Catena.LanguageLifecycle do
 
   defp affected_dimensions("standard-stability-and-performance"),
     do: ~w(static-meaning dynamic-behavior interfaces artifacts)
+
+  defp affected_dimensions("performance-envelope"),
+    do: ~w(dynamic-behavior artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1294,6 +1304,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("standard-stability-and-performance"),
     do:
       "Select exact 0.1.87 standard contracts. Preserve laws, order, callback multiplicity, failures, stack and asymptotic bounds across compatible replacements; treat measurements as toolchain-bound evidence, never portable time or ABI promises."
+
+  defp migration("performance-envelope"),
+    do:
+      "Select exact 0.1.88 supported-host envelopes. Run every published workload family against a semantically equivalent baseline, retain timeouts and mismatches, compare medians only after semantic gates pass, and treat all absolute measurements as empirical."
 
   defp migration("secrets-and-capabilities"),
     do:
