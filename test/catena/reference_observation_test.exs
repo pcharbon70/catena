@@ -135,7 +135,7 @@ defmodule Catena.ReferenceObservationTest do
   end
 
   test "profile states bounded coverage without turning agreement into proof" do
-    assert Catena.LanguageVersion.latest() == "0.1.88"
+    assert Catena.LanguageVersion.latest() == "0.1.89"
     assert Observation.profile().agreement_is_proof == false
     assert Observation.profile().public_source == :held_for_p109
     assert Observation.profile().semantic_fuel == 10_000_000

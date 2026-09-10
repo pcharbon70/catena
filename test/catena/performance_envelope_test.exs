@@ -70,7 +70,7 @@ defmodule Catena.PerformanceEnvelopeTest do
     assert {:ok, report} = Envelope.run(workloads(& &1), repetitions: 1, warmup: 0)
     assert {:error, :invalid_performance_envelope} = Envelope.verify(Map.put(report, "seed", -1))
 
-    assert LanguageVersion.latest() == "0.1.88"
+    assert LanguageVersion.latest() == "0.1.89"
     assert LanguageVersion.introduced(:performance_envelope) == "0.1.88"
     assert {:ok, :stable} = LanguageLifecycle.state("performance-envelope", "0.1.88")
     profile = Catena.ConformanceInfo.document()["performance_envelope"]

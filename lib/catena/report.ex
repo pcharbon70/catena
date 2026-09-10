@@ -4,6 +4,9 @@ defmodule Catena.Report do
   def debug_frames(artifact, input, stack, options \\ []),
     do: Catena.Debugging.frames(artifact, input, stack, options)
 
+  def debug_snapshot(session), do: Catena.Tool.Debugger.snapshot(session)
+  def debug_profile(session), do: Catena.Tool.Debugger.profile_snapshot(session)
+
   alias Catena.Type
   alias Catena.Type.Scheme
 

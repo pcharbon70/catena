@@ -578,6 +578,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "performance-envelope/supported-host-workloads-and-regression-policy.md#status-and-authority"
         )
+      ),
+      feature(
+        "debugging-and-observability",
+        "0.1.89",
+        specification(
+          "debugging-and-observability/source-aware-bounded-debug-sessions.md#status-and-authority"
+        )
       )
     ]
   end
@@ -929,6 +936,9 @@ defmodule Catena.LanguageLifecycle do
 
   defp affected_dimensions("performance-envelope"),
     do: ~w(dynamic-behavior artifacts)
+
+  defp affected_dimensions("debugging-and-observability"),
+    do: ~w(dynamic-behavior diagnostics artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1308,6 +1318,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("performance-envelope"),
     do:
       "Select exact 0.1.88 supported-host envelopes. Run every published workload family against a semantically equivalent baseline, retain timeouts and mismatches, compare medians only after semantic gates pass, and treat all absolute measurements as empirical."
+
+  defp migration("debugging-and-observability"),
+    do:
+      "Select exact 0.1.89 bounded debug sessions over verified sidecars. Use explicit cooperative checkpoints, treat trace timing as perturbing nonsemantic evidence, retain loss counts, redact values by default, and keep erased declarations outside runtime artifacts."
 
   defp migration("secrets-and-capabilities"),
     do:
