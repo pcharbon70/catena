@@ -36,13 +36,10 @@ defmodule Catena.Tool.Migration do
     root = Path.expand(root)
 
     with {:ok, %File.Stat{type: :directory}} <- File.lstat(root),
-         true <- length(requests) in 1..@maximum_files,
+         :ok <- request_count_bound(requests),
          true <- unique?(Enum.map(requests, &field(&1, "path"))),
          {:ok, files} <- plan_files(root, requests),
-         true <-
-           Enum.sum(Enum.map(files, &byte_size(Base.decode64!(&1["preimage"])))) <=
-             @maximum_input_bytes,
-         true <- Enum.sum(Enum.map(files, &length(&1["edits"]))) <= @maximum_edits do
+         :ok <- planned_resource_bounds(files) do
       body = %{
         "format" => "catena-migration-plan",
         "version" => @version,
@@ -134,11 +131,11 @@ defmodule Catena.Tool.Migration do
            {:ok, edits} <- normalize_edits(edits),
            :ok <- disjoint(edits),
            {:ok, bytes} <- File.read(absolute),
-           true <- byte_size(bytes) <= @maximum_input_bytes,
+           :ok <- byte_bound(bytes, @maximum_input_bytes),
            {:ok, document} when is_map(document) <- JSON.decode(bytes),
            {:ok, migrated} <- apply_edits(document, edits),
            result <- CanonicalJCS.encode(migrated) <> "\n",
-           true <- byte_size(result) <= @maximum_result_bytes,
+           :ok <- byte_bound(result, @maximum_result_bytes),
            true <- result != bytes do
         file = %{
           "path" => path,
@@ -269,6 +266,26 @@ defmodule Catena.Tool.Migration do
   end
 
   defp valid_plan_file?(_), do: false
+
+  defp request_count_bound(requests) do
+    cond do
+      requests == [] -> {:error, :invalid_migration_request}
+      length(requests) <= @maximum_files -> :ok
+      true -> {:error, :migration_limit_exceeded}
+    end
+  end
+
+  defp byte_bound(bytes, limit) do
+    if byte_size(bytes) <= limit,
+      do: :ok,
+      else: {:error, :migration_limit_exceeded}
+  end
+
+  defp planned_resource_bounds(files) do
+    if within_plan_bounds?(files),
+      do: :ok,
+      else: {:error, :migration_limit_exceeded}
+  end
 
   defp within_plan_bounds?(files) do
     Enum.sum(Enum.map(files, &byte_size(Base.decode64!(&1["preimage"])))) <=

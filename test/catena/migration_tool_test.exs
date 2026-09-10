@@ -121,6 +121,13 @@ defmodule Catena.MigrationToolTest do
              Migration.plan(root, [request("linked.json", "module", fixes)])
   end
 
+  test "finite planning bounds have a distinct implementation-limit outcome", %{tmp_dir: root} do
+    {_path, _original, fixes} = legacy_module(root, "module.json")
+    requests = List.duplicate(request("module.json", "module", fixes), 33)
+
+    assert {:error, :migration_limit_exceeded} = Migration.plan(root, requests)
+  end
+
   test "a symlinked backup base cannot redirect retained preimages", %{tmp_dir: root} do
     {_path, _original, fixes} = legacy_module(root, "module.json")
     assert {:ok, plan} = Migration.plan(root, [request("module.json", "module", fixes)])
