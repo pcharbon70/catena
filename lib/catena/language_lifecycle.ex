@@ -488,6 +488,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "supply-chain-policy/signed-registry-and-immutable-acquisition.md#status-and-authority"
         )
+      ),
+      feature(
+        "resource-exhaustion",
+        "0.1.75",
+        specification(
+          "resource-exhaustion/aggregate-budgets-and-runtime-admission.md#status-and-authority"
+        )
       )
     ]
   end
@@ -797,6 +804,9 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("reproducible-builds"), do: ~w(artifacts)
 
   defp affected_dimensions("supply-chain-policy"), do: ~w(artifacts)
+
+  defp affected_dimensions("resource-exhaustion"),
+    do: ~w(static-meaning dynamic-behavior artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1128,6 +1138,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("supply-chain-policy"),
     do:
       "Configure an out-of-band registry root, verify monotonic signed snapshots and delegated publisher signatures, then acquire exact content through a lock. Yanked releases remain available only to exact locked replay; compromised releases are denied. Registry authority remains separate from language governance."
+
+  defp migration("resource-exhaustion"),
+    do:
+      "Apply aggregate source, syntax and output budgets to compiler transactions before publication. Use explicit bounded runtime queues when overload must be rejected or terminate an admitted service; raw local send keeps its existing semantics."
 
   defp migration("secrets-and-capabilities"),
     do:

@@ -50,6 +50,42 @@ defmodule Catena.ImplementationLimits do
       exhaustion: %{kind: :diagnostic, id: "LIM003"}
     },
     %{
+      id: :aggregate_source_files,
+      classification: :implementation_limit,
+      unit: :files,
+      portable_minimum: 128,
+      configured: 256,
+      applies_to: "one compiler or package transaction",
+      exhaustion: %{kind: :diagnostic, id: "LIM006"}
+    },
+    %{
+      id: :aggregate_source_bytes,
+      classification: :implementation_limit,
+      unit: :bytes,
+      portable_minimum: 16_777_216,
+      configured: 67_108_864,
+      applies_to: "all supplied source and interface bytes in one transaction",
+      exhaustion: %{kind: :diagnostic, id: "LIM007"}
+    },
+    %{
+      id: :aggregate_syntax_nodes,
+      classification: :implementation_limit,
+      unit: :nodes,
+      portable_minimum: 100_000,
+      configured: 200_000,
+      applies_to: "decoded syntax and semantic input in one transaction",
+      exhaustion: %{kind: :diagnostic, id: "LIM008"}
+    },
+    %{
+      id: :aggregate_output_bytes,
+      classification: :implementation_limit,
+      unit: :bytes,
+      portable_minimum: 16_777_216,
+      configured: 67_108_864,
+      applies_to: "all outputs before one package publication transaction",
+      exhaustion: %{kind: :diagnostic, id: "LIM009"}
+    },
+    %{
       id: :kernel_parser_depth,
       classification: :implementation_limit,
       unit: :nesting_levels,
@@ -65,7 +101,7 @@ defmodule Catena.ImplementationLimits do
       portable_minimum: nil,
       configured: nil,
       applies_to: "deployment runtime memory rather than language acceptance",
-      exhaustion: %{kind: :deferred, owner: "P085/P129"}
+      exhaustion: %{kind: :deployment_policy, owner: "C129/P085"}
     }
   ]
 
@@ -230,6 +266,9 @@ defmodule Catena.ImplementationLimits do
 
         :generated_beam_bytes ->
           "generated BEAM module exceeds the published size limit"
+
+        _ ->
+          "aggregate resource budget exceeds the published limit"
       end
 
     Diagnostic.new(diagnostic_id, Keyword.get(options, :message, default_message),
