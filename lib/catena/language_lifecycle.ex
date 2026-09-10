@@ -517,6 +517,13 @@ defmodule Catena.LanguageLifecycle do
         "hot-code-upgrade",
         "0.1.79",
         specification("hot-code-upgrade/checked-migration-and-activation.md#status-and-authority")
+      ),
+      feature(
+        "long-term-evolution",
+        "0.1.80",
+        specification(
+          "long-term-evolution/historical-replay-and-migration.md#status-and-authority"
+        )
       )
     ]
   end
@@ -841,6 +848,9 @@ defmodule Catena.LanguageLifecycle do
 
   defp affected_dimensions("hot-code-upgrade"),
     do: ~w(dynamic-behavior interfaces artifacts)
+
+  defp affected_dimensions("long-term-evolution"),
+    do: ~w(artifacts interfaces)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
