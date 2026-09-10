@@ -15,7 +15,7 @@ defmodule Catena.TrustBoundaryTest do
   test "reviewed graph classifies all source paths, call expressions and generated data" do
     assert :ok = Profile.verify(Profile.document())
     assert :ok = Profile.audit(File.cwd!())
-    assert map_size(Profile.document()["guarantees"]) == 12
+    assert map_size(Profile.document()["guarantees"]) == 13
     assert Catena.ConformanceInfo.document()["trusted_computing_base"] == Profile.summary()
     refute Profile.summary()["proof_verified_compiler"]
     refute Profile.summary()["runtime_sandbox"]

@@ -21,6 +21,13 @@ defmodule Catena.ConformanceInfo do
         "compiler" => stringify(Catena.Resource.Budget.profile()),
         "runtime" => stringify(Catena.Runtime.Capacity.profile())
       },
+      "distribution" => %{
+        "contract" => stringify(Catena.Distribution.Contract.profile()),
+        "wire" => stringify(Catena.Distribution.Wire.profile()),
+        "delivery_outcomes" => ["admitted", "not_enqueued", "delivery_unknown"],
+        "duplicate_disposition" => "deduplicate-by-message-id-and-frame-digest",
+        "application_processing_acknowledged" => false
+      },
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,

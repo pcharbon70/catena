@@ -495,6 +495,11 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "resource-exhaustion/aggregate-budgets-and-runtime-admission.md#status-and-authority"
         )
+      ),
+      feature(
+        "distribution",
+        "0.1.76",
+        specification("distribution/typed-authenticated-transport.md#status-and-authority")
       )
     ]
   end
@@ -807,6 +812,9 @@ defmodule Catena.LanguageLifecycle do
 
   defp affected_dimensions("resource-exhaustion"),
     do: ~w(static-meaning dynamic-behavior artifacts)
+
+  defp affected_dimensions("distribution"),
+    do: ~w(dynamic-behavior interfaces artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1142,6 +1150,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("resource-exhaustion"),
     do:
       "Apply aggregate source, syntax and output budgets to compiler transactions before publication. Use explicit bounded runtime queues when overload must be rejected or terminate an admitted service; raw local send keeps its existing semantics."
+
+  defp migration("distribution"),
+    do:
+      "Provision mutually authenticated TLS identities and an explicit peer allow-list bound to package and local-protocol digests. Exchange only bounded canonical typed frames; handle not-enqueued and delivery-unknown outcomes explicitly, without automatic retry or an exactly-once claim."
 
   defp migration("secrets-and-capabilities"),
     do:
