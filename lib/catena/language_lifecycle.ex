@@ -557,6 +557,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "differential-testing/generated-and-adversarial-agreement.md#status-and-authority"
         )
+      ),
+      feature(
+        "optimizer-validity",
+        "0.1.86",
+        specification(
+          "optimizer-validity/checked-rewrites-and-observation-preservation.md#status-and-authority"
+        )
       )
     ]
   end
@@ -899,6 +906,9 @@ defmodule Catena.LanguageLifecycle do
 
   defp affected_dimensions("differential-testing"),
     do: ~w(static-meaning dynamic-behavior artifacts)
+
+  defp affected_dimensions("optimizer-validity"),
+    do: ~w(dynamic-behavior artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1266,6 +1276,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("differential-testing"),
     do:
       "Select exact 0.1.85 for subject-bound generated and adversarial comparison of independent reference and production observations. Compare deterministic behavior exactly, validate nondeterministic executions against bounded allowed sets, and retain minimized counterexamples. Public source generation remains held for P109."
+
+  defp migration("optimizer-validity"),
+    do:
+      "Select exact 0.1.86 to enable checked optimization. Only the published literal and right-identity rules run; each rewrite is independently reverified and replayed from its input certificate. Law-dependent annihilation remains refused without machine-checked purity and totality evidence."
 
   defp migration("secrets-and-capabilities"),
     do:

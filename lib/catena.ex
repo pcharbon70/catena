@@ -25,7 +25,7 @@ defmodule Catena do
   strongly-connected components with joint digests.
   """
 
-  alias Catena.{AST.Decoder, Compiler, Resource.Budget}
+  alias Catena.{AST.Decoder, Compiler, Optimizer, Resource.Budget}
   alias Catena.Kernel.{Backend, Checker, Parser}
 
   @spec decode_source_text(binary(), keyword()) ::
@@ -180,8 +180,20 @@ defmodule Catena do
   @spec compile_kernel(binary(), keyword()) ::
           {:ok, module(), binary(), map()} | {:error, Catena.Diagnostic.t()}
   def compile_kernel(source, options \\ []) do
-    with {:ok, core} <- check_kernel(source, options) do
-      Backend.compile(core, options)
+    mode = Keyword.get(options, :optimizer, :disabled)
+
+    with {:ok, core} <- check_kernel(source, options),
+         {:ok, optimization} <- Optimizer.optimize(core, mode: mode),
+         {:ok, module, binary, metadata} <- Backend.compile(optimization.core, options) do
+      metadata =
+        if Keyword.has_key?(options, :optimizer),
+          do: Map.put(metadata, :optimizer, Optimizer.evidence(optimization)),
+          else: metadata
+
+      {:ok, module, binary, metadata}
     end
   end
+
+  @spec optimize_kernel(map(), keyword()) :: {:ok, map()} | {:error, term()}
+  def optimize_kernel(core, options \\ []), do: Optimizer.optimize(core, options)
 end
