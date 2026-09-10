@@ -512,6 +512,11 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "scheduler-observability/policy-classes-and-visible-limits.md#status-and-authority"
         )
+      ),
+      feature(
+        "hot-code-upgrade",
+        "0.1.79",
+        specification("hot-code-upgrade/checked-migration-and-activation.md#status-and-authority")
       )
     ]
   end
@@ -833,6 +838,9 @@ defmodule Catena.LanguageLifecycle do
 
   defp affected_dimensions("scheduler-observability"),
     do: ~w(dynamic-behavior interfaces)
+
+  defp affected_dimensions("hot-code-upgrade"),
+    do: ~w(dynamic-behavior interfaces artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
