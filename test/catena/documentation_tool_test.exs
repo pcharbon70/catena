@@ -43,6 +43,7 @@ defmodule Catena.DocumentationToolTest do
     assert {:ok, first} = Documentation.render(graph)
     assert {:ok, ^first} = Documentation.render(graph)
     assert first =~ "[#{type_id}](##{String.replace(String.downcase(type_id), ".", "-")})"
+    assert first =~ "No documentation supplied."
     assert Enum.any?(graph["nodes"], &(&1["kind"] == "type"))
     assert Enum.any?(graph["nodes"], &(&1["kind"] == "value"))
   end
@@ -85,6 +86,9 @@ defmodule Catena.DocumentationToolTest do
     assert {:ok, graph} = Documentation.build(interface(), docs, dependencies: [dependency])
     assert {:ok, markdown} = Documentation.render(graph)
     assert markdown =~ "DocumentedDependency.md#documenteddependency-type"
+
+    assert {:error, :duplicate_dependency_module} =
+             Documentation.build(interface(), docs, dependencies: [dependency, dependency])
   end
 
   test "hidden targets, raw HTML, unresolved links, and undeclared effects are refused" do
