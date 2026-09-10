@@ -44,6 +44,24 @@ defmodule Catena.CompatibilityMatrixTest do
     assert report["counts"] == %{"pass" => 0, "fail" => 1, "unsupported" => 0}
   end
 
+  test "missing and malformed adapters have distinct explicit outcomes" do
+    {:ok, matrix} =
+      CompatibilityMatrix.define("adapter protocol", [
+        case_("malformed-adapter", "interface", "compatible", %{}),
+        case_("missing-adapter", "data", "compatible", %{})
+      ])
+
+    assert {:ok, report} =
+             CompatibilityMatrix.run(matrix, %{"interface" => fn _ -> :invalid_result end})
+
+    assert Enum.map(report["results"], &{&1["id"], &1["outcome"], &1["observed"]}) == [
+             {"malformed-adapter", "fail", "invalid-adapter-result"},
+             {"missing-adapter", "unsupported", "unsupported"}
+           ]
+
+    assert report["counts"] == %{"pass" => 0, "fail" => 1, "unsupported" => 1}
+  end
+
   test "wide and deep dependency graphs use the retained resolver and exact lock replay" do
     wide_names = for n <- 1..64, do: "p#{n}"
     wide_env = Map.new(wide_names, &{&1, %{"1.0.0" => %{dependencies: %{}}}})
