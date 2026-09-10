@@ -545,6 +545,11 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "reference-evaluator/common-observations-and-bounded-models.md#status-and-authority"
         )
+      ),
+      feature(
+        "testing-tools",
+        "0.1.84",
+        specification("testing-tools/isolated-seeded-and-scoped-runs.md#status-and-authority")
       )
     ]
   end
@@ -881,6 +886,9 @@ defmodule Catena.LanguageLifecycle do
 
   defp affected_dimensions("reference-evaluator"),
     do: ~w(static-meaning dynamic-behavior)
+
+  defp affected_dimensions("testing-tools"),
+    do: ~w(static-meaning dynamic-behavior artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1240,6 +1248,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("reference-evaluator"),
     do:
       "Select exact 0.1.83 for the common bounded observation contract over retained independent reference engines. Preserve values, traps, ordered events, lifetime outcomes, semantic exhaustion, host timeout and unsupported coverage as distinct observations. Public source grammar remains held for P109."
+
+  defp migration("testing-tools"),
+    do:
+      "Select exact 0.1.84 for internal unit, law, property, model, concurrency and specification runs. Supply explicit seeds and subject digests, preserve generator invariants while shrinking, declare observed effects, and distinguish semantic, schedule, shrink and host-time bounds. Public test syntax remains held for P109/P107."
 
   defp migration("secrets-and-capabilities"),
     do:

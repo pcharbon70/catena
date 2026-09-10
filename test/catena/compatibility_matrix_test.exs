@@ -110,7 +110,7 @@ defmodule Catena.CompatibilityMatrixTest do
       case_("interface-addition", "interface", "compatible", %{"change" => "add"}),
       case_("runtime-upgrade", "runtime-upgrade", "compatible", %{"generation" => 1}),
       case_("source-oldest", "source", "compatible", %{"revision" => "0.1.1"}),
-      case_("source-newest", "source", "compatible", %{"revision" => "0.1.83"}),
+      case_("source-newest", "source", "compatible", %{"revision" => "0.1.84"}),
       case_("toolchain-newest", "toolchain", "compatible", %{"edge" => "newest"}),
       case_("toolchain-oldest", "toolchain", "compatible", %{"edge" => "oldest"})
     ]
@@ -144,7 +144,7 @@ defmodule Catena.CompatibilityMatrixTest do
   end
 
   test "profile and lifecycle expose bounded matrix scope" do
-    assert Catena.LanguageVersion.latest() == "0.1.83"
+    assert Catena.LanguageVersion.latest() == "0.1.84"
     assert CompatibilityMatrix.profile().ecosystem_wide_claim == false
     assert CompatibilityMatrix.profile().unsupported_is_failure == false
     assert Catena.ConformanceInfo.document()["compatibility_suite"]["version"] == "0.1.82"
