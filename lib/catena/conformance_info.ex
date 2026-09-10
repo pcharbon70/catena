@@ -9,6 +9,10 @@ defmodule Catena.ConformanceInfo do
       "toolchain" => Catena.OTP.Profile.document(),
       "trusted_computing_base" => Catena.Trust.Profile.summary(),
       "secret_capabilities" => Catena.Runtime.Secret.conformance_profile(),
+      "reproducible_builds" =>
+        Map.new(Catena.Package.Reproducible.profile(), fn {key, value} ->
+          {Atom.to_string(key), value}
+        end),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,

@@ -474,6 +474,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "secret-capabilities/sealed-values-and-protected-delivery.md#status-and-authority"
         )
+      ),
+      feature(
+        "reproducible-builds",
+        "0.1.73",
+        specification(
+          "reproducible-builds/exact-inputs-and-canonical-packages.md#status-and-authority"
+        )
       )
     ]
   end
@@ -779,6 +786,8 @@ defmodule Catena.LanguageLifecycle do
 
   defp change_classification("selective-receive-correction"), do: "compatible-correction"
   defp change_classification(_id), do: "compatible-addition"
+
+  defp affected_dimensions("reproducible-builds"), do: ~w(artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1102,6 +1111,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("closed-capability-kernel"),
     do:
       "Select 0.1.50 through the explicit closed capability-tree boundary. Retained 0.1.8 source, interfaces and signed formats are unchanged; provide slot/family bindings, fragment rows and enclosing handlers. No automatic source rewrite applies."
+
+  defp migration("reproducible-builds"),
+    do:
+      "Bind all supplied files, deterministic generators and explicit public environment in an exact compiler/toolchain envelope. Build in fresh roots and compare complete canonical archives. General build actions, new signed events and secret-dependent builds require their own contracts."
 
   defp migration("secrets-and-capabilities"),
     do:
