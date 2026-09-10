@@ -505,6 +505,13 @@ defmodule Catena.LanguageLifecycle do
         "message-semantics",
         "0.1.77",
         specification("message-semantics/values-capacity-and-transport.md#status-and-authority")
+      ),
+      feature(
+        "scheduler-observability",
+        "0.1.78",
+        specification(
+          "scheduler-observability/policy-classes-and-visible-limits.md#status-and-authority"
+        )
       )
     ]
   end
@@ -822,6 +829,9 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(dynamic-behavior interfaces artifacts)
 
   defp affected_dimensions("message-semantics"),
+    do: ~w(dynamic-behavior interfaces)
+
+  defp affected_dimensions("scheduler-observability"),
     do: ~w(dynamic-behavior interfaces)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
@@ -1166,6 +1176,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("message-semantics"),
     do:
       "Retain raw local Unit-returning send where its existing contract is intended. At foreign, capacity-sensitive or remote boundaries, validate the declared message schema before admission and handle the boundary's explicit overload or delivery outcome."
+
+  defp migration("scheduler-observability"),
+    do:
+      "Do not depend on deterministic scheduling, fairness, or reduction counts. Classify foreign work before admission, route scheduled blocking work through bounded workers, and refuse unsafe unbounded work in the supported profile."
 
   defp migration("secrets-and-capabilities"),
     do:

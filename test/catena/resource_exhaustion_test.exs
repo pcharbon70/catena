@@ -101,11 +101,13 @@ defmodule Catena.ResourceExhaustionTest do
       spawn(fn ->
         {:ok, {Capacity, pid, _} = queue} = Capacity.start(messages: 1, bytes: 128)
         send(parent, {:queue, queue, pid})
+        receive do: (:release_owner -> :ok)
       end)
 
     owner_monitor = Process.monitor(owner)
     assert_receive {:queue, _queue, pid}
     queue_monitor = Process.monitor(pid)
+    send(owner, :release_owner)
     assert_receive {:DOWN, ^owner_monitor, :process, ^owner, :normal}
     assert_receive {:DOWN, ^queue_monitor, :process, ^pid, :normal}
 
