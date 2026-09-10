@@ -40,7 +40,11 @@ defmodule Catena.Package.Linker do
            compile_modules(manifest, directory, imported_interfaces, options),
          {:ok, entries} <- Catena.Entry.validate(Map.get(manifest, :entries), prepared_modules),
          {:ok, module, companion_binary, metadata} <-
-           link(manifest, interfaces, Keyword.put(options, :source, path)),
+           link(
+             manifest,
+             interfaces,
+             Keyword.put(options, :source, logical_source(path, Path.basename(path), options))
+           ),
          {:ok, result} <-
            finalize_package(
              manifest,
@@ -164,6 +168,14 @@ defmodule Catena.Package.Linker do
     error in File.Error -> {:error, Diagnostic.new("LNK001", Exception.message(error))}
   end
 
+  defp logical_source(physical, relative, options) do
+    if Keyword.get(options, :reproducible_paths, false),
+      do: "catena://build/" <> relative,
+      else: physical
+  end
+
+  def compile_reproducible(plan, root), do: Catena.Package.Reproducible.build(plan, root)
+
   defp compile_modules(manifest, directory, interfaces, options) do
     Enum.reduce_while(manifest.modules, {:ok, interfaces, []}, fn declaration,
                                                                   {:ok, available, outputs} ->
@@ -172,7 +184,7 @@ defmodule Catena.Package.Linker do
       compile_options =
         Keyword.merge(options,
           interfaces: available,
-          source: source,
+          source: logical_source(source, declaration["source"], options),
           language_selection: manifest.selection,
           artifact_version: manifest.artifact_version,
           denied_diagnostics: manifest.denied_diagnostics

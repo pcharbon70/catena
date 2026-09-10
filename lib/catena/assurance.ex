@@ -5,6 +5,10 @@ defmodule Catena.Assurance do
   def verify_trusted_obligations(binary, graph),
     do: Catena.Trust.Obligations.verify_document(binary, graph)
 
+  @doc "Rebuild every packaged byte from its exact input envelope in a fresh root."
+  def verify_reproducible(archive, plan, root),
+    do: Catena.Package.Reproducible.rebuild_verify(plan, archive, root)
+
   alias Catena.{
     CanonicalJCS,
     Diagnostic,
