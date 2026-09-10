@@ -524,6 +524,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "long-term-evolution/historical-replay-and-migration.md#status-and-authority"
         )
+      ),
+      feature(
+        "build-system",
+        "0.1.81",
+        specification(
+          "build-system/project-graphs-acquisition-and-offline-builds.md#status-and-authority"
+        )
       )
     ]
   end
@@ -850,6 +857,9 @@ defmodule Catena.LanguageLifecycle do
     do: ~w(dynamic-behavior interfaces artifacts)
 
   defp affected_dimensions("long-term-evolution"),
+    do: ~w(artifacts interfaces)
+
+  defp affected_dimensions("build-system"),
     do: ~w(artifacts interfaces)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
@@ -1198,6 +1208,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("scheduler-observability"),
     do:
       "Do not depend on deterministic scheduling, fairness, or reduction counts. Classify foreign work before admission, route scheduled blocking work through bounded workers, and refuse unsafe unbounded work in the supported profile."
+
+  defp migration("build-system"),
+    do:
+      "Select exact 0.1.81 project graphs and profiles over retained manifests, locks and reproducible plans. Acquire verified locked content before building; offline execution uses content-addressed inputs, declared generators and staged output publication. Public project vocabulary remains deferred."
 
   defp migration("secrets-and-capabilities"),
     do:
