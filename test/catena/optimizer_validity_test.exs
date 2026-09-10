@@ -4,7 +4,7 @@ defmodule Catena.OptimizerValidityTest do
   alias Catena.{LanguageLifecycle, LanguageVersion, Optimizer}
   alias Catena.Kernel.Stepper
 
-  @tag obligations: ~w(OP-OBL-001 OP-OBL-002 OP-OBL-003 OP-OBL-004)
+  @tag obligations: ~w(OZ-OBL-001 OZ-OBL-002 OZ-OBL-003 OZ-OBL-004)
   test "profile inventories the closed checked rewrite domain" do
     profile = Optimizer.profile()
     assert profile.version == "0.1.86"
@@ -16,7 +16,7 @@ defmodule Catena.OptimizerValidityTest do
     assert map_size(profile.inventories) == 5
   end
 
-  @tag obligations: ~w(OP-OBL-005 OP-OBL-006 OP-OBL-007 OP-OBL-008)
+  @tag obligations: ~w(OZ-OBL-005 OZ-OBL-006 OZ-OBL-007 OZ-OBL-008)
   test "checked literal and identity rewrites replay from verified core" do
     source = module_source("P135Certificates", "(add (multiply 2 3) 0)")
     assert {:ok, core} = Catena.check_kernel(source)
@@ -37,7 +37,7 @@ defmodule Catena.OptimizerValidityTest do
              Optimizer.verify_result(core, %{result | certificates: tampered})
   end
 
-  @tag obligations: ~w(OP-OBL-009 OP-OBL-010 OP-OBL-011)
+  @tag obligations: ~w(OZ-OBL-009 OZ-OBL-010 OZ-OBL-011)
   test "disabled and checked compilation preserve reference and BEAM observations" do
     source = module_source("P135Agreement", "(multiply (add 20 1) 1)")
     assert {:ok, core} = Catena.check_kernel(source)
@@ -57,7 +57,7 @@ defmodule Catena.OptimizerValidityTest do
     refute disabled_metadata.optimizer.output_digest == checked_metadata.optimizer.output_digest
   end
 
-  @tag obligations: ~w(OP-OBL-012 OP-OBL-013 OP-OBL-014)
+  @tag obligations: ~w(OZ-OBL-012 OZ-OBL-013 OZ-OBL-014)
   test "annihilation is refused without machine-checked purity and totality" do
     source = module_source("P135Refusal", "(let x 7 (multiply 0 (var x)))")
     assert {:ok, core} = Catena.check_kernel(source)
@@ -74,7 +74,7 @@ defmodule Catena.OptimizerValidityTest do
     assert {:ok, 0, _} = Stepper.run(result.core, "main")
   end
 
-  @tag obligations: ~w(OP-OBL-010 OP-OBL-012 OP-OBL-015)
+  @tag obligations: ~w(OZ-OBL-010 OZ-OBL-012 OZ-OBL-015)
   test "trap-producing annihilation is refused and the terminal remains observable" do
     trap_source = module_source("P135Trap", "(multiply 0 (trap 9))")
     assert {:ok, trap_core} = Catena.check_kernel(trap_source)
@@ -88,7 +88,7 @@ defmodule Catena.OptimizerValidityTest do
     assert :binary in tags
   end
 
-  @tag obligations: ~w(OP-OBL-009 OP-OBL-010 OP-OBL-012)
+  @tag obligations: ~w(OZ-OBL-009 OZ-OBL-010 OZ-OBL-012)
   test "right identity preserves a call and its exact-once evaluation" do
     source =
       module_source(
@@ -103,7 +103,7 @@ defmodule Catena.OptimizerValidityTest do
     assert {:ok, 42, _} = Stepper.run(result.core, "main")
   end
 
-  @tag obligations: ~w(OP-OBL-006 OP-OBL-009 OP-OBL-016)
+  @tag obligations: ~w(OZ-OBL-006 OZ-OBL-009 OZ-OBL-016)
   test "large pure structures optimize deterministically without changing value" do
     expression = Enum.reduce(1..128, "1", fn _, inner -> "(add #{inner} 0)" end)
     source = module_source("P135Large", expression)
@@ -115,7 +115,7 @@ defmodule Catena.OptimizerValidityTest do
     assert {:ok, 1, _} = Stepper.run(first.core, "main")
   end
 
-  @tag obligations: ~w(OP-OBL-001 OP-OBL-017 OP-OBL-018)
+  @tag obligations: ~w(OZ-OBL-001 OZ-OBL-017 OZ-OBL-018)
   test "optimizer validity is selected cumulatively and disclosed" do
     assert LanguageVersion.introduced(:optimizer_validity) == "0.1.86"
     assert LanguageVersion.from(:optimizer_validity) == ["0.1.86"]
