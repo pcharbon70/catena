@@ -87,6 +87,19 @@ defmodule Catena.FormatterToolTest do
 
     too_deep = Enum.reduce(1..66, Formatter.text("x"), &Formatter.nest(&1, &2))
     assert {:error, :format_limit_exceeded} = Formatter.preview("", too_deep)
+
+    assert {:error, :format_limit_exceeded} =
+             Formatter.preview("", Formatter.text(String.duplicate("x", 16_777_217)))
+
+    source = "// bounded"
+    assert {:ok, tokenized} = Catena.Tokenizer.tokenize(source)
+    [comment] = tokenized.tokens
+
+    assert {:error, :format_limit_exceeded} =
+             Formatter.preview(
+               source,
+               Formatter.verbatim(source, comment, String.duplicate("a", 257))
+             )
   end
 
   test "public-source application remains held and never overwrites an input", %{tmp_dir: root} do
@@ -118,5 +131,6 @@ defmodule Catena.FormatterToolTest do
     assert profile["public_source_formatting"] == "held_for_p109"
     assert profile["style_options"] == []
     assert profile["width_unit"] == "unicode_scalar"
+    assert profile["maximum_attachment_bytes"] == 256
   end
 end

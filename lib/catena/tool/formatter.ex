@@ -10,6 +10,7 @@ defmodule Catena.Tool.Formatter do
   @maximum_depth 64
   @maximum_input_bytes 16_777_216
   @maximum_output_bytes 16_777_216
+  @maximum_attachment_bytes 256
   @verbatim_roles ~w(comment literal token)a
 
   defmodule Document do
@@ -30,6 +31,7 @@ defmodule Catena.Tool.Formatter do
       maximum_depth: @maximum_depth,
       maximum_input_bytes: @maximum_input_bytes,
       maximum_output_bytes: @maximum_output_bytes,
+      maximum_attachment_bytes: @maximum_attachment_bytes,
       comments: :exact_verbatim_with_attachment_identity,
       literals: :exact_verbatim,
       source_mapping: :exact_original_and_output_byte_spans,
@@ -198,20 +200,21 @@ defmodule Catena.Tool.Formatter do
   defp validate(_, _, _, _), do: {:error, :invalid_format_document}
 
   defp validate_verbatim_tokens(%Document{form: :verbatim} = document, token_index) do
-    attachment_valid =
-      is_nil(document.attachment) or
-        (document.role == :comment and is_binary(document.attachment) and
-           byte_size(document.attachment) <= 256)
+    cond do
+      document.role == :comment and is_binary(document.attachment) and
+          byte_size(document.attachment) > @maximum_attachment_bytes ->
+        {:error, :format_limit_exceeded}
 
-    token_valid =
-      MapSet.member?(
-        token_index,
-        {document.value, document.origin, document.role}
-      )
+      not is_nil(document.attachment) and
+          not (document.role == :comment and is_binary(document.attachment)) ->
+        {:error, :invalid_verbatim_source}
 
-    if attachment_valid and token_valid,
-      do: :ok,
-      else: {:error, :invalid_verbatim_source}
+      MapSet.member?(token_index, {document.value, document.origin, document.role}) ->
+        :ok
+
+      true ->
+        {:error, :invalid_verbatim_source}
+    end
   end
 
   defp validate_verbatim_tokens(%Document{form: :concat, children: children}, token_index),
@@ -383,7 +386,7 @@ defmodule Catena.Tool.Formatter do
            true <-
              is_nil(item["attachment"]) or
                (item["role"] == "comment" and is_binary(item["attachment"]) and
-                  byte_size(item["attachment"]) <= 256),
+                  byte_size(item["attachment"]) <= @maximum_attachment_bytes),
            %{"byte_start" => sa, "byte_end" => sb} <- item["source"],
            %{"byte_start" => oa, "byte_end" => ob} <- item["output"],
            true <- valid_range?(sa, sb, source),
