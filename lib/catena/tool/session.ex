@@ -10,6 +10,7 @@ defmodule Catena.Tool.Session do
   @maximum_history 256
   @default_budget 100_000
   @maximum_budget 10_000_000
+  @cleanup_confirmation_timeout_ms 1_000
 
   def profile do
     %{
@@ -27,7 +28,8 @@ defmodule Catena.Tool.Session do
       maximum_generations_per_module: @maximum_generations,
       maximum_history_entries: @maximum_history,
       default_evaluation_steps: @default_budget,
-      maximum_evaluation_steps: @maximum_budget
+      maximum_evaluation_steps: @maximum_budget,
+      cleanup_confirmation_timeout_ms: @cleanup_confirmation_timeout_ms
     }
   end
 
@@ -459,7 +461,7 @@ defmodule Catena.Tool.Session do
       when monitor == job.monitor and worker == job.worker ->
         :ok
     after
-      1_000 -> {:error, :session_cleanup_timeout}
+      @cleanup_confirmation_timeout_ms -> {:error, :session_cleanup_timeout}
     end
   end
 
