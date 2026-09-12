@@ -81,7 +81,7 @@ defmodule Catena.StandardStabilityPerformanceTest do
 
   @tag obligations: ~w(SP-OBL-016 SP-OBL-017 SP-OBL-018)
   test "revision and conformance profile disclose the policy boundary" do
-    assert LanguageVersion.latest() == "0.1.95"
+    assert LanguageVersion.latest() == "0.1.96"
     assert LanguageVersion.introduced(:standard_stability_and_performance) == "0.1.87"
 
     assert {:ok, :stable} =
