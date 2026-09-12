@@ -7,6 +7,7 @@ defmodule Catena.Tool.UsabilityStudy do
   @package_version 1
   @gate "G137"
   @status "prepared-not-observed"
+  @version "0.1.97"
   @task_families ~w(comprehension dependent-sequencing diagnostic-repair effect-handling guard-selection independent-combination single-context-mapping traversal)
   @metrics ~w(prediction-accuracy repair-success task-completion transfer-success)
   @strata ~w(functional general)
@@ -16,6 +17,7 @@ defmodule Catena.Tool.UsabilityStudy do
   def profile do
     %{
       gate: @gate,
+      version: @version,
       package_format: @format,
       package_version: @package_version,
       status: :prepared_not_observed,

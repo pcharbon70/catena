@@ -5,7 +5,7 @@ defmodule Catena.C086ReceiveCompletionTest do
 
   @tag obligations: ~w(RC-OBL-001)
   test "the correction is separately registered without changing retained formats" do
-    assert Catena.LanguageVersion.latest() == "0.1.96"
+    assert Catena.LanguageVersion.latest() == "0.1.97"
 
     assert {:ok, :stable} =
              Catena.LanguageLifecycle.state("selective-receive-correction", "0.1.49")
@@ -22,7 +22,7 @@ defmodule Catena.C086ReceiveCompletionTest do
     assert change["affects"] == ["static-meaning"]
     assert change["migration"] =~ "Historical selections"
     assert change["specification"] =~ "waiting-and-scan-cost-amendment.md#waiting-and-selection"
-    assert {:ok, %{selection: %{language_revision: "0.1.96"}}} = Catena.decode_source_text("")
+    assert {:ok, %{selection: %{language_revision: "0.1.97"}}} = Catena.decode_source_text("")
 
     assert {:ok, %{selection: %{language_revision: "0.1.46"}}} =
              Catena.decode_source_text("",
