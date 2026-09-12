@@ -92,6 +92,34 @@ defmodule Catena.InteractiveSessionTest do
     assert profile["public_repl"] == "held_for_p109"
     assert profile["history"] == "bounded_metadata_redacted_by_default"
     assert profile["governance"] == "external_admission_required"
+    assert profile["cleanup_confirmation_timeout_ms"] == 1_000
+  end
+
+  test "owner death terminates the session and its running evaluation" do
+    parent = self()
+
+    owner =
+      spawn(fn ->
+        {:ok, session} = Session.open()
+        {:ok, _} = Session.load(session, looping_kernel(), format: :kernel)
+
+        {:ok, handle} =
+          Session.start_evaluation(session, "Looping", "main", [], evaluation_steps: 10_000_000)
+
+        send(parent, {:owned_session, session, handle})
+        receive do: (:remain_owner -> :ok)
+      end)
+
+    assert_receive {:owned_session, session, handle}
+    assert {Session, ^owner, ^session, reference} = handle
+    worker = :sys.get_state(session).jobs[reference].worker
+    session_monitor = Process.monitor(session)
+    worker_monitor = Process.monitor(worker)
+
+    Process.exit(owner, :kill)
+
+    assert_receive {:DOWN, ^worker_monitor, :process, ^worker, _}
+    assert_receive {:DOWN, ^session_monitor, :process, ^session, :normal}
   end
 
   defp module_json(module, value) do
