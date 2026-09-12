@@ -34,8 +34,17 @@ defmodule Catena.InteractiveSessionTest do
     assert {:ok, 2, _} = Session.evaluate(session, "ReplaceMe", "answer")
     assert {:ok, 1, _} = Session.evaluate(session, "ReplaceMe", "answer", [], generation: 0)
 
+    assert {:ok, 1, _} =
+             Session.evaluate(session, "ReplaceMe", "answer", [], generation: 0, sensitive: true)
+
     assert {:ok, %{entries: entries}} = Session.history(session)
     assert Enum.any?(entries, &(&1.value == 2))
+
+    assert Enum.any?(entries, fn entry ->
+             entry.action == :evaluate and entry.details.generation == 0 and
+               entry.value == :redacted
+           end)
+
     assert {:ok, _} = Session.close(session)
   end
 
@@ -68,8 +77,12 @@ defmodule Catena.InteractiveSessionTest do
                evaluation_steps: 10_000_000
              )
 
+    assert {:ok, _} = Session.load(session, module_json("Looping", 9), replace: true)
+    assert {:ok, 9, _} = Session.evaluate(session, "Looping", "answer")
     assert :ok = Session.interrupt(running)
     assert {:cancelled, :session_interrupt} = Session.await(running)
+
+    assert {:ok, _} = Session.load(session, looping_kernel(), replace: true, format: :kernel)
 
     assert {:ok, running_on_close} =
              Session.start_evaluation(session, "Looping", "main", [],
