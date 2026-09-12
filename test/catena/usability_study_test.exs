@@ -76,7 +76,11 @@ defmodule Catena.UsabilityStudyTest do
 
   test "the conformance profile publishes the honest preparation boundary" do
     profile = Catena.ConformanceInfo.document()["usability_study"]
+    assert Catena.LanguageVersion.introduced(:usability_study) == "0.1.97"
+    assert {:ok, :stable} = Catena.LanguageLifecycle.state("usability-study", "0.1.97")
+    assert Catena.LanguageVersion.latest() == "0.1.97"
     assert profile["gate"] == "G137"
+    assert profile["version"] == "0.1.97"
     assert profile["status"] == "prepared_not_observed"
     assert profile["evidence_status"] == "blocked_until_observed_human_study"
     assert profile["public_vocabulary"] == "held_for_p107"
