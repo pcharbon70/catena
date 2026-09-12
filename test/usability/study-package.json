@@ -1,0 +1,91 @@
+{
+  "data_policy": {
+    "collect": [
+      "condition",
+      "duration-band",
+      "outcome-code",
+      "stratum",
+      "task-id"
+    ],
+    "exclude": [
+      "contact-details",
+      "free-text",
+      "names",
+      "source-recordings"
+    ],
+    "raw_retention": "none-after-verified-aggregation",
+    "reporting": "anonymous-aggregate-with-negative-results"
+  },
+  "exclusions": [
+    {
+      "id": "consent-withdrawn",
+      "rule": "Exclude all observations for a participant who withdraws consent.",
+      "timing": "defined-before-main-study"
+    },
+    {
+      "id": "duplicate-participation",
+      "rule": "Retain only the first eligible session when the same participant enrolls twice.",
+      "timing": "defined-before-main-study"
+    },
+    {
+      "id": "facilitator-protocol-failure",
+      "rule": "Exclude a task only when required material was omitted or the facilitator supplied its answer.",
+      "timing": "defined-before-main-study"
+    }
+  ],
+  "format": "catena-usability-prestudy",
+  "gate": "G137",
+  "materials": {
+    "README.md": "7447901c4fa808f988675f53bfc9a06fd57f3bc28238c30480379bc2df33b94c",
+    "analysis-plan.md": "a5666da4d9c9b57da32ed4b598955ae5ddbcf47612b277e1e639eb3afbe3cd9b",
+    "consent-and-data.md": "86ab61b7964900eab24cdd626e2828084a9bf37be5dbbce81f81d8d1a98c03cb",
+    "facilitator-guide.md": "1e63603954cc02df27b6c1b5f2406c48bd09b1d2b2b74631f1c7e64efb33bf18",
+    "semantic-task-book.md": "fd048948a87e2b85b5da6ae0fd306087be907297032a337a232f3fdcee524ee1"
+  },
+  "outcome_metrics": [
+    "prediction-accuracy",
+    "repair-success",
+    "task-completion",
+    "transfer-success"
+  ],
+  "outreach_authorized": false,
+  "package_version": 1,
+  "participant_data": [],
+  "phases": [
+    {
+      "id": "main",
+      "participants": 24,
+      "purpose": "preregistered-confirmatory"
+    },
+    {
+      "id": "pilot",
+      "participants": 6,
+      "purpose": "calibrate-materials-and-thresholds"
+    }
+  ],
+  "public_source": "held-for-p109",
+  "public_vocabulary": "held-for-p107",
+  "results": [],
+  "status": "prepared-not-observed",
+  "strata": [
+    "functional",
+    "general"
+  ],
+  "task_families": [
+    "comprehension",
+    "dependent-sequencing",
+    "diagnostic-repair",
+    "effect-handling",
+    "guard-selection",
+    "independent-combination",
+    "single-context-mapping",
+    "traversal"
+  ],
+  "thresholds": {
+    "prediction_accuracy": null,
+    "repair_success": null,
+    "status": "calibrate-after-pilot-preregister-before-main",
+    "task_completion": null,
+    "transfer_success": null
+  }
+}
