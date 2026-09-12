@@ -122,6 +122,42 @@ defmodule Catena.InteractiveSessionTest do
     assert_receive {:DOWN, ^session_monitor, :process, ^session, :normal}
   end
 
+  test "capability admission rejects an effect before evaluation" do
+    assert {:ok, session} = Session.open()
+    assert {:ok, _} = Session.load(session, effectful_module_json())
+
+    assert {:error, :interactive_capability_denied} =
+             Session.evaluate(session, "Effectful", "main")
+
+    assert {:ok, _} = Session.close(session)
+  end
+
+  test "generation and history retention enforce their published bounds" do
+    assert {:ok, session} = Session.open()
+    assert {:ok, _} = Session.load(session, module_json("Bounded", 0))
+
+    for value <- 1..32 do
+      assert {:ok, _} = Session.load(session, module_json("Bounded", value), replace: true)
+    end
+
+    for _ <- 1..224 do
+      assert {:ok, 32, _} = Session.evaluate(session, "Bounded", "answer")
+    end
+
+    assert {:ok, %{entries: entries, dropped: 1}} = Session.history(session)
+    assert length(entries) == 256
+
+    assert {:error, :stale_or_unknown_session_generation} =
+             Session.evaluate(session, "Bounded", "answer", [], generation: 0)
+
+    assert {:ok, 1, _} = Session.evaluate(session, "Bounded", "answer", [], generation: 1)
+
+    assert {:error, :interactive_session_limit_exceeded} =
+             Session.evaluate(session, "Bounded", "answer", [], evaluation_steps: 10_000_001)
+
+    assert {:ok, _} = Session.close(session)
+  end
+
   defp module_json(module, value) do
     JSON.encode!(%{
       "version" => "0.1.1",
@@ -134,6 +170,54 @@ defmodule Catena.InteractiveSessionTest do
           "parameters" => [],
           "signature" => %{"forall" => [], "type" => %{"tag" => "integer"}},
           "body" => %{"tag" => "integer", "value" => value}
+        }
+      ]
+    })
+  end
+
+  defp effectful_module_json do
+    JSON.encode!(%{
+      "version" => "0.1.5",
+      "origin" => "session://Effectful",
+      "module" => "Effectful",
+      "exports" => ["main"],
+      "type_exports" => [],
+      "types" => [],
+      "traits" => [],
+      "instances" => [],
+      "templates" => [],
+      "imports" => [],
+      "effects" => [
+        %{
+          "name" => "Ask",
+          "parameters" => [],
+          "visibility" => "public",
+          "operations" => [
+            %{
+              "name" => "ask",
+              "parameters" => [%{"name" => "value", "type" => %{"tag" => "integer"}}],
+              "result" => %{"tag" => "integer"}
+            }
+          ]
+        }
+      ],
+      "handlers" => [],
+      "definitions" => [
+        %{
+          "name" => "main",
+          "parameters" => [],
+          "signature" => %{
+            "forall" => [],
+            "type" => %{"tag" => "integer"},
+            "uses" => [%{"effect" => "Ask", "arguments" => [], "capability" => "ask"}]
+          },
+          "body" => %{
+            "tag" => "request",
+            "effect" => "Ask",
+            "operation" => "ask",
+            "arguments" => [%{"tag" => "integer", "value" => 1}],
+            "capability" => "ask"
+          }
         }
       ]
     })
