@@ -172,7 +172,7 @@ defmodule Catena.ForeignCodecTest do
   end
 
   test "exact 0.1.60 codec selection does not widen retained executable or serialized formats" do
-    assert Catena.LanguageVersion.latest() == "0.1.94"
+    assert Catena.LanguageVersion.latest() == "0.1.95"
     refute "0.1.60" in Catena.LanguageVersion.compilable_revisions()
     refute "0.1.60" in Catena.LanguageVersion.interface_versions()
     refute "0.1.60" in Catena.LanguageVersion.signed_format_versions()

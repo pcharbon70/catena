@@ -46,6 +46,7 @@ defmodule Catena.ConformanceInfo do
       "documentation_tool" => stringify(Catena.Tool.Documentation.profile()),
       "migration_tool" => stringify(Catena.Tool.Migration.profile()),
       "formatter_tool" => stringify(Catena.Tool.Formatter.profile()),
+      "interactive_session" => stringify(Catena.Tool.Session.profile()),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,

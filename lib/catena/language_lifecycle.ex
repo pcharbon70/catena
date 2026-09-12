@@ -616,6 +616,13 @@ defmodule Catena.LanguageLifecycle do
         "formatter-tool",
         "0.1.94",
         specification("formatter/syntax-independent-document-algebra.md#status-and-authority")
+      ),
+      feature(
+        "interactive-session",
+        "0.1.95",
+        specification(
+          "interactive-environment/owned-retained-input-sessions.md#status-and-authority"
+        )
       )
     ]
   end
@@ -980,6 +987,8 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("migration-tool"), do: ~w(diagnostics artifacts)
 
   defp affected_dimensions("formatter-tool"), do: ~w(diagnostics artifacts)
+
+  defp affected_dimensions("interactive-session"), do: ~w(diagnostics artifacts dynamic-behavior)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1383,6 +1392,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("formatter-tool"),
     do:
       "Select exact 0.1.94 for the syntax-independent document algebra, deterministic Unicode-scalar width rendering, exact comment/literal source mapping, and preimage-bound formatting previews. Public-source printing and edit application remain held for P109."
+
+  defp migration("interactive-session"),
+    do:
+      "Select exact 0.1.95 for owned retained-input sessions, explicit capability admission, immutable module generations, bounded evaluation, redacted history, and managed interruption and close. Public input editing and the REPL surface remain held for P109."
 
   defp migration("secrets-and-capabilities"),
     do:
