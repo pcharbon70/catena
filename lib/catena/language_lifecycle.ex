@@ -623,6 +623,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "interactive-environment/owned-retained-input-sessions.md#status-and-authority"
         )
+      ),
+      feature(
+        "language-service",
+        "0.1.96",
+        specification(
+          "editor-protocol/immutable-retained-input-language-service.md#status-and-authority"
+        )
       )
     ]
   end
@@ -989,6 +996,8 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("formatter-tool"), do: ~w(diagnostics artifacts)
 
   defp affected_dimensions("interactive-session"), do: ~w(diagnostics artifacts dynamic-behavior)
+
+  defp affected_dimensions("language-service"), do: ~w(diagnostics artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1396,6 +1405,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("interactive-session"),
     do:
       "Select exact 0.1.95 for owned retained-input sessions, explicit capability admission, immutable module generations, bounded evaluation, redacted history, and managed interruption and close. Public input editing and the REPL surface remain held for P109."
+
+  defp migration("language-service"),
+    do:
+      "Select exact 0.1.96 for immutable retained-JSON snapshots, shared compiler diagnostics, identity-based semantic queries, exact freshness, cancellation, and preimage-bound rename previews. Public incremental parsing, source coordinates, edit application, formatting, and transport remain held for P109."
 
   defp migration("secrets-and-capabilities"),
     do:
