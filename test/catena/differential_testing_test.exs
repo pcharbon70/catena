@@ -199,7 +199,7 @@ defmodule Catena.DifferentialTestingTest do
   end
 
   test "profile publishes matrix scope and honest proof boundary" do
-    assert Catena.LanguageVersion.latest() == "0.1.97"
+    assert Catena.LanguageVersion.latest() == "0.1.98"
     assert Differential.profile().version == "0.1.85"
     assert Differential.profile().maximum_scenarios == 10_000
     refute Differential.profile().agreement_is_proof

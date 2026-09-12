@@ -1,0 +1,53 @@
+{
+  "bootstrap_directory": "held-until-source-adoption",
+  "claimed_self_hosted": false,
+  "compiler_source": null,
+  "fixed_point": null,
+  "format": "catena-self-hosting-preflight",
+  "gate": "G141",
+  "language_revision": "0.1.98",
+  "unverified_stage_evidence": [],
+  "port_order": [
+    "canonical-json",
+    "scc",
+    "row-and-unification",
+    "parser",
+    "checker",
+    "verifier",
+    "backend"
+  ],
+  "public_source": "held-for-p109",
+  "required_evidence": [
+    "compiler-source",
+    "stage-one",
+    "stage-two",
+    "fixed-point",
+    "offline-reproducibility",
+    "rollback-drill"
+  ],
+  "required_suites": [
+    "application-corpus",
+    "compatibility",
+    "conformance",
+    "differential",
+    "packaging"
+  ],
+  "residual_host_services": [
+    "crypto",
+    "filesystem",
+    "otp-abstract-format",
+    "process"
+  ],
+  "rollback_drill": null,
+  "stage_one": null,
+  "stage_two": null,
+  "stage_zero": {
+    "implementation": "Elixir-bootstrap",
+    "status": "retained-recovery-root",
+    "target": "BEAM-through-OTP-29-Erlang-Abstract-Format",
+    "trust": "audited-source-toolchain-and-host"
+  },
+  "status": "prepared-blocked",
+  "target": "BEAM-through-OTP-29-Erlang-Abstract-Format",
+  "version": 1
+}

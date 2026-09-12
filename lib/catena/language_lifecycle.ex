@@ -637,6 +637,13 @@ defmodule Catena.LanguageLifecycle do
         specification(
           "usability-gate/observed-prediction-transfer-and-repair.md#status-and-authority"
         )
+      ),
+      feature(
+        "self-hosting",
+        "0.1.98",
+        specification(
+          "compiler-self-hosting/staged-bootstrap-and-fixed-point-evidence.md#status-and-authority"
+        )
       )
     ]
   end
@@ -1007,6 +1014,8 @@ defmodule Catena.LanguageLifecycle do
   defp affected_dimensions("language-service"), do: ~w(diagnostics artifacts)
 
   defp affected_dimensions("usability-study"), do: ~w(interfaces artifacts)
+
+  defp affected_dimensions("self-hosting"), do: ~w(artifacts)
 
   defp affected_dimensions("secrets-and-capabilities"), do: ~w(artifacts dynamic-behavior)
 
@@ -1422,6 +1431,10 @@ defmodule Catena.LanguageLifecycle do
   defp migration("usability-study"),
     do:
       "Select exact 0.1.97 for the digest-bound G137 pre-study package, minimized data, predefined exclusions, and counterbalanced semantic tasks. Human observations, thresholds, and public-language conditions remain absent; G137 stays blocked pending authorized study execution after P107 and P109."
+
+  defp migration("self-hosting"),
+    do:
+      "Select exact 0.1.98 for the G141 staged-bootstrap preflight, retained Elixir recovery root, fixed BEAM/OTP 29 target, pure-pass-first port order, dual-suite requirements, and explicit absent witnesses. Actual Catena compiler source and bootstrap stages remain held until P109 adoption."
 
   defp migration("secrets-and-capabilities"),
     do:

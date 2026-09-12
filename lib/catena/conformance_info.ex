@@ -49,6 +49,7 @@ defmodule Catena.ConformanceInfo do
       "interactive_session" => stringify(Catena.Tool.Session.profile()),
       "language_service" => stringify(Catena.Tool.LanguageService.profile()),
       "usability_study" => stringify(Catena.Tool.UsabilityStudy.profile()),
+      "self_hosting" => stringify(Catena.Tool.SelfHosting.profile()),
       "trusted_obligation_policy" => %{
         "contract" => "0.1.71",
         "nodes" => 64,
